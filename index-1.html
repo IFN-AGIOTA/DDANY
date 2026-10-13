@@ -305,6 +305,11 @@ body.city.foot #xhair,body.city.foot #ammo{display:block}
 #btnRld{position:absolute;right:calc(var(--sr) + 39vh);bottom:calc(var(--sb) + 11vh);pointer-events:auto;touch-action:none;width:11vh;height:11vh;border-radius:50%;flex-direction:column;align-items:center;justify-content:center;font:800 max(16px,4vh)/1 var(--font);color:#fff;background:rgba(58,160,255,.2);border:.5vh solid var(--blue)}
 #btnRld small{display:block;font-size:.3em;font-weight:700;margin-top:.2vh;letter-spacing:.02em}
 #btnRld:active{transform:scale(.93);background:rgba(58,160,255,.55)}
+/* [v1.1.49 · AGACHAR] botão de agachar (só no modo a pé; fica entre CORRER e TRANSFORMAR; pode ser movido em Opções › HUD) */
+#btnCrouch{display:none;position:absolute;right:calc(var(--sr) + 4vh);bottom:calc(var(--sb) + 21vh);pointer-events:auto;touch-action:none;width:11vh;height:11vh;border-radius:50%;align-items:center;justify-content:center;color:#fff;padding:0;font-size:0;background:rgba(255,255,255,.1);border:.4vh solid rgba(255,255,255,.78);transition:transform .06s,background .1s}
+body.city.foot #btnCrouch{display:flex}
+#btnCrouch:active{transform:scale(.93)}
+#btnCrouch.on{background:rgba(255,255,255,.42);border-color:#fff}
 #xhair{position:absolute;left:50%;top:50%;width:0;height:0;pointer-events:none;--g:1.2vh}
 #xhair i{position:absolute;display:block;background:#fff;box-shadow:0 0 .4vh rgba(0,0,0,.9)}
 #xhair .t{left:-.18vh;width:.36vh;height:1.5vh;top:calc(-1.5vh - var(--g))}
@@ -503,6 +508,7 @@ body.gyro #btnCal{display:flex}
   <button id="btnFire" aria-label="Fogo"><svg viewBox="0 0 24 24" class="ic"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>
   <button id="btnWpn" aria-label="Armas"><svg viewBox="0 0 24 24" class="ic"><path d="M3 7h15l2 2v3h-9l-1 7H6l1-7H3z"/></svg></button>
   <button id="btnRld" aria-label="Recarregar"><svg viewBox="0 0 24 24" class="ic"><path d="M20 11a8 8 0 1 0-2.3 6"/><path d="M20 4v7h-7"/></svg></button>
+  <button id="btnCrouch" aria-label="Agachar"><svg viewBox="0 0 24 24" class="ic"><circle cx="12" cy="4.5" r="2"/><path d="M12 7.5L10 12.5M10 12.5l5 1M15 13.5l-1.5 5.5M10 12.5L8 17l2 2.5M11.4 9l3.6 1.5M5 21h14"/></svg></button>
   <div id="xhair"><i class="t"></i><i class="b"></i><i class="l"></i><i class="r"></i><i class="d"></i></div>
   <div id="ammo" class="panel"><div class="nm" id="amNm">PISTOLA</div><div class="ct"><b id="amMag">12</b> <small id="amRes">/ 60</small></div><div class="bar"><i id="amBar"></i></div></div>
   <canvas id="adi"></canvas>
@@ -657,7 +663,7 @@ body.gyro #btnCal{display:flex}
   <div class="opage" data-p="help">
     <div class="ohelp">
       <p><b>Toque:</b> arraste a tela para girar a câmera · FOGO atira · ARMAS/TRANSFORMAR: segure e deslize para escolher.</p>
-      <p><b>Teclado:</b> WASD/setas mover · Espaço pular · Shift correr · F fogo · T recarregar · E armas · Q transformar · C câmera · M mapa · J jato · P/Esc pausa · R reiniciar.</p>
+      <p><b>Teclado:</b> WASD/setas mover · Espaço pular · Shift correr · V agachar (Ctrl segura) · F fogo · T recarregar · E armas · Q transformar · C câmera · M mapa · J jato · P/Esc pausa · R reiniciar.</p>
       <p><b>HUD:</b> em Opções › HUD (ou no menu/pausa) toque em um item, arraste e use o controle de tamanho. Há um layout para cada forma (a pé, carro e jato).</p>
     </div>
     <button class="mbtn obtn" id="bDefaults"><b>Restaurar todas as opções</b></button>
@@ -762,6 +768,7 @@ body.gyro #btnCal{display:flex}
                       (acaba o falso desvio em trechos longos); recálculo a > 28 m (antes 70 m) a cada 1,5 s; o GPS é atualizado antes de desenhar o minimapa
    v1.1.48 · ABERTURA · tela preta com a logo da Infinity Studio (fade-in, ~4 s, toque para pular, uma vez por abertura); a logo vai embutida (WebP em base64) no <div id="intro"> logo após <body>
    v1.1.49 · HUD DO JATO · removido o painel do topo (altitude, V/S e mensagens); o elemento #jetHud continua no código, oculto, e saiu da lista de elementos movíveis do HUD
+   v1.1.49 · AGACHAR (sem nova versão) · botão #btnCrouch no modo a pé (toque alterna; tecla V; Ctrl segura): soldado desce o quadril e dobra os joelhos, câmera mais baixa, ~metade da velocidade, passos mais baixos; correr/pular/trocar de forma levanta; item "Agachar" no editor de HUD ... footStep(), footVisual(), footCamera(), crouchToggle()
    PRÓXIMOS · LISTA DE MISSÕES no menu de pausa (VG.sel + GPS de outra cor) · golpe furtivo e silenciador · PASSO 3 tráfego sobre o grafo · PASSO 4 pontes reais
    ========================================================= */
 
@@ -2078,6 +2085,7 @@ window.addEventListener('keydown', e => {
   if(e.code==='KeyQ' && !e.repeat) wheelOpen(mouse.x, mouse.y, 'key');
   if(e.code==='KeyE' && !e.repeat) wOpen(mouse.x, mouse.y);
   if(e.code==='KeyT' && !e.repeat) wpReload();
+  if(e.code==='KeyV' && !e.repeat) crouchToggle();      // [v1.1.49 · AGACHAR]
   if(e.code==='Digit4') wpSelect('pistol'); if(e.code==='Digit5') wpSelect('m4');
   if(e.code==='KeyF') initAudio();
   if(e.code==='KeyR' && S.state==='city') startCity();
@@ -3691,7 +3699,7 @@ $('mapGpsClear').onclick = () => { gpsClear(); gpsMsgSet('GPS limpo'); drawFullM
    ========================================================= */
 const soldier = new THREE.Group(); soldier.visible = false; scene.add(soldier);
 const SD = {};
-const foot = {gh:0, y:0, vy:0, sp:0, ph:0, air:false, jh:false, st:1, mv:0, rn:0, lsp:0, acc:0, lh:0, tn:0, land:0};
+const foot = {gh:0, y:0, vy:0, sp:0, ph:0, air:false, jh:false, st:1, mv:0, rn:0, lsp:0, acc:0, lh:0, tn:0, land:0, cr:0, crw:0, crt:0};   // [v1.1.49 · AGACHAR] crt = agachar ligado (botão/V) · crw = quer agachado (inclui Ctrl) · cr = 0..1 suavizado
 const FCAM = {yaw:0, pit:.05, dist:2.35};
 (function buildSoldier(){
   const mk = (c,sh) => new THREE.MeshPhongMaterial({color:c, shininess:sh||5, specular:0x222222});
@@ -3783,17 +3791,19 @@ function footStep(dt){
   let ix = touch.steer, iy = touch.pitch;
   if(!ix && !iy){ ix = (keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0); iy = (keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0); }
   const m = Math.min(1, hyp2(ix,iy));
-  const sprint = touch.gas || keys.ShiftLeft || keys.ShiftRight;
+  let sprint = touch.gas || keys.ShiftLeft || keys.ShiftRight;
+  if(sprint && f.crt){ f.crt = 0; crouchSync(); }                       // [v1.1.49 · AGACHAR] correr levanta
+  f.crw = (f.crt || keys.ControlLeft || keys.ControlRight) ? 1 : 0; if(f.crw) sprint = false;
   const sy = Math.sin(FCAM.yaw), cy = Math.cos(FCAM.yaw), mm = hyp2(ix,iy) || 1;
   const wx = (sy*iy - cy*ix)/mm, wz = (cy*iy + sy*ix)/mm;
-  const vmax = m < .05 ? 0 : (sprint ? 7.2 : (m > .55 ? 3.9 : 1.7));
+  const vmax = m < .05 ? 0 : (f.crw ? (m > .55 ? 2.1 : 1.1) : (sprint ? 7.2 : (m > .55 ? 3.9 : 1.7)));   // agachado: ~metade da velocidade
   const k = Math.min(1, dt*(f.air ? 2.5 : 9));
   c.vx += (wx*vmax - c.vx)*k; c.vz += (wz*vmax - c.vz)*k;
   f.sp = hyp2(c.vx,c.vz);
   if(wp.since < 1.6) c.h += wrapPI(FCAM.yaw - c.h)*Math.min(1, dt*14);   // [v1.1.18] atirando: o corpo vira para onde a câmera mira
   else if(f.sp > .4) c.h += wrapPI(Math.atan2(c.vx,c.vz) - c.h)*Math.min(1, dt*10);
   const jw = touch.brake || keys.Space;
-  if(jw && !f.jh && !f.air){ f.vy = 5.2; f.air = true; buzz(12); }
+  if(jw && !f.jh && !f.air){ f.vy = 5.2; f.air = true; buzz(12); if(f.crt){ f.crt = 0; crouchSync(); } }   // pular levanta
   f.jh = !!jw;
   f.gh += clamp(groundH(c.x,c.z)-f.gh, -3*dt, 3*dt);   // [v1.1.34] sobe/desce o meio-fio sem pulo seco
   f.vy -= 15*dt; f.y += f.vy*dt; if(f.y <= 0){ if(f.air){ f.land = clamp(-f.vy/9,0,1); } if(f.air && f.vy < -4){ for(let i=0;i<3;i++) spawnSmoke(c.x+(Math.random()-.5), .2, c.z+(Math.random()-.5), 0xcccccc); } f.y = 0; f.vy = 0; f.air = false; }
@@ -3801,11 +3811,14 @@ function footStep(dt){
   c.kmh = f.sp*3.6; c.rpm = 4000; c.gear = 'N';
   if(f.sp > .3) f.ph += dt*6.2832*clamp(.65 + f.sp*.17, .7, 1.85);   // cadência cresce com a velocidade
 }
-function footTick(a){
+function footTick(a,q){
   if(!actx || muted || !ngain) return; const t = actx.currentTime;
-  ngain.gain.cancelScheduledValues(t); ngain.gain.setValueAtTime(.025+.05*a, t); ngain.gain.setTargetAtTime(0, t+.015, .035);
+  ngain.gain.cancelScheduledValues(t); ngain.gain.setValueAtTime((.025+.05*a)*(q===undefined ? 1 : q), t); ngain.gain.setTargetAtTime(0, t+.015, .035);
   nfilt.frequency.setValueAtTime(380+Math.random()*260, t);
 }
+// [v1.1.49 · AGACHAR] botão (HUD) / tecla V alterna agachado; Ctrl segura agachado. Só no modo a pé. Correr ou pular levanta.
+function crouchSync(){ const b = $('btnCrouch'); if(b) b.classList.toggle('on', !!foot.crt); }
+function crouchToggle(){ if(FORM!=='foot' || S.state!=='city' || S.paused) return; foot.crt = foot.crt ? 0 : 1; crouchSync(); buzz(10); }
 function footVisual(dt){
   const f = foot, c = car; if(!SD.hips) return;
   soldier.position.set(c.x,f.gh,c.z); soldier.rotation.y = c.h;
@@ -3818,6 +3831,7 @@ function footVisual(dt){
   f.tn += (clamp(wrapPI(c.h-f.lh)/dd,-6,6) - f.tn)*Math.min(1,dt*6); f.lh = c.h;
   if(f.land > 0) f.land = Math.max(0, f.land - dt*3.5);
   const air = f.air ? 1 : 0, ls = f.land;
+  f.cr += (f.crw - f.cr)*k8; const cr = f.cr, ce = cr*(1-air);        // [v1.1.49 · AGACHAR] 0 = em pé · 1 = agachado (no ar não agacha)
   const Sw = lerp(.4,.72,clamp((f.sp-1.7)/5.5,0,1))*mv;          // amplitude da passada
   const sph = Math.sin(f.ph), cph = Math.cos(f.ph);
   // pernas: coxa + joelho (fase de balanço dobra muito na corrida) + tornozelo com rolagem calcanhar→ponta
@@ -3828,17 +3842,21 @@ function footVisual(dt){
     let kn = .04 + (.1+.12*R)*mv*Math.max(0,-cs) + (.5+1.45*R)*mv*Math.pow(Math.max(0,cs),1.4);
     th = lerp(th, i ? .3 : -.75, air); kn = lerp(kn, i ? .55 : .95, air);
     th -= .55*ls*(i ? .8 : 1); kn += 1.1*ls;                      // amortece o pouso
+    if(ce > 0){ th = lerp(th, -1.1 + th*.5, ce); kn = lerp(kn, 1.9 + (kn-.04)*.45, ce); }   // agachado: coxa à frente, joelho dobrado, passada curta
     l.p.rotation.x = th; l.k.rotation.x = kn;
     const st = clamp(.5 - cs*1.5, 0, 1);                           // 1 = pé apoiado
-    l.an.rotation.x = -(th+kn)*st*(1-air) - kn*.35*(1-st) + (.15+.45*R)*mv*Math.max(0,-s)*st - .25*mv*Math.max(0,s)*st + air*.3;
+    let an = -(th+kn)*st*(1-air) - kn*.35*(1-st) + (.15+.45*R)*mv*Math.max(0,-s)*st - .25*mv*Math.max(0,s)*st + air*.3;
+    if(ce > 0) an = lerp(an, -(th+kn), ce);                       // pé sempre rente ao chão
+    l.an.rotation.x = an;
     hy.push(.08 + .46*Math.cos(th) + .39*Math.cos(th+kn));
   });
   SD.hips.position.y = Math.max(hy[0],hy[1]) - .01 + f.y + R*.05*Math.max(0,Math.cos(f.ph*2))*mv*(1-air);   // impulso da fase de voo          // quadril acompanha o pé mais baixo (sem flutuar nem afundar)
   SD.hips.position.x = sph*.012*mv*(1-R)*(1-air);
+  SD.hips.position.z = -.12*ce;                                    // [AGACHAR] quadril recua para os pés ficarem sob o corpo
   SD.hips.rotation.y = sph*.14*(.5+R)*mv*(1-air);                  // giro da pelve
   SD.hips.rotation.z = sph*.035*(1+R)*mv*(1-air) + Math.sin(t*.5)*.015*(1-mv);
   // tronco: inclina ao acelerar e na corrida, contra-giro dos ombros, inclina nas curvas
-  SD.tor.rotation.x = .05 + R*.2 + clamp(f.acc*.012,-.12,.2) + ls*.25 + air*.05;
+  SD.tor.rotation.x = .05 + R*.2 + clamp(f.acc*.012,-.12,.2) + ls*.25 + air*.05 + .3*ce;
   SD.tor.rotation.y = -SD.hips.rotation.y*1.6;
   SD.tor.rotation.z = -SD.hips.rotation.z*.8 - clamp(f.tn*f.sp*.012,-.2,.2);
   SD.tor.position.y = .1 + Math.sin(t*1.7)*.004*(1-mv);
@@ -3855,7 +3873,7 @@ function footVisual(dt){
   // fuzil balança com atraso
   SD.rifle.position.y = .13 + Math.sin(f.ph*2+.6)*.012*mv*(1+R);
   SD.rifle.rotation.x = .1 + R*.06; SD.rifle.rotation.z = sph*.03*mv;
-  const sg = cph > 0 ? 1 : -1; if(mv > .3 && !f.air && sg !== f.st){ f.st = sg; footTick(R); }
+  const sg = cph > 0 ? 1 : -1; if(mv > .3 && !f.air && sg !== f.st){ f.st = sg; footTick(R, 1-.6*cr); }
 }
 function camBlocked(x,y,z){
   const l = cityHash[(Math.floor(x/40)+100)*1000 + Math.floor(z/40)+100]; if(!l) return false;
@@ -3867,12 +3885,12 @@ function footCamera(dt){
   const fovT = (camMode===1 ? 74 : OPT.fov) + (camMode===1 ? 10 : 5)*clamp((f.sp-3)/4,0,1);
   if(camMode===1){            // 1ª pessoa
     soldier.visible = false;
-    camera.position.set(c.x+sy*.15, 1.74+f.y+f.gh, c.z+cy*.15);
+    camera.position.set(c.x+sy*.15, 1.74-.55*f.cr+f.y+f.gh, c.z+cy*.15);
     camera.lookAt(camera.position.x+sy*cp*10, camera.position.y-sp*10, camera.position.z+cy*cp*10);
   }else{                      // 3ª pessoa: câmera por cima do ombro direito, com colisão contra prédios
     soldier.visible = true;
     // [v1.1.21] mesma composição da câmera do menu: FOV 42, 2.35 atrás, altura ~1.52, nível, soldado à esquerda (~34% da largura)
-    const tx = c.x, tz = c.z, ty = 1.52 + f.y*.7 + f.gh, k = Math.tan(fovT*Math.PI/360)*camera.aspect*LATX[OPT.pos];
+    const tx = c.x, tz = c.z, ty = 1.52 - .5*f.cr + f.y*.7 + f.gh, k = Math.tan(fovT*Math.PI/360)*camera.aspect*LATX[OPT.pos];
     let d = FCAM.dist, px = 0, py = 0, pz = 0;
     for(let i=0;i<8;i++){ const off = d*k; px = tx - sy*cp*d - cy*off; py = Math.max(.35, ty + sp*d); pz = tz - cy*cp*d + sy*off; if(!camBlocked(px,py,pz)) break; d *= .8; }
     camera.position.set(px,py,pz);
@@ -3915,6 +3933,7 @@ function setForm(f){
   const vv = f==='car' ? Math.min(v,CITY_VMAX) : 0;
   Object.assign(car, {x:p.x, z:p.z, h:h, vx:Math.sin(h)*vv, vz:Math.cos(h)*vv, steer:0, slide:false});
   foot.y = 0; foot.vy = 0; foot.air = false; camH = h; FCAM.yaw = h;
+  foot.crt = foot.crw = foot.cr = 0; crouchSync(); if(SD.hips) SD.hips.position.z = 0;   // [v1.1.49 · AGACHAR]
   carRoot.visible = (f==='car'); carRoot.scale.setScalar(1); soldier.visible = (f==='foot');
   document.body.classList.toggle('foot', f==='foot');
   if(f==='jet'){
@@ -4251,6 +4270,7 @@ function wClose(apply){
   const fu = e => { ids.delete(e.pointerId); if(!ids.size){ wp.fire = false; f.classList.remove('down'); } };
   ['pointerup','pointercancel','lostpointercapture'].forEach(t => f.addEventListener(t, fu));
   $('btnRld').addEventListener('pointerdown', e => { e.preventDefault(); initAudio(); wpReload(); });
+  $('btnCrouch').addEventListener('pointerdown', e => { e.preventDefault(); initAudio(); crouchToggle(); });   // [v1.1.49 · AGACHAR]
 })();
 weaponsReset();
 
@@ -4428,7 +4448,7 @@ document.addEventListener('visibilitychange', () => { if(!document.hidden && OPT
 // ---- layout da HUD (um por forma: a pé · carro · jato), em unidades vh
 const HUDI = [
   {id:'map', n:'Minimapa'}, {id:'btnCam', n:'Botão câmera'}, {id:'btnPause', n:'Botão pausa'},
-  {id:'steerPad', n:'Direcional'}, {id:'btnGas', n:'Correr / Acelerar'}, {id:'btnBrake', n:'Pular / Freio'},
+  {id:'steerPad', n:'Direcional'}, {id:'btnGas', n:'Correr / Acelerar'}, {id:'btnBrake', n:'Pular / Freio'}, {id:'btnCrouch', n:'Agachar'},
   {id:'btnFire', n:'Fogo'}, {id:'btnWpn', n:'Armas'}, {id:'btnRld', n:'Recarregar'}, {id:'btnWheel', n:'Transformar'},
   {id:'btnHb', n:'Freio de mão'}, {id:'ammo', n:'Munição'}, {id:'gauge', n:'Velocímetro'}, {id:'adi', n:'Horizonte'},
   {id:'gpsBox', n:'GPS'}, {id:'btnCal', n:'Calibrar'}
