@@ -63,6 +63,24 @@ public class MainActivity extends BridgeActivity {
   }
   edit(path.join(A,'res','values','styles.xml'), s => s.includes('windowFullscreen') ? s : s.replace(/(<style name="AppTheme\.NoActionBar"[^>]*>)/, '$1\n        <item name="android:windowFullscreen">true</item>'));
 
+  // 3) ícone do app: coloque um icon.png (1024x1024) na raiz do repositório
+  const iconSrc = fs.readdirSync(ROOT).find(f => /^icon\.png$/i.test(f)) || fs.readdirSync(ROOT).find(f => /icon.*\.png$/i.test(f));
+  if(iconSrc){
+    try{
+      fs.mkdirSync(path.join(ROOT,'assets'),{recursive:true}); fs.copyFileSync(path.join(ROOT,iconSrc), path.join(ROOT,'assets','icon.png'));
+      run('npx --yes @capacitor/assets generate --android --iconBackgroundColor "#000000" --iconBackgroundColorDark "#000000"');
+      console.log('Ícone aplicado a partir de '+iconSrc);
+    }catch(e){ console.log('Aviso: não foi possível aplicar o ícone ('+e.message+') — seguindo com o ícone padrão.'); }
+  }
+  // 4) assinatura fixa (dda.keystore) + versionCode crescente → o APK novo ATUALIZA o instalado sem desinstalar
+  edit(path.join(ROOT,'android','app','build.gradle'), s => {
+    if(fs.existsSync(path.join(ROOT,'dda.keystore')) && s.indexOf('signingConfigs.dda')<0){
+      s = s.replace(/android\s*\{/, m => m+"\n    signingConfigs {\n        dda {\n            storeFile file('../../dda.keystore')\n            storePassword 'android'\n            keyAlias 'dda'\n            keyPassword 'android'\n        }\n    }");
+      s = s.replace(/buildTypes\s*\{/, m => m+"\n        debug {\n            signingConfig signingConfigs.dda\n        }");
+    }
+    return s.replace(/versionCode\s+\d+/, 'versionCode '+(process.env.GITHUB_RUN_NUMBER||1));
+  });
+
   run('npx cap sync android');
   if(process.argv.includes('--build')){
     run((isWin ? 'gradlew.bat' : './gradlew')+' assembleDebug', path.join(ROOT,'android'));
