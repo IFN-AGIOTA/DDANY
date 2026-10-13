@@ -11,7 +11,13 @@ const edit = (file, fn) => { const s = fs.readFileSync(file,'utf8'), t = fn(s); 
 
 (async () => {
   fs.mkdirSync(WWW,{recursive:true});
-  if(fs.existsSync(path.join(ROOT,'index.html'))) fs.copyFileSync(path.join(ROOT,'index.html'), path.join(WWW,'index.html'));   // index.html na raiz → www/
+  {   // qualquer .html na raiz vira www/index.html (o celular às vezes renomeia o arquivo, ex.: "index (1).html")
+    const all = fs.readdirSync(ROOT), htmls = all.filter(f => /\.html?$/i.test(f));
+    const pick = htmls.indexOf('index.html')>=0 ? 'index.html' : htmls.sort((a,b) => fs.statSync(path.join(ROOT,b)).size - fs.statSync(path.join(ROOT,a)).size)[0];
+    if(!pick) throw new Error('Nenhum arquivo .html na raiz do repositório. Arquivos encontrados: '+all.join(', '));
+    console.log('Usando '+pick+' como index.html');
+    fs.copyFileSync(path.join(ROOT,pick), path.join(WWW,'index.html'));
+  }
   const three = path.join(WWW,'three.min.js');
   if(!fs.existsSync(three) || fs.statSync(three).size<100000){
     console.log('Baixando three.min.js (r128)…');
