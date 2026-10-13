@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#05070b">
 <!-- REGRA DE VERSÃO: o número da versão (este <title>, o rótulo "VERSÃO x.y.z" do menu e o registro de alterações no script) só deve mudar quando a atualização for SIGNIFICATIVA. -->
-<title>Dias de um Apocalipse – Nova York 1.1.42</title>
+<title>Dias de um Apocalipse – Nova York 1.1.47</title>
 <style>
 :root{
   --bg:#05070b; --fg:#f4f6fa; --red:#e10600; --green:#19d46a; --amber:#ffb400; --blue:#3aa0ff;
@@ -533,7 +533,7 @@ body.gyro #btnCal{display:flex}
     <div>
       <h1 class="dtitle"><span class="d1">Dias de um</span><span class="d2">Apocalipse</span><span class="d3"><span style="visibility:hidden">;&nbsp;</span>Nova York</span></h1>
       <!-- REGRA DE VERSÃO: só altere este número quando a atualização for SIGNIFICATIVA. -->
-      <div class="dver">VERSÃO 1.1.42</div>
+      <div class="dver">VERSÃO 1.1.47</div>
     </div>
     <nav class="mnav">
       <button class="mbtn primary" id="bStory"><b>História · Ato 1</b><small>Parte 1 · A Última Corrida</small></button>
@@ -749,7 +749,17 @@ body.gyro #btnCal{display:flex}
    v1.1.42 · GRÁFICOS AVANÇADOS 2 · Opções › Gráficos: Sombras (Desligadas / Simples = mancha sob personagem e carro / Alta = sombra em tempo real ao redor do jogador), Densidade do cenário
                       abandonado (carros, barricadas, barris + colisões), Distância dos detalhes (postes, árvores, semáforos, fios), Água simples/completa, Fios e Halos liga/desliga,
                       Neblina densa/normal/limpa e ajuste fino da resolução em % ... shadApply()/shadUpdate(), wkDensity(), GFX_DET/GFX_FK/GFX_DEN, gfxDet(), uniform uWOn
-   PRÓXIMOS · PASSO 3 tráfego sobre o grafo · PASSO 4 pontes reais
+   v1.1.43 · VAGOS · VIDA DO JOGADOR + INIMIGOS · PL.hp/PL.ar com dano (PLH.hurt), tela vermelha, morte e reaparecimento; inimigos Vagos (ENM) com patrulha, visão, audição,
+                      alarme e combate; tiro na cabeça = morte silenciosa; ENM.squad(x,z,n,raio,idBase), ENM.left(id) e ENM.onClear(id) prontos para as bases
+                      ... PLH, ENM, EN, enSense(), enFight(); ganchos em wpShoot(), wpImpact(), startCity() e frame(); TESTE: tecla K / L ou "?vagos" na URL
+   v1.1.44 · VAGOS · BASES · 3 bases por setor (bairro), aeroporto neutro, caminho até cada base sem passar perto de outra; inimigos nascem/somem por distância; marcadores no mapa grande
+                      ... VG.plan(), VG.tick(), VG.draw(), vgSeg(); ganchos em startCity() (carregamento), unloadCity(), frame() e drawFullMap()
+   v1.1.45 · VAGOS · BASES FIXAS · 9 bases em locais definidos pelo jogador (VG.SITES, leste 2 · Bohan 1 · Algonquin 3 · Alderney 3); cada ponto é ajustado a um terreno livre próximo (determinístico);
+                      os inimigos de cada base nascem a < 220 m e guardam quantos faltam ao sumir (b.nl); a validação de rotas agora só avisa no console
+   v1.1.46 · MAPA · tocar numa base no mapa grande traça o GPS até ela (toque dentro de ~34 px do marcador) e a marca em roxo (VG.sel); tocar noutro ponto ou limpar o GPS tira a seleção
+   v1.1.47 · GPS · o traço azul (minimapa e mapa grande) agora começa na posição do jogador e só mostra o trecho que falta (GPS.live); a posição na rota é medida pelo TRECHO, não pelo vértice mais próximo
+                      (acaba o falso desvio em trechos longos); recálculo a > 28 m (antes 70 m) a cada 1,5 s; o GPS é atualizado antes de desenhar o minimapa
+   PRÓXIMOS · LISTA DE MISSÕES no menu de pausa (VG.sel + GPS de outra cor) · golpe furtivo e silenciador · PASSO 3 tráfego sobre o grafo · PASSO 4 pontes reais
    ========================================================= */
 
 /* =========================================================
@@ -757,7 +767,6 @@ body.gyro #btnCal{display:flex}
    ========================================================= */
 const _dc = {};
 const $ = id => _dc[id] || (_dc[id] = document.getElementById(id));
-const setH = (id,h) => { const el = $(id); if(el._h!==h){ el._h = h; el.innerHTML = h; } };
 const clamp = (v,a,b) => v<a?a:(v>b?b:v);
 const lerp = (a,b,t) => a+(b-a)*t;
 const hyp2 = (a,b) => Math.sqrt(a*a+b*b), hyp3 = (a,b,c) => Math.sqrt(a*a+b*b+c*c);   // [v1.1.39] Math.hypot é bem mais lento que sqrt nos caminhos quentes
@@ -870,7 +879,7 @@ skyPaint(0,0);
    0–4:00 dia · 4:00–5:00 entardecer · 5:00–9:00 noite · 9:00–10:00 amanhecer
    ========================================================= */
 const DN = {t:0, n:0, u:0, DAY:300, NIGHT:300, R:60, applied:-1, appliedU:-1, inCity:false, phase:'dia', label:'', uNight:{value:0}, pool:null, lamps:null, stars:null, sunSpr:null, moonSpr:null, sunDir:new THREE.Vector3(), moonDir:new THREE.Vector3()};
-const DN_FOG = new THREE.Color(FOG), DN_MULT = new THREE.Color(), DN_TMP = new THREE.Color();
+const DN_MULT = new THREE.Color(), DN_TMP = new THREE.Color();
 const DN_HSD = new THREE.Color(0xffc08a), DN_HSN = new THREE.Color(0x5a6fa8), DN_HGD = new THREE.Color(0x5a3820), DN_HGN = new THREE.Color(0x151a2a);
 const DN_SUD = new THREE.Color(0xffa860), DN_SUN = new THREE.Color(0x9db4e6), DN_ORG = new THREE.Color(0xff7a30);
 const AP = {done:false, group:null, smoke:[], fire:[]};   // [v1.1.20] colunas de fumaça distantes
@@ -1898,7 +1907,7 @@ let hudAcc = 0, hudN = 0;
 function updateHUD(dt){
   hudAcc += dt;
   if(hudAcc < 1/20) return; hudAcc = 0; const h0 = performance.now();
-  updateJetHud(); if(!(S.state==='city' && FORM==='foot')) drawGauge(); if((hudN = (hudN+1)|0) % 2 === 0){ drawCityMap(); trackZone(); gpsUpdate(); }
+  updateJetHud(); if(!(S.state==='city' && FORM==='foot')) drawGauge(); if((hudN = (hudN+1)|0) % 2 === 0){ gpsUpdate(); drawCityMap(); trackZone(); }
   else if(Math.abs(wrapPI(mapHeading()-mapLastH)) > .04) drawCityMap();   // [v1.1.33 · MINIMAPA] câmera girando: redesenha no tick extra (rotação mais fluida)
   { const c0 = performance.now(); cullCity(); PF.c += performance.now()-c0; }
   PF.h += performance.now()-h0;
@@ -2147,7 +2156,6 @@ setInterval(() => {
   if(!$('options').classList.contains('show')) return;
   $('gyroLive').textContent = gyro.on ? 'Sensor: ' + Math.round(gyro.deg-gyro.offset) + '° · direção ' + Math.round(gyro.value*100) + '%' : '';
 }, 150);
-function refreshPause(){ refreshUI(); }
 function oMsg(t){ $('oMsg').textContent = t||''; }
 function openOptions(){ oMsg(''); refreshUI(); $('options').classList.add('show'); }
 $('bOptions').onclick = openOptions; $('bOptions2').onclick = openOptions;
@@ -2271,7 +2279,7 @@ function unloadCity(){
   G.forEach(g => g.dispose()); M.forEach(m => m.dispose());
   cityGroup = null; cityHash = null; cityRoads = null; citySpawn = null; fullBase = null; curZone = undefined;
   LC.chunks = []; LC.cells = null; LC.cellList = null; LC.land = LC.park = LC.near = null; LC.landPath = LC.parkPath = LC.roadMajor = LC.roadMinor = null;
-  LC.graph = null; LC.gh = null; gpsReset();   // [v1.1.10 · PASSO 2]
+  LC.graph = null; LC.gh = null; VG.reset(); gpsReset();   // [v1.1.10 · PASSO 2]
 }
 // colocação de árvores e prédios: função pura (sem acesso ao DOM) → roda num Web Worker; se o worker falhar, roda na thread principal
 function lcPlace(d){
@@ -2490,7 +2498,6 @@ function buildCity(){
     band(14,.02,0xb59a76,-45);                                                              // areia / calçadão
     band(1.6,.03,0x5a524c,-44);                                                             // muro de contenção na linha da costa
   }
-  const chunkOf = {};      // chave do bloco → grupo de 800 m (prédios) / 1,6 km (ruas)
   Object.keys(tiles).forEach(k => {
     const t = tiles[k], g = new THREE.Group();
     const ex = [], add = (P,I,m,e,U) => { const o = new THREE.Mesh(geoOf(P,I,U),m); o.renderOrder = m.userData.go; g.add(o); if(e) ex.push(o); };
@@ -2952,10 +2959,11 @@ function drawFullMap(){
   c.setTransform(s,0,0,s,v.tx,v.tz);
   if(GPS.path){   // [v1.1.10 · PASSO 2] rota do GPS e destino
     c.lineJoin = 'round'; c.lineCap = 'round';
-    c.strokeStyle = '#000'; c.lineWidth = 6.5*u; c.stroke(GPS.path);
-    c.strokeStyle = '#3aa0ff'; c.lineWidth = 3.6*u; c.stroke(GPS.path);
+    c.strokeStyle = '#000'; c.lineWidth = 6.5*u; c.stroke(GPS.live||GPS.path);
+    c.strokeStyle = '#3aa0ff'; c.lineWidth = 3.6*u; c.stroke(GPS.live||GPS.path);
     c.beginPath(); c.arc(GPS.dest.x,GPS.dest.z,13*u,0,7); c.fillStyle = '#3aa0ff'; c.fill(); c.lineWidth = 3*u; c.strokeStyle = '#fff'; c.stroke();
   }
+  VG.draw(c,u);   // [v1.1.44 · VAGOS · BASES]
   c.beginPath(); c.arc(car.x,car.z,26*u,0,7); c.lineWidth = 4*u; c.strokeStyle = '#ffb400'; c.stroke();
   c.save(); c.translate(car.x,car.z); c.rotate(Math.PI-car.h); c.scale(2.2*u,2.2*u);
   c.fillStyle = '#ffb400'; c.strokeStyle = '#000'; c.lineWidth = 2;
@@ -3001,7 +3009,7 @@ function startCity(){
     if(cityLoading) return; cityLoading = true; const ov = $('loadCity'); ov.style.display = 'flex';
     setTimeout(() => {
       let p; try{ p = buildCity(); }catch(e){ p = Promise.reject(e); }
-      p.then(() => cityWarm(ov)).then(() => { cityLoading = false; ov.style.display = 'none'; startCity(); })
+      p.then(() => { try{ VG.plan(); }catch(e){ console.error('vagos',e); } return cityWarm(ov); }).then(() => { cityLoading = false; ov.style.display = 'none'; startCity(); })
        .catch(e => { cityLoading = false; ov.style.display = 'none'; console.error(e); unloadCity(); toast('Falha ao carregar a cidade',2500,true); });
     }, 60);
     return;
@@ -3009,7 +3017,7 @@ function startCity(){
   S.state = 'city'; S.paused = false; S.hitCool = 0; setCityMode(true); apocSmokeInit(); gfxTex.force = true; gfxTex(); gfxFx();
   if(!STORY.pending) wkSet(true);        // mundo livre: cidade abandonada completa
   Object.assign(car, {x:citySpawn.x, z:citySpawn.z, h:citySpawn.h, vx:0, vz:0, steer:0, slide:false, rpm:4000}); camH = car.h;
-  weaponsReset(); FORM = 'car'; jet.active = false; setForm('foot');     // [v1.1.17] o modo cidade começa a pé
+  weaponsReset(); PLH.reset(); ENM.clear(); VG.live(); FORM = 'car'; jet.active = false; setForm('foot');     // [v1.1.17] o modo cidade começa a pé
   $('hud').classList.remove('hidden');
   ['menu','pauseMenu','options','fullMap'].forEach(id => $(id).classList.remove('show'));
   curZone = undefined;
@@ -3428,8 +3436,8 @@ function drawCityMap(){
   mctx.save(); mctx.translate(W/2,H/2); mctx.rotate(rot); mctx.scale(.5,.5); mctx.translate(-c.x,-c.z);   // 1 px = 2 m
   mapBase(c.x,c.z); mctx.drawImage(MB.cv, MB.cx-MB.PW, MB.cz-MB.PH, MB.PW*2, MB.PH*2);   // [v1.1.39] terra, parques, ruas e base: camada pré-desenhada
   if(GPS.path){   // [v1.1.10 · PASSO 2] rota do GPS e destino
-    mctx.strokeStyle = '#000'; mctx.lineWidth = 38; mctx.stroke(GPS.path);
-    mctx.strokeStyle = '#3aa0ff'; mctx.lineWidth = 24; mctx.stroke(GPS.path);
+    mctx.strokeStyle = '#000'; mctx.lineWidth = 38; mctx.stroke(GPS.live||GPS.path);
+    mctx.strokeStyle = '#3aa0ff'; mctx.lineWidth = 24; mctx.stroke(GPS.live||GPS.path);
     mctx.beginPath(); mctx.arc(GPS.dest.x,GPS.dest.z,40,0,7); mctx.fillStyle = '#3aa0ff'; mctx.fill(); mctx.lineWidth = 8; mctx.strokeStyle = '#fff'; mctx.stroke();
   }
   mctx.restore();
@@ -3581,7 +3589,7 @@ function gpsBuild3D(){
 }
 function gpsRebuild(){
   const r = gpsRoute(car.x,car.z,GPS.dest.x,GPS.dest.z); if(!r) return false;
-  GPS.route = r; GPS.idx = 0; GPS.cum = new Float32Array(r.length); GPS.path = new Path2D();
+  GPS.route = r; GPS.idx = 0; GPS.live = null; GPS.cum = new Float32Array(r.length); GPS.path = new Path2D();
   r.forEach((p,k) => { if(k){ GPS.cum[k] = GPS.cum[k-1]+hyp2(p.x-r[k-1].x,p.z-r[k-1].z); GPS.path.lineTo(p.x,p.z); } else GPS.path.moveTo(p.x,p.z); });
   GPS.total = GPS.cum[r.length-1];
   gpsBuild3D(); return true;
@@ -3590,12 +3598,12 @@ function gpsSet(x,z){
   if(!LC.graph) return 'O mapa ainda não está pronto';
   if(!landAt(x,z)) return 'Escolha um ponto em terra firme';
   GPS.dest = {x:x, z:z};
-  if(!gpsRebuild()){ GPS.dest = null; GPS.route = GPS.path = null; gpsBuild3D(); return GPS.why; }
+  if(!gpsRebuild()){ GPS.dest = null; GPS.route = GPS.path = GPS.live = null; gpsBuild3D(); return GPS.why; }
   const t = GPS.total;
   return 'Rota traçada · ' + (t>=1000 ? (t/1000).toFixed(1).replace('.',',')+' km' : Math.round(t)+' m');
 }
-function gpsClear(){ GPS.dest = null; GPS.route = GPS.path = GPS.cum = null; gpsBuild3D(); $('gpsBox').classList.remove('show'); }
-function gpsReset(){ GPS.dest = null; GPS.route = GPS.path = GPS.cum = GPS.mesh = GPS.beacon = GPS.mat = null; $('gpsBox').classList.remove('show'); }
+function gpsClear(){ VG.sel = null; GPS.dest = null; GPS.route = GPS.path = GPS.cum = GPS.live = null; gpsBuild3D(); $('gpsBox').classList.remove('show'); }
+function gpsReset(){ GPS.dest = null; GPS.route = GPS.path = GPS.cum = GPS.live = GPS.mesh = GPS.beacon = GPS.mat = null; $('gpsBox').classList.remove('show'); }
 
 // [v1.1.28] próxima curva da rota: devolve {d: distância (m) até ela, a: seta, n: nome} (ou o destino, se não houver curva)
 function gpsNextTurn(r,cum,bi,bd){
@@ -3618,15 +3626,20 @@ const fmtDist = m => m>=1000 ? (m/1000).toFixed(2).replace('.',',')+' km' : (Mat
 function gpsUpdate(){
   const box = $('gpsBox');
   if(!GPS.dest || !GPS.route){ box.classList.remove('show'); return; }
-  const r = GPS.route, c = car;
-  let bi = GPS.idx, bd = 1e18;
-  for(let k=Math.max(0,GPS.idx-6), e=Math.min(r.length-1,GPS.idx+60); k<=e; k++){ const d = hyp2(r[k].x-c.x,r[k].z-c.z); if(d<bd){ bd = d; bi = k; } }
+  const r = GPS.route, c = car, N = r.length-1;
+  let bi = GPS.idx, bd = 1e18, bt = 0;      // bi = trecho r[bi]→r[bi+1] mais próximo · bd = distância lateral · bt = avanço (m) dentro do trecho
+  if(N<1){ bi = 0; bd = hyp2(c.x-r[0].x,c.z-r[0].z); }
+  else for(let k=Math.max(0,GPS.idx-6), e=Math.min(N-1,GPS.idx+60); k<=e; k++){
+    const ax = r[k].x, az = r[k].z, dx = r[k+1].x-ax, dz = r[k+1].z-az, L2 = dx*dx+dz*dz||1, t = clamp(((c.x-ax)*dx+(c.z-az)*dz)/L2,0,1), d = hyp2(c.x-ax-dx*t,c.z-az-dz*t);
+    if(d<bd){ bd = d; bi = k; bt = t*Math.sqrt(L2); } }
   GPS.idx = bi;
   const now = performance.now();
-  if(bd>70 && !jet.active && now-GPS.lastRe>2000){ GPS.lastRe = now; if(gpsRebuild()) toast('RECALCULANDO ROTA',900,true); return; }
-  const rem = Math.max(0,GPS.total-GPS.cum[bi]) + bd;
+  if(bd>28 && !jet.active && now-GPS.lastRe>1500){ GPS.lastRe = now; if(gpsRebuild()){ if(now-(GPS.lt||0)>6000){ GPS.lt = now; toast('RECALCULANDO ROTA',900,true); } return; } }
+  const rem = Math.max(0,GPS.total-GPS.cum[bi]-bt) + bd;
   if(rem<35){ toast('CHEGOU AO DESTINO',1800); gpsClear(); return; }
-  const nt = gpsNextTurn(r,GPS.cum,bi,bd);
+  if(!GPS.live || bi!==GPS.li || hyp2(c.x-GPS.lx,c.z-GPS.lz)>1.5){      // traço azul: do jogador até o destino
+    GPS.li = bi; GPS.lx = c.x; GPS.lz = c.z; const p = new Path2D(); p.moveTo(c.x,c.z); for(let k=bi+1;k<=N;k++) p.lineTo(r[k].x,r[k].z); GPS.live = p; }
+  const nt = gpsNextTurn(r,GPS.cum,bi,bd-bt);
   box.innerHTML = '<span class="ga">'+nt.a+'</span>'+fmtDist(nt.d);
   box.classList.add('show');
 }
@@ -3660,7 +3673,7 @@ function fmZoomBy(f){ const cv = $('bigMap'); fmZoomAt(FM.z*f, cv.width/2, cv.he
     if(!P.has(e.pointerId)) return;
     const tap = e.type==='pointerup' && P.size===1 && g && !g.moved && performance.now()-g.t < 600;
     P.delete(e.pointerId);
-    if(tap){ const q = cvXY(e.clientX,e.clientY), sc = FM.s*FM.z; gpsMsgSet(gpsSet(FM.cx+(q[0]-cv.width/2)/sc, FM.cz+(q[1]-cv.height/2)/sc)); drawFullMap(); }
+    if(tap){ const q = cvXY(e.clientX,e.clientY), sc = FM.s*FM.z; let wx = FM.cx+(q[0]-cv.width/2)/sc, wz = FM.cz+(q[1]-cv.height/2)/sc; const hb = VG.hit(wx,wz,34/sc); if(hb){ wx = hb.x; wz = hb.z; } const msg = gpsSet(wx,wz); VG.sel = (hb && GPS.dest) ? hb.id : null; gpsMsgSet(VG.sel ? hb.name+' · '+msg : msg); drawFullMap(); }
     if(P.size===1) anchor(); else if(P.size===0) g = null;
   };
   ['pointerup','pointercancel','lostpointercapture'].forEach(t => cv.addEventListener(t, end));
@@ -4133,6 +4146,7 @@ function wpShoot(W, A, fpv){
   const o = camera.position; let r = wpRay(o.x,o.y,o.z,_wd.x,_wd.y,_wd.z,W.range), px, py, pz, hk = 0, hx = 0, hy = 0, hz = 0, nx = 0, ny = 1, nz = 0;
   if(r.hit){ px = hx = r.x; py = hy = r.y; pz = hz = r.z; hk = r.k; nx = r.nx; ny = r.ny; nz = r.nz; }
   else { px = o.x+_wd.x*W.range; py = o.y+_wd.y*W.range; pz = o.z+_wd.z*W.range; }
+  { const eh = ENM.shot(o.x,o.y,o.z,_wd.x,_wd.y,_wd.z,r.hit ? r.d : W.range,wp.cur); if(eh){ px = hx = eh.x; py = hy = eh.y; pz = hz = eh.z; hk = 4; nx = ny = nz = 0; } }   // [v1.1.43 · VAGOS] acerto em inimigo
   wp[fpv ? 'fp' : 'tp'][wp.cur].userData.muzzle.getWorldPosition(_wm);
   let dx = px-_wm.x, dy = py-_wm.y, dz = pz-_wm.z; const L = hyp3(dx,dy,dz) || 1; dx /= L; dy /= L; dz /= L;
   let len = L;
@@ -4142,10 +4156,11 @@ function wpShoot(W, A, fpv){
   q.k = hk; q.hx = hx; q.hy = hy; q.hz = hz; q.nx = nx; q.ny = ny; q.nz = nz; q.m.visible = true;
   fl3.material.rotation = flV.material.rotation = Math.random()*6.2832;
   wp.kick = Math.min(wp.kick + W.kick, .14); wp.ky += (Math.random()-.5)*2*W.ky;
-  gunSnd(wp.cur); buzz(wp.cur==='m4' ? 8 : 14);
+  gunSnd(wp.cur); buzz(wp.cur==='m4' ? 8 : 14); ENM.noise(car.x,car.z,wp.cur==='m4' ? 75 : 28);   // [v1.1.43 · VAGOS] barulho do tiro
 }
 function wpImpact(q){
   const x = q.hx, y = q.hy, z = q.hz;
+  if(q.k===4){ spawnSmoke(x,y,z,0x8a1010); return; }   // [v1.1.43 · VAGOS] acerto em inimigo
   if(q.k===2){ spawnSmoke(x,.15,z,0xcfe6ff); spawnSmoke(x+(Math.random()-.5)*.6,.15,z+(Math.random()-.5)*.6,0xcfe6ff); return; }
   const s = wpSP[(wp.si = (wp.si+1) % wpSP.length)]; s.life = .09; s.m.position.set(x+q.nx*.1,y+q.ny*.1,z+q.nz*.1); s.m.visible = true;
   spawnSmoke(x+q.nx*.2, Math.max(.1,y+q.ny*.2), z+q.nz*.2, q.k===1 ? 0xb9a98c : 0xbdbdbd);
@@ -4558,6 +4573,224 @@ window.addEventListener('keydown', e => {
 applyO2(); refreshO2();
 
 /* =========================================================
+   [v1.1.43 · VAGOS] VIDA DO JOGADOR (PLH) + INIMIGOS DA GANGUE VAGOS (ENM)
+   Jogador: PL.hp / PL.ar (0..1 = 100 pontos) · dano PLH.hurt(n) (colete absorve primeiro) · tela vermelha, pulso com vida baixa, morte → reaparece em 3 s.
+   Inimigos: patrulha → desconfiado (?) → combate (!) · visão (cone, alcance, linha de tiro), audição de tiros (pistola 28 m, M4 75 m) e alarme entre aliados.
+   Tiro na cabeça de quem não te viu = morte silenciosa. Cada inimigo tem .base (id do acampamento): ENM.left(id) e ENM.onClear(id) servem para retomar bases.
+   TESTE: tecla K gera 4 Vagos à frente · tecla L remove todos · ou abra o jogo com "?vagos" na URL.
+   ========================================================= */
+(function(){ const st = document.createElement('style');
+  st.textContent = '#dmgfx{position:fixed;inset:0;z-index:12;pointer-events:none;opacity:0;background:radial-gradient(ellipse at center,rgba(120,0,0,0) 42%,rgba(160,0,0,.9) 100%)}#dmgfx.dead{background:rgba(0,0,0,.75)}#hitm{position:fixed;left:50%;top:50%;z-index:12;pointer-events:none;width:3.4vh;height:3.4vh;margin:-1.7vh 0 0 -1.7vh;opacity:0;color:#fff;font:900 3vh/3.4vh Arial;text-align:center;text-shadow:0 0 4px #000}';
+  document.head.appendChild(st);
+  ['dmgfx','hitm'].forEach(id => { const d = document.createElement('div'); d.id = id; if(id==='hitm') d.textContent = '✕'; document.body.appendChild(d); }); })();
+const PLH = {dead:false, t:0, since:99, flash:0, hm:0, hmK:0, regen:.03, regenMax:.5, _o:-1, _m:-1,   // regen: regeneração lenta (por s) até regenMax, após 8 s sem dano
+  reset(){ PL.hp = 1; PL.ar = 0; this.dead = false; this.flash = this.hm = 0; this.since = 99; $('dmgfx').classList.remove('dead'); },
+  hurt(n){
+    if(this.dead || S.state!=='city' || jet.active) return;
+    if(FORM==='car') n *= .45;                                   // a lataria protege
+    const a = Math.min(PL.ar*100, n); PL.ar -= a/100; PL.hp -= (n-a)/100;
+    this.since = 0; this.flash = Math.min(1, this.flash+.3+n/60); buzz(35);
+    if(PL.hp <= 0){ PL.hp = 0; this.dead = true; this.t = 3.2; wp.fire = false; wp.pend = false; toast('VOCÊ MORREU<small>Reaparecendo…</small>', 2800); $('dmgfx').classList.add('dead'); }
+  },
+  tick(dt){
+    const m = this.hm = Math.max(0, this.hm-dt*5), low = (PL.hp<.25 && !this.dead) ? .22+.14*Math.sin(performance.now()/170) : 0;
+    this.flash = Math.max(0, this.flash-dt*1.6);
+    const o = Math.round((this.dead ? Math.min(1,1.3-this.t/3.2) : Math.max(this.flash,low))*50)/50; if(o!==this._o){ this._o = o; $('dmgfx').style.opacity = o; }
+    const mo = Math.round(m*10)/10; if(mo!==this._m){ this._m = mo; const h = $('hitm'); h.style.opacity = mo; h.style.color = this.hmK ? '#ff3b30' : '#fff'; if(!mo) this.hmK = 0; }
+    if(this.dead){ car.vx = car.vz = 0; wp.fire = false; this.t -= dt; if(this.t<=0){ this.reset(); weaponsReset(); respawnCar(); ENM.calm(); } return; }
+    this.since += dt; if(this.since>8 && PL.hp<this.regenMax) PL.hp = Math.min(this.regenMax, PL.hp+this.regen*dt);
+  }};
+
+const EN = {HP:100, SEE:50, RANGE:55, MAX:16, WALK:1.5, RUN:4.4, HEADX:3, DMG:{pistol:34, m4:21}, SHOT:[6,10]};
+const enBox = new THREE.BoxGeometry(1,1,1);
+const enMat = (() => { const L = c => new THREE.MeshLambertMaterial({color:c});
+  const T = (t,c) => { const cv = document.createElement('canvas'); cv.width = cv.height = 64; const x = cv.getContext('2d'); x.font = '900 52px Arial'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.lineWidth = 8; x.strokeStyle = '#000'; x.strokeText(t,32,34); x.fillStyle = c; x.fillText(t,32,34); return new THREE.SpriteMaterial({map:new THREE.CanvasTexture(cv), transparent:true, depthTest:false}); };
+  return {skin:L(0xc99468), yel:L(0xe2b81c), blk:L(0x0f1012), gun:L(0x17181a), jk:[0x15171b,0x2b1a1a,0x1d241f].map(L), pt:[0x23262b,0x30343c].map(L), q:T('?','#ffd23a'), x:T('!','#ff3b30'), tr:new THREE.MeshBasicMaterial({color:0xffd27a})}; })();
+function enBuild(){   // soldado Vagos: roupa escura, bandana amarela (referência aos Vagos do GTA SA) e fuzil
+  const g = new THREE.Group(), R = Math.random, jm = enMat.jk[(R()*3)|0], pm = enMat.pt[(R()*2)|0];
+  const B = (w,h,d,m,x,y,z,p) => { const o = new THREE.Mesh(enBox,m); o.scale.set(w,h,d); o.position.set(x,y,z); (p||g).add(o); return o; };
+  const legs = [-1,1].map(s => { const p = new THREE.Group(); p.position.set(s*.11,.9,0); g.add(p); B(.17,.9,.2,pm,0,-.45,0,p); return p; });
+  B(.46,.6,.26,jm,0,1.2,0); B(.2,.22,.21,enMat.skin,0,1.62,0); B(.22,.075,.23,enMat.yel,0,1.57,0); B(.215,.1,.225,enMat.blk,0,1.74,0);
+  [-1,1].forEach(s => { const p = new THREE.Group(); p.position.set(s*.28,1.43,0); p.rotation.x = -1.25; g.add(p); B(.12,.55,.12,jm,0,-.27,0,p); });
+  B(.07,.1,.8,enMat.gun,0,1.3,.42);
+  const sp = new THREE.Sprite(enMat.q); sp.scale.set(.5,.5,1); sp.position.y = 2.15; sp.visible = false; sp.renderOrder = 9; g.add(sp);
+  return {g:g, legs:legs, ind:sp};
+}
+const ENM = {list:[], tr:[], kills:0, onClear:null, grp:new THREE.Group(), _a:0};
+scene.add(ENM.grp);
+for(let i=0;i<8;i++){ const m = new THREE.Mesh(enBox, enMat.tr); m.visible = false; m.userData.life = 0; ENM.grp.add(m); ENM.tr.push(m); }
+ENM.tracer = function(ox,oy,oz,tx,ty,tz){
+  const m = this.tr.find(q => q.userData.life<=0) || this.tr[0], L = hyp3(tx-ox,ty-oy,tz-oz) || 1;
+  m.position.set((ox+tx)/2,(oy+ty)/2,(oz+tz)/2); m.scale.set(.04,.04,L); m.lookAt(tx,ty,tz); m.visible = true; m.userData.life = .07;
+};
+ENM.spawn = function(x,z,o){
+  o = o||{}; const b = enBuild(); this.grp.add(b.g);
+  const e = {g:b.g, legs:b.legs, ind:b.ind, x:x, z:z, h:Math.random()*6.28, y:groundH(x,z), hp:EN.HP, st:'patrol', aw:0, wp:o.wp||[{x:x,z:z}], wi:0, wait:Math.random()*2, lk:{x:x,z:z}, t:0, cd:0, burst:0, keep:16, sd:1, sdt:1, stuck:0, sk:.6, lx:x, lz:z, ph:Math.random()*6, v:0, think:Math.random()*.2, los:false, lost:0, dead:0, base:o.base==null ? null : o.base};
+  this.list.push(e); return e;
+};
+ENM.squad = function(cx,cz,n,r,base){    // n inimigos patrulhando um círculo de raio r (só em terra)
+  const pick = () => { let x, z; for(let k=0;k<14;k++){ const a = Math.random()*6.2832, d = Math.sqrt(Math.random())*r; x = cx+Math.sin(a)*d; z = cz+Math.cos(a)*d; if(landAt(x,z)) break; } return {x:x,z:z}; };
+  for(let i=0;i<n && this.alive()<EN.MAX;i++){ const p = pick(); this.spawn(p.x,p.z,{base:base, wp:[p,pick(),pick(),pick()]}); }
+};
+ENM.alive = function(){ let n = 0; for(const e of this.list) if(e.st!=='dead') n++; return n; };
+ENM.left = function(base){ let n = 0; for(const e of this.list) if(e.base===base && e.st!=='dead') n++; return n; };
+ENM.clear = function(){ for(const e of this.list) this.grp.remove(e.g); this.list.length = 0; };
+ENM.calm = function(){ for(const e of this.list) if(e.st!=='dead'){ e.st = 'patrol'; e.aw = 0; e.lost = 0; } };
+ENM.test = function(){ const a = FCAM.yaw; let x = car.x+Math.sin(a)*32, z = car.z+Math.cos(a)*32; if(!landAt(x,z)){ x = car.x; z = car.z; } this.squad(x,z,4,9,'teste'); toast('VAGOS · TESTE ×4',1200,true); };
+ENM.noise = function(x,z,r){
+  for(const e of this.list){ if(e.st==='dead' || e.st==='combat') continue; const d = hyp2(e.x-x,e.z-z); if(d>r) continue;
+    e.lk.x = x; e.lk.z = z; if(d<r*.45){ e.aw = 1; enAlert(e); } else { e.aw = Math.max(e.aw,.55); if(e.st==='patrol'){ e.st = 'sus'; e.t = 0; } } }
+};
+ENM.shot = function(ox,oy,oz,dx,dy,dz,maxD,wn){    // tiro do jogador contra os cilindros dos inimigos (antes da parede mais próxima, maxD)
+  const a = dx*dx+dz*dz; if(a<1e-6) return null; let best = null, bt = 1e9;
+  for(const e of this.list){ if(e.st==='dead') continue;
+    const rx = e.x-ox, rz = e.z-oz; if(rx*rx+rz*rz > (maxD+1)*(maxD+1)) continue;
+    const t0 = (rx*dx+rz*dz)/a, cx = rx-dx*t0, cz = rz-dz*t0, c2 = cx*cx+cz*cz; if(c2>.1) continue;
+    const t = t0-Math.sqrt((.1-c2)/a); if(t<0 || t>maxD || t>=bt) continue;
+    const y = oy+dy*t; if(y<e.y || y>e.y+1.8) continue; bt = t; best = e; }
+  if(!best) return null;
+  const hx = ox+dx*bt, hy = oy+dy*bt, hz = oz+dz*bt, head = hy-best.y > 1.52;
+  enHurt(best, (EN.DMG[wn]||25)*(head ? EN.HEADX : 1), head);
+  return {x:hx, y:hy, z:hz};
+};
+function enHurt(e,n,head){
+  e.hp -= n; PLH.hm = 1;
+  if(e.hp<=0){ PLH.hmK = 1; e.st = 'dead'; e.dead = 0; e.ind.visible = false; ENM.kills++; if(e.base!==null && ENM.left(e.base)===0 && ENM.onClear) ENM.onClear(e.base); }
+  else if(e.st!=='combat'){ e.lk.x = car.x; e.lk.z = car.z; enAlert(e); }
+}
+function enAlert(e,quiet){      // entra em combate e (se não for "quiet") dá o alarme para quem está a menos de 38 m
+  if(e.st==='combat' || e.st==='dead') return;
+  e.st = 'combat'; e.aw = 1; e.cd = .5+Math.random()*.4; e.lost = 0; e.burst = 0; e.keep = 12+Math.random()*10; e.sd = Math.random()<.5 ? -1 : 1; e.sdt = 1+Math.random()*2;
+  if(quiet) return;
+  for(const o of ENM.list){ if(o===e || o.st==='dead' || o.st==='combat') continue; if(hyp2(o.x-e.x,o.z-e.z)<38){ o.lk.x = car.x; o.lk.z = car.z; enAlert(o,true); o.cd += Math.random()*.6; } }
+}
+function enSense(e,d,dx,dz,py,live){    // visão: alcance (cai se o jogador está parado, sobe se corre/dirige) + cone de ~120° + linha de tiro livre
+  const f = foot.sp||0, comb = e.st==='combat', R = EN.SEE*(FORM==='foot' ? (f>5 ? 1.25 : f<.6 ? .65 : 1) : 1.3); let sees = false;
+  if(live && d < (comb ? EN.RANGE+15 : R) && (comb || d<4 || (Math.sin(e.h)*dx+Math.cos(e.h)*dz)/(d||1) > .5)){
+    const ey = e.y+1.62, dy = py-ey, L = hyp3(dx,dy,dz)||1, r = wpRay(e.x,ey,e.z,dx/L,dy/L,dz/L,L); sees = !(r.hit && r.d < L-1.2);
+  }
+  e.los = sees;
+  if(sees){ e.lk.x = car.x; e.lk.z = car.z; e.lost = 0; if(!comb) e.aw += (1.15-d/R)*.32; }
+  else if(comb){ e.lost += .2; if(e.lost>7){ e.st = 'search'; e.t = 0; e.aw = .5; } }
+  else e.aw = Math.max(0, e.aw-.05);
+  if(!comb && e.st!=='dead'){
+    if(e.aw>=1) enAlert(e);
+    else if(e.aw>.3 && e.st==='patrol'){ e.st = 'sus'; e.t = 0; }
+  }
+  const show = comb || e.aw>.12; if(e.ind.visible!==show) e.ind.visible = show; const mt = comb ? enMat.x : enMat.q; if(e.ind.material!==mt) e.ind.material = mt;
+}
+function enMove(e,tx,tz,sp,dt,face){
+  let dx = tx-e.x, dz = tz-e.z; const d = hyp2(dx,dz); if(d<.05) return d;
+  dx /= d; dz /= d; const s = Math.min(sp*dt,d), nx = e.x+dx*s, nz = e.z+dz*s;
+  if(landAt(nx,nz)){ e.x = nx; e.z = nz; e.v = sp; } else e.stuck += dt*2;
+  if(!face) e.h += wrapPI(Math.atan2(dx,dz)-e.h)*Math.min(1,dt*8);
+  return d;
+}
+function enPush(e){    // empurra para fora das caixas de prédios/props (mesmo cityHash do jogador e do jato)
+  const ci = Math.floor(e.x/40), cj = Math.floor(e.z/40);
+  for(let i=ci-1;i<=ci+1;i++) for(let k=cj-1;k<=cj+1;k++){ const l = cityHash[(i+100)*1000+k+100]; if(!l) continue;
+    for(const b of l){ if(b[4]<.6) continue; const px = clamp(e.x,b[0],b[1]), pz = clamp(e.z,b[2],b[3]), dx = e.x-px, dz = e.z-pz, d = hyp2(dx,dz); if(d<.45 && d>1e-4){ e.x += dx/d*(.45-d); e.z += dz/d*(.45-d); e.stuck += .05; } } }
+}
+function enShoot(e,d,py){
+  const f = foot.sp||0; let p = clamp(.68-d*.013,.12,.6); if(FORM==='foot' && f>5) p *= .7;
+  const hit = Math.random()<p; let tx = car.x, ty = py, tz = car.z;
+  if(!hit){ tx += (Math.random()-.5)*2.6; ty += (Math.random()-.5)*1.2; tz += (Math.random()-.5)*2.6; }
+  ENM.tracer(e.x+Math.sin(e.h)*.55, e.y+1.3, e.z+Math.cos(e.h)*.55, tx,ty,tz);
+  if(d<45) gunSnd('pistol');
+  if(hit) PLH.hurt(EN.SHOT[0]+Math.random()*(EN.SHOT[1]-EN.SHOT[0]));
+}
+function enFight(e,live,py,dt){
+  const tx = e.los ? car.x : e.lk.x, tz = e.los ? car.z : e.lk.z, ax = tx-e.x, az = tz-e.z, ad = hyp2(ax,az)||1;
+  e.h += wrapPI(Math.atan2(ax,az)-e.h)*Math.min(1,dt*9);
+  e.sdt -= dt; if(e.sdt<=0 || e.stuck>2){ e.sd = -e.sd; e.sdt = 1.2+Math.random()*2; e.stuck = 0; }
+  if(ad > e.keep+5) enMove(e, e.x+ax/ad*5, e.z+az/ad*5, EN.RUN, dt, true);              // aproxima
+  else if(ad < e.keep-6) enMove(e, e.x-ax/ad*3, e.z-az/ad*3, 2.2, dt, true);            // recua
+  else enMove(e, e.x-az/ad*e.sd*3, e.z+ax/ad*e.sd*3, 2.0, dt, true);                    // desvia de lado
+  e.cd -= dt;
+  if(live && e.los && ad<EN.RANGE && e.cd<=0){ if(e.burst<=0) e.burst = 3+((Math.random()*3)|0); enShoot(e,ad,py); e.burst--; e.cd = e.burst>0 ? .13 : .9+Math.random()*.9; }
+}
+ENM.tick = function(dt){
+  if(!this._a){ this._a = 1; if(/vagos/i.test(location.search)) this.test(); }
+  for(const q of this.tr) if(q.userData.life>0){ q.userData.life -= dt; if(q.userData.life<=0) q.visible = false; }
+  const live = !PLH.dead && !jet.active, py = (FORM==='foot' ? foot.gh+foot.y : (car.gy||0)) + 1.3;
+  for(let i=this.list.length-1;i>=0;i--){
+    const e = this.list[i];
+    if(e.st==='dead'){ e.dead += dt; const k = Math.min(1,e.dead*3.5); e.g.rotation.x = -k*1.5; e.g.position.y = e.y+.15*k-(e.dead>22 ? (e.dead-22)*.6 : 0); if(e.dead>25){ this.grp.remove(e.g); this.list.splice(i,1); } continue; }
+    const dx = car.x-e.x, dz = car.z-e.z, d = hyp2(dx,dz);
+    e.g.visible = d<170; if(d>=170 && e.st!=='combat') continue;           // longe do jogador: congelado
+    e.think -= dt; if(e.think<=0){ e.think = .2; enSense(e,d,dx,dz,py,live); }
+    e.v = 0;
+    switch(e.st){
+      case 'patrol': { const w = e.wp[e.wi]; if(e.wait>0) e.wait -= dt; else if(enMove(e,w.x,w.z,EN.WALK,dt)<1.2){ e.wi = (e.wi+1)%e.wp.length; e.wait = 1+Math.random()*3; } break; }
+      case 'sus': e.h += wrapPI(Math.atan2(e.lk.x-e.x,e.lk.z-e.z)-e.h)*Math.min(1,dt*4); e.t += dt; if(e.t>5){ e.st = 'patrol'; e.aw = Math.min(e.aw,.2); } break;
+      case 'search': if(enMove(e,e.lk.x,e.lk.z,3.2,dt)<1.5){ e.t += dt; if(e.t>3){ e.st = 'patrol'; e.aw = 0; } } break;
+      case 'combat': enFight(e,live,py,dt); break;
+    }
+    enPush(e);
+    e.sk -= dt; if(e.sk<=0){ e.sk = .6; if(e.v>0 && hyp2(e.x-e.lx,e.z-e.lz)<.12) e.stuck += 1; e.lx = e.x; e.lz = e.z; }
+    if(e.st==='patrol' && e.stuck>=2){ e.wi = (e.wi+1)%e.wp.length; e.wait = 0; e.stuck = 0; }
+    e.y += clamp(groundH(e.x,e.z)-e.y, -3*dt, 3*dt);
+    e.ph += e.v*dt*2.1; const k = Math.min(1,e.v/2.5)*.7*Math.sin(e.ph); e.legs[0].rotation.x = k; e.legs[1].rotation.x = -k;
+    e.g.position.set(e.x,e.y,e.z); e.g.rotation.y = e.h;
+  }
+};
+window.addEventListener('keydown', ev => { if(S.state!=='city' || S.paused || ev.repeat) return; if(ev.code==='KeyK') ENM.test(); else if(ev.code==='KeyL') ENM.clear(); });
+
+/* =========================================================
+   [v1.1.44 · VAGOS · BASES] ONDE FICA CADA BASE (lógica de setores; ainda sem lista de missões)
+   SETORES = os bairros de lcZone(): Alderney, Algonquin, Bohan, Broker, Dukes. O "Aeroporto" (base militar, onde o jogador nasce) é NEUTRO: sem bases nem inimigos.
+   Cada setor recebe 3 bases (VG.N = inimigos 4 / 6 / 8, da mais fácil para a mais difícil), escolhidas uma vez, ao carregar a cidade, assim:
+     1) candidatos = pontos de terra (grade de 80 m) fora do aeroporto e do Middle Park, com área livre de prédios (24 m, senão 16 m, senão 10 m) e a ≤ 90 m de uma rua do GPS
+     2) 1ª base do setor = a mais central; as outras = as mais afastadas das já escolhidas (mín. 450 m, relaxando para 300 e 200 m)
+     3) CAMINHO LIVRE: a rota de GPS até a base (saindo do spawn, ou do "hub" do setor se for outra ilha) não pode passar a menos de VG.CORR (100 m) de NENHUMA outra base,
+        e nenhuma outra rota pode passar perto desta. Candidato que fere a regra é descartado.
+   Estado de cada base: b.state 'enemy' | 'taken' · VG.sel = id da base escolhida na futura lista de missões (no mapa vira roxa; o GPS usará outra cor) · b.route = caminho já validado.
+   Os inimigos só nascem com o jogador a < 220 m e somem a > 420 m. Retomar = matar todos (ENM.onClear). Marcadores no mapa grande: vermelho = inimiga, verde = retomada.
+   ========================================================= */
+ENM.drop = function(base){ for(let i=this.list.length-1;i>=0;i--) if(this.list[i].base===base){ this.grp.remove(this.list[i].g); this.list.splice(i,1); } };
+const vgSeg = (x,z,P) => { let m = 1e9; for(let i=1;i<P.length;i++){ const ax = P[i-1].x, az = P[i-1].z, dx = P[i].x-ax, dz = P[i].z-az, L2 = dx*dx+dz*dz||1, t = clamp(((x-ax)*dx+(z-az)*dz)/L2,0,1); m = Math.min(m, hyp2(x-ax-dx*t, z-az-dz*t)); } return m; };
+const VG = {bases:null, G:null, sel:null, tk:0, CORR:100, EXC:{'Aeroporto':1},
+  reset(){ this.bases = null; this.G = null; this.sel = null; },
+  live(){ if(this.bases) for(const b of this.bases) b.on = false; },
+  get(id){ return this.bases ? this.bases.find(b => b.id===id) : null; },
+  hit(x,z,R){ let m = null, md = R; if(this.bases) for(const b of this.bases){ const d = hyp2(b.x-x,b.z-z); if(d<md){ md = d; m = b; } } return m; },   // base mais próxima do ponto, até R metros
+  draw(c,u){ if(!this.bases) return; for(const b of this.bases){ c.beginPath(); c.arc(b.x,b.z,16*u,0,7); c.fillStyle = b.id===this.sel ? '#b86bff' : (b.state==='taken' ? '#3ddc5a' : '#e5372d'); c.fill(); c.lineWidth = 3*u; c.strokeStyle = '#fff'; c.stroke(); } },
+  tick(dt){
+    if(!this.bases) return; this.tk -= dt; if(this.tk>0) return; this.tk = 1;
+    for(const b of this.bases){ if(b.state!=='enemy') continue; const d = hyp2(car.x-b.x,car.z-b.z);
+      if(!b.on && d<220){ b.on = true; ENM.squad(b.x,b.z,b.nl,b.r,b.id); }
+      else if(b.on && d>420){ b.on = false; b.nl = ENM.left(b.id); ENM.drop(b.id); } }
+  },
+  SITES:[{x:2750,z:-890,n:4}, {x:2770,z:3190,n:5}, {x:2220,z:-3790,n:6}, {x:-2110,z:-1900,n:6}, {x:-750,z:1140,n:7}, {x:-840,z:4010,n:8}, {x:-4390,z:-2820,n:8}, {x:-5560,z:-290,n:9}, {x:-6000,z:2790,n:10}],   // [v1.1.45] pontos marcados pelo jogador no mapa (mundo, m) + inimigos; cada um é ajustado a um terreno livre num raio de 320 m
+  plan(){
+    const G = LC.graph; if(!G || !cityHash || !citySpawn) return; if(this.bases && this.G===G) return;
+    this.G = G; this.bases = []; const T0 = performance.now(), sp = {x:citySpawn.x, z:citySpawn.z}, spN = nearestNode(sp.x,sp.z), cnt = {};
+    const clear = (x,z,R) => { const k = Math.ceil(R/40)+1, ci = Math.floor(x/40), cj = Math.floor(z/40);
+      for(let i=ci-k;i<=ci+k;i++) for(let j=cj-k;j<=cj+k;j++){ const l = cityHash[(i+100)*1000+j+100]; if(!l) continue;
+        for(const b of l){ if(b[4]<.8) continue; const dx = x-clamp(x,b[0],b[1]), dz = z-clamp(z,b[2],b[3]); if(dx*dx+dz*dz<R*R) return false; } }
+      for(let a=0;a<8;a++) if(!landAt(x+Math.sin(a*.785)*R*.8, z+Math.cos(a*.785)*R*.8)) return false;
+      return true; };
+    for(const q of this.SITES){
+      let best = null;
+      for(const rad of [320,640]){
+        for(let dx=-rad;dx<=rad;dx+=20) for(let dz=-rad;dz<=rad;dz+=20){
+          const d = hyp2(dx,dz); if(d>rad) continue; const x = q.x+dx, z = q.z+dz;
+          if(!landAt(x,z) || this.EXC[lcZone(x,z)] || inMiddlePark(x,z) || inMilBase(x,z,400)) continue;
+          const c = clear(x,z,24) ? 24 : clear(x,z,16) ? 16 : clear(x,z,10) ? 10 : 0; if(!c) continue;
+          const n = nearestNode(x,z); if(!n || hyp2(n.x-x,n.z-z)>90) continue;
+          const sc = c*6-d*.3; if(!best || sc>best.sc) best = {x:x, z:z, sc:sc, n:n}; }
+        if(best) break; }
+      if(!best){ console.warn('[vagos] sem terreno livre perto de', q.x, q.z); continue; }
+      const zn = lcZone(best.x,best.z); cnt[zn] = (cnt[zn]||0)+1;
+      this.bases.push({id:zn.toLowerCase()+'-'+cnt[zn], name:zn+' · Base '+cnt[zn], zone:zn, x:best.x, z:best.z, r:10+q.n, n:q.n, nl:q.n, state:'enemy', on:false, nd:best.n, route:null});
+    }
+    for(const b of this.bases){ const o = (spN && spN.c===b.nd.c) ? sp : null; b.route = o ? gpsRoute(o.x,o.z,b.x,b.z) : null; }   // rota do spawn (para a futura lista de missões)
+    for(const b of this.bases) if(b.route) for(const B of this.bases) if(B!==b && vgSeg(B.x,B.z,b.route)<this.CORR) console.warn('[vagos] rota de', b.id, 'passa perto de', B.id);
+    console.info('[vagos] bases ('+Math.round(performance.now()-T0)+' ms)', this.bases.map(b => b.id+' ('+Math.round(b.x)+','+Math.round(b.z)+')').join(' | '));
+  }};
+ENM.onClear = id => { const b = VG.get(id); if(b){ b.state = 'taken'; b.on = false; toast('BASE RETOMADA<small>'+b.name+'</small>', 2600); } };
+
+/* =========================================================
    LOOP PRINCIPAL
    ========================================================= */
 let last = performance.now(), fpsN = 0, fpsT = 0, fps = 60, goodSecs = 0, warm = 2;
@@ -4837,7 +5070,7 @@ function frame(now){
       if(k>=1){ o.s.visible=false; continue; }
       o.s.material.opacity = (1-k)*.5; const sc = 1+k*4.5; o.s.scale.set(sc,sc,sc); o.s.position.y += o.vy*dt;
     }
-    dnStep(dt); tlStep(dt); STORY.tick(dt);          // relógio do dia/noite e semáforos
+    dnStep(dt); tlStep(dt); STORY.tick(dt); PLH.tick(dt); ENM.tick(dt); VG.tick(dt);          // relógio do dia/noite e semáforos
     updateCamera(dt); updateHUD(dt); updateAudio();
   }else{
     if(S.state==='menu'){
@@ -4848,7 +5081,7 @@ function frame(now){
   }
   if(S.paused && S.state==='city'){ if(paintLeft<=0) return; paintLeft--; }   // [v1.1.39] pausado: mundo parado → não redesenha (economiza GPU/bateria)
   sky.position.copy(camera.position); dnFollow();
-  wpFx.visible = (S.state==='city');
+  wpFx.visible = (S.state==='city'); ENM.grp.visible = wpFx.visible;
   if(S.state==='city') shadUpdate(); else if(SHD.blob.visible) SHD.blob.visible = false;
   const T1 = performance.now(); renderer.render(scene, camera); PF.u += T1-T0; PF.r += performance.now()-T1; PF.n++;
   if(S.state==='city' && FORM==='foot' && camMode===1 && vmGrp.visible){ wpVmSync(); renderer.autoClear = false; renderer.clearDepth(); renderer.render(vmScene, camera); renderer.autoClear = true; }   // arma em 1ª pessoa por cima de tudo
