@@ -34,7 +34,7 @@ O QUE JÁ TEM
   O pente fica na arma; RECARREGAR puxa munição (9MM / 5.56) dos bolsos e da mochila. ARMA/rodinha alterna
   coldre <-> ombro; 1/2 (atalhos) pegam a pistola/M4 (apertar de novo guarda). Mãos vazias = sem arma.
 - LOOT DE TESTE ao nascer: na sua frente, itens no chão (mochila de combate, munição 5.56, comida...) e uma
-  CAIXA MILITAR (capacete, mochila escolar, pistola, munição 9MM...).
+  CAIXA MILITAR (capacete, mochila escolar, pistola, munição 9MM...). Lista em mundo/loot.gd.
 
 CONTROLES (toque: vários dedos ao mesmo tempo)
 - Metade ESQUERDA da tela: joystick (aparece onde você toca; fraco = andar, forte = trote).
@@ -46,24 +46,42 @@ CONTROLES (toque: vários dedos ao mesmo tempo)
   R recarregar · 1..8 atalhos · rodinha troca arma · Tab ou I inventário · E pegar ·
   mouse arrastando na metade direita = olhar · V voo (Q/E no voo).
 
-ARQUIVOS
-- main.gd ................ monta a cidade e liga o jogo. SPAWN (onde nasce) no topo.
-- jogador/jogador.gd ..... movimento, correr, agachar, mirar, pulo, câmera. Ajustes no Inspetor (cena jogador.tscn).
-- jogador/soldado.gd ..... o soldado original (peças e animação).
-- jogador/controles.gd ... joystick, olhar, botões (posições e cores no _ready) e teclado.
-- jogador/animador_modelo.gd ... animações para quando você colocar um modelo 3D próprio.
-- armas/armas.gd ......... munição, cadência, dano etc. (tabela WDEF no topo: fácil de balancear).
-- armas/modelos_armas.gd . pistola e M4 em 3D. armas/efeitos_tiro.gd: traçantes, clarão, marcas.
-- armas/sons_armas.gd .... sons sintetizados (dá para trocar por arquivos .wav/.ogg).
-- armas/hud_combate.gd ... mira, munição, acerto, avisos.
-- mundo/colisao_mundo.gd . colisão perto do jogador + raio dos tiros contra a cidade inteira.
-- mundo/estande_tiro.gd .. alvos de treino. Use o mesmo método receber_tiro(...) nos inimigos Vagos.
-- inventario/itens.gd .... TABELA DE ITENS (tamanho, peso, pilha, onde veste, espaço interno). Item novo = 1 linha.
-- inventario/inventario.gd  regras e movimentos (corpo, mãos, atalhos, munição, pegar/largar). Fica no Jogador.
-- inventario/tela_inventario.gd  a tela de 3 colunas · grade_ui.gd (grade com arrastar) · slot_ui.gd (encaixes)
-- inventario/item.gd / grade.gd  item e grade de células · visual.gd: ícones desenhados por código
-  (para usar imagens: res://inventario/icones/<id>.png, ex.: m4.png).
-- inventario/item_mundo.gd (item jogado no chão) · caixa_mundo.gd (caixa/armário com grade, ex. em main.gd).
+MAPA DO PROJETO (cada sistema no seu arquivo · numa atualização, mande/troque só os arquivos que mudaram)
+
+QUERO MEXER EM...                         ARQUIVO
+- onde o jogador nasce / ordem do jogo .. main.gd (só liga as partes; quase nunca muda)
+
+PERSONAGEM (pasta jogador/)
+- andar, correr, agachar, pular, câmera . jogador/jogador.gd (ajustes no Inspetor da cena jogador.tscn)
+- aparência e animação do soldado ...... jogador/soldado.gd
+- modelo 3D próprio (.glb) e animações . jogador/animador_modelo.gd + modelos/LEIA-ME.txt
+- botões de toque, joystick, teclado ... jogador/controles.gd (posições e cores no _ready)
+- câmera livre (VOO) .................. jogador/camera_voo.gd
+
+ARMAS (pasta armas/)
+- dano, cadência, pente, alcance ...... armas/armas.gd (tabela WDEF no topo)
+- modelo 3D das armas ................. armas/modelos_armas.gd
+- traçantes, clarão, marcas de bala ... armas/efeitos_tiro.gd
+- sons dos tiros ...................... armas/sons_armas.gd
+- mira e painel de munição (HUD) ...... armas/hud_combate.gd
+
+INVENTÁRIO / ITENS (pasta inventario/)
+- criar/alterar ITENS (tamanho, peso,
+  pilha, onde veste, bolsos) .......... inventario/itens.gd (tabela DB; item novo = 1 linha)
+- regras (pegar, largar, trocar, mãos,
+  atalhos, munição da recarga) ........ inventario/inventario.gd
+- tela de 3 colunas ................... inventario/tela_inventario.gd
+- grade com arrastar · encaixes ....... inventario/grade_ui.gd · inventario/slot_ui.gd
+- ícones dos itens .................... inventario/visual.gd (ou imagens em inventario/icones/<id>.png)
+- item no chão · caixa/armário ........ inventario/item_mundo.gd · inventario/caixa_mundo.gd
+- equipamento inicial do jogador ...... inventario/inventario.gd (função equipamento_inicial)
+
+MUNDO / CONSTRUÇÕES (pasta mundo/)
+- prédios, ruas, parques, céu, sol .... mundo/cidade.gd
+- colisão com chão/prédios e tiros .... mundo/colisao_mundo.gd
+- loot espalhado (chão e caixas) ...... mundo/loot.gd (listas no topo)
+- estande de tiro (alvos) ............. mundo/estande_tiro.gd (use receber_tiro(...) nos inimigos Vagos)
+- dados do mapa ....................... data/city.json
 
 CAMADAS DE FÍSICA: 1 = mundo · 2 = jogador · 3 = inimigos/alvos.
 
