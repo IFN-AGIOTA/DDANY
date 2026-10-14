@@ -1,0 +1,225 @@
+extends CanvasLayer
+# CONTROLES DE TOQUE (multitoque de verdade) + teclado/mouse no PC.
+# Botões próprios desenhados aqui (os Button da Godot só reconhecem UM dedo, e no tiroteio
+# você anda, olha e atira ao mesmo tempo).
+#  - metade ESQUERDA da tela: joystick que aparece onde você toca (fraco = andar · forte = trote)
+#  - metade DIREITA: arrastar = olhar
+#  - ATIRAR (segurar; dá para arrastar o dedo em cima dele para mirar enquanto atira) · CORRER (segurar)
+#  - PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga, aproxima a câmera) · RECARREGAR · ARMA (troca)
+#  - VOO (canto de cima): câmera livre para inspecionar a cidade
+# PC: WASD andar · Shift correr · Espaço pular · C/Ctrl agachar · F atirar · botão direito do mouse mirar
+#     R recarregar · 1/2 ou Tab trocar arma · mouse arrastando na metade direita = olhar · Q/E sobem/descem no voo
+
+signal voo_pedido
+signal vel_pedida
+signal agachar_pedido
+signal mirar_pedido
+signal recarregar_pedido
+signal trocar_arma_pedido
+signal arma_pedida(tipo: String)
+
+const RAIO_STICK := 90.0
+
+var mover := Vector2.ZERO          # x = direita, y = frente
+var modo_voo := false
+var info: Label
+var indicadores := {}              # id -> bool (botão aceso: AGACHAR/MIRAR ligados)
+var textos := {}                   # id -> texto trocado em tempo real (ex.: nome da arma)
+var botoes: Array = []
+
+var _olhar := Vector2.ZERO
+var _toque_mover := -1
+var _toque_olhar := -1
+var _origem := Vector2.ZERO
+var _atual := Vector2.ZERO
+var _visual: Control
+var _mouse_dir := false
+var _fonte: Font
+
+func _ready() -> void:
+	layer = 10
+	_fonte = ThemeDB.fallback_font
+	_visual = Control.new()
+	_visual.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_visual.draw.connect(_desenhar)
+	add_child(_visual)
+	info = Label.new()
+	info.position = Vector2(16.0, 12.0)
+	info.add_theme_font_size_override("font_size", 16)
+	info.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
+	add_child(info)
+	#        id            texto          canto  distância do canto     raio  cor                         modo       olhar  só no voo
+	_bt("ATIRAR", "ATIRAR", "br", Vector2(215, 250), 70, Color(0.88, 0.02, 0.0), "segurar", true, false)
+	_bt("CORRER", "CORRER", "br", Vector2(90, 125), 60, Color(0.11, 0.56, 0.30), "segurar", false, false)
+	_bt("PULAR", "PULAR", "br", Vector2(78, 330), 46, Color(0.75, 0.75, 0.80), "segurar", false, false)
+	_bt("AGACHAR", "AGACHAR", "br", Vector2(228, 95), 44, Color(0.62, 0.66, 0.70), "tocar", false, false)
+	_bt("MIRAR", "MIRAR", "br", Vector2(355, 335), 46, Color(0.95, 0.95, 0.95), "tocar", false, false)
+	_bt("RECARREGAR", "RECARREGAR", "br", Vector2(362, 168), 40, Color(0.23, 0.63, 1.0), "tocar", false, false)
+	_bt("ARMA", "ARMA", "br", Vector2(482, 282), 44, Color(1.0, 0.71, 0.0), "tocar", false, false)
+	_bt("VOO", "VOO", "tr", Vector2(56, 46), 30, Color(0.6, 0.6, 0.6), "tocar", false, false)
+	_bt("SOBE", "SOBE", "br", Vector2(80, 330), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
+	_bt("DESCE", "DESCE", "br", Vector2(80, 210), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
+	_bt("VEL", "VEL", "br", Vector2(80, 90), 44, Color(0.6, 0.6, 0.6), "tocar", false, true)
+	get_viewport().size_changed.connect(func(): _visual.queue_redraw())
+
+func _bt(id: String, txt: String, canto: String, off: Vector2, r: float, cor: Color, modo: String, olhar: bool, voo: bool) -> void:
+	botoes.append({"id": id, "txt": txt, "canto": canto, "off": off, "r": r, "cor": cor, "modo": modo, "olhar": olhar, "voo": voo, "toque": -1})
+
+func _centro(b: Dictionary) -> Vector2:
+	var vs := get_viewport().get_visible_rect().size
+	var off: Vector2 = b["off"]
+	if b["canto"] == "tr":
+		return Vector2(vs.x - off.x, off.y)
+	return Vector2(vs.x - off.x, vs.y - off.y)
+
+func _visivel(b: Dictionary) -> bool:
+	if b["id"] == "VOO":
+		return true
+	return b["voo"] == modo_voo
+
+func _botao(id: String) -> Dictionary:
+	for b in botoes:
+		if b["id"] == id:
+			return b
+	return {}
+
+func segurando(id: String) -> bool:
+	var b := _botao(id)
+	return not b.is_empty() and int(b["toque"]) != -1
+
+func set_modo_voo(v: bool) -> void:
+	modo_voo = v
+	mover = Vector2.ZERO
+	_toque_mover = -1
+	_toque_olhar = -1
+	for b in botoes:
+		b["toque"] = -1
+	_visual.queue_redraw()
+
+func _unhandled_input(e: InputEvent) -> void:
+	var vs := get_viewport().get_visible_rect().size
+	if e is InputEventScreenTouch:
+		var t: InputEventScreenTouch = e
+		if t.pressed:
+			for b in botoes:
+				if _visivel(b) and int(b["toque"]) == -1 and t.position.distance_to(_centro(b)) <= float(b["r"]) * 1.15:
+					b["toque"] = t.index
+					if b["modo"] == "tocar":
+						_tocou(b["id"])
+					_visual.queue_redraw()
+					return
+			if t.position.x < vs.x * 0.5 and _toque_mover == -1:
+				_toque_mover = t.index
+				_origem = t.position
+				_atual = t.position
+			elif t.position.x >= vs.x * 0.5 and _toque_olhar == -1:
+				_toque_olhar = t.index
+		else:
+			for b in botoes:
+				if int(b["toque"]) == t.index:
+					b["toque"] = -1
+			if t.index == _toque_mover:
+				_toque_mover = -1
+				mover = Vector2.ZERO
+			if t.index == _toque_olhar:
+				_toque_olhar = -1
+		_visual.queue_redraw()
+	elif e is InputEventScreenDrag:
+		var g: InputEventScreenDrag = e
+		if g.index == _toque_mover:
+			_atual = g.position
+			var d := ((g.position - _origem) / RAIO_STICK).limit_length(1.0)
+			mover = Vector2(d.x, -d.y)
+			_visual.queue_redraw()
+		elif g.index == _toque_olhar:
+			_olhar += g.relative
+		else:
+			for b in botoes:
+				if int(b["toque"]) == g.index and b["olhar"]:
+					_olhar += g.relative
+	elif e is InputEventKey:
+		var k: InputEventKey = e
+		if k.pressed and not k.echo:
+			match k.keycode:
+				KEY_C, KEY_CTRL: agachar_pedido.emit()
+				KEY_R, KEY_T: recarregar_pedido.emit()
+				KEY_1: arma_pedida.emit("pistola")
+				KEY_2: arma_pedida.emit("m4")
+				KEY_TAB: trocar_arma_pedido.emit()
+				KEY_V: voo_pedido.emit()
+	elif e is InputEventMouseButton:
+		var mb: InputEventMouseButton = e
+		if mb.button_index == MOUSE_BUTTON_RIGHT:
+			_mouse_dir = mb.pressed
+		elif mb.pressed and (mb.button_index == MOUSE_BUTTON_WHEEL_UP or mb.button_index == MOUSE_BUTTON_WHEEL_DOWN):
+			trocar_arma_pedido.emit()
+
+func _tocou(id: String) -> void:
+	match id:
+		"AGACHAR": agachar_pedido.emit()
+		"MIRAR": mirar_pedido.emit()
+		"RECARREGAR": recarregar_pedido.emit()
+		"ARMA": trocar_arma_pedido.emit()
+		"VOO": voo_pedido.emit()
+		"VEL": vel_pedida.emit()
+
+func _process(_dt: float) -> void:
+	_visual.queue_redraw()
+
+func _desenhar() -> void:
+	for b in botoes:
+		if not _visivel(b):
+			continue
+		var c := _centro(b)
+		var r: float = b["r"]
+		var cor: Color = b["cor"]
+		var aceso := int(b["toque"]) != -1 or bool(indicadores.get(b["id"], false))
+		_visual.draw_circle(c, r, Color(cor.r, cor.g, cor.b, 0.62 if aceso else 0.22))
+		_visual.draw_arc(c, r, 0.0, TAU, 40, Color(cor.r, cor.g, cor.b, 0.95), 4.0)
+		var txt: String = textos.get(b["id"], b["txt"])
+		var tam := 20 if r >= 55 else (15 if txt.length() > 7 else 17)
+		var w := _fonte.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam).x
+		_visual.draw_string(_fonte, c + Vector2(-w * 0.5, tam * 0.35), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, Color(1, 1, 1, 0.95))
+	if _toque_mover != -1:
+		var d := (_atual - _origem).limit_length(RAIO_STICK)
+		_visual.draw_circle(_origem, RAIO_STICK, Color(1, 1, 1, 0.10))
+		_visual.draw_arc(_origem, RAIO_STICK, 0.0, TAU, 48, Color(1, 1, 1, 0.45), 3.0)
+		_visual.draw_circle(_origem + d, 36.0, Color(1, 1, 1, 0.35))
+
+# ---------- leitura (o jogador consulta todo quadro) ----------
+func vetor_mover() -> Vector2:
+	var k := Vector2.ZERO
+	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP): k.y += 1.0
+	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN): k.y -= 1.0
+	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT): k.x += 1.0
+	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT): k.x -= 1.0
+	if k != Vector2.ZERO:
+		return k.normalized()
+	return mover
+
+func correndo() -> bool:
+	return segurando("CORRER") or Input.is_key_pressed(KEY_SHIFT)
+
+func pulando() -> bool:
+	return segurando("PULAR") or Input.is_key_pressed(KEY_SPACE)
+
+func atirando() -> bool:
+	return segurando("ATIRAR") or Input.is_key_pressed(KEY_F)
+
+func mirando_segurado() -> bool:
+	return _mouse_dir
+
+func vertical() -> float:
+	var v := 0.0
+	if segurando("SOBE"): v = 1.0
+	if segurando("DESCE"): v = -1.0
+	if Input.is_key_pressed(KEY_E): v = 1.0
+	if Input.is_key_pressed(KEY_Q): v = -1.0
+	return v
+
+# quanto o dedo arrastou para olhar desde a última chamada (pixels)
+func consumir_olhar() -> Vector2:
+	var r := _olhar
+	_olhar = Vector2.ZERO
+	return r

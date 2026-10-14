@@ -1,0 +1,317 @@
+extends Node3D
+# COLISÃO DO MUNDO, só em volta do jogador ("streaming").
+# A cidade inteira é visual (malhas + MultiMesh); aqui criamos colisão apenas onde o jogador está:
+#  - CHÃO: um HeightMapShape3D de ~96 m centrado no jogador. A altura de cada ponto vem dos MESMOS dados
+#    que desenham o chão (rua 0.6 · parque 0.4 · lago 0.2 · terra 0.0 · mar -0.5), então o pé encosta no que se vê.
+#    O recálculo roda aos poucos (poucas linhas por quadro) para não travar o celular.
+#  - PRÉDIOS: um pequeno conjunto (pool) de caixas reaproveitadas, posicionadas só nos prédios próximos.
+# Camadas de física: 1 = mundo · 2 = jogador · 3 = inimigos (futuro).
+
+const ALT_MAR := -0.5
+const ALT_TERRA := 0.0
+const ALT_LAGO := 0.2
+const ALT_PARQUE := 0.4
+const ALT_RUA := 0.6
+const BASE_PREDIO := 0.6
+
+const ESPACO := 2.0          # metros entre amostras do chão
+const MEIO := 24
+const N := 49                # = 2 * MEIO + 1 amostras por lado (96 m de chão)
+const RECENTRAR := 16.0      # quando o jogador se afasta tanto do centro, recalcula o chão
+const LINHAS_POR_QUADRO := 4
+const CEL_RUA := 64.0
+const CEL_PARQUE := 128.0
+const CEL_PREDIO := 100.0
+const RAIO_PREDIOS := 40.0
+const POOL := 48
+
+var alvo: Node3D = null      # quem a colisão acompanha (o jogador)
+
+var _t_pts: Array[PackedVector2Array] = []
+var _t_box: Array[Rect2] = []
+var _l_pts: Array[PackedVector2Array] = []
+var _l_box: Array[Rect2] = []
+var _p_pts: Array[PackedVector2Array] = []
+var _p_box: Array[Rect2] = []
+var _p_hash := {}            # Vector2i -> PackedInt32Array (parques)
+var _r_hash := {}            # Vector2i -> PackedFloat32Array (ax, az, bx, bz, meia-largura)
+var _pred := PackedFloat32Array()   # x, z, tam_x, tam_z, altura (5 por prédio)
+var _pred_hash := {}         # Vector2i -> PackedInt32Array
+
+var _chao_forma: CollisionShape3D
+var _mapa: HeightMapShape3D
+var _centro := Vector2(1.0e9, 1.0e9)
+var _novo_centro := Vector2.ZERO
+var _novo_dados := PackedFloat32Array()
+var _linha := -1             # -1 = nenhum recálculo em andamento
+var _pool: Array[StaticBody3D] = []
+var _pool_forma: Array[BoxShape3D] = []
+var _pool_uso := 0
+var _ult_pred := Vector2(1.0e9, 1.0e9)
+
+func _ready() -> void:
+	process_physics_priority = -10     # roda antes do jogador
+	var chao := StaticBody3D.new()
+	chao.name = "Chao"
+	chao.collision_layer = 1
+	chao.collision_mask = 0
+	_mapa = HeightMapShape3D.new()
+	_mapa.map_width = N
+	_mapa.map_depth = N
+	_chao_forma = CollisionShape3D.new()
+	_chao_forma.shape = _mapa
+	chao.add_child(_chao_forma)
+	add_child(chao)
+	for i in POOL:
+		var sb := StaticBody3D.new()
+		sb.name = "Predio%d" % i
+		sb.collision_layer = 1
+		sb.collision_mask = 0
+		var cs := CollisionShape3D.new()
+		var bs := BoxShape3D.new()
+		cs.shape = bs
+		sb.add_child(cs)
+		sb.position = Vector3(0.0, -10000.0, 0.0)
+		add_child(sb)
+		_pool.append(sb)
+		_pool_forma.append(bs)
+
+# dados = conteúdo de data/city.json · predios = x, z, tam_x, tam_z, altura (5 floats por prédio)
+func configurar(dados: Dictionary, predios: PackedFloat32Array) -> void:
+	for l in dados["lands"]:
+		var p := _pts(l[1])
+		if int(l[0]) == 1:
+			_l_pts.append(p)
+			_l_box.append(_caixa(p))
+		else:
+			_t_pts.append(p)
+			_t_box.append(_caixa(p))
+	var tmp_p := {}
+	var ip := 0
+	for f in dados["parks"]:
+		var p := _pts(f)
+		var r := _caixa(p)
+		_p_pts.append(p)
+		_p_box.append(r)
+		_indexar(tmp_p, r, CEL_PARQUE, ip)
+		ip += 1
+	for k in tmp_p:
+		_p_hash[k] = PackedInt32Array(tmp_p[k])
+	var tmp_r := {}
+	for rd in dados["roads"]:
+		var hw: float = float(rd[0]) * 0.5
+		var f: Array = rd[1]
+		for k in range(0, f.size() - 3, 2):
+			var ax: float = f[k]
+			var az: float = f[k + 1]
+			var bx: float = f[k + 2]
+			var bz: float = f[k + 3]
+			var r := Rect2(minf(ax, bx) - hw, minf(az, bz) - hw, absf(bx - ax) + 2.0 * hw, absf(bz - az) + 2.0 * hw)
+			var seg := [ax, az, bx, bz, hw]
+			var c0 := Vector2i(floori(r.position.x / CEL_RUA), floori(r.position.y / CEL_RUA))
+			var c1 := Vector2i(floori(r.end.x / CEL_RUA), floori(r.end.y / CEL_RUA))
+			for cx in range(c0.x, c1.x + 1):
+				for cz in range(c0.y, c1.y + 1):
+					var key := Vector2i(cx, cz)
+					if not tmp_r.has(key):
+						tmp_r[key] = []
+					tmp_r[key].append_array(seg)
+	for k in tmp_r:
+		_r_hash[k] = PackedFloat32Array(tmp_r[k])
+	_pred = predios
+	var tmp_b := {}
+	for i in range(_pred.size() / 5):
+		var key := Vector2i(floori(_pred[i * 5] / CEL_PREDIO), floori(_pred[i * 5 + 1] / CEL_PREDIO))
+		if not tmp_b.has(key):
+			tmp_b[key] = []
+		tmp_b[key].append(i)
+	for k in tmp_b:
+		_pred_hash[k] = PackedInt32Array(tmp_b[k])
+
+func _pts(f: Array) -> PackedVector2Array:
+	var o := PackedVector2Array()
+	for i in range(0, f.size() - 1, 2):
+		o.append(Vector2(f[i], f[i + 1]))
+	return o
+
+func _caixa(p: PackedVector2Array) -> Rect2:
+	var r := Rect2(p[0], Vector2.ZERO)
+	for v in p:
+		r = r.expand(v)
+	return r
+
+func _indexar(tmp: Dictionary, r: Rect2, cel: float, idx: int) -> void:
+	var c0 := Vector2i(floori(r.position.x / cel), floori(r.position.y / cel))
+	var c1 := Vector2i(floori(r.end.x / cel), floori(r.end.y / cel))
+	for cx in range(c0.x, c1.x + 1):
+		for cz in range(c0.y, c1.y + 1):
+			var key := Vector2i(cx, cz)
+			if not tmp.has(key):
+				tmp[key] = []
+			tmp[key].append(idx)
+
+# altura do chão (m) num ponto do mundo, igual às alturas usadas para desenhar a cidade
+func altura(x: float, z: float) -> float:
+	var key := Vector2i(floori(x / CEL_RUA), floori(z / CEL_RUA))
+	if _r_hash.has(key):
+		var s: PackedFloat32Array = _r_hash[key]
+		for i in range(0, s.size(), 5):
+			var dx := s[i + 2] - s[i]
+			var dz := s[i + 3] - s[i + 1]
+			var l2 := dx * dx + dz * dz
+			var t := 0.0
+			if l2 > 0.0001:
+				t = clampf(((x - s[i]) * dx + (z - s[i + 1]) * dz) / l2, 0.0, 1.0)
+			var qx := s[i] + dx * t - x
+			var qz := s[i + 1] + dz * t - z
+			if qx * qx + qz * qz <= s[i + 4] * s[i + 4]:
+				return ALT_RUA          # ruas valem também sobre a água (pontes)
+	var p := Vector2(x, z)
+	var terra := false
+	for i in _t_box.size():
+		if _t_box[i].has_point(p) and Geometry2D.is_point_in_polygon(p, _t_pts[i]):
+			terra = true
+			break
+	if not terra:
+		return ALT_MAR
+	var pk := Vector2i(floori(x / CEL_PARQUE), floori(z / CEL_PARQUE))
+	if _p_hash.has(pk):
+		for i in _p_hash[pk]:
+			if _p_box[i].has_point(p) and Geometry2D.is_point_in_polygon(p, _p_pts[i]):
+				return ALT_PARQUE
+	for i in _l_box.size():
+		if _l_box[i].has_point(p) and Geometry2D.is_point_in_polygon(p, _l_pts[i]):
+			return ALT_LAGO
+	return ALT_TERRA
+
+# calcula tudo de uma vez (usar ao nascer/teleportar)
+func forcar(pos: Vector2) -> void:
+	_iniciar_calculo(pos)
+	_calcular_linhas(N)
+	_atualizar_predios(pos, true)
+
+func _iniciar_calculo(pos: Vector2) -> void:
+	_novo_centro = Vector2(roundf(pos.x / ESPACO) * ESPACO, roundf(pos.y / ESPACO) * ESPACO)
+	_novo_dados.resize(N * N)
+	_linha = 0
+
+func _calcular_linhas(max_linhas: int) -> void:
+	var feitas := 0
+	while _linha >= 0 and _linha < N and feitas < max_linhas:
+		var z := _novo_centro.y + (_linha - MEIO) * ESPACO
+		for i in N:
+			_novo_dados[_linha * N + i] = altura(_novo_centro.x + (i - MEIO) * ESPACO, z)
+		_linha += 1
+		feitas += 1
+	if _linha >= N:
+		_mapa.map_data = _novo_dados
+		_chao_forma.transform = Transform3D(Basis.from_scale(Vector3(ESPACO, 1.0, ESPACO)), Vector3(_novo_centro.x, 0.0, _novo_centro.y))
+		_centro = _novo_centro
+		_linha = -1
+
+func _physics_process(_delta: float) -> void:
+	if alvo == null or not is_instance_valid(alvo):
+		return
+	var g := alvo.global_position
+	var p := Vector2(g.x, g.z)
+	if p.distance_to(_centro) > 40.0:
+		forcar(p)
+		return
+	if _linha >= 0:
+		_calcular_linhas(LINHAS_POR_QUADRO)
+	elif p.distance_to(_centro) > RECENTRAR:
+		_iniciar_calculo(p)
+		_calcular_linhas(LINHAS_POR_QUADRO)
+	_atualizar_predios(p, false)
+
+func _atualizar_predios(p: Vector2, forcado: bool) -> void:
+	if not forcado and p.distance_to(_ult_pred) < 3.0:
+		return
+	_ult_pred = p
+	var cx := floori(p.x / CEL_PREDIO)
+	var cz := floori(p.y / CEL_PREDIO)
+	var cand: Array = []
+	var r2 := RAIO_PREDIOS * RAIO_PREDIOS
+	for dz in range(-1, 2):
+		for dx in range(-1, 2):
+			var key := Vector2i(cx + dx, cz + dz)
+			if not _pred_hash.has(key):
+				continue
+			var lst: PackedInt32Array = _pred_hash[key]
+			for idx in lst:
+				var o := idx * 5
+				var ex := maxf(absf(p.x - _pred[o]) - _pred[o + 2] * 0.5, 0.0)
+				var ez := maxf(absf(p.y - _pred[o + 1]) - _pred[o + 3] * 0.5, 0.0)
+				var d2 := ex * ex + ez * ez
+				if d2 < r2:
+					cand.append([d2, idx])
+	if cand.size() > POOL:
+		cand.sort_custom(func(a, b): return a[0] < b[0])
+	var n := mini(cand.size(), POOL)
+	for k in n:
+		var o := int(cand[k][1]) * 5
+		_pool[k].position = Vector3(_pred[o], BASE_PREDIO + _pred[o + 4] * 0.5, _pred[o + 1])
+		_pool_forma[k].size = Vector3(_pred[o + 2], _pred[o + 4], _pred[o + 3])
+	for k in range(n, _pool_uso):
+		_pool[k].position = Vector3(0.0, -10000.0, 0.0)
+	_pool_uso = n
+
+func predios_ativos() -> int:
+	return _pool_uso
+
+# RAIO pelos dados da cidade (prédios e chão de qualquer distância, sem física). Usado pelos tiros:
+# a colisão de física só existe perto do jogador, mas a M4 alcança 260 m.
+# devolve {hit, pos, n, dist, predio}
+func raio(o: Vector3, d: Vector3, alcance: float) -> Dictionary:
+	var res := {"hit": false, "pos": o + d * alcance, "n": Vector3.UP, "dist": alcance, "predio": false}
+	var melhor := alcance
+	# chão: plano na altura do terreno (2 iterações bastam: as alturas variam menos de 1 m)
+	if d.y < -0.0001:
+		var hg := altura(o.x, o.z)
+		var t := (o.y - hg) / -d.y
+		for it in 2:
+			if t <= 0.0 or t > melhor:
+				break
+			var p := o + d * t
+			hg = altura(p.x, p.z)
+			t = (o.y - hg) / -d.y
+		if t > 0.0 and t <= melhor:
+			melhor = t
+			res = {"hit": true, "pos": o + d * t, "n": Vector3.UP, "dist": t, "predio": false}
+	# prédios: células da grade que o raio atravessa (+ vizinhas, porque um prédio passa da borda da célula)
+	var celulas := {}
+	var passos := int(ceil(melhor / (CEL_PREDIO * 0.5)))
+	for s in passos + 1:
+		var p := o + d * minf(s * CEL_PREDIO * 0.5, melhor)
+		var cx := floori(p.x / CEL_PREDIO)
+		var cz := floori(p.z / CEL_PREDIO)
+		for dz in range(-1, 2):
+			for dx in range(-1, 2):
+				celulas[Vector2i(cx + dx, cz + dz)] = true
+	var inv := Vector3(1.0 / d.x if absf(d.x) > 1e-9 else 1e18, 1.0 / d.y if absf(d.y) > 1e-9 else 1e18, 1.0 / d.z if absf(d.z) > 1e-9 else 1e18)
+	for key in celulas:
+		if not _pred_hash.has(key):
+			continue
+		var lista: PackedInt32Array = _pred_hash[key]
+		for idx in lista:
+			var b: int = idx * 5
+			var mn := Vector3(_pred[b] - _pred[b + 2] * 0.5, BASE_PREDIO, _pred[b + 1] - _pred[b + 3] * 0.5)
+			var mx := Vector3(_pred[b] + _pred[b + 2] * 0.5, BASE_PREDIO + _pred[b + 4], _pred[b + 1] + _pred[b + 3] * 0.5)
+			var t1 := (mn - o) * inv
+			var t2 := (mx - o) * inv
+			var tmin := Vector3(minf(t1.x, t2.x), minf(t1.y, t2.y), minf(t1.z, t2.z))
+			var tmax := Vector3(maxf(t1.x, t2.x), maxf(t1.y, t2.y), maxf(t1.z, t2.z))
+			var entra := maxf(tmin.x, maxf(tmin.y, tmin.z))
+			var sai := minf(tmax.x, minf(tmax.y, tmax.z))
+			if sai < maxf(entra, 0.0) or entra < 0.0 or entra >= melhor:
+				continue
+			var n := Vector3.ZERO
+			if entra == tmin.x:
+				n.x = -signf(d.x)
+			elif entra == tmin.y:
+				n.y = -signf(d.y)
+			else:
+				n.z = -signf(d.z)
+			melhor = entra
+			res = {"hit": true, "pos": o + d * entra, "n": n, "dist": entra, "predio": true}
+	return res

@@ -1,0 +1,37 @@
+COMO COLOCAR O SEU PERSONAGEM 3D
+
+1) Coloque o modelo AQUI com o nome  personagem.glb  (também vale .gltf, .fbx, .tscn ou .scn).
+   O ideal é GLB/glTF: leva malha, esqueleto, texturas e animações num arquivo só.
+   Ele entra sozinho no lugar do soldado original quando o jogo abre. Não precisa mexer em código.
+   (Sem arquivo aqui, o jogo usa o soldado original do HTML, que já é animado por código.)
+
+2) Tamanho e direção
+   - A origem do modelo deve ficar nos PÉS, e a altura em torno de 1,8 m (1 unidade = 1 metro).
+     Se ficar grande/pequeno: Inspetor do nó Jogador > Escala Modelo.
+   - Se o personagem andar de COSTAS: Inspetor do nó Jogador > Giro Modelo Importado, troque 180 por 0.
+     (modelos glTF costumam olhar para +Z; a Godot anda para -Z, por isso o padrão é 180.)
+
+3) Animações
+   a) Se o seu GLB já traz animações, o jogo as reconhece pelo NOME (maiúsculas não importam):
+        parado .... idle, parado, stand            andar ..... walk, andar
+        correr .... run, sprint, correr, jog       pular ..... jump, pular
+        cair ...... fall, cair                     mirar ..... aim, mirar
+        atirar .... shoot, fire, firing, atirar    morrer .... death, die, dying, morrer
+        agachado .. crouch, agach                  andar agachado ... crouch walk, crouched walk, sneak
+      Se faltar alguma, ele usa a mais parecida (correr -> andar -> parado; andar agachado -> agachado) e nunca dá erro.
+   b) Animações PRONTAS em arquivos separados (como o Mixamo entrega): coloque em modelos/animacoes/.
+      Cada arquivo com uma animação ganha o nome do arquivo ("Rifle Run.glb" -> "Rifle Run").
+      Elas precisam ser do MESMO esqueleto do personagem (ex.: tudo baixado do Mixamo, mesmo rig).
+   c) Nome diferente do esperado? No _ready do jogador (ou onde preferir):
+        $Animador.nomes_exatos = {"correr": "Minha Corrida", "parado": "Respirando"}
+        $Animador.atualizar_mapa()
+   d) Esqueleto diferente (animação de outro rig): use a "Mapa de ossos" (BoneMap) com o perfil humanoide
+      nas opções de importação do GLB; a Godot reaproveita animações entre esqueletos humanoides.
+
+4) Arma na mão: a pistola e a M4 vão sozinhas para o osso da mão direita ("RightHand" do esqueleto).
+   Se ficarem tortas, ajuste a posição/rotação dos nós "Arma_pistola" e "Arma_m4" (filhos do osso).
+
+5) Trocar o modelo por código (ex.: skins):  $Jogador.trocar_modelo(meu_no)
+
+Dica Mixamo: ao baixar, escolha "FBX Binary" ou converta para GLB; baixe o personagem "With Skin" uma vez
+e as animações "Without Skin" (menores). Marque "In Place" nas de andar/correr (o jogo é quem move o corpo).

@@ -1,0 +1,54 @@
+DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4 (passo 3: jogabilidade do soldado)
+1) Extraia o zip. 2) Godot 4.2+ > Importar projeto > escolha a pasta com project.godot. 3) Rodar (F5).
+Ao abrir leva alguns segundos para montar a cidade (veja "Cidade pronta em ... ms" na saída).
+(Transformação em carro e jato foi descartada: o jogo é só a pé.)
+
+O QUE JÁ TEM
+- O SOLDADO ORIGINAL do HTML (camuflagem urbana, colete, mochila, capacete), com a mesma animação por código:
+  passada, corrida, pulo, pouso, inclinação nas curvas, e os braços segurando a arma de verdade (IK).
+- ARMAS iguais às do HTML: PISTOLA (12/60, semiautomática) e M4 (30/180, automática).
+  Mesma cadência, alcance (150 / 260 m), dispersão, recuo de câmera, traçantes, clarão, faíscas, marcas de bala,
+  som e tempo de recarga. Recarga sozinha quando o pente acaba. Dano: pistola 34 · M4 21 · cabeça x3 (vida 100).
+- CORRER (7,2 m/s, cancela agachar e mirar).
+- AGACHAR (novo): anda a 1,0 / 1,8 m/s, mira mais firme (0,6x), cápsula menor. Não levanta debaixo de teto baixo.
+  Pular agachado = levantar.
+- MIRAR (novo): câmera vai para cima do ombro direito e aproxima, mira mais firme (0,5x), anda no máximo 2,2 m/s.
+- HUD de combate: mira que abre ao andar/correr/pular/atirar, munição (fica vermelha com pouca bala),
+  marcador de acerto (vermelho = cabeça ou abate), avisos ("SEM MUNIÇÃO", nome da arma).
+- ESTANDE DE TIRO na base militar, na sua frente ao nascer: 8 alvos a 15, 25, 40 e 60 m que caem e levantam,
+  com placar (acertos, tiros na cabeça, derrubados).
+- Cidade com colisão (chão e prédios) e câmera que encurta ao bater em parede.
+
+CONTROLES (toque: vários dedos ao mesmo tempo)
+- Metade ESQUERDA da tela: joystick (aparece onde você toca; fraco = andar, forte = trote).
+- Metade DIREITA: olhar.
+- ATIRAR (segurar; dá para arrastar o dedo em cima dele para mirar enquanto atira) · CORRER (segurar)
+- PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga) · RECARREGAR · ARMA (troca pistola/M4)
+- VOO (canto de cima): câmera livre para ver a cidade (SOBE / DESCE / VEL); ao sair, o soldado desce ali.
+- PC: WASD · Shift correr · Espaço pular · C ou Ctrl agachar · F atirar · botão direito do mouse mirar ·
+  R recarregar · 1/2, Tab ou rodinha troca arma · mouse arrastando na metade direita = olhar · V voo (Q/E no voo).
+
+ARQUIVOS
+- main.gd ................ monta a cidade e liga o jogo. SPAWN (onde nasce) no topo.
+- jogador/jogador.gd ..... movimento, correr, agachar, mirar, pulo, câmera. Ajustes no Inspetor (cena jogador.tscn).
+- jogador/soldado.gd ..... o soldado original (peças e animação).
+- jogador/controles.gd ... joystick, olhar, botões (posições e cores no _ready) e teclado.
+- jogador/animador_modelo.gd ... animações para quando você colocar um modelo 3D próprio.
+- armas/armas.gd ......... munição, cadência, dano etc. (tabela WDEF no topo: fácil de balancear).
+- armas/modelos_armas.gd . pistola e M4 em 3D. armas/efeitos_tiro.gd: traçantes, clarão, marcas.
+- armas/sons_armas.gd .... sons sintetizados (dá para trocar por arquivos .wav/.ogg).
+- armas/hud_combate.gd ... mira, munição, acerto, avisos.
+- mundo/colisao_mundo.gd . colisão perto do jogador + raio dos tiros contra a cidade inteira.
+- mundo/estande_tiro.gd .. alvos de treino. Use o mesmo método receber_tiro(...) nos inimigos Vagos.
+
+CAMADAS DE FÍSICA: 1 = mundo · 2 = jogador · 3 = inimigos/alvos.
+
+ANDROID: para o celular vibrar nos tiros, marque a permissão VIBRATE na exportação (Projeto > Exportar > Android >
+Permissões). Sem ela o jogo funciona normal, só não vibra.
+
+LIMITAÇÕES CONHECIDAS (por enquanto)
+- Sem vida do jogador e sem inimigos ainda (o barulho dos tiros já é avisado pelo sinal "barulho", para os Vagos ouvirem).
+- Sem 1ª pessoa (o HTML tinha); a HUD ainda não é editável; o mar é "caminhável".
+- A base militar ainda não tem os prédios/pistas do HTML.
+
+Se der erro, me mande a mensagem exata (painel "Saída"/"Depurador") ou uma foto da tela.
