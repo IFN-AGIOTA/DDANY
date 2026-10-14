@@ -18,6 +18,8 @@ var built: Array[Node] = []
 var is_built := false
 var dados_cidade = null
 var predios := PackedFloat32Array()         # x, z, tam_x, tam_z, altura de cada prédio (para a colisão)
+var ambiente: Environment                   # céu/neblina (Opções › Gráficos mexe na neblina)
+var sol: DirectionalLight3D                 # Opções › Gráficos › Sombras
 
 func construir() -> void:
 	is_built = true
@@ -76,6 +78,7 @@ func _env() -> void:
 	env.fog_density = 0.00025
 	var we := WorldEnvironment.new()
 	we.environment = env
+	ambiente = env
 	_adopt(we)
 	var sun := DirectionalLight3D.new()
 	sun.rotation_degrees = Vector3(-30.0, -50.0, 0.0)
@@ -83,6 +86,7 @@ func _env() -> void:
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 500.0
 	_adopt(sun)
+	sol = sun
 
 # ---------- geometria utilitária ----------
 func _pts(f: Array) -> PackedVector2Array:

@@ -9,6 +9,7 @@ const AMBAR := Color(1.0, 0.71, 0.0)
 const VERMELHO := Color(0.88, 0.02, 0.0)
 
 var armas: Node = null
+var escala := 1.0                   # Opções › HUD › Tamanho geral
 var jogador: Node = null
 
 var _tela: Control
@@ -27,6 +28,11 @@ func _ready() -> void:
 	_tela.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_tela.draw.connect(_desenhar)
 	add_child(_tela)
+
+# Opções › HUD: opacidade e tamanho
+func aplicar_estilo(esc: float, opacidade: float) -> void:
+	escala = esc
+	_tela.modulate.a = opacidade
 
 func ligar(a: Node, j: Node) -> void:
 	armas = a
@@ -68,7 +74,7 @@ func _desenhar() -> void:
 	if armas == null:
 		return
 	var vs := _tela.get_viewport_rect().size
-	var vh := vs.y / 100.0
+	var vh := vs.y / 100.0 * escala
 	var c := vs * 0.5
 	# ----- mira -----
 	var g := _gap * vh

@@ -239,6 +239,7 @@ func _montar() -> void:
 		arms.append({"p": p, "e": e, "s": s})
 	# sombra falsa (barata no celular)
 	var sombra := MeshInstance3D.new()
+	sombra.name = "SombraFalsa"
 	var pm := PlaneMesh.new()
 	pm.size = Vector2(1.5, 1.5)
 	var smat := StandardMaterial3D.new()
@@ -377,6 +378,41 @@ func _pose_arma(j, R: float, air: float) -> void:
 	var l: Array = P["l"]
 	_ik(arms[1], gt * Vector3(r[0], r[1], r[2]))    # mão direita (empunhadura)
 	_ik(arms[0], gt * Vector3(l[0], l[1], l[2]))    # mão esquerda (apoio)
+
+# pose parada do MENU PRINCIPAL (porte do menuPose do HTML): peso numa perna, respirando, M4 baixa,
+# cabeça virada para o sol. t = tempo em segundos.
+func pose_menu(t: float, tipo := "m4") -> void:
+	if legs.size() < 2:
+		return
+	var th := [0.05, -0.06]
+	var kn := [0.12, 0.05]
+	var hy: Array[float] = []
+	for i in 2:
+		var l: Dictionary = legs[i]
+		(l["p"] as Node3D).rotation = Vector3(th[i], 0.0, 0.0)
+		(l["k"] as Node3D).rotation.x = kn[i]
+		(l["an"] as Node3D).rotation.x = -(th[i] + kn[i])
+		hy.append(0.08 + 0.46 * cos(th[i]) + 0.39 * cos(th[i] + kn[i]))
+	hips.position = Vector3(0.0, maxf(hy[0], hy[1]) - 0.01, 0.0)
+	hips.rotation = Vector3(0.0, 0.04, sin(t * 0.4) * 0.01)
+	var br := sin(t * 1.6)
+	tor.position.y = 0.1 + br * 0.004
+	tor.rotation = Vector3(0.07 + br * 0.006, -0.04, 0.0)
+	head.rotation = Vector3(-0.06 + sin(t * 0.35) * 0.012, 0.38 + sin(t * 0.27) * 0.04, 0.0)
+	for k in armas_seguradas:
+		(armas_seguradas[k] as Node3D).visible = (k == tipo)
+	if not armas_seguradas.has(tipo) or not POSE.has(tipo):
+		return
+	var P: Dictionary = POSE[tipo]
+	var g: Node3D = armas_seguradas[tipo]
+	var lo: Array = P["lo"]
+	g.position = Vector3(lo[0], lo[1], lo[2])
+	g.rotation = Vector3(lo[3], 0.0, 0.0)
+	var gt := g.transform
+	var r: Array = P["r"]
+	var le: Array = P["l"]
+	_ik(arms[1], gt * Vector3(r[0], r[1], r[2]))
+	_ik(arms[0], gt * Vector3(le[0], le[1], le[2]))
 
 # braço com IK de dois ossos (ombro -> cotovelo -> mão). T no espaço do tronco.
 func _ik(a: Dictionary, T: Vector3) -> void:

@@ -18,6 +18,16 @@ O QUE JÁ TEM
 - ESTANDE DE TIRO na base militar, na sua frente ao nascer: 8 alvos a 15, 25, 40 e 60 m que caem e levantam,
   com placar (acertos, tiros na cabeça, derrubados).
 - Cidade com colisão (chão e prédios) e câmera que encurta ao bater em parede.
+- MENU PRINCIPAL igual ao do HTML (novo): cena do pôr do sol com a skyline e o soldado no terraço,
+  "DIAS DE UM / APOCALIPSE / NOVA YORK", História · Ato 1 (ainda não existe no porte), Jogar (mundo livre), Opções.
+- OPÇÕES igual ao HTML (novo): Controles · Câmera · HUD · Gráficos · Vídeo e som · Ajuda. Salvas no aparelho.
+  Funcionam: toque/giroscópio, sensibilidade, eixo invertido, vibração, distância/posição/campo de visão da câmera,
+  personalizar HUD (arrastar e mudar tamanho), opacidade e tamanho da HUD, contador de FPS, som, volume,
+  manter tela ligada, tela cheia, sombras, distância de visão, neblina, resolução (+ dinâmica), anti-aliasing,
+  limite de FPS, brilho, contraste, saturação, vinheta e as predefinições.
+  Marcadas "(em breve)" (ficam salvas, sem efeito por enquanto): shaders, texturas, modelos, distância dos
+  detalhes, efeitos, densidade do cenário, água, fios, halos, anisotrópica; e cockpit, aceleração e minimapa.
+- PAUSA (novo): botão II, P ou Esc · Continuar, Opções, Voltar ao início, Menu principal.
 - INVENTÁRIO ESTILO DAYZ (novo) · botão INV (canto de cima), Tab ou I:
     ESQUERDA = o que está PERTO no mundo: itens no CHÃO, caixas/armários e mochilas jogadas (com o que tem dentro).
     MEIO     = o personagem: CABEÇA, CAMISA, COLETE, CINTO, OMBRO, COLDRE, CALÇA, MOCHILA, as MÃOS e a barra
@@ -49,7 +59,19 @@ CONTROLES (toque: vários dedos ao mesmo tempo)
 MAPA DO PROJETO (cada sistema no seu arquivo · numa atualização, mande/troque só os arquivos que mudaram)
 
 QUERO MEXER EM...                         ARQUIVO
-- onde o jogador nasce / ordem do jogo .. main.gd (só liga as partes; quase nunca muda)
+- onde o jogador nasce / ordem do jogo .. main.gd (só liga as partes: menu -> jogo -> pausa)
+
+MENUS E OPÇÕES (pasta menu/)
+- menu principal (título e botões) .... menu/menu_principal.gd
+- cena 3D do menu (pôr do sol,
+  skyline, soldado no terraço) ........ menu/cena_menu.gd
+- tela de Opções (6 abas) ............. menu/opcoes.gd
+- valores padrão e predefinições ...... menu/config.gd (autoload "Config"; salva em user://opcoes.cfg)
+- o que cada opção faz no jogo ........ menu/aplicar_opcoes.gd
+- brilho/contraste/saturação/vinheta .. menu/filtro_tela.gd
+- menu de pausa ....................... menu/pausa.gd
+- editor da HUD (arrastar botões) ..... menu/editor_hud.gd
+- cores, fontes e formato dos botões .. menu/ui.gd (fonte Roboto Condensed em menu/fontes, licença OFL)
 
 PERSONAGEM (pasta jogador/)
 - andar, correr, agachar, pular, câmera . jogador/jogador.gd (ajustes no Inspetor da cena jogador.tscn)

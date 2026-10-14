@@ -8,6 +8,7 @@ extends CanvasLayer
 #  - PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga, aproxima a câmera) · RECARREGAR · ARMA (troca)
 #  - VOO (canto de cima): câmera livre para inspecionar a cidade
 #  - INV (canto de cima): abre o inventário (estilo DayZ) · PEGAR aparece quando há um item no chão perto
+#  - II (canto de cima): pausa. Posições/tamanhos/opacidade vêm de Opções › HUD (aplicar_layout / modo de edição)
 # PC: WASD andar · Shift correr · Espaço pular · C/Ctrl agachar · F atirar · botão direito do mouse mirar
 #     R recarregar · 1..8 atalhos (1 = pistola, 2 = M4) · rodinha troca arma · Tab ou I inventário · E pegar
 #     mouse arrastando na metade direita = olhar · Q/E sobem/descem no voo
@@ -22,6 +23,8 @@ signal trocar_arma_pedido
 signal atalho_pedido(indice: int)
 signal inventario_pedido
 signal pegar_pedido
+signal pausa_pedida
+signal selecionou(id: String)      # modo de edição da HUD: botão tocado
 
 const RAIO_STICK := 90.0
 
@@ -32,7 +35,15 @@ var indicadores := {}              # id -> bool (botão aceso: AGACHAR/MIRAR lig
 var textos := {}                   # id -> texto trocado em tempo real (ex.: nome da arma)
 var ocultos := {}                  # id -> true para esconder o botão (ex.: PEGAR sem item perto)
 var bloqueado := false             # inventário aberto
+var mostrar_info := true           # contador de FPS (Opções › Vídeo e som)
+var editando := false              # Opções › HUD › Personalizar HUD: arrastar os botões
+var editar_ignorar := Rect2()      # área do painel do editor (toques ali não mexem nos botões)
+var selecionado := ""
+var escala := 1.0                  # Opções › HUD › Tamanho geral
+var layout := {}                   # posições editadas: id -> [off_x, off_y, raio] (sem a escala)
 var botoes: Array = []
+var _arraste := -1
+var _arraste_dif := Vector2.ZERO
 
 var _olhar := Vector2.ZERO
 var _toque_mover := -1
@@ -67,6 +78,7 @@ func _ready() -> void:
 	_bt("PEGAR", "PEGAR", "br", Vector2(500, 150), 40, Color(0.35, 0.85, 0.45), "tocar", false, false)
 	_bt("VOO", "VOO", "tr", Vector2(56, 46), 30, Color(0.6, 0.6, 0.6), "tocar", false, false)
 	_bt("INV", "INV", "tr", Vector2(132, 46), 30, Color(1.0, 0.71, 0.0), "tocar", false, false)
+	_bt("PAUSA", "II", "tr", Vector2(208, 46), 30, Color(1.0, 0.54, 0.21), "tocar", false, false)
 	ocultos["PEGAR"] = true
 	_bt("SOBE", "SOBE", "br", Vector2(80, 330), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
 	_bt("DESCE", "DESCE", "br", Vector2(80, 210), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
@@ -74,7 +86,87 @@ func _ready() -> void:
 	get_viewport().size_changed.connect(func(): _visual.queue_redraw())
 
 func _bt(id: String, txt: String, canto: String, off: Vector2, r: float, cor: Color, modo: String, olhar: bool, voo: bool) -> void:
-	botoes.append({"id": id, "txt": txt, "canto": canto, "off": off, "r": r, "cor": cor, "modo": modo, "olhar": olhar, "voo": voo, "toque": -1})
+	botoes.append({"id": id, "txt": txt, "canto": canto, "off": off, "r": r, "off0": off, "r0": r, "cor": cor, "modo": modo, "olhar": olhar, "voo": voo, "toque": -1})
+
+# posições/tamanhos: padrão do botão, ou o que foi salvo no editor da HUD; tudo vezes a escala geral
+func aplicar_layout(pos: Dictionary, esc: float, opacidade: float) -> void:
+	layout = pos.duplicate(true)
+	escala = esc
+	_visual.modulate.a = opacidade
+	for b in botoes:
+		var p = layout.get(b["id"])
+		var off: Vector2 = b["off0"]
+		var r: float = b["r0"]
+		if p is Array and p.size() >= 3:
+			off = Vector2(p[0], p[1])
+			r = p[2]
+		b["off"] = off * escala
+		b["r"] = r * escala
+	_visual.queue_redraw()
+
+func tamanho_do(id: String) -> float:
+	var b := _botao(id)
+	if b.is_empty():
+		return 1.0
+	return float(b["r"]) / escala / float(b["r0"])
+
+func definir_tamanho(id: String, fator: float) -> void:
+	var b := _botao(id)
+	if b.is_empty():
+		return
+	var off: Vector2 = b["off"] / escala
+	layout[id] = [off.x, off.y, float(b["r0"]) * fator]
+	aplicar_layout(layout, escala, _visual.modulate.a)
+
+func item_padrao(id: String) -> void:
+	layout.erase(id)
+	aplicar_layout(layout, escala, _visual.modulate.a)
+
+func set_info(v: bool) -> void:
+	mostrar_info = v
+	info.visible = mostrar_info and not bloqueado
+
+func set_editando(v: bool) -> void:
+	editando = v
+	process_mode = Node.PROCESS_MODE_ALWAYS if v else Node.PROCESS_MODE_INHERIT   # funciona com o jogo pausado
+	selecionado = ""
+	_arraste = -1
+	_soltar_tudo()
+
+# arrastar um botão no modo de edição (toque ou mouse emulado como toque)
+func _editar(e: InputEvent) -> void:
+	var vs := get_viewport().get_visible_rect().size
+	if e is InputEventScreenTouch:
+		if e.index != 0:
+			return
+		if e.pressed:
+			if editar_ignorar.has_point(e.position):
+				return
+			var melhor := -1
+			var md := INF
+			for i in botoes.size():
+				var b: Dictionary = botoes[i]
+				if b["voo"]:
+					continue
+				var d: float = e.position.distance_to(_centro(b))
+				if d <= float(b["r"]) * 1.2 and d < md:
+					md = d
+					melhor = i
+			if melhor >= 0:
+				_arraste = melhor
+				_arraste_dif = _centro(botoes[melhor]) - e.position
+				selecionado = botoes[melhor]["id"]
+				selecionou.emit(selecionado)
+		else:
+			_arraste = -1
+		_visual.queue_redraw()
+	elif e is InputEventScreenDrag and _arraste >= 0 and e.index == 0:
+		var b: Dictionary = botoes[_arraste]
+		var c: Vector2 = (e.position + _arraste_dif).clamp(Vector2(b["r"], b["r"]), vs - Vector2(b["r"], b["r"]))
+		var off := Vector2(vs.x - c.x, c.y if b["canto"] == "tr" else vs.y - c.y)
+		layout[b["id"]] = [off.x / escala, off.y / escala, float(b["r"]) / escala]
+		b["off"] = off
+		_visual.queue_redraw()
 
 func _centro(b: Dictionary) -> Vector2:
 	var vs := get_viewport().get_visible_rect().size
@@ -84,6 +176,8 @@ func _centro(b: Dictionary) -> Vector2:
 	return Vector2(vs.x - off.x, vs.y - off.y)
 
 func _visivel(b: Dictionary) -> bool:
+	if editando:
+		return not b["voo"]
 	if bloqueado or ocultos.get(b["id"], false):
 		return false
 	if b["id"] == "VOO":
@@ -109,7 +203,7 @@ func set_modo_voo(v: bool) -> void:
 # inventário aberto: solta joystick/botões e ignora o toque (a tela do inventário cuida dele)
 func set_bloqueado(v: bool) -> void:
 	bloqueado = v
-	info.visible = not v
+	info.visible = mostrar_info and not v
 	_soltar_tudo()
 
 func _soltar_tudo() -> void:
@@ -124,6 +218,9 @@ func _soltar_tudo() -> void:
 
 func _unhandled_input(e: InputEvent) -> void:
 	var vs := get_viewport().get_visible_rect().size
+	if editando:
+		_editar(e)
+		return
 	if bloqueado:
 		if e is InputEventKey and e.pressed and not e.echo and (e.keycode == KEY_TAB or e.keycode == KEY_I):
 			inventario_pedido.emit()
@@ -183,6 +280,7 @@ func _unhandled_input(e: InputEvent) -> void:
 					if not modo_voo:
 						pegar_pedido.emit()
 				KEY_V: voo_pedido.emit()
+				KEY_ESCAPE, KEY_P: pausa_pedida.emit()
 	elif e is InputEventMouseButton:
 		var mb: InputEventMouseButton = e
 		if mb.button_index == MOUSE_BUTTON_RIGHT:
@@ -199,13 +297,14 @@ func _tocou(id: String) -> void:
 		"VOO": voo_pedido.emit()
 		"VEL": vel_pedida.emit()
 		"INV": inventario_pedido.emit()
+		"PAUSA": pausa_pedida.emit()
 		"PEGAR": pegar_pedido.emit()
 
 func _process(_dt: float) -> void:
 	_visual.queue_redraw()
 
 func _desenhar() -> void:
-	if bloqueado:
+	if bloqueado and not editando:
 		return
 	for b in botoes:
 		if not _visivel(b):
@@ -214,6 +313,9 @@ func _desenhar() -> void:
 		var r: float = b["r"]
 		var cor: Color = b["cor"]
 		var aceso := int(b["toque"]) != -1 or bool(indicadores.get(b["id"], false))
+		if editando:
+			var sel: bool = b["id"] == selecionado
+			_visual.draw_arc(c, r + 6.0, 0.0, TAU, 48, Color(1.0, 0.71, 0.0) if sel else Color(1, 1, 1, 0.75), 5.0 if sel else 2.0)
 		_visual.draw_circle(c, r, Color(cor.r, cor.g, cor.b, 0.62 if aceso else 0.22))
 		_visual.draw_arc(c, r, 0.0, TAU, 40, Color(cor.r, cor.g, cor.b, 0.95), 4.0)
 		var txt: String = textos.get(b["id"], b["txt"])

@@ -37,6 +37,11 @@ const InventarioCls := preload("res://inventario/inventario.gd")
 @export var fov_mirando := 34.0
 @export var ombro_mirando := 0.55      # mirando, a câmera vai para cima do ombro direito (metros)
 @export var sensibilidade := 1.0
+@export var inverter_y := false         # Opções › Controles › Eixo vertical
+var giroscopio := false                 # Opções › Controles › Giroscópio (olhar mexendo o celular)
+var giro_sens := 1.0
+var giro_inv := false
+var giro_zero := Vector3.ZERO
 @export_group("Modelo")
 @export var giro_modelo_importado := 180.0   # modelos glTF olham para +Z; se andar de costas, troque 180 <-> 0
 @export var escala_modelo := 1.0
@@ -242,7 +247,13 @@ func _process(delta: float) -> void:
 		var r: Vector2 = controles.consumir_olhar()
 		var s := sensibilidade * (0.6 if mirando else 1.0)     # mirando: olhar mais preciso
 		cam_yaw -= r.x * 0.006 * s
-		cam_pit = clampf(cam_pit + r.y * 0.004 * s, -0.35, 1.15)
+		cam_pit = clampf(cam_pit + r.y * 0.004 * s * (-1.0 if inverter_y else 1.0), -0.35, 1.15)
+		if giroscopio:
+			# celular deitado (paisagem): girar em pé = olhar para os lados, inclinar = olhar para cima/baixo
+			var gv := Input.get_gyroscope() - giro_zero
+			var gs := giro_sens * (-1.0 if giro_inv else 1.0)
+			cam_yaw += gv.x * delta * gs
+			cam_pit = clampf(cam_pit - gv.y * delta * gs * (-1.0 if inverter_y else 1.0), -0.35, 1.15)
 		controles.indicadores["AGACHAR"] = agachado
 		controles.indicadores["MIRAR"] = mirando
 		controles.textos["ARMA"] = armas.WDEF[armas.atual]["nome"] if armas.atual != "" else "ARMA"
