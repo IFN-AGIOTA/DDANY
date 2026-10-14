@@ -5,6 +5,8 @@ extends Node
 # - Dispersão maior andando/correndo e no ar; MENOR agachado (0,6x) e mirando (0,5x).
 # - Dano igual aos inimigos Vagos do HTML: pistola 34 · M4 21 · tiro na cabeça x3 (vida 100).
 # Qualquer coisa atingível precisa ter o método receber_tiro(dano, ponto, direcao, forma, atirador) -> Dictionary
+# INVENTÁRIO: a arma usada é a que está nas MÃOS (inventario/inventario.gd). As balas do pente ficam no próprio
+# item da arma e a recarga puxa munição (mun_9mm / mun_556) dos bolsos e da mochila. Mãos vazias = sem arma.
 # (veja mundo/estande_tiro.gd). Use a camada de física 3 ("inimigos") para alvos/inimigos.
 
 signal mudou                          # munição / arma / recarga mudaram (HUD)
@@ -18,16 +20,17 @@ const EfeitosCls := preload("res://armas/efeitos_tiro.gd")
 const SonsCls := preload("res://armas/sons_armas.gd")
 
 const WDEF := {
-	"pistola": {"nome": "PISTOLA", "mag": 12, "res": 60, "rate": 0.17, "auto": false, "range": 150.0, "spread": 0.004,
+	"pistola": {"nome": "PISTOLA", "mag": 12, "rate": 0.17, "auto": false, "range": 150.0, "spread": 0.004,
 		"kick": 0.028, "ky": 0.006, "rel": 1.15, "v": 420.0, "tl": 4.5, "fl": 0.55, "dano": 34.0, "ruido": 28.0, "vibra": 14},
-	"m4": {"nome": "M4", "mag": 30, "res": 180, "rate": 0.085, "auto": true, "range": 260.0, "spread": 0.007,
+	"m4": {"nome": "M4", "mag": 30, "rate": 0.085, "auto": true, "range": 260.0, "spread": 0.007,
 		"kick": 0.014, "ky": 0.007, "rel": 1.9, "v": 520.0, "tl": 7.0, "fl": 0.8, "dano": 21.0, "ruido": 75.0, "vibra": 8},
 }
 const ORDEM := ["pistola", "m4"]
 const MASCARA_TIRO := 1 | 4           # camadas 1 (mundo) e 3 (inimigos)
 
-var atual := "pistola"
-var municao := {}                     # tipo -> {mag, res}
+var atual := ""                       # tipo da arma nas mãos ("" = mãos vazias ou outro item)
+var item_arma = null                  # item (inventario/item.gd) da arma nas mãos
+var inventario = null                 # inventario/inventario.gd
 var cd := 0.0                         # tempo até poder atirar de novo
 var rel := 0.0                        # tempo restante de recarga (0 = não está recarregando)
 var rel_tot := 1.0
@@ -66,9 +69,6 @@ func _ready() -> void:
 	reiniciar()
 
 func reiniciar() -> void:
-	for k in ORDEM:
-		municao[k] = {"mag": WDEF[k]["mag"], "res": WDEF[k]["res"]}
-	atual = "pistola"
 	for t in nos:
 		(nos[t] as Node3D).visible = (t == atual)
 	cd = 0.0
@@ -83,7 +83,44 @@ func reiniciar() -> void:
 	aim = 0.0
 	draw = 0.0
 	rec = 0.0
+	_sincronizar()
 	mudou.emit()
+
+func ligar_inventario(inv) -> void:
+	inventario = inv
+	inv.mudou.connect(_sincronizar)
+	_sincronizar()
+
+# a arma das mãos mudou? (trocou no inventário, atalho 1..8, botão ARMA, largou no chão...)
+func _sincronizar() -> void:
+	var it = inventario.arma_na_mao() if inventario != null else null
+	if it != null and not WDEF.has(it.def()["arma"]):
+		it = null
+	if it == item_arma:
+		return
+	item_arma = it
+	var k: String = it.def()["arma"] if it != null else ""
+	atual = k
+	rel = 0.0
+	cd = 0.22
+	draw = 1.0
+	for t in nos:
+		(nos[t] as Node3D).visible = (t == atual)
+	if k != "":
+		_vibrar(15)
+		if sons != null:
+			sons.tocar("clique_520")
+		aviso.emit(WDEF[k]["nome"])
+	mudou.emit()
+
+# balas no pente e no inventário da arma das mãos
+func estado() -> Dictionary:
+	if item_arma == null:
+		return {"mag": 0, "res": 0}
+	var r := 0
+	if inventario != null:
+		r = inventario.contar(item_arma.def().get("municao", ""))
+	return {"mag": item_arma.municao, "res": r}
 
 # entrega os modelos das armas ao personagem (soldado: tronco · modelo importado: osso da mão)
 func anexar(modelo: Node3D, ponto_mao: Node3D) -> void:
@@ -110,8 +147,10 @@ func pode_usar() -> bool:
 func recarregar() -> void:
 	if not pode_usar():
 		return
+	if atual == "":
+		return
 	var W: Dictionary = WDEF[atual]
-	var A: Dictionary = municao[atual]
+	var A := estado()
 	if rel > 0.0 or A["mag"] >= W["mag"] or A["res"] <= 0:
 		return
 	rel = W["rel"]
@@ -120,25 +159,13 @@ func recarregar() -> void:
 	_vibrar(10)
 	mudou.emit()
 
-func selecionar(k: String) -> void:
-	if not pode_usar() or not WDEF.has(k) or k == atual:
-		return
-	atual = k
-	rel = 0.0
-	cd = 0.22
-	draw = 1.0
-	for t in nos:
-		(nos[t] as Node3D).visible = (t == atual)
-	_vibrar(15)
-	sons.tocar("clique_520")
-	aviso.emit(WDEF[k]["nome"])
-	mudou.emit()
-
+# troca de arma agora passa pelo inventário (coldre/ombro <-> mãos)
 func proxima_arma() -> void:
-	selecionar(ORDEM[(ORDEM.find(atual) + 1) % ORDEM.size()])
+	if pode_usar() and inventario != null:
+		inventario.trocar_arma()
 
 func dispersao() -> float:
-	var W: Dictionary = WDEF[atual]
+	var W: Dictionary = WDEF.get(atual, WDEF["pistola"])
 	var sp: float = jogador.vel_horizontal
 	var ar := 0.0 if jogador.is_on_floor() else 1.5
 	var s: float = W["spread"] * (1.0 + 1.5 * (minf(1.0, sp / 6.0) + ar))
@@ -151,8 +178,19 @@ func dispersao() -> float:
 func _physics_process(dt: float) -> void:
 	if jogador == null:
 		return
+	if atual == "" or item_arma == null:
+		# mãos vazias: nada para atirar, só deixa os valores voltarem ao repouso
+		_pend = false
+		_prev = false
+		since += dt
+		draw = maxf(0.0, draw - dt * 4.5)
+		rec *= exp(-dt * 16.0)
+		kick *= exp(-dt * 6.5)
+		ky *= exp(-dt * 6.5)
+		aim += (0.0 - aim) * minf(1.0, dt * 11.0)
+		return
 	var W: Dictionary = WDEF[atual]
-	var A: Dictionary = municao[atual]
+	var A := estado()
 	var held := gatilho and pode_usar()
 	if held and not _prev:
 		_pend = true
@@ -180,8 +218,8 @@ func _physics_process(dt: float) -> void:
 		if rel <= 0.0:
 			rel = 0.0
 			var take := mini(int(W["mag"]) - int(A["mag"]), int(A["res"]))
-			A["mag"] += take
-			A["res"] -= take
+			if take > 0 and inventario != null:
+				item_arma.municao += inventario.consumir(item_arma.def().get("municao", ""), take)
 			sons.tocar("clique_300")
 		mudou.emit()
 	var aim_t := 0.3 if rel > 0.0 else (1.0 if (held or _pend or since < 1.6 or jogador.mirando) else 0.0)
@@ -189,7 +227,7 @@ func _physics_process(dt: float) -> void:
 	if (held or _pend) and rel <= 0.0 and cd <= 0.0 and draw < 0.3 and aim > 0.6:
 		if A["mag"] > 0:
 			if (W["auto"] and held) or _pend:
-				_atirar(W, A)
+				_atirar(W)
 				_pend = false
 		elif A["res"] > 0:
 			recarregar()
@@ -200,8 +238,8 @@ func _physics_process(dt: float) -> void:
 			aviso.emit("SEM MUNIÇÃO")
 
 # ---------- tiro ----------
-func _atirar(W: Dictionary, A: Dictionary) -> void:
-	A["mag"] -= 1
+func _atirar(W: Dictionary) -> void:
+	item_arma.municao -= 1
 	cd = W["rate"]
 	since = 0.0
 	rec = 1.0

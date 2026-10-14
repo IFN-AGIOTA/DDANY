@@ -7,8 +7,11 @@ extends CanvasLayer
 #  - ATIRAR (segurar; dá para arrastar o dedo em cima dele para mirar enquanto atira) · CORRER (segurar)
 #  - PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga, aproxima a câmera) · RECARREGAR · ARMA (troca)
 #  - VOO (canto de cima): câmera livre para inspecionar a cidade
+#  - INV (canto de cima): abre o inventário (estilo DayZ) · PEGAR aparece quando há um item no chão perto
 # PC: WASD andar · Shift correr · Espaço pular · C/Ctrl agachar · F atirar · botão direito do mouse mirar
-#     R recarregar · 1/2 ou Tab trocar arma · mouse arrastando na metade direita = olhar · Q/E sobem/descem no voo
+#     R recarregar · 1..8 atalhos (1 = pistola, 2 = M4) · rodinha troca arma · Tab ou I inventário · E pegar
+#     mouse arrastando na metade direita = olhar · Q/E sobem/descem no voo
+# Com o inventário aberto (bloqueado = true) os controles ficam neutros: o jogador para e nada é desenhado.
 
 signal voo_pedido
 signal vel_pedida
@@ -16,7 +19,9 @@ signal agachar_pedido
 signal mirar_pedido
 signal recarregar_pedido
 signal trocar_arma_pedido
-signal arma_pedida(tipo: String)
+signal atalho_pedido(indice: int)
+signal inventario_pedido
+signal pegar_pedido
 
 const RAIO_STICK := 90.0
 
@@ -25,6 +30,8 @@ var modo_voo := false
 var info: Label
 var indicadores := {}              # id -> bool (botão aceso: AGACHAR/MIRAR ligados)
 var textos := {}                   # id -> texto trocado em tempo real (ex.: nome da arma)
+var ocultos := {}                  # id -> true para esconder o botão (ex.: PEGAR sem item perto)
+var bloqueado := false             # inventário aberto
 var botoes: Array = []
 
 var _olhar := Vector2.ZERO
@@ -57,7 +64,10 @@ func _ready() -> void:
 	_bt("MIRAR", "MIRAR", "br", Vector2(355, 335), 46, Color(0.95, 0.95, 0.95), "tocar", false, false)
 	_bt("RECARREGAR", "RECARREGAR", "br", Vector2(362, 168), 40, Color(0.23, 0.63, 1.0), "tocar", false, false)
 	_bt("ARMA", "ARMA", "br", Vector2(482, 282), 44, Color(1.0, 0.71, 0.0), "tocar", false, false)
+	_bt("PEGAR", "PEGAR", "br", Vector2(500, 150), 40, Color(0.35, 0.85, 0.45), "tocar", false, false)
 	_bt("VOO", "VOO", "tr", Vector2(56, 46), 30, Color(0.6, 0.6, 0.6), "tocar", false, false)
+	_bt("INV", "INV", "tr", Vector2(132, 46), 30, Color(1.0, 0.71, 0.0), "tocar", false, false)
+	ocultos["PEGAR"] = true
 	_bt("SOBE", "SOBE", "br", Vector2(80, 330), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
 	_bt("DESCE", "DESCE", "br", Vector2(80, 210), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
 	_bt("VEL", "VEL", "br", Vector2(80, 90), 44, Color(0.6, 0.6, 0.6), "tocar", false, true)
@@ -74,8 +84,12 @@ func _centro(b: Dictionary) -> Vector2:
 	return Vector2(vs.x - off.x, vs.y - off.y)
 
 func _visivel(b: Dictionary) -> bool:
+	if bloqueado or ocultos.get(b["id"], false):
+		return false
 	if b["id"] == "VOO":
 		return true
+	if b["id"] == "INV":
+		return not modo_voo
 	return b["voo"] == modo_voo
 
 func _botao(id: String) -> Dictionary:
@@ -90,7 +104,18 @@ func segurando(id: String) -> bool:
 
 func set_modo_voo(v: bool) -> void:
 	modo_voo = v
+	_soltar_tudo()
+
+# inventário aberto: solta joystick/botões e ignora o toque (a tela do inventário cuida dele)
+func set_bloqueado(v: bool) -> void:
+	bloqueado = v
+	info.visible = not v
+	_soltar_tudo()
+
+func _soltar_tudo() -> void:
 	mover = Vector2.ZERO
+	_olhar = Vector2.ZERO
+	_mouse_dir = false
 	_toque_mover = -1
 	_toque_olhar = -1
 	for b in botoes:
@@ -99,6 +124,10 @@ func set_modo_voo(v: bool) -> void:
 
 func _unhandled_input(e: InputEvent) -> void:
 	var vs := get_viewport().get_visible_rect().size
+	if bloqueado:
+		if e is InputEventKey and e.pressed and not e.echo and (e.keycode == KEY_TAB or e.keycode == KEY_I):
+			inventario_pedido.emit()
+		return
 	if e is InputEventScreenTouch:
 		var t: InputEventScreenTouch = e
 		if t.pressed:
@@ -144,9 +173,15 @@ func _unhandled_input(e: InputEvent) -> void:
 			match k.keycode:
 				KEY_C, KEY_CTRL: agachar_pedido.emit()
 				KEY_R, KEY_T: recarregar_pedido.emit()
-				KEY_1: arma_pedida.emit("pistola")
-				KEY_2: arma_pedida.emit("m4")
-				KEY_TAB: trocar_arma_pedido.emit()
+				KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8:
+					if not modo_voo:
+						atalho_pedido.emit(k.keycode - KEY_1)
+				KEY_TAB, KEY_I:
+					if not modo_voo:
+						inventario_pedido.emit()
+				KEY_E:
+					if not modo_voo:
+						pegar_pedido.emit()
 				KEY_V: voo_pedido.emit()
 	elif e is InputEventMouseButton:
 		var mb: InputEventMouseButton = e
@@ -163,11 +198,15 @@ func _tocou(id: String) -> void:
 		"ARMA": trocar_arma_pedido.emit()
 		"VOO": voo_pedido.emit()
 		"VEL": vel_pedida.emit()
+		"INV": inventario_pedido.emit()
+		"PEGAR": pegar_pedido.emit()
 
 func _process(_dt: float) -> void:
 	_visual.queue_redraw()
 
 func _desenhar() -> void:
+	if bloqueado:
+		return
 	for b in botoes:
 		if not _visivel(b):
 			continue
@@ -189,6 +228,8 @@ func _desenhar() -> void:
 
 # ---------- leitura (o jogador consulta todo quadro) ----------
 func vetor_mover() -> Vector2:
+	if bloqueado:
+		return Vector2.ZERO
 	var k := Vector2.ZERO
 	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP): k.y += 1.0
 	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN): k.y -= 1.0
@@ -199,16 +240,16 @@ func vetor_mover() -> Vector2:
 	return mover
 
 func correndo() -> bool:
-	return segurando("CORRER") or Input.is_key_pressed(KEY_SHIFT)
+	return not bloqueado and (segurando("CORRER") or Input.is_key_pressed(KEY_SHIFT))
 
 func pulando() -> bool:
-	return segurando("PULAR") or Input.is_key_pressed(KEY_SPACE)
+	return not bloqueado and (segurando("PULAR") or Input.is_key_pressed(KEY_SPACE))
 
 func atirando() -> bool:
-	return segurando("ATIRAR") or Input.is_key_pressed(KEY_F)
+	return not bloqueado and (segurando("ATIRAR") or Input.is_key_pressed(KEY_F))
 
 func mirando_segurado() -> bool:
-	return _mouse_dir
+	return _mouse_dir and not bloqueado
 
 func vertical() -> float:
 	var v := 0.0
@@ -220,6 +261,8 @@ func vertical() -> float:
 
 # quanto o dedo arrastou para olhar desde a última chamada (pixels)
 func consumir_olhar() -> Vector2:
+	if bloqueado:
+		_olhar = Vector2.ZERO
 	var r := _olhar
 	_olhar = Vector2.ZERO
 	return r

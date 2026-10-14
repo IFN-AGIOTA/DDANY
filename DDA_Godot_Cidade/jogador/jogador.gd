@@ -6,6 +6,9 @@ extends CharacterBody3D
 # Câmera igual à do menu: FOV 42, 2,35 m atrás, alvo a 1,52 m, personagem à esquerda (~34% da largura);
 # o recuo das armas mexe a câmera como no HTML.
 #
+# INVENTÁRIO (estilo DayZ): nó "Inventario" criado no _ready (inventario/inventario.gd). A arma usada é a que está
+# nas MÃOS; atalhos 1..8, botão ARMA (coldre <-> ombro) e PEGAR passam por ele.
+#
 # MODELO 3D: o nó "Modelo" é o encaixe. Se existir res://modelos/personagem.glb (ou .tscn/.fbx) ele substitui o
 # soldado original, com as animações (ver modelos/LEIA-ME.txt). Por código: jogador.trocar_modelo(no).
 
@@ -22,6 +25,7 @@ const FORCA_PULO := 5.2
 const ALTURA_EM_PE := 1.8
 const ALTURA_AGACHADO := 1.3
 const EXTENSOES_MODELO := ["tscn", "scn", "glb", "gltf", "fbx"]
+const InventarioCls := preload("res://inventario/inventario.gd")
 
 @export_group("Câmera")
 @export var distancia_camera := 2.35
@@ -38,6 +42,7 @@ const EXTENSOES_MODELO := ["tscn", "scn", "glb", "gltf", "fbx"]
 @export var escala_modelo := 1.0
 
 var controles = null                # controles.gd (toque/teclado)
+var inventario: Node = null         # inventario/inventario.gd
 var mundo = null                    # colisao_mundo.gd (altura do chão e raio dos tiros)
 var ativo := true
 var morto := false
@@ -72,6 +77,11 @@ func _ready() -> void:
 	var sold := _slot.get_node_or_null("Soldado")
 	animador.configurar(sold)
 	armas.anexar(sold, null)
+	inventario = InventarioCls.new()
+	inventario.name = "Inventario"
+	add_child(inventario)
+	inventario.equipamento_inicial()
+	armas.ligar_inventario(inventario)
 	_carregar_modelo_do_projeto()
 
 func ligar_controles(c) -> void:
@@ -80,7 +90,16 @@ func ligar_controles(c) -> void:
 	c.mirar_pedido.connect(func(): _mirar_ligado = not _mirar_ligado)
 	c.recarregar_pedido.connect(func(): armas.recarregar())
 	c.trocar_arma_pedido.connect(func(): armas.proxima_arma())
-	c.arma_pedida.connect(func(t: String): armas.selecionar(t))
+	c.atalho_pedido.connect(_usar_atalho)
+	c.pegar_pedido.connect(_pegar_do_chao)
+
+func _usar_atalho(i: int) -> void:
+	if ativo and not morto:
+		inventario.usar_atalho(i)
+
+func _pegar_do_chao() -> void:
+	if ativo and not morto:
+		inventario.pegar(inventario.item_mais_proximo())
 
 # usa res://modelos/personagem.(tscn|scn|glb|gltf|fbx) se existir; senão fica o soldado original
 func _carregar_modelo_do_projeto() -> void:
@@ -226,7 +245,7 @@ func _process(delta: float) -> void:
 		cam_pit = clampf(cam_pit + r.y * 0.004 * s, -0.35, 1.15)
 		controles.indicadores["AGACHAR"] = agachado
 		controles.indicadores["MIRAR"] = mirando
-		controles.textos["ARMA"] = armas.WDEF[armas.atual]["nome"]
+		controles.textos["ARMA"] = armas.WDEF[armas.atual]["nome"] if armas.atual != "" else "ARMA"
 	fator_agachado = lerpf(fator_agachado, 1.0 if agachado else 0.0, minf(1.0, delta * 10.0))
 	fator_mira = lerpf(fator_mira, 1.0 if mirando else 0.0, minf(1.0, delta * 12.0))
 	# câmera: pivô na altura do ombro, gira com a mira (+ recuo da arma); o braço (SpringArm3D) bate nos prédios

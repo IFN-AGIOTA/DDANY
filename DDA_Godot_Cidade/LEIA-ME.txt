@@ -18,15 +18,33 @@ O QUE JÁ TEM
 - ESTANDE DE TIRO na base militar, na sua frente ao nascer: 8 alvos a 15, 25, 40 e 60 m que caem e levantam,
   com placar (acertos, tiros na cabeça, derrubados).
 - Cidade com colisão (chão e prédios) e câmera que encurta ao bater em parede.
+- INVENTÁRIO ESTILO DAYZ (novo) · botão INV (canto de cima), Tab ou I:
+    ESQUERDA = o que está PERTO no mundo: itens no CHÃO, caixas/armários e mochilas jogadas (com o que tem dentro).
+    MEIO     = o personagem: CABEÇA, CAMISA, COLETE, CINTO, OMBRO, COLDRE, CALÇA, MOCHILA, as MÃOS e a barra
+               de atalhos 1..8; embaixo, informações do item tocado e os botões USAR / PEGAR / LARGAR / DIVIDIR.
+    DIREITA  = o que você carrega: bolsos da jaqueta, calça, colete, pochete e a mochila (ex.: "MOCHILA (12/56)").
+  Cada item ocupa um retângulo de células. Arrastar e soltar entre qualquer grade/encaixe; durante o arraste,
+  R / Espaço / botão direito / um 2º dedo na tela = GIRAR. Soltar em cima de uma pilha igual = juntar.
+  Duplo toque = ação rápida (pegar do chão, vestir, usar, guardar a arma). Soltar no fundo da coluna da esquerda
+  = largar no chão. Arrastar um item para a barra liga o atalho; arrastar o atalho para fora desliga.
+  Regras: mochila/roupa com coisas dentro não entra em outra grade; nada entra em si mesmo; trocar o que está
+  na mão devolve o antigo ao coldre/ombro (ou ao lugar de onde o novo veio, ao inventário ou ao chão).
+  Com o inventário aberto o jogador fica parado. Botão PEGAR (ou E) aparece perto de um item no chão.
+- ARMAS + INVENTÁRIO: a arma usada é a que está nas MÃOS. Começa com a pistola na mão e a M4 no ombro.
+  O pente fica na arma; RECARREGAR puxa munição (9MM / 5.56) dos bolsos e da mochila. ARMA/rodinha alterna
+  coldre <-> ombro; 1/2 (atalhos) pegam a pistola/M4 (apertar de novo guarda). Mãos vazias = sem arma.
+- LOOT DE TESTE ao nascer: na sua frente, itens no chão (mochila de combate, munição 5.56, comida...) e uma
+  CAIXA MILITAR (capacete, mochila escolar, pistola, munição 9MM...).
 
 CONTROLES (toque: vários dedos ao mesmo tempo)
 - Metade ESQUERDA da tela: joystick (aparece onde você toca; fraco = andar, forte = trote).
 - Metade DIREITA: olhar.
 - ATIRAR (segurar; dá para arrastar o dedo em cima dele para mirar enquanto atira) · CORRER (segurar)
-- PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga) · RECARREGAR · ARMA (troca pistola/M4)
+- PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga) · RECARREGAR · ARMA (troca coldre/ombro) · PEGAR · INV
 - VOO (canto de cima): câmera livre para ver a cidade (SOBE / DESCE / VEL); ao sair, o soldado desce ali.
 - PC: WASD · Shift correr · Espaço pular · C ou Ctrl agachar · F atirar · botão direito do mouse mirar ·
-  R recarregar · 1/2, Tab ou rodinha troca arma · mouse arrastando na metade direita = olhar · V voo (Q/E no voo).
+  R recarregar · 1..8 atalhos · rodinha troca arma · Tab ou I inventário · E pegar ·
+  mouse arrastando na metade direita = olhar · V voo (Q/E no voo).
 
 ARQUIVOS
 - main.gd ................ monta a cidade e liga o jogo. SPAWN (onde nasce) no topo.
@@ -40,6 +58,12 @@ ARQUIVOS
 - armas/hud_combate.gd ... mira, munição, acerto, avisos.
 - mundo/colisao_mundo.gd . colisão perto do jogador + raio dos tiros contra a cidade inteira.
 - mundo/estande_tiro.gd .. alvos de treino. Use o mesmo método receber_tiro(...) nos inimigos Vagos.
+- inventario/itens.gd .... TABELA DE ITENS (tamanho, peso, pilha, onde veste, espaço interno). Item novo = 1 linha.
+- inventario/inventario.gd  regras e movimentos (corpo, mãos, atalhos, munição, pegar/largar). Fica no Jogador.
+- inventario/tela_inventario.gd  a tela de 3 colunas · grade_ui.gd (grade com arrastar) · slot_ui.gd (encaixes)
+- inventario/item.gd / grade.gd  item e grade de células · visual.gd: ícones desenhados por código
+  (para usar imagens: res://inventario/icones/<id>.png, ex.: m4.png).
+- inventario/item_mundo.gd (item jogado no chão) · caixa_mundo.gd (caixa/armário com grade, ex. em main.gd).
 
 CAMADAS DE FÍSICA: 1 = mundo · 2 = jogador · 3 = inimigos/alvos.
 

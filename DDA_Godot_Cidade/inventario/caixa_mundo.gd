@@ -1,0 +1,61 @@
+extends Node3D
+# CONTÊINER NO MUNDO (caixa, armário, geladeira...). Tem uma grade própria que aparece na coluna da
+# ESQUERDA do inventário quando o jogador está perto. É sólido (camada 1, como o resto do mundo).
+# Uso: var c = CaixaMundo.new(); c.nome = "CAIXA MILITAR"; c.tamanho = Vector2i(10, 6); add_child(c);
+#      c.guardar(Item.novo("bandagem", 4))
+
+const GradeCls := preload("res://inventario/grade.gd")
+
+var nome := "CAIXA"
+var tamanho := Vector2i(8, 5)
+var medidas := Vector3(1.2, 0.7, 0.6)        # metros
+var cor := Color(0.24, 0.30, 0.20)
+var grade = null
+
+func _init() -> void:
+	grade = GradeCls.new(tamanho.x, tamanho.y, nome, self)
+
+func _ready() -> void:
+	add_to_group("conteineres_mundo")
+	grade.largura = tamanho.x
+	grade.altura = tamanho.y
+	grade.nome = nome
+	var mi := MeshInstance3D.new()
+	var bm := BoxMesh.new()
+	bm.size = medidas
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = cor
+	mat.roughness = 0.85
+	bm.material = mat
+	mi.mesh = bm
+	mi.position.y = medidas.y * 0.5
+	add_child(mi)
+	var tampa := MeshInstance3D.new()
+	var tb := BoxMesh.new()
+	tb.size = Vector3(medidas.x + 0.04, 0.05, medidas.z + 0.04)
+	var tm := StandardMaterial3D.new()
+	tm.albedo_color = cor.darkened(0.3)
+	tb.material = tm
+	tampa.mesh = tb
+	tampa.position.y = medidas.y
+	add_child(tampa)
+	var corpo := StaticBody3D.new()
+	corpo.collision_layer = 1
+	corpo.collision_mask = 0
+	var cs := CollisionShape3D.new()
+	var bs := BoxShape3D.new()
+	bs.size = medidas
+	cs.shape = bs
+	cs.position.y = medidas.y * 0.5
+	corpo.add_child(cs)
+	add_child(corpo)
+
+# põe um item na primeira vaga livre (usado para encher a caixa no começo)
+func guardar(it) -> bool:
+	grade.largura = tamanho.x
+	grade.altura = tamanho.y
+	var v: Vector3i = grade.achar_vaga(it)
+	if v.x < 0:
+		return false
+	grade.colocar(it, v.x, v.y, v.z == 1)
+	return true

@@ -16,6 +16,10 @@ const ColisaoMundoCls := preload("res://mundo/colisao_mundo.gd")
 const ControlesCls := preload("res://jogador/controles.gd")
 const HudCls := preload("res://armas/hud_combate.gd")
 const EstandeCls := preload("res://mundo/estande_tiro.gd")
+const TelaInventarioCls := preload("res://inventario/tela_inventario.gd")
+const CaixaMundoCls := preload("res://inventario/caixa_mundo.gd")
+const ItemMundoCls := preload("res://inventario/item_mundo.gd")
+const ItemCls := preload("res://inventario/item.gd")
 const JOGADOR_CENA := preload("res://jogador/jogador.tscn")
 
 var W := 0
@@ -37,6 +41,7 @@ var controles: CanvasLayer
 var mundo: Node3D
 var hud: CanvasLayer
 var estande: Node3D
+var tela_inventario: CanvasLayer
 
 # Preview dentro do editor (não é salvo na cena; leva alguns segundos e pesa no celular)
 @export var preview_no_editor := false:
@@ -362,11 +367,35 @@ func _criar_jogo() -> void:
 	mundo.forcar(SPAWN)
 	jogador.teleportar(Vector3(SPAWN.x, y + 0.05, SPAWN.y), PI)   # virado para o sul (+Z), como no jogo em HTML
 	mundo.alvo = jogador
+	tela_inventario = TelaInventarioCls.new()
+	tela_inventario.name = "TelaInventario"
+	add_child(tela_inventario)
+	tela_inventario.ligar(jogador.inventario, controles)
+	_criar_loot()
 	cam = Camera3D.new()          # câmera livre (modo VOO)
 	cam.near = 2.0
 	cam.far = 9000.0
 	add_child(cam)
 	jogador.camera.make_current()
+
+# LOOT DE TESTE ao lado de onde o jogador nasce: itens no chão e uma caixa militar (abra o INVENTÁRIO perto deles)
+func _criar_loot() -> void:
+	var chao := [
+		["mochila_combate", 1, Vector2(1.4, 1.6)], ["ursinho", 1, Vector2(1.0, 2.1)], ["feijao", 1, Vector2(1.8, 2.2)],
+		["agua", 1, Vector2(1.2, 2.5)], ["mun_556", 60, Vector2(1.9, 1.3)], ["corda", 1, Vector2(0.8, 1.4)],
+	]
+	for c in chao:
+		var p: Vector2 = SPAWN + c[2]
+		ItemMundoCls.soltar(self, ItemCls.novo(c[0], c[1]), Vector3(p.x, mundo.altura(p.x, p.y), p.y))
+	var caixa = CaixaMundoCls.new()
+	caixa.name = "CaixaMilitar"
+	caixa.nome = "CAIXA MILITAR"
+	caixa.tamanho = Vector2i(8, 6)
+	var pc := SPAWN + Vector2(-1.2, 2.0)
+	add_child(caixa)
+	caixa.global_position = Vector3(pc.x, mundo.altura(pc.x, pc.y), pc.y)
+	for c in [["capacete", 1], ["mochila_escolar", 1], ["bandagem", 4], ["mun_9mm", 50], ["pistola", 1], ["radio", 1], ["vitaminas", 1]]:
+		caixa.guardar(ItemCls.novo(c[0], c[1]))
 
 # VOO: câmera livre sobre a cidade (para inspecionar). Ao sair, o jogador desce onde a câmera estiver.
 func _alternar_voo() -> void:
@@ -376,6 +405,8 @@ func _alternar_voo() -> void:
 		cam.position = jogador.global_position + Vector3(0.0, 60.0, 0.0)
 		yaw = jogador.cam_yaw
 		pitch = -0.6
+		if tela_inventario.aberto:
+			tela_inventario.fechar()
 		jogador.ativo = false
 		mundo.alvo = null
 		cam.make_current()
