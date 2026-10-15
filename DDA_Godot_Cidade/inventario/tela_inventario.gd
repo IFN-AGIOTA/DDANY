@@ -434,13 +434,23 @@ func _atualizar_meio() -> void:
 		var linhas: String = it.nome()
 		if it.max_pilha() > 1:
 			linhas += "  ×%d" % it.qtd
-		if it.eh_arma():
-			linhas += "  ·  %d/%d balas (%d no inventário)" % [it.municao, int(d.get("pente", 0)), inv.contar(d.get("municao", ""))]
-		linhas += "  ·  %.2f kg\n%s" % [it.peso(), d.get("desc", "")]
+		if it.eh_arma_de_fogo():
+			if it.usa_pente() != "" and it.pente_id == "":
+				linhas += "  ·  SEM PENTE"
+			else:
+				linhas += "  ·  %d/%d balas" % [it.municao, it.capacidade()]
+			linhas += " (%d soltas)" % inv.contar(d.get("municao", ""))
+			for k in it.acessorios:
+				linhas += "  ·  " + String(Itens.def(it.acessorios[k]).get("sigla", ""))
+		elif it.eh_pente():
+			linhas += "  ·  %d/%d balas" % [it.municao, it.capacidade()]
+		linhas += "  ·  %.2f kg  ·  " % it.peso()
 		_info.text = linhas
+		_info.text += Itens.nome_estado(it.estado) + "\n" + String(d.get("desc", ""))
 	var meu: bool = it != null and inv.do_jogador(it)
-	_bt["USAR"].disabled = it == null or not meu or not (it.def().get("consome", false) or (it.slot != "maos"))
-	_bt["USAR"].text = "USAR" if it != null and it.def().get("consome", false) else "NA MÃO"
+	var acao: String = inv.nome_acao(it)
+	_bt["USAR"].disabled = it == null or not meu or (acao == "NA MÃO" and it.slot == "maos")
+	_bt["USAR"].text = acao
 	_bt["PEGAR"].disabled = it == null or meu
 	_bt["LARGAR"].disabled = it == null or it.no_mundo != null
 	_bt["DIVIDIR"].disabled = it == null or it.qtd < 2 or it.no_mundo != null

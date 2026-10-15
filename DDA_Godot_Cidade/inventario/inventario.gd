@@ -14,6 +14,7 @@ signal aviso(texto: String)
 const Itens := preload("res://inventario/itens.gd")
 const ItemCls := preload("res://inventario/item.gd")
 const ItemMundo := preload("res://inventario/item_mundo.gd")
+const GradeCls := preload("res://inventario/grade.gd")
 
 const CONTEINERES_CORPO := ["camisa", "calca", "colete", "cinto", "mochila"]   # ordem na coluna da direita
 const ARMAS_CORPO := ["coldre", "ombro"]
@@ -43,9 +44,10 @@ func equipamento_inicial() -> void:
 	_por(jaq.conteudo, ItemCls.novo("vitaminas"))
 	_por(jaq.conteudo, ItemCls.novo("fita"))
 	_por(jaq.conteudo, ItemCls.novo("lanterna"))
-	_por(calca.conteudo, ItemCls.novo("mun_9mm", 48))
+	_por(calca.conteudo, ItemCls.novo("mun_9mm", 36))
+	_por(calca.conteudo, ItemCls.novo("pente_pistola"))
 	_por(calca.conteudo, ItemCls.novo("faca"))
-	_por(colete.conteudo, ItemCls.novo("mun_556", 60))
+	_por(colete.conteudo, ItemCls.novo("pente_stanag"))
 	_por(colete.conteudo, ItemCls.novo("mun_556", 60))
 	_por(pochete.conteudo, ItemCls.novo("agua"))
 	var pistola = ItemCls.novo("pistola")
@@ -57,6 +59,95 @@ func equipamento_inicial() -> void:
 	atalhos[0] = pistola
 	atalhos[1] = m4
 	atalhos[2] = jaq.conteudo.itens[0]      # ataduras
+	mudou.emit()
+
+# ---------- salvar / carregar ----------
+func salvar() -> Dictionary:
+	var sl := {}
+	for s in slots:
+		if slots[s] != null:
+			sl[s] = slots[s].para_dict()
+	var at := []
+	for a in atalhos:
+		at.append(_caminho(a) if a != null else [])
+	return {"slots": sl, "atalhos": at}
+
+func carregar(d: Dictionary) -> void:
+	for s in slots:
+		if slots[s] != null:
+			slots[s].slot = ""
+		slots[s] = null
+	var sl: Dictionary = d.get("slots", {})
+	for s in sl:
+		if slots.has(s):
+			var it = ItemCls.de_dict(sl[s])
+			if it != null:
+				slots[s] = it
+				it.slot = s
+	var at: Array = d.get("atalhos", [])
+	for i in N_ATALHOS:
+		atalhos[i] = _achar_caminho(at[i]) if i < at.size() else null
+	mudou.emit()
+
+# caminho de um item no corpo: [slot, índice na grade, índice na grade de dentro...]
+func _caminho(it) -> Array:
+	var c := []
+	var a = it
+	for _i in 8:
+		if a == null:
+			return []
+		if a.slot != "":
+			c.push_front(a.slot)
+			return c
+		var g = a.onde
+		if g == null:
+			return []
+		c.push_front(g.itens.find(a))
+		a = g.dono
+		if not (a is RefCounted):
+			return []
+	return []
+
+func _achar_caminho(c) -> Variant:
+	if not (c is Array) or c.is_empty() or not slots.has(c[0]):
+		return null
+	var it = slots[c[0]]
+	for k in range(1, c.size()):
+		if it == null or it.conteudo == null:
+			return null
+		var i := int(c[k])
+		if i < 0 or i >= it.conteudo.itens.size():
+			return null
+		it = it.conteudo.itens[i]
+	return it
+
+# tira tudo do corpo (morte: vai tudo para o chão junto do corpo)
+func esvaziar() -> Array:
+	var r := []
+	for s in slots:
+		if slots[s] != null:
+			r.append(slots[s])
+			slots[s].slot = ""
+			slots[s] = null
+	for i in N_ATALHOS:
+		atalhos[i] = null
+	mudou.emit()
+	return r
+
+# equipamento de quem acabou de renascer (como no DayZ: quase nada)
+func equipamento_renascer() -> void:
+	var cam = ItemCls.novo("camiseta")
+	var jeans = ItemCls.novo("jeans")
+	cam.estado = randf_range(0.5, 0.9)
+	jeans.estado = randf_range(0.5, 0.9)
+	slots["camisa"] = cam
+	cam.slot = "camisa"
+	slots["calca"] = jeans
+	jeans.slot = "calca"
+	_por(cam.conteudo, ItemCls.novo("trapos", 2))
+	_por(jeans.conteudo, ItemCls.novo("lanterna"))
+	_por(jeans.conteudo, ItemCls.novo("maca"))
+	atalhos[0] = cam.conteudo.itens[0] if not cam.conteudo.itens.is_empty() else null
 	mudou.emit()
 
 func _por(g, it) -> void:
@@ -311,13 +402,145 @@ func acao_rapida(it) -> void:
 func usar(it) -> void:
 	var d: Dictionary = it.def()
 	if d.get("consome", false):
+		var sv = jogador.get("sobrevivencia")
+		if sv != null and d.has("efeito"):
+			var r: String = sv.aplicar(d["efeito"], it.id)
+			if r != "":
+				aviso.emit(r)           # ex.: "NADA PARA CONSERTAR" (o item não é gasto)
+				return
 		aviso.emit(String(d.get("usar", "Usou " + it.nome())).to_upper())
 		it.qtd -= 1
 		if it.qtd <= 0:
 			retirar(it)
 		_depois()
+	elif it.eh_pente():
+		encher_pente(it)
+	elif it.eh_arma_de_fogo() and (it.pente_id != "" or not it.acessorios.is_empty()) and it.slot == "maos":
+		desmontar(it)
 	elif it.slot != "maos":
 		equipar(it, "maos")
+
+# texto do botão USAR para este item (a tela do inventário mostra)
+func nome_acao(it) -> String:
+	if it == null:
+		return "USAR"
+	var d: Dictionary = it.def()
+	if d.get("consome", false):
+		return {"comida": "COMER", "bebida": "BEBER"}.get(d.get("cat", ""), "USAR")
+	if it.eh_pente():
+		return "ENCHER"
+	if it.eh_arma_de_fogo() and (it.pente_id != "" or not it.acessorios.is_empty()) and it.slot == "maos":
+		return "DESMONTAR"
+	return "NA MÃO"
+
+# ---------- pentes, munição e acessórios (estilo DayZ) ----------
+# enche o pente com a munição solta que o jogador carrega
+func encher_pente(p) -> bool:
+	var falta: int = p.capacidade() - p.municao
+	if falta <= 0:
+		aviso.emit("PENTE CHEIO")
+		return false
+	var n := consumir(String(p.def()["pente_de"]), falta)
+	if n <= 0:
+		aviso.emit("SEM MUNIÇÃO " + String(Itens.def(p.def()["pente_de"]).get("sigla", "")))
+		return false
+	p.municao += n
+	aviso.emit("PENTE %d/%d" % [p.municao, p.capacidade()])
+	_depois()
+	return true
+
+# tira o pente e os acessórios da arma (vão para o inventário ou para o chão)
+func desmontar(arma) -> void:
+	if arma.pente_id != "":
+		var pe = ItemCls.novo(arma.pente_id)
+		pe.municao = arma.municao
+		arma.municao = 0
+		arma.pente_id = ""
+		_guardar_ou_largar(pe)
+	for k in arma.acessorios.keys():
+		_guardar_ou_largar(ItemCls.novo(arma.acessorios[k]))
+	arma.acessorios.clear()
+	aviso.emit("ARMA DESMONTADA")
+	_depois()
+
+func _guardar_ou_largar(it) -> void:
+	if not _guardar_auto(it):
+		_soltar_no_chao(it)
+
+# soltar o item "it" em cima de "alvo" faz algo? (munição -> pente/arma, pente -> arma, acessório -> arma)
+func pode_combinar(it, alvo) -> bool:
+	if it == null or alvo == null or it == alvo:
+		return false
+	var da: Dictionary = alvo.def()
+	if it.def().get("cat", "") == "municao":
+		if alvo.eh_pente():
+			return da["pente_de"] == it.id and alvo.municao < alvo.capacidade()
+		if alvo.eh_arma_de_fogo() and alvo.usa_pente() == "":
+			return da.get("municao", "") == it.id and alvo.municao < alvo.capacidade()
+		return false
+	if it.eh_pente():
+		return alvo.eh_arma_de_fogo() and alvo.usa_pente() == it.id
+	var enc: String = it.def().get("encaixe", "")
+	if enc != "":
+		return alvo.eh_arma_de_fogo() and da.get("arma", "") in it.def().get("serve", []) and enc in da.get("acess", [])
+	return false
+
+func combinar(it, alvo) -> bool:
+	if not pode_combinar(it, alvo):
+		return false
+	if it.def().get("cat", "") == "municao":
+		var n := mini(it.qtd, alvo.capacidade() - alvo.municao)
+		alvo.municao += n
+		it.qtd -= n
+		if it.qtd <= 0:
+			retirar(it)
+		aviso.emit("%d/%d" % [alvo.municao, alvo.capacidade()])
+	elif it.eh_pente():
+		var orig := _origem(it)
+		retirar(it)
+		var antigo = null
+		if alvo.pente_id != "":
+			antigo = ItemCls.novo(alvo.pente_id)
+			antigo.municao = alvo.municao
+		alvo.pente_id = it.id
+		alvo.municao = it.municao
+		if antigo != null:
+			_guardar_em_algum_lugar(antigo, orig)
+		aviso.emit("PENTE ENCAIXADO")
+	else:
+		var enc: String = it.def()["encaixe"]
+		var orig := _origem(it)
+		retirar(it)
+		var antigo: String = alvo.acessorios.get(enc, "")
+		alvo.acessorios[enc] = it.id
+		if antigo != "":
+			_guardar_em_algum_lugar(ItemCls.novo(antigo), orig)
+		aviso.emit(it.nome() + " ENCAIXADO")
+	_depois()
+	return true
+
+# recarga estilo DayZ: troca pelo pente mais cheio que você carrega (o vazio volta para o lugar dele);
+# sem pente cheio, enche o pente encaixado com munição solta. Armas sem pente puxam munição solta.
+# devolve quantas balas a arma vai ter (-1 = nada a fazer)
+func pente_para_recarga(arma):
+	var tipo: String = arma.usa_pente()
+	var melhor = null
+	for g in grades_do_jogador():
+		for o in g.itens:
+			if o.id == tipo and o.municao > arma.municao and (melhor == null or o.municao > melhor.municao):
+				melhor = o
+	return melhor
+
+func trocar_pente(arma, novo) -> void:
+	var orig := _origem(novo)
+	retirar(novo)
+	if arma.pente_id != "":
+		var velho = ItemCls.novo(arma.pente_id)
+		velho.municao = arma.municao
+		_guardar_em_algum_lugar(velho, orig)
+	arma.pente_id = novo.id
+	arma.municao = novo.municao
+	_depois()
 
 # divide uma pilha ao meio (a metade nova vai para a mesma grade ou outra vaga do inventário)
 func dividir(it) -> bool:

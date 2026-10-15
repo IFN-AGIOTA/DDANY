@@ -10,7 +10,10 @@ const GradeCls := preload("res://inventario/grade.gd")
 
 var id := ""
 var qtd := 1
-var municao := 0              # armas: balas no pente
+var municao := 0              # armas: balas no pente encaixado (ou no tambor) · pentes: balas guardadas
+var estado := 1.0             # 1 = perfeito ... 0 = arruinado (veja Itens.nome_estado)
+var pente_id := ""            # armas com pente: qual pente está encaixado ("" = sem pente)
+var acessorios := {}          # armas: encaixe ("cano"/"mira") -> id do acessório
 var x := 0                    # posição na grade (célula do canto de cima à esquerda)
 var y := 0
 var rot := false              # girado 90° na grade (troca largura e altura)
@@ -33,6 +36,9 @@ static func novo(tipo: String, quantidade := 1) -> RefCounted:
 	it.id = tipo
 	it.qtd = clampi(quantidade, 1, int(d.get("max", 1)))
 	it.municao = int(d.get("pente", 0))
+	it.pente_id = String(d.get("usa_pente", ""))
+	if d.has("cap"):
+		it.municao = int(d["cap"])
 	if d.has("grade"):
 		var g: Array = d["grade"]
 		it.conteudo = GradeCls.new(int(g[0]), int(g[1]), d["nome"], it)
@@ -63,6 +69,24 @@ func empilha_com(outro) -> bool:
 func eh_arma() -> bool:
 	return def().has("arma")
 
+func eh_arma_de_fogo() -> bool:
+	return def().has("municao") and def().has("arma")
+
+func eh_pente() -> bool:
+	return def().has("pente_de")
+
+func usa_pente() -> String:
+	return String(def().get("usa_pente", ""))
+
+# balas que cabem: pente = "cap" · arma sem pente = "pente" · arma com pente = capacidade do pente encaixado
+func capacidade() -> int:
+	var d := def()
+	if d.has("cap"):
+		return int(d["cap"])
+	if d.has("usa_pente"):
+		return int(Itens.def(pente_id).get("cap", 0)) if pente_id != "" else 0
+	return int(d.get("pente", 0))
+
 func tem_conteudo() -> bool:
 	return conteudo != null and not conteudo.itens.is_empty()
 
@@ -71,15 +95,62 @@ func peso() -> float:
 	var p := float(def().get("peso", 0.0)) * qtd
 	if conteudo != null:
 		p += conteudo.peso()
-	if eh_arma():
-		var m: Dictionary = Itens.def(def().get("municao", ""))
-		p += float(m.get("peso", 0.0)) * municao
+	var mid: String = def().get("municao", def().get("pente_de", ""))
+	if mid != "":
+		p += float(Itens.def(mid).get("peso", 0.0)) * municao
+	if pente_id != "":
+		p += float(Itens.def(pente_id).get("peso", 0.0))
+	for k in acessorios:
+		p += float(Itens.def(acessorios[k]).get("peso", 0.0))
 	return p
 
 # texto pequeno no canto do ícone (quantidade / balas)
 func rotulo() -> String:
-	if eh_arma():
+	if eh_arma_de_fogo():
+		if usa_pente() != "" and pente_id == "":
+			return "—"
 		return str(municao)
+	if eh_pente():
+		return "%d/%d" % [municao, capacidade()]
 	if max_pilha() > 1:
 		return str(qtd)
 	return ""
+
+# ---------- salvar / carregar (jogo salvo e loot guardado dos prédios) ----------
+func para_dict() -> Dictionary:
+	var d := {"id": id, "q": qtd, "x": x, "y": y}
+	if rot:
+		d["r"] = 1
+	if municao != 0:
+		d["m"] = municao
+	if estado < 1.0:
+		d["e"] = snappedf(estado, 0.01)
+	if pente_id != "":
+		d["p"] = pente_id
+	if not acessorios.is_empty():
+		d["a"] = acessorios.duplicate()
+	if conteudo != null and not conteudo.itens.is_empty():
+		var lista := []
+		for o in conteudo.itens:
+			lista.append(o.para_dict())
+		d["c"] = lista
+	return d
+
+static func de_dict(d: Dictionary) -> RefCounted:
+	var it = novo(String(d.get("id", "")), int(d.get("q", 1)))
+	if it == null:
+		return null
+	it.qtd = int(d.get("q", 1))
+	it.x = int(d.get("x", 0))
+	it.y = int(d.get("y", 0))
+	it.rot = d.has("r")
+	it.municao = int(d.get("m", 0))
+	it.estado = float(d.get("e", 1.0))
+	it.pente_id = String(d.get("p", ""))
+	it.acessorios = (d.get("a", {}) as Dictionary).duplicate()
+	if it.conteudo != null:
+		for od in d.get("c", []):
+			var o = de_dict(od)
+			if o != null and it.conteudo.cabe(o, o.x, o.y, o.rot):
+				it.conteudo.colocar(o, o.x, o.y, o.rot)
+	return it

@@ -12,6 +12,8 @@ const CidadeCls := preload("res://mundo/cidade.gd")
 const ColisaoMundoCls := preload("res://mundo/colisao_mundo.gd")
 const EstandeCls := preload("res://mundo/estande_tiro.gd")
 const LootCls := preload("res://mundo/loot.gd")
+const LootMundoCls := preload("res://mundo/loot_mundo.gd")
+const InterioresCls := preload("res://mundo/interiores.gd")
 const ControlesCls := preload("res://jogador/controles.gd")
 const CameraVooCls := preload("res://jogador/camera_voo.gd")
 const HudCls := preload("res://armas/hud_combate.gd")
@@ -38,6 +40,8 @@ var menu: CanvasLayer
 var opcoes: CanvasLayer
 var pausa: CanvasLayer
 var aplicador: Node
+var loot_mundo                              # mundo/loot_mundo.gd (o que tem em cada móvel/carro, guardado)
+var interiores: Node                        # mundo/interiores.gd (prédios por dentro perto do jogador)
 var _tempo_jogo := 0.0
 
 # Preview dentro do editor (não é salvo na cena; leva alguns segundos e pesa no celular)
@@ -187,6 +191,8 @@ func _criar_jogo() -> void:
 	mundo.name = "ColisaoMundo"
 	jogo.add_child(mundo)
 	mundo.configurar(cidade.dados_cidade, cidade.predios)
+	if cidade.abandono != null:
+		mundo.configurar_obstaculos(cidade.abandono.obstaculos)
 	jogador = JOGADOR_CENA.instantiate()
 	jogador.name = "Jogador"
 	jogador.mundo = mundo
@@ -210,6 +216,11 @@ func _criar_jogo() -> void:
 	jogo.add_child(tela_inventario)
 	tela_inventario.ligar(jogador.inventario, controles)
 	LootCls.espalhar(jogo, mundo, SPAWN)
+	loot_mundo = LootMundoCls.new()
+	interiores = InterioresCls.new()
+	interiores.name = "Interiores"
+	jogo.add_child(interiores)
+	interiores.ligar(cidade, mundo, jogador, loot_mundo)
 	voo = CameraVooCls.new()
 	voo.name = "CameraVoo"
 	jogo.add_child(voo)
@@ -222,6 +233,9 @@ func _criar_jogo() -> void:
 	jogador.armas.acertou.connect(func(_c, matou): Musica.adicionar_tensao(0.12 if matou else 0.03))
 
 func _fechar_jogo() -> void:
+	if interiores != null and is_instance_valid(interiores):
+		interiores.fechar_todos()           # devolve os blocos dos prédios para a cidade
+	interiores = null
 	if jogo != null:
 		jogo.queue_free()
 	jogo = null

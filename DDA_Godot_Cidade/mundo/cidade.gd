@@ -13,6 +13,7 @@ extends Node3D
 # Quem usa: main.gd (cria o nó "Cidade") e mundo/colisao_mundo.gd (recebe dados + predios para a colisão).
 
 const Mat := preload("res://mundo/materiais_cidade.gd")
+const AbandonoCls := preload("res://mundo/abandono.gd")
 
 const CELL := 20.0                          # resolução das máscaras (m)
 const WORLD := Vector2(11000.0, 8600.0)     # metade do mundo (m)
@@ -47,6 +48,7 @@ var sol: DirectionalLight3D                 # Opções › Gráficos › Sombras
 var mat_predio: ShaderMaterial              # Opções › Gráficos › Detalhes dos shaders (janelas)
 var mats_agua: Array[ShaderMaterial] = []   # Opções › Gráficos › Água
 var detalhes: Array[GeometryInstance3D] = []   # árvores e caixas d'água (Opções › Distância dos detalhes)
+var detalhes_abandono: Array[GeometryInstance3D] = []   # carros, lixo, entulho
 
 var _mascara: ImageTexture                  # terra (1) / água (0) para praias, mar raso e espuma
 var _nos := {}                              # Vector2i (m) -> {"n": quantas ruas chegam, "r": raio}
@@ -63,6 +65,7 @@ func construir() -> void:
 	_ground(data)
 	_roads(data)
 	_buildings()
+	_abandono()
 	_arvores()
 	print("Cidade pronta em ", Time.get_ticks_msec() - t0, " ms")
 
@@ -75,6 +78,7 @@ func limpar() -> void:
 		n.queue_free()
 	built.clear()
 	detalhes.clear()
+	detalhes_abandono.clear()
 	is_built = false
 
 # grava res://cidade.scn: a cidade vira uma cena de verdade, editável com as ferramentas da Godot
@@ -474,6 +478,27 @@ func _mascara_rua(a: Vector2, b: Vector2, hw: float) -> void:
 # ---------- prédios ----------
 const CORES_TIPO := [Color(0.60, 0.58, 0.55), Color(0.50, 0.29, 0.21), Color(0.74, 0.67, 0.55), Color(0.30, 0.34, 0.38)]
 
+# usos dos prédios (decidem os móveis e o loot lá dentro: mundo/interiores.gd)
+const USOS := ["residencial", "loja", "mercado", "restaurante", "escritorio", "farmacia", "delegacia", "clinica"]
+const PESO_USOS := [0.42, 0.12, 0.08, 0.1, 0.1, 0.08, 0.05, 0.05]
+const CHANCE_RUINA := 0.07
+const CHANCE_ENTRA := 0.76                  # 76% dos prédios inteiros = mais de 70% de todos
+
+var predio_info: Array = []                 # um Dictionary por prédio (mesma ordem de "predios")
+var _mm_predios := {}                       # Vector2i -> MultiMesh dos prédios daquele bloco
+var ruinas: Array = []                      # [x, z, tam_x, tam_z, altura] dos prédios destruídos
+var abandono                                # mundo/abandono.gd (carros, obstáculos)
+
+func _sortear_uso(r: RandomNumberGenerator, h: float) -> String:
+	if h > 70.0:
+		return "escritorio"
+	var x := r.randf()
+	for i in USOS.size():
+		x -= PESO_USOS[i]
+		if x <= 0.0:
+			return USOS[i]
+	return "residencial"
+
 func _buildings() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 20081029
@@ -484,8 +509,14 @@ func _buildings() -> void:
 	var caixas := {}                     # caixas d'água: Vector2i -> [Transform3D, ...]
 	var extra := RandomNumberGenerator.new()
 	extra.seed = 4242
+	var sorte := RandomNumberGenerator.new()
+	sorte.seed = 9090
 	predios = PackedFloat32Array()
+	predio_info.clear()
+	ruinas.clear()
+	_mm_predios.clear()
 	var n := 0
+	var n_entra := 0
 	for lr in range(0, H - 1, 2):
 		for lc in range(0, W - 1, 2):
 			var n_land := 0
@@ -510,7 +541,6 @@ func _buildings() -> void:
 			var sz := rng.randf_range(20.0, 34.0)
 			var bx := x + rng.randf_range(-3.0, 3.0)
 			var bz := z + rng.randf_range(-3.0, 3.0)
-			predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h]))   # guardado para a colisão
 			# tipo: torres altas quase sempre de vidro; o resto concreto, tijolo ou pedra
 			var tipo: int = 3 if (h > 75.0 and extra.randf() < 0.7) else [0, 1, 1, 2][extra.randi() % 4]
 			var cor: Color = CORES_TIPO[tipo] * extra.randf_range(0.82, 1.12)
@@ -519,6 +549,28 @@ func _buildings() -> void:
 			var chave := Vector2i(floori(bx / BLOCO), floori(bz / BLOCO))
 			if not blocos.has(chave):
 				blocos[chave] = []
+			var ruina := sorte.randf() < CHANCE_RUINA
+			var info := {"x": bx, "z": bz, "sx": sx, "sz": sz, "tipo": tipo, "cor": cor, "sem": sem, "bloco": chave,
+				"uso": _sortear_uso(sorte, h), "entra": false, "idx": -1, "ruina": ruina}
+			if ruina:
+				# prédio destruído: mais baixo, metade desabada, fuligem (tipo 4) e entulho em volta/em cima
+				h = h * sorte.randf_range(0.3, 0.65)
+				var h_b := h * sorte.randf_range(0.35, 0.8)
+				var cz := Color(0.36, 0.34, 0.32) * sorte.randf_range(0.8, 1.1)
+				cz.a = 1.0
+				var pb := Vector2(bx + sx * 0.25, bz) if sx > sz else Vector2(bx, bz + sz * 0.25)
+				if sx > sz:
+					blocos[chave].append([Transform3D(Basis.from_scale(Vector3(sx * 0.5, h, sz)), Vector3(bx - sx * 0.25, Y_RUA + h * 0.5, bz)), cz, Color(sx * 0.5, h, sz, 4 + sem)])
+					blocos[chave].append([Transform3D(Basis.from_scale(Vector3(sx * 0.5, h_b, sz * 0.85)), Vector3(bx + sx * 0.25, Y_RUA + h_b * 0.5, bz)), cz, Color(sx * 0.5, h_b, sz * 0.85, 4 + sem)])
+				else:
+					blocos[chave].append([Transform3D(Basis.from_scale(Vector3(sx, h, sz * 0.5)), Vector3(bx, Y_RUA + h * 0.5, bz - sz * 0.25)), cz, Color(sx, h, sz * 0.5, 4 + sem)])
+					blocos[chave].append([Transform3D(Basis.from_scale(Vector3(sx * 0.85, h_b, sz * 0.5)), Vector3(bx, Y_RUA + h_b * 0.5, bz + sz * 0.25)), cz, Color(sx * 0.85, h_b, sz * 0.5, 4 + sem)])
+				ruinas.append([bx, bz, sx, sz, h, pb.x, pb.y, h_b])
+				info["h"] = h
+				predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h]))
+				predio_info.append(info)
+				continue
+			predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h]))   # guardado para a colisão
 			var h1 := h
 			if h > 60.0 and extra.randf() < 0.55:
 				# torre escalonada: corpo + topo mais estreito
@@ -532,7 +584,15 @@ func _buildings() -> void:
 					caixas[chave] = []
 				var off := Vector3(extra.randf_range(-0.25, 0.25) * sx, 0.0, extra.randf_range(-0.25, 0.25) * sz)
 				caixas[chave].append(Transform3D(Basis.from_scale(Vector3.ONE * extra.randf_range(0.8, 1.2)), Vector3(bx, Y_RUA + h1, bz) + off))
-			blocos[chave].append([Transform3D(Basis.from_scale(Vector3(sx, h1, sz)), Vector3(bx, Y_RUA + h1 * 0.5, bz)), cor, Color(sx, h1, sz, tipo + sem)])
+			var t := Transform3D(Basis.from_scale(Vector3(sx, h1, sz)), Vector3(bx, Y_RUA + h1 * 0.5, bz))
+			info["h"] = h1
+			info["t"] = t
+			info["idx"] = blocos[chave].size()
+			info["entra"] = sorte.randf() < CHANCE_ENTRA
+			if info["entra"]:
+				n_entra += 1
+			blocos[chave].append([t, cor, Color(sx, h1, sz, tipo + sem)])
+			predio_info.append(info)
 	mat_predio = Mat.material(Mat.PREDIO, {"detalhe": 1.0})
 	var caixa := BoxMesh.new()
 	caixa.material = mat_predio
@@ -549,6 +609,7 @@ func _buildings() -> void:
 			mm.set_instance_color(i, lista[i][1])
 			mm.set_instance_custom_data(i, lista[i][2])
 		n += lista.size()
+		_mm_predios[chave] = mm
 		var mi := MultiMeshInstance3D.new()
 		mi.name = "Predios_%d_%d" % [chave.x, chave.y]
 		mi.multimesh = mm
@@ -569,7 +630,31 @@ func _buildings() -> void:
 		mi.visibility_range_end = 1500.0
 		_adopt(mi)
 		detalhes.append(mi)
-	print("Prédios: ", predios.size() / 5, " (", n, " blocos de malha)")
+	print("Prédios: ", predios.size() / 5, " (", n, " blocos de malha) · com entrada: ", n_entra, " · em ruína: ", ruinas.size())
+
+# esconde/mostra o bloco de um prédio (quando o interior dele está montado perto do jogador)
+func esconder_predio(i: int, esconder: bool) -> void:
+	var info: Dictionary = predio_info[i]
+	if info["idx"] < 0:
+		return
+	var mm: MultiMesh = _mm_predios[info["bloco"]]
+	if esconder:
+		mm.set_instance_transform(info["idx"], Transform3D(Basis.from_scale(Vector3.ONE * 0.001), Vector3(info["x"], -500.0, info["z"])))
+	else:
+		mm.set_instance_transform(info["idx"], info["t"])
+
+# ---------- cidade abandonada (carros, barreiras, lixo, entulho) ----------
+func _abandono() -> void:
+	var dens := 1.0
+	var cfg = get_node_or_null("/root/Config") if is_inside_tree() else null
+	if cfg != null:
+		dens = [0.45, 0.75, 1.0][clampi(int(cfg.g.get("den", 1)), 0, 2)]
+	abandono = AbandonoCls.new()
+	abandono.construir(self, ruinas, dens)
+	for no in abandono.nos:
+		_adopt(no)
+		detalhes_abandono.append(no)
+	print("Carros: ", abandono.carros.size(), " · obstáculos: ", abandono.obstaculos.size() / 7)
 
 # junta várias malhas prontas (cilindro, cone...) numa só, deslocadas, cada uma com seu material
 static func _juntar(partes: Array) -> ArrayMesh:

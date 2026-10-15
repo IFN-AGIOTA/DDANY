@@ -11,15 +11,19 @@ var tamanho := Vector2i(8, 5)
 var medidas := Vector3(1.2, 0.7, 0.6)        # metros
 var cor := Color(0.24, 0.30, 0.20)
 var grade = null
-
-func _init() -> void:
-	grade = GradeCls.new(tamanho.x, tamanho.y, nome, self)
+var invisivel := false                        # true = é um móvel do interior (o móvel já é desenhado e tem colisão)
+var id_loot := ""                             # mundo/loot_mundo.gd: guarda o conteúdo enquanto o prédio está fechado
 
 func _ready() -> void:
 	add_to_group("conteineres_mundo")
+	if grade == null:
+		grade = GradeCls.new(tamanho.x, tamanho.y, nome, self)
 	grade.largura = tamanho.x
 	grade.altura = tamanho.y
 	grade.nome = nome
+	grade.dono = self
+	if invisivel:
+		return
 	var mi := MeshInstance3D.new()
 	var bm := BoxMesh.new()
 	bm.size = medidas
@@ -52,6 +56,8 @@ func _ready() -> void:
 
 # põe um item na primeira vaga livre (usado para encher a caixa no começo)
 func guardar(it) -> bool:
+	if grade == null:
+		grade = GradeCls.new(tamanho.x, tamanho.y, nome, self)
 	grade.largura = tamanho.x
 	grade.altura = tamanho.y
 	var v: Vector3i = grade.achar_vaga(it)

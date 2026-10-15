@@ -49,6 +49,10 @@ static func desenhar_item(ci: CanvasItem, it, r: Rect2, f: Font, girado: bool, a
 		var t2 := tam + 2
 		var w := f.get_string_size(rot, HORIZONTAL_ALIGNMENT_LEFT, -1, t2).x
 		texto(ci, f, rot, caixa.end - Vector2(w + 3, 4), t2, Color(1, 1, 1, alfa))
+	if it.estado < 0.7:
+		# estado (DayZ): bolinha colorida no canto (amarelo = gasto ... vermelho = muito danificado)
+		var raio := clampf(minf(caixa.size.x, caixa.size.y) * 0.09, 2.5, 5.0)
+		ci.draw_circle(caixa.position + Vector2(caixa.size.x - raio - 3, raio + 3), raio, Color(Itens.cor_estado(it.estado), alfa))
 	if it.conteudo != null:
 		var g = it.conteudo
 		var frac := float(g.celulas_usadas()) / float(maxi(1, g.largura * g.altura))
@@ -78,17 +82,69 @@ static func _icone(ci: CanvasItem, it, a: Rect2, alfa: float) -> void:
 			_r(ci, a, 0.05, 0.2, 0.95, 0.45, escuro)
 			_poli(ci, a, [[0.55, 0.45], [0.85, 0.45], [0.78, 0.95], [0.5, 0.95]], escuro)
 			_r(ci, a, 0.4, 0.45, 0.55, 0.6, escuro)
+			if it.acessorios.has("cano"):
+				_r(ci, a, 0.0, 0.24, 0.12, 0.41, Color(0.2, 0.2, 0.22, alfa))
 			return
-		"m4":
-			_poli(ci, a, [[0.0, 0.35], [0.2, 0.4], [0.2, 0.6], [0.0, 0.7]], escuro)
+		"m4", "ak":
+			var ak: bool = d["arma"] == "ak"
+			var mad := Color(0.42, 0.26, 0.14, alfa) if ak else escuro
+			_poli(ci, a, [[0.0, 0.35], [0.2, 0.4], [0.2, 0.6], [0.0, 0.7]], mad)
 			_r(ci, a, 0.2, 0.35, 0.58, 0.58, escuro)
-			_r(ci, a, 0.58, 0.38, 0.82, 0.56, escuro)
+			_r(ci, a, 0.58, 0.38, 0.82, 0.56, mad)
 			_r(ci, a, 0.82, 0.44, 1.0, 0.5, escuro)
-			_r(ci, a, 0.3, 0.22, 0.46, 0.35, escuro)
-			_poli(ci, a, [[0.4, 0.58], [0.5, 0.58], [0.54, 0.92], [0.44, 0.92]], escuro)
+			if not ak:
+				_r(ci, a, 0.3, 0.22, 0.46, 0.35, escuro)
+			if it.pente_id != "":
+				if ak:
+					_poli(ci, a, [[0.4, 0.58], [0.5, 0.58], [0.6, 0.9], [0.5, 0.95]], escuro)
+				else:
+					_poli(ci, a, [[0.4, 0.58], [0.5, 0.58], [0.54, 0.92], [0.44, 0.92]], escuro)
 			_poli(ci, a, [[0.24, 0.58], [0.31, 0.58], [0.29, 0.85], [0.22, 0.85]], escuro)
+			if it.acessorios.has("mira"):
+				_r(ci, a, 0.3, 0.12, 0.5, 0.3, Color(0.15, 0.15, 0.17, alfa))
+			if it.acessorios.has("cano"):
+				_r(ci, a, 0.86, 0.4, 1.0, 0.54, Color(0.2, 0.2, 0.22, alfa))
 			return
+		"espingarda", "rifle_caca":
+			var mad := Color(0.45, 0.28, 0.15, alfa)
+			_poli(ci, a, [[0.0, 0.4], [0.28, 0.42], [0.3, 0.62], [0.0, 0.78]], mad)
+			_r(ci, a, 0.28, 0.4, 0.5, 0.58, escuro)
+			_r(ci, a, 0.5, 0.42, 1.0, 0.5, escuro)
+			if d["arma"] == "espingarda":
+				_r(ci, a, 0.55, 0.5, 0.8, 0.6, mad)
+			else:
+				_r(ci, a, 0.5, 0.5, 0.75, 0.57, mad)
+				_r(ci, a, 0.36, 0.3, 0.42, 0.4, escuro)
+			if it.acessorios.has("mira"):
+				_r(ci, a, 0.3, 0.2, 0.6, 0.34, Color(0.15, 0.15, 0.17, alfa))
+			return
+	if d.get("cat", "") == "branca":
+		var metal := Color(0.7, 0.72, 0.75, alfa)
+		var cabo := Color(0.35, 0.22, 0.12, alfa)
+		match it.id:
+			"faca":
+				_r(ci, a, 0.42, 0.62, 0.58, 0.98, escuro)
+				_poli(ci, a, [[0.4, 0.62], [0.6, 0.62], [0.58, 0.15], [0.5, 0.0]], metal)
+			"machado":
+				_r(ci, a, 0.45, 0.05, 0.55, 1.0, cabo)
+				_poli(ci, a, [[0.5, 0.05], [0.95, 0.0], [0.95, 0.35], [0.5, 0.25]], metal)
+			"taco":
+				_poli(ci, a, [[0.44, 1.0], [0.56, 1.0], [0.7, 0.0], [0.3, 0.0]], cabo)
+			_:
+				_r(ci, a, 0.4, 0.0, 0.6, 1.0, metal.darkened(0.3) if it.id == "cano" else Color(0.55, 0.12, 0.1, alfa))
+		return
 	match d.get("cat", ""):
+		"pente":
+			_poli(ci, a, [[0.25, 0.05], [0.75, 0.05], [0.8, 0.95], [0.3, 0.95]], escuro)
+			var f := float(it.municao) / float(maxi(1, it.capacidade()))
+			_r(ci, a, 0.33, 0.1, 0.67, 0.1 + 0.8 * f, Color(0.85, 0.68, 0.25, 0.8 * alfa))
+		"acessorio":
+			_r(ci, a, 0.05, 0.3, 0.95, 0.7, escuro)
+			_r(ci, a, 0.05, 0.25, 0.2, 0.75, escuro)
+			_r(ci, a, 0.8, 0.25, 0.95, 0.75, escuro)
+		"bebida":
+			_r(ci, a, 0.25, 0.3, 0.75, 0.95, cor)
+			_r(ci, a, 0.4, 0.05, 0.6, 0.3, cor.darkened(0.3))
 		"municao":
 			for i in 3:
 				var x := 0.12 + i * 0.28

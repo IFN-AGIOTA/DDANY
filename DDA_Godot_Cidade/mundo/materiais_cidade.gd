@@ -139,7 +139,9 @@ void fragment() {
 """
 
 # prédios (MultiMesh): INSTANCE_CUSTOM = (largura x, altura, largura z, tipo + semente)
-# tipo: 0 concreto · 1 tijolo · 2 pedra clara · 3 vidro (torres)
+# tipo: 0 concreto · 1 tijolo · 2 pedra clara · 3 vidro (torres) · 4 ruína (queimada)
+# Cidade abandonada: sujeira escorrendo, janelas quebradas (pretas), vitrines tapadas com tábuas.
+# COLOR.a < 1 = bloco que começa acima do chão (casca de prédio com interior): a = 1 - altura_da_base / 10
 const PREDIO := """
 shader_type spatial;
 uniform float detalhe = 1.0;               // 0 = sem janelas (leve) · 1 = completo
@@ -149,12 +151,18 @@ varying float tipo;
 varying float sem;
 varying vec3 nl;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float ruido(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
 void vertex() {
 	tam = INSTANCE_CUSTOM.xyz;
 	tipo = floor(INSTANCE_CUSTOM.w);
 	sem = fract(INSTANCE_CUSTOM.w);
 	lp = VERTEX * tam;
-	lp.y += tam.y * 0.5;                    // altura a partir da base
+	lp.y += tam.y * 0.5 + (1.0 - COLOR.a) * 10.0;   // altura a partir do chão
 	nl = NORMAL;
 }
 void fragment() {
@@ -182,21 +190,36 @@ void fragment() {
 		// vidro: escuro, refletindo o céu mais em cima; algumas janelas acesas (quente)
 		vec3 vidro = mix(vec3(0.08, 0.10, 0.13), vec3(0.45, 0.38, 0.36), clamp(v / max(tam.y, 1.0), 0.0, 1.0) * 0.6);
 		float h = hash(cel + sem * 91.0);
-		if (h > 0.975 && dist < 700.0) vidro = vec3(0.95, 0.72, 0.38);
+		if (h < 0.22) vidro = vec3(0.015, 0.015, 0.02);                     // quebrada: buraco escuro
 		else if (h > 0.86) vidro *= 0.55;
 		vec3 parede = base * (0.9 + 0.12 * hash(vec2(cel.y, sem)));
+		// sujeira escorrendo das janelas e manchas de umidade (cidade abandonada)
+		parede *= 0.8 + 0.2 * ruido(vec2(u * 0.55 + sem * 40.0, v * 0.035));
+		parede *= 1.0 - 0.18 * smoothstep(0.55, 0.85, ruido(vec2(u * 0.12, v * 0.09) + sem * 7.0));
 		// faixa entre andares e térreo com lojas (vitrine escura + toldo)
 		float laje = corpo * step(0.92, fv) * (1.0 - longe) * detalhe;
 		parede *= 1.0 - laje * 0.18;
 		vec3 c = mix(parede, vidro, janela);
 		float terreo = step(v, 4.6) * detalhe;
 		float vitrine = terreo * step(0.6, v) * step(v, 3.4) * step(0.12, fract(u / 6.0)) * step(fract(u / 6.0), 0.88);
-		float toldo = terreo * step(3.4, v) * step(v, 4.0);
+		float toldo = terreo * step(3.4, v) * step(v, 4.0) * step(0.35, hash(vec2(sem, 3.0)));   // alguns toldos já caíram
 		float ht = hash(vec2(floor(u / 6.0), sem));
 		vec3 cor_toldo = ht < 0.33 ? vec3(0.32, 0.12, 0.10) : (ht < 0.66 ? vec3(0.12, 0.22, 0.16) : vec3(0.14, 0.15, 0.22));
-		c = mix(c, vec3(0.07, 0.07, 0.08), vitrine * (1.0 - longe));
+		vec3 cor_vitrine = vec3(0.07, 0.07, 0.08);
+		if (hash(vec2(floor(u / 6.0), sem * 13.0)) < 0.45) {
+			// vitrine tapada com tábuas
+			float tab = fract(v / 0.32);
+			cor_vitrine = vec3(0.36, 0.26, 0.17) * (0.75 + 0.35 * hash(vec2(floor(v / 0.32), floor(u / 6.0)))) * (0.8 + 0.2 * step(0.08, tab));
+		}
+		c = mix(c, cor_vitrine, vitrine * (1.0 - longe));
 		c = mix(c, cor_toldo, toldo * (1.0 - longe));
 		c *= 0.72 + 0.28 * smoothstep(0.0, 6.0, v);                                // sombra perto do chão
+		if (tipo > 3.5) {
+			// ruína: fuligem subindo das janelas, sem vidro, buracos
+			float fumo = smoothstep(0.3, 0.8, ruido(vec2(u * 0.25 + sem * 9.0, v * 0.06)));
+			c = mix(c, vec3(0.05, 0.045, 0.04), fumo * 0.75);
+			c = mix(c, vec3(0.02), janela);
+		}
 		ALBEDO = c;
 		ROUGHNESS = mix(0.9, 0.25, janela);
 		SPECULAR = mix(0.3, 0.7, janela);
@@ -204,9 +227,66 @@ void fragment() {
 }
 """
 
+# INTERIORES (mundo/interior.gd): dentro do prédio o sol quase não entra e a luz ambiente é fraca;
+# a lanterna e outras luzes (não direcionais) iluminam normal. padrao: 0 liso · 1 cerâmica · 2 tábuas ·
+# 3 papel de parede (só do lado de dentro) · 4 concreto. Sujeira, manchas e umidade em tudo.
+const INTERIOR := """
+shader_type spatial;
+uniform vec4 caixa = vec4(0.0, 0.0, 10.0, 10.0);   // centro x, z e meia-largura x, z (por dentro)
+uniform float padrao = 0.0;
+uniform float sol_dentro = 0.12;
+varying vec3 wp;
+varying float dentro;
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float ruido(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+void vertex() { wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
+void fragment() {
+	vec2 d = abs(wp.xz - caixa.xy) - caixa.zw;
+	dentro = 1.0 - smoothstep(-0.02, 0.06, max(d.x, d.y));
+	vec3 c = COLOR.rgb;
+	vec2 u = UV;
+	if (padrao > 0.5 && padrao < 1.5) {
+		vec2 g = fract(u / 0.5);
+		float junta = step(0.94, max(g.x, g.y));
+		float xadrez = mod(floor(u.x / 0.5) + floor(u.y / 0.5), 2.0);
+		c *= (0.9 + 0.12 * xadrez) * (1.0 - junta * 0.35);
+	} else if (padrao > 1.5 && padrao < 2.5) {
+		float tabua = floor(u.y / 0.18);
+		float emenda = step(0.93, fract(u.y / 0.18)) + step(0.985, fract(u.x / 2.4 + hash(vec2(tabua, 1.0))));
+		c *= (0.8 + 0.3 * hash(vec2(tabua, 7.0))) * (0.9 + 0.1 * ruido(vec2(u.x * 3.0, tabua))) * (1.0 - clamp(emenda, 0.0, 1.0) * 0.4);
+	} else if (padrao > 2.5 && padrao < 3.5) {
+		float faixa = step(0.5, fract(u.x / 0.3));
+		c *= mix(1.0, 0.93 + 0.07 * faixa, dentro);
+		c *= 1.0 - dentro * 0.25 * smoothstep(0.6, 0.9, ruido(u * vec2(0.8, 0.5)));          // papel descascando / umidade
+	} else if (padrao > 3.5) {
+		c *= 0.85 + 0.25 * ruido(u * 2.0);
+	}
+	c *= 0.78 + 0.3 * ruido(u * 1.3 + wp.xz * 0.05);                                        // sujeira
+	c *= 1.0 - 0.35 * smoothstep(0.7, 0.95, ruido(wp.xz * 0.35 + 3.0)) * step(padrao, 2.5) * step(0.5, padrao);   // manchas no piso
+	ALBEDO = c;
+	ROUGHNESS = 0.9;
+	SPECULAR = 0.2;
+	AO = mix(1.0, 0.45, dentro);
+}
+void light() {
+	float f = LIGHT_IS_DIRECTIONAL ? mix(1.0, sol_dentro, dentro) : 1.0;
+	DIFFUSE_LIGHT += clamp(dot(NORMAL, LIGHT), 0.0, 1.0) * ATTENUATION * LIGHT_COLOR / PI * f;
+}
+"""
+
+static var _shaders := {}             # o mesmo código vira o MESMO shader (compila uma vez só; importante no celular)
+
 static func shader(codigo: String) -> Shader:
+	if _shaders.has(codigo):
+		return _shaders[codigo]
 	var s := Shader.new()
 	s.code = codigo
+	_shaders[codigo] = s
 	return s
 
 static func material(codigo: String, params := {}) -> ShaderMaterial:

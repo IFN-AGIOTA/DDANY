@@ -1,7 +1,8 @@
 extends Control
 # UMA GRADE NA TELA (bolso, mochila, caixa ou chão), com arrastar e soltar.
 #  - arrastar um item: move (mostra em verde onde cabe, vermelho onde não cabe)
-#  - soltar em cima de uma pilha igual: junta
+#  - soltar em cima de uma pilha igual: junta · munição em cima de pente/arma: enche · pente/acessório em cima
+#    da arma: encaixa
 #  - durante o arraste: R / Espaço / botão direito / um 2º dedo na tela = girar
 #  - tocar: seleciona (informações embaixo, no meio) · duplo toque: ação rápida (pegar, vestir, usar)
 # Tocar numa célula vazia e arrastar rola a coluna (celular).
@@ -89,6 +90,9 @@ func _can_drop_data(p: Vector2, d: Variant) -> bool:
 	_hover_pos = c - off
 	_hover_item = it
 	var pilha = tela.inv.alvo_pilha(it, grade, c.x, c.y)
+	var junto = grade.item_em(c.x, c.y)
+	if pilha == null and junto != null and tela.inv.pode_combinar(it, junto):
+		pilha = junto                 # munição -> pente/arma · pente -> arma · acessório -> arma
 	if pilha != null:
 		_hover_pos = Vector2i(pilha.x, pilha.y)
 		_hover_rot = pilha.rot
@@ -108,6 +112,10 @@ func _drop_data(p: Vector2, d: Variant) -> void:
 	var pilha = tela.inv.alvo_pilha(it, grade, c.x, c.y)
 	if pilha != null:
 		tela.inv.juntar(it, pilha)
+		return
+	var junto = grade.item_em(c.x, c.y)
+	if junto != null and tela.inv.pode_combinar(it, junto):
+		tela.inv.combinar(it, junto)
 		return
 	var girado: bool = d.get("rot", it.rot)
 	var off: Vector2i = d.get("off", Vector2i.ZERO)

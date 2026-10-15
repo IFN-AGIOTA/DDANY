@@ -63,6 +63,8 @@ func _can_drop_data(_p: Vector2, d: Variant) -> bool:
 			ok = tela.inv.do_jogador(it)
 		elif not d.has("atalho"):
 			ok = tela.inv.pode_equipar(it, slot) and tela.inv.slots.get(slot) != it
+			if tela.inv.pode_combinar(it, tela.inv.slots.get(slot)):
+				ok = true             # pente/munição/acessório em cima da arma vestida ou na mão
 	_hover = 1 if ok else -1
 	queue_redraw()
 	return ok
@@ -76,6 +78,8 @@ func _drop_data(_p: Vector2, d: Variant) -> void:
 		tela.inv.atribuir_atalho(it, atalho)
 		if de >= 0 and aqui != null and aqui != it:
 			tela.inv.atribuir_atalho(aqui, de)     # troca de lugar os dois atalhos
+	elif tela.inv.pode_combinar(it, tela.inv.slots.get(slot)):
+		tela.inv.combinar(it, tela.inv.slots.get(slot))
 	else:
 		tela.inv.equipar(it, slot)
 

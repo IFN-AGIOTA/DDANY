@@ -4,7 +4,9 @@ extends Node3D
 #  - CHÃO: um HeightMapShape3D de ~96 m centrado no jogador. A altura de cada ponto vem dos MESMOS dados
 #    que desenham o chão (rua 0.6 · calçada 0.55 · parque 0.4 · lago 0.2 · terra 0.0 · mar -0.5), então o pé encosta no que se vê.
 #    O recálculo roda aos poucos (poucas linhas por quadro) para não travar o celular.
-#  - PRÉDIOS: um pequeno conjunto (pool) de caixas reaproveitadas, posicionadas só nos prédios próximos.
+#  - PRÉDIOS: um pequeno conjunto (pool) de caixas reaproveitadas, posicionadas só nos prédios próximos
+#    (menos os que estão com o interior montado: esses têm paredes de verdade, ver mundo/interiores.gd).
+#  - OBSTÁCULOS: carros, barreiras, caçambas e entulho perto do jogador (outro pool de caixas giradas).
 # Camadas de física: 1 = mundo · 2 = jogador · 3 = inimigos (futuro).
 
 const ALT_MAR := -0.5
@@ -26,6 +28,9 @@ const CEL_PARQUE := 128.0
 const CEL_PREDIO := 100.0
 const RAIO_PREDIOS := 40.0
 const POOL := 48
+const POOL_OBST := 40
+const CEL_OBST := 50.0
+const RAIO_OBST := 30.0
 
 var alvo: Node3D = null      # quem a colisão acompanha (o jogador)
 
@@ -50,6 +55,14 @@ var _pool: Array[StaticBody3D] = []
 var _pool_forma: Array[BoxShape3D] = []
 var _pool_uso := 0
 var _ult_pred := Vector2(1.0e9, 1.0e9)
+# obstáculos (carros, barreiras, caçambas, entulho): x, z, giro, tam_x, tam_y, tam_z, y_centro
+var _obst := PackedFloat32Array()
+var _obst_hash := {}
+var _pool_obst: Array[StaticBody3D] = []
+var _pool_obst_forma: Array[BoxShape3D] = []
+var _obst_uso := 0
+var _ult_obst := Vector2(1.0e9, 1.0e9)
+var abertos := {}            # prédios com interior montado (a colisão/tiro usa as paredes de verdade)
 
 func _ready() -> void:
 	process_physics_priority = -10     # roda antes do jogador
@@ -79,6 +92,56 @@ func _ready() -> void:
 		_pool_forma.append(bs)
 
 # dados = conteúdo de data/city.json · predios = x, z, tam_x, tam_z, altura (5 floats por prédio)
+func configurar_obstaculos(lista: PackedFloat32Array) -> void:
+	_obst = lista
+	var tmp := {}
+	for i in range(lista.size() / 7):
+		var key := Vector2i(floori(lista[i * 7] / CEL_OBST), floori(lista[i * 7 + 1] / CEL_OBST))
+		if not tmp.has(key):
+			tmp[key] = []
+		tmp[key].append(i)
+	for k in tmp:
+		_obst_hash[k] = PackedInt32Array(tmp[k])
+	for i in POOL_OBST:
+		var sb := StaticBody3D.new()
+		sb.collision_layer = 1
+		sb.collision_mask = 0
+		var cs := CollisionShape3D.new()
+		var bs := BoxShape3D.new()
+		cs.shape = bs
+		sb.add_child(cs)
+		sb.position = Vector3(0.0, -10000.0, 0.0)
+		add_child(sb)
+		_pool_obst.append(sb)
+		_pool_obst_forma.append(bs)
+
+func _atualizar_obstaculos(p: Vector2, forcado: bool) -> void:
+	if _pool_obst.is_empty() or (not forcado and p.distance_to(_ult_obst) < 3.0):
+		return
+	_ult_obst = p
+	var cx := floori(p.x / CEL_OBST)
+	var cz := floori(p.y / CEL_OBST)
+	var cand: Array = []
+	for dz in range(-1, 2):
+		for dx in range(-1, 2):
+			var key := Vector2i(cx + dx, cz + dz)
+			if not _obst_hash.has(key):
+				continue
+			for idx in _obst_hash[key]:
+				var d2 := p.distance_squared_to(Vector2(_obst[idx * 7], _obst[idx * 7 + 1]))
+				if d2 < RAIO_OBST * RAIO_OBST:
+					cand.append([d2, idx])
+	if cand.size() > POOL_OBST:
+		cand.sort_custom(func(a, b): return a[0] < b[0])
+	var n := mini(cand.size(), POOL_OBST)
+	for k in n:
+		var o := int(cand[k][1]) * 7
+		_pool_obst[k].transform = Transform3D(Basis(Vector3.UP, _obst[o + 2]), Vector3(_obst[o], _obst[o + 6], _obst[o + 1]))
+		_pool_obst_forma[k].size = Vector3(_obst[o + 3], _obst[o + 4], _obst[o + 5])
+	for k in range(n, _obst_uso):
+		_pool_obst[k].position = Vector3(0.0, -10000.0, 0.0)
+	_obst_uso = n
+
 func configurar(dados: Dictionary, predios: PackedFloat32Array) -> void:
 	for l in dados["lands"]:
 		var p := _pts(l[1])
@@ -198,6 +261,7 @@ func forcar(pos: Vector2) -> void:
 	_iniciar_calculo(pos)
 	_calcular_linhas(N)
 	_atualizar_predios(pos, true)
+	_atualizar_obstaculos(pos, true)
 
 func _iniciar_calculo(pos: Vector2) -> void:
 	_novo_centro = Vector2(roundf(pos.x / ESPACO) * ESPACO, roundf(pos.y / ESPACO) * ESPACO)
@@ -232,6 +296,7 @@ func _physics_process(_delta: float) -> void:
 		_iniciar_calculo(p)
 		_calcular_linhas(LINHAS_POR_QUADRO)
 	_atualizar_predios(p, false)
+	_atualizar_obstaculos(p, false)
 
 func _atualizar_predios(p: Vector2, forcado: bool) -> void:
 	if not forcado and p.distance_to(_ult_pred) < 3.0:
@@ -248,6 +313,8 @@ func _atualizar_predios(p: Vector2, forcado: bool) -> void:
 				continue
 			var lst: PackedInt32Array = _pred_hash[key]
 			for idx in lst:
+				if abertos.has(idx):
+					continue
 				var o := idx * 5
 				var ex := maxf(absf(p.x - _pred[o]) - _pred[o + 2] * 0.5, 0.0)
 				var ez := maxf(absf(p.y - _pred[o + 1]) - _pred[o + 3] * 0.5, 0.0)
@@ -303,6 +370,8 @@ func raio(o: Vector3, d: Vector3, alcance: float) -> Dictionary:
 			continue
 		var lista: PackedInt32Array = _pred_hash[key]
 		for idx in lista:
+			if abertos.has(idx):
+				continue             # prédio aberto: o tiro bate nas paredes de verdade (física)
 			var b: int = idx * 5
 			var mn := Vector3(_pred[b] - _pred[b + 2] * 0.5, BASE_PREDIO, _pred[b + 1] - _pred[b + 3] * 0.5)
 			var mx := Vector3(_pred[b] + _pred[b + 2] * 0.5, BASE_PREDIO + _pred[b + 4], _pred[b + 1] + _pred[b + 3] * 0.5)
@@ -324,3 +393,50 @@ func raio(o: Vector3, d: Vector3, alcance: float) -> Dictionary:
 			melhor = entra
 			res = {"hit": true, "pos": o + d * entra, "n": n, "dist": entra, "predio": true}
 	return res
+
+# ---------- consultas para os inimigos (inimigos/vago.gd e inimigos/vagos.gd) ----------
+# true se (x, z) cai dentro da planta de um prédio FECHADO (+ margem). Os prédios "abertos" ficam de fora:
+# eles têm paredes e portas de verdade (física).
+func dentro_de_predio(x: float, z: float, margem := 0.0) -> bool:
+	var cx := floori(x / CEL_PREDIO)
+	var cz := floori(z / CEL_PREDIO)
+	for dz in range(-1, 2):
+		for dx in range(-1, 2):
+			var key := Vector2i(cx + dx, cz + dz)
+			if not _pred_hash.has(key):
+				continue
+			var lista: PackedInt32Array = _pred_hash[key]
+			for idx in lista:
+				var o := idx * 5
+				if absf(x - _pred[o]) < _pred[o + 2] * 0.5 + margem and absf(z - _pred[o + 1]) < _pred[o + 3] * 0.5 + margem:
+					if abertos.has(idx):
+						continue
+					return true
+	return false
+
+# true se (x, z) cai dentro de um obstáculo (carro, barreira, caçamba, entulho), em qualquer distância
+func dentro_de_obstaculo(x: float, z: float, margem := 0.0) -> bool:
+	var cx := floori(x / CEL_OBST)
+	var cz := floori(z / CEL_OBST)
+	for dz in range(-1, 2):
+		for dx in range(-1, 2):
+			var key := Vector2i(cx + dx, cz + dz)
+			if not _obst_hash.has(key):
+				continue
+			var lista: PackedInt32Array = _obst_hash[key]
+			for idx in lista:
+				var o := idx * 7
+				var ox := x - _obst[o]
+				var oz := z - _obst[o + 1]
+				var co := cos(_obst[o + 2])
+				var se := sin(_obst[o + 2])
+				var lx := ox * co - oz * se
+				var lz := ox * se + oz * co
+				if absf(lx) < _obst[o + 3] * 0.5 + margem and absf(lz) < _obst[o + 5] * 0.5 + margem:
+					return true
+	return false
+
+# true se o chão de física (mapa de alturas em volta do jogador) cobre (x, z) com folga
+func tem_chao_fisico(x: float, z: float) -> bool:
+	var lim := (MEIO - 3) * ESPACO
+	return absf(x - _centro.x) < lim and absf(z - _centro.y) < lim
