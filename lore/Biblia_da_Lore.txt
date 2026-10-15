@@ -1,0 +1,527 @@
+ DIAS DE UM APOCALIPSE
+ O ÚLTIMO SUSPIRO DA HUMANIDADE
+ Bíblia da Lore · Livro 1
+ Atualizada até o Capítulo 22
+Linha do tempo · Projeto Harbinger · Personagens · Lugares · Regras de continuidade
+ Willian Ulguim e Gabriel Solla
+Como usar esta bíblia
+Este documento é a referência oficial do universo de Dias de um Apocalipse. Quando o livro, o jogo ou
+qualquer material novo contradisser algo daqui, vale o que está aqui, ou então esta bíblia é atualizada
+primeiro.
+ Cânone: tudo que está no texto normal já está no Livro 1 (versão corrigida).
+ SUGESTÃO
+ Caixas azuis são ideias que ainda não estão no livro. Servem para fechar pontas soltas. Podem ser
+ aceitas, mudadas ou descartadas.
+Sumário
+ 1. O mundo em uma página
+ 2. O vírus: Projeto Harbinger
+ 3. Linha do tempo
+ 4. Personagens (com a galeria de visual)
+ 5. Facções e organizações
+ 6. Lugares
+ 7. Objetos importantes
+ 8. Segredos: quem sabe o quê
+ 9. Regras de continuidade e estilo
+ 10. Pontas soltas para o Livro 2
+ 11. Notas para o jogo
+1. O mundo em uma página
+Em 2024, um vírus criado em laboratório escapa de uma base secreta em Tóquio e derruba a civilização
+em poucos dias. Para o público, é uma "nova gripe", depois uma onda de ataques violentos, depois o fim.
+Quase ninguém sabe que o vírus foi fabricado, nem que ele já dormia dentro de todo mundo havia
+meses.
+A história acompanha Dominic Vaider, corredor clandestino de Nova York, seu melhor amigo Greg e
+Mavie, a garota que Greg ama. Eles fogem de jato para a Califórnia. No caminho, Mavie é arranhada por
+um infectado e não se transforma. Isso a torna o alvo mais valioso do país.
+Do outro lado está Alyce Vaider, a irmã gêmea de Dominic, separada dele aos oito anos. Hoje ela é
+agente da Agência infiltrada na gangue Vagos com o codinome Nara. Quando os Vagos sequestram
+Mavie, é Alyce quem fica responsável por mantê-la viva, e é assim que os dois irmãos se reencontram.
+O Livro 1 termina com a invasão do ferro-velho dos Vagos. Mavie desperta na Forma Adaptativa e salva
+Greg e Alyce. Dominic fica para trás para segurar os capangas, arma a bomba que seria usada contra o
+hospital e desaparece num vão entre os contêineres, agarrado por um infectado mutado, segundos antes
+da explosão. O helicóptero dos Vagos voa para Los Angeles com Greg, Alyce, Nick e Mavie.
+ Tema central: o que você está disposto a fazer para manter os vivos... vivos. Laços (família,
+ amizade, pactos) contra um mundo que não perdoa laços.
+2. O vírus: Projeto Harbinger
+2.1 Origem
+O vírus não surgiu na natureza. Foi criado em laboratórios ultrassecretos, numa parceria entre o governo
+norte-americano e laboratórios internacionais, sob o codinome Projeto Harbinger.
+A base genética é uma mutação avançada do vírus da raiva (RABV), manipulada para virar uma arma
+biológica silenciosa: algo capaz de enfraquecer ou controlar populações inteiras sem declarar guerra. O
+plano era espalhar um vírus que ficasse adormecido no hospedeiro até ser ativado sob certas
+condições.
+ "A intenção era controle. Dominação sem guerra." (Alyce, Cap. 15)
+2.2 A falha em Tóquio: a Variante Tóquio
+ A variante mais agressiva, transmitida pelo ar, escapou por uma falha de segurança não detectada.
+ Todos os cientistas da base foram contaminados antes de qualquer contenção.
+ Para "salvar os dados", o governo enviou cientistas infectados para outras regiões do mundo, como
+ cobaias ambulantes, para estudar o vírus em climas e hospedeiros diferentes.
+ Isso espalhou o vírus pelo planeta e fez surgirem novas variantes.
+ O governo encobriu tudo com uma campanha de vacinação. A "vacina" era só disfarce: a cura nunca
+ existiu.
+2.3 Contaminação global
+O vírus já está em toda a população mundial, inativo. É uma bomba-relógio biológica.
+ "A infecção está dentro de todos nós. Dormindo. Esperando..."
+O Prólogo diz que o vírus era "algo sem nome, que não obedecia à lógica ou à ciência". Isso é proposital:
+é o ponto de vista de quem não sabia da verdade. A explicação científica só chega no Cap. 15, pela
+boca de Alyce.
+2.4 Transmissão
+ Fluidos corporais (mordida, sangue, saliva)
+ Contato com feridas (arranhões)
+ Via aérea (somente a Variante Tóquio)
+ Objetos contaminados
+2.5 O que o vírus faz no corpo
+Ataca o sistema nervoso central, principalmente o córtex pré-frontal (decisão, controle) e o sistema
+límbico (emoção, impulso). O resultado é perda de controle emocional e de funções cognitivas, até
+sobrar "apenas a fome, o impulso e a destruição".
+As formas da infecção
+ Exemplos
+Forma O que acontece
+ no livro
+Forma O hospedeiro morre e o corpo é reanimado pelo vírus. Sem dor, sem coordenação fina, A horda do
+Comum mas com força. Andam em hordas, atraídos por barulho e cheiro de gente viva. posto (Cap.
+ 16)
+Forma O hospedeiro não morre. Tem febre, sintomas e oscilações, mas mantém a consciência. Mavie
+Adaptativa Pode desenvolver habilidades aprimoradas (força, agilidade ou inteligência), sempre com
+ efeitos colaterais.
+Imunes Cerca de 1% da população tem imunidade total. São raríssimos e valiosíssimos. Ninguém
+ confirmado
+ ainda
+ SUGESTÃO · FASE FEBRIL (fecha um buraco do livro)
+ O homem de North Platte (Cap. 5) e o vulto mancando (Cap. 3) parecem vivos e doentes: veias
+ escuras, manchas roxas que pulsam, pigarro, grunhidos. Pela lore, a Forma Comum só existe depois
+ da morte. Proposta: antes de morrer, todo infectado passa por uma fase febril de algumas horas a
+ poucos dias.
+ Sinais: olhos injetados, veios escuros sob a pele, tosse com sangue, febre alta, agressividade
+ crescente, fala virando grunhido.
+ Ainda estão vivos: sentem algo, sangram, podem ser "parados" como uma pessoa comum (por
+ isso Greg mata o homem de Nebraska com uma barra no peito).
+ No fim da fase febril, morrem. Minutos depois, levantam na Forma Comum.
+ Mavie entra na fase febril e nunca sai dela: o vírus "não avança, mas também não recua" (Cap.
+ 16). Esse é o primeiro sinal da Forma Adaptativa.
+ Também explica os reféns "com sintomas" do depósito 3 (Cap. 8) e o rapaz que tossia sangue.
+2.6 O caso Mavie
+ Dia -1: corte no braço por vidro (vitrine estourada na Lenox Avenue). Não é infecção. Ela jura que
+ ninguém encostou nela (Cap. 4).
+ Dia 0: em North Platte, o infectado rasga o antebraço dela com as unhas, logo acima do curativo. Três
+ arranhões. Ela esconde dos outros (Cap. 5). É aqui que a infecção começa.
+ Febre crescente, "sinais estranhos na pele", respiração irregular (Caps. 9 a 11).
+ Os Vagos descobrem, por Jhon, que existe uma "garota ferida" que não virou. Ela vira o alvo do
+ ataque ao hospital.
+ Sob os cuidados de Alyce: picos de febre seguidos de quedas, pupilas dilatadas, tremores, suor
+ gelado, espasmos e por fim coma (Cap. 13). Acorda por alguns momentos, volta a apagar.
+ O vírus nela "reage como se estivesse aprendendo. Testando." (Cap. 16)
+ Dia 12: Alyce aplica um soro estabilizador da Agência, nunca testado em humanos. Mavie acorda
+ lúcida, com os sentidos ampliados: ouve conversas e batimentos cardíacos através de paredes de
+ metal. Surge um anel escuro e metálico em volta da íris (Cap. 17).
+ Ao ver os olhos dela, V diz: "Eu já vi isso antes. Em Tóquio."
+ Noite do Dia 12: quando Edy encosta a faca em Greg, Mavie desperta de vez. Força sobre-humana
+ (entorta a grade da cama, arranca a arma e os dedos de um capanga, quebra o pulso de Edy),
+ velocidade, olhos totalmente escuros. Morde um capanga. Marca o rosto de Edy com três cortes,
+ como os dela (Cap. 21).
+ Efeito colateral: por alguns segundos ela não reconhece ninguém e quase estrangula Greg. Volta a si
+ quando ele fala de Berlim e do sonho dela de encontrar a cura. Depois desmaia e fica inconsciente.
+ "Ela foi arranhada, contaminada. Mas não virou. [...] Isso é uma chance. Talvez a única que tenhamos."
+ (Alyce, Cap. 15)
+2.7 Os Mutados
+Infectados que V mantinha presos no Fosso, a velha prensa de sucata no centro do ferro-velho. Eram
+civis capturados "com sintomas" pelas patrulhas (Cap. 8). Os que pioravam iam para o Fosso à noite e
+não voltavam. V não os matava: deixava o vírus mudar dentro deles.
+ Infectado
+Característica Mutado
+ comum
+Velocidade Muito rápido; corre e salta como animal Lento, tropeça,
+ avança em
+ massa
+Corpo Braços longos demais, articulações no lugar errado, pele rachada como barro Corpo humano
+ seco, veios negros que pulsam, costelas e mandíbula deformadas, unhas como danificado
+ garras
+Som Estalo rápido e repetido, como dentes batendo Gemido
+ arrastado
+Movimento Escala paredes de contêineres, salta entre telhados Só no chão
+Sentidos Fareja sangue de longe Atraído por
+ barulho e cheiro
+Edy os solta no Cap. 22 e é morto por eles. Um mutado agarra Dominic no ar durante o salto final.
+Ninguém sabe quantos sobreviveram à explosão.
+ SUGESTÃO
+ Os mutados podem ser o caminho oposto ao de Mavie: o vírus "aprendendo" num corpo que morreu,
+ em vez de num corpo que resistiu. Isso dá ao Livro 2 uma pergunta científica para Alyce: o que
+ separa Mavie de um mutado?
+3. Linha do tempo
+Os dias contam a partir da fuga de jato (Dia 0). O ano do colapso é 2024.
+3.1 Antes do surto
+Quando O que acontece
+2000 Nascem Dominic e Alyce Vaider, gêmeos, em São Francisco. Dominic nasce alguns minutos antes, e por
+ isso Alyce sempre o chama de "irmão mais velho". Os dois nascem de cabelos brancos e pele clara
+ demais, quase albinos. A mãe, Elena, é enfermeira.
+2006 O pai some quando os gêmeos têm 6 anos. Deixa um revólver na gaveta e mais nada.
+2008 Elena adoece aos poucos (esquecimento, confusão, internações) e é levada numa maca, com problemas
+ psiquiátricos. Os gêmeos, com 8 anos, trocam os colares de pano azul e fazem o pacto. No mesmo dia,
+ são separados: lares diferentes, estados diferentes.
+2008– Dominic: orfanato e lares temporários em São Francisco, "bons e outros nem tanto". Sai assim que tem
+2018 idade. Alyce: vai para Washington, sob a guarda de um tio distante e ausente. Cresce "entre silêncio e
+ livros".
+Anos Alyce entra na academia militar e procura o irmão por buscas oficiais. Acha só o orfanato e depois um
+seguintes registro em Nova York, mas quando chega lá, ele já sumiu. Entra para a Agência. Dominic vai para Nova
+ York, vive de corridas clandestinas e apostas e compra, em silêncio, um jato particular. Aprende a pilotar.
+~2022 Dominic conhece Greg numa corrida no Bronx: para no meio da reta para consertar o carro de Greg e
+ perde a corrida. Por essa época, Greg conhece Mavie.
+2024 Vazamento da Variante Tóquio. Cientistas infectados são espalhados pelo mundo. Campanha de
+(antes do vacinação falsa. Alyce já está infiltrada nos Vagos, em Los Angeles, como Nara.
+Dia -5)
+3.2 O colapso (Livro 1)
+Dia Cap. O que acontece
+Dia -5 1–2 Noite da última corrida ilegal em Nova York ("A Morte do Medo"). No bar, a TV mostra os
+ primeiros ataques em Tóquio, Paris e Nova York.
+Dia -4 a -2 3 Três dias de pânico crescente. Uns riem da "nova gripe", outros estocam comida e armas.
+Dia -1 3 Sirenes. Mensagem do aeroporto: voos privados só até as 18h do dia seguinte. Dominic busca
+(manhã) Greg (129th com Malcolm X Boulevard, Harlem). Mavie chega ferida (corte de vidro). Primeiro
+ infectado visto: um vulto mancando. Rádio: "Evacuação imediata".
+Dia -1 4 Ponte bloqueada. Mavie leva o grupo para a casa dos pais dela, numa cidadezinha de Nova
+(noite) Jersey, no caminho do aeroporto. Os três contam parte das suas histórias. Às 2h, Dominic vê um
+ infectado parado no quintal e não conta a ninguém.
+Dia 0 4–5 Madrugada: aeroporto executivo de Nova Jersey, hangar 4, decolagem. Parada para reabastecer
+ em North Platte, Nebraska. Mavie é atacada e arranhada. Greg mata pela primeira vez.
+Dia 0 (fim 6 Pouso numa pista abandonada no interior da Califórnia. Mercado isolado vira abrigo. Noite de
+da tarde) histórias à luz de lanternas: Dominic conta da mãe, do pai e da irmã gêmea.
+Dia 1 6–7 4h da manhã: ataque de três saqueadores. Um deles (Edy Vargas) foge. Dominic acha o Dodge
+ Charger R/T 1969 na oficina. Partem de manhã.
+Dia 1–3 8 No ferro-velho dos Vagos, Nara vigia Edy e V, ajuda reféns do depósito 3 e guarda o dossiê de
+ Dominic. Nick já trabalha com ela.
+Dia 4 9 Delegacia abandonada: armas, coletes e a ficha de Edy Vargas. Chegada ao hospital: Mônica,
+ Carlos, Lucas, Jhon e cerca de dez sobreviventes.
+Dia 5 9– A ameaça de Edy no rádio ("O de cabelo branco..."). Preparação. À noite, V escala Nara para o
+ 10 ataque: "A garota ferida é sua responsabilidade. Eu quero ela viva."
+Dia 6 10– Jhon é desmascarado como espião. Ataque dos Vagos ao hospital. José morre. Carlos é ferido.
+ 11 Mavie é levada por dois capangas e uma figura de capuz (Alyce). No meio da fumaça, Alyce vê
+ um homem de cabelo branco, mas não o reconhece com certeza.
+Dia 6 12 Lucas, morrendo, diz que quem levou Mavie foi "a garota de cabelo branco".
+(depois)
+Dia 7–9 13 Mavie cai em coma no ferro-velho. Ela murmura "Dominic". Alyce aciona Nick, que entra no
+ hospital disfarçado de "Kyle Harmon". Nick confirma o nome. V ameaça: "Se ela morrer, você
+ morre junto."
+Dia 10 13 Dominic e Greg encurralam Nick. Ele revela tudo e mostra a réplica do colar. Dominic descobre
+ que Alyce está viva.
+Dia 11 14– Contato por rádio. Reencontro no posto abandonado. Os gêmeos destrocam os colares. Alyce
+ 16 revela o Projeto Harbinger e mente sobre onde Mavie está. Chega a horda: Alyce some, o grupo
+ foge no Dodge. À noite, V dá o prazo.
+Dia 12 17 Alyce aplica o soro. Mavie acorda com sentidos ampliados. V vê os olhos dela ("Em Tóquio") e
+(manhã) decide levá-la para o norte de helicóptero ao amanhecer do Dia 13. Edy prepara a bomba para o
+ hospital. Alyce vê os mutados no Fosso. A Agência ordena: "Não interfira no transporte."
+Dia 12 (dia) 18 Enterro de José e Lucas. V acha o comunicador da Agência no baú de Nara. No fim da tarde,
+ Greg capta no rádio do Lucas a transmissão dos Vagos. Dominic descobre a mentira de Alyce.
+ Greg dá um soco em Dominic e os dois se reconciliam. Mônica leva os sobreviventes para os
+ túneis.
+Noite do 19– Infiltração no ferro-velho com Nick, que entra pelo portão. Greg solta os reféns do depósito 3. A
+Dia 12 21 equipe se separa. Alyce tenta impedir Dominic. Dominic acha a pasta H-7 e foge do V. Edy
+ captura Alyce e Greg. Mavie desperta e salva os dois. Dominic cobre a fuga até o helicóptero e
+ fica para trás.
+Madrugada 22 Dominic encontra a bomba e a arma com 3 minutos. Edy solta os mutados e morre. Na fuga
+do Dia 13 pelos telhados, um mutado agarra Dominic no último salto, e os dois caem no vão entre os
+ contêineres. O ferro-velho explode. O helicóptero voa para Los Angeles.
+4. Personagens
+Dominic Vaider
+ Idade: 24 anos em 2024. Gêmeo de Alyce, nascido minutos antes.
+ Aparência: cabelos brancos e pele clara demais desde o nascimento (quase albino, sem diagnóstico
+ certo). Olhos sensíveis à luz, por isso usa óculos escuros de aviador (Ray-Ban) até de noite. Veja a
+ galeria.
+ Passado: São Francisco, Mission District. Pai sumiu aos 6. Mãe internada aos 8. Orfanato e lares
+ temporários. Corredor clandestino em Nova York.
+ Habilidades: piloto de carro e de avião, líder tático, atirador. Mônica e Nick acham que ele tem "olhar
+ de militar ou ex-policial".
+ Itens: revólver do pai, jato particular, o Dodge Charger 1969, o colar azul.
+ Personalidade: calado, protetor, carrega a responsabilidade de irmão mais velho (de Greg e de
+ Alyce). Tem "um certo ódio do silêncio".
+ Arco no Livro 1: de corredor que achava que a mídia vivia de medo a líder de um grupo de
+ sobreviventes. Descobre que a irmã está viva e depois que ela mentiu. Escolhe ficar para trás para
+ salvar todos.
+ Status no fim do Livro 1: desaparecido. Caiu no vão entre os contêineres, agarrado por um mutado,
+ ferido no ombro, segundos antes da explosão. Estava com o colar azul e a pasta H-7 do V dentro da
+ jaqueta.
+Alyce Vaider ("Nara")
+ Idade: 24 anos. Gêmea de Dominic. Os mesmos cabelos brancos, a mesma pele clara e os olhos
+ idênticos aos dele.
+ Disfarce: nos Vagos, é Nara, "ladra de carga, ex-mercenária". Esconde o cabelo num coque, sob um
+ lenço escuro, e mantém a pele suja de fuligem. Fora do ferro-velho, ou quando o lenço cai, o cabelo
+ branco aparece.
+ Passado: criada em Washington por um tio distante. Academia militar. Agente da Agência.
+ Missão: coletar informações sobre o surto, monitorar fontes de cura ou contaminação e derrubar a
+ estrutura das gangues. Edy e V são alvos prioritários.
+ Itens: comunicador ligado à frequência da Agência, rádio de pulso, caderno de anotações à mão, baú
+ com fundo falso e arquivos do governo (incluindo o dossiê de Dominic).
+ Personalidade: fria por fora, "não espera permissão do mundo". Calcula tudo, mas cuida dos reféns e
+ se apega a Mavie. Mente quando acha que a mentira protege.
+ Status no fim do Livro 1: disfarce destruído (V achou o comunicador). Agora usa o macacão tático da
+ Agência. A Agência negou a extração e quer Mavie entregue. Está no helicóptero com Mavie no colo e
+ o colar azul na mão.
+Greg
+ Passado: cresceu num apartamento pequeno no Brooklyn, só ele e a mãe. O pai nunca esteve
+ presente. Abriu mão da adolescência para cuidar da mãe doente (respirava com ajuda, cinco remédios
+ por dia). Quando ela morreu, achou que estava sozinho.
+ Com Dominic: melhor amigo desde a corrida do Bronx. Dominic é "como um irmão mais velho".
+ Com Mavie: apaixonado. Não sabia se era correspondido; durante a fuga, a relação se firma.
+ Plano original: ir para a propriedade do primo, perto de Los Angeles (floresta, portão alto, cerca
+ elétrica).
+ Arma: taco de beisebol; depois pistola semiautomática e colete leve.
+ Aparência: negro, dreads curtos, bigode e cavanhaque, tatuagens no pescoço, corrente de ouro
+ grossa (nunca tira), jaqueta preta estilo college com o emblema "TF" no peito, moletom escuro, calça
+ cargo preta, luvas e botas de combate verde-oliva. Veja a galeria.
+ Arco: mata pela primeira vez em Nebraska e não se recupera totalmente. Entra em colapso quando
+ Mavie é levada. Desconfia de Alyce. Dá um soco em Dominic quando descobre a mentira e depois
+ chora no ombro dele.
+ Status no fim do Livro 1: vivo, com marcas de dedos no pescoço (de Mavie) e um corte de faca (de
+ Edy). Pegou um fuzil M4 de um guarda. Viu Dominic cair a centímetros da mão dele e acredita que
+ falhou.
+Mavie
+ Família: pai médico de pronto-socorro, mãe de cabelos cacheados. A casa da família fica numa
+ cidadezinha de Nova Jersey. Os pais estavam em Ohio, visitando a avó, e não atendem desde o Dia
+ -2.
+ Sonho: ser médica. Queria fazer intercâmbio em Berlim e estudar doenças raras, genética e
+ imunidade. "Eu queria encontrar respostas. Cura."
+ Infecção: veja 2.6. Primeiro caso conhecido de Forma Adaptativa.
+ Status no fim do Livro 1: inconsciente no helicóptero. Não sabe que quase matou Greg nem que
+ Dominic caiu.
+ Personalidade: corajosa (mata o homem de Nebraska com o cano, derruba um saqueador com a
+ barra de ferro), mas esconde o que sente e o que sabe, incluindo o arranhão.
+Nick Evers
+ Ex-agente de infiltração, aliado secreto de Alyce. Alto, magro, cabelo escuro, rosto marcado por
+ cicatrizes e olheiras, olhar frio.
+ Já trabalha com Nara no ferro-velho nos Dias 1–3. É acionado para a missão do hospital nos Dias 7–
+ 9.
+ Identidade falsa: Kyle Harmon, motorista de transporte civil do governo, separado do comboio na
+ ponte, vindo de San Jose. Uniforme do Corpo de Ajuda Civil. Dirige um jipe militar camuflado.
+ É desmascarado porque desativa um sensor de movimento "como se tivesse feito isso mil vezes". Leal
+ a Alyce: "Ela não é como os outros."
+ Para os Vagos, era "Evers", um dos deles, o "mais esperto aqui dentro". Entra pelo portão com uma
+ garrafa de uísque e Dominic e Greg escondidos sob a lona.
+ Pilota o helicóptero UH-60 na fuga ("Eu sei pilotar quase tudo").
+Edy Vargas
+ Irmão mais novo de V. Procurado por homicídio, tráfico de armas e organização criminosa. Última
+ localização registrada: Los Angeles.
+ É o saqueador que foge do mercado no Cap. 7. Persegue o grupo pelo rádio ("O de cabelo branco...
+ Eu vou te encontrar").
+ Comanda o ataque ao hospital. Teme retaliação e é mais cauteloso que V, mas é obcecado pelo "de
+ cabelo branco".
+ Monta a bomba para o hospital (Cap. 17). Captura Alyce e Greg. Mavie quebra o pulso dele e marca o
+ rosto dele com três cortes.
+ Destino: solta os mutados do Fosso ("Se eu não pego ele... eles pegam") e é morto por eles (Cap.
+ 22).
+V
+ Irmão mais velho de Edy e líder dos Vagos. Casaco de couro, rosto coberto de tatuagens, "olhar de
+ gelo".
+ Quer expandir o território. Está diretamente ligado ao Projeto Harbinger (ainda não revelado no
+ livro).
+ Sabe que Mavie é especial e dá a Nara um prazo para ter resultados.
+ Revelado no Cap. 20: uma foto na pasta H-7 mostra V mais novo, sem tatuagens, de uniforme de
+ segurança, na frente da "Instalação Tóquio" do Projeto Harbinger. Reconhece os olhos de Mavie: "Eu
+ já vi isso antes. Em Tóquio."
+ Planejava levar Mavie para o norte, para um ponto marcado H-7 perto das montanhas, para "gente
+ que paga mais do que qualquer um".
+ Quando Dominic leva a pasta, V sente medo pela primeira vez.
+ Destino: desconhecido. Foi visto correndo na direção de Edy, no Fosso, pouco antes da explosão.
+ SUGESTÃO
+ V ainda não tem nome. Ideia: a letra é de um sobrenome ou codinome do tempo do Projeto Harbinger
+ (um ex-segurança ou ex-cobaia da base). Isso explicaria por que ele reconhece o valor de Mavie
+ antes de qualquer outro.
+Sobreviventes do hospital
+Nome Quem é Destino no Livro 1
+Mônica Ex-enfermeira, líder do grupo. Viva. Leva os sobreviventes para os túneis do subsolo e espera
+ Firme, usa faca e bastão. os reféns do depósito 3.
+Carlos Ex-militar, perdeu o braço esquerdo Baleado no ombro bom durante o ataque. Vivo.
+ nos primeiros dias do colapso.
+Lucas Garoto de 17 anos, não larga o Morre depois de contar sobre a "garota de cabelo branco".
+ rádio de pilha, faz perguntas Enterrado no Dia 12. O rádio de pilha modificado dele capta a
+ demais. transmissão dos Vagos.
+Jhon Boné preto, olhar evasivo, sempre Baleado na perna por Carlos e desmascarado.
+ perto do rádio. Espião de Edy.
+José Sobrevivente aliado. Morto no corredor leste. Enterrado no Dia 12.
+A senhora Refém idosa e de olhar atento. Viu Guia os reféns pelo canal seco até o hospital.
+do V sair do quarto de Nara com o
+depósito comunicador.
+3
+Galeria: visual dos personagens
+Ilustrações oficiais (à esquerda) e modelos de referência do jogo (à direita).
+ Dominic: cabelo branco em tranças finas no topo, laterais raspadas. Óculos escuros de aviador. Tatuagens no
+ pescoço. Jaqueta de couro preta, camiseta branca ou escura, calça preta, botas pretas. Rosto duro, expressão
+ fechada.
+ Alyce: cabelo branco, longo e liso, repartido ao meio. Pele clara. Macacão tático preto com gola alta, luvas, cinto,
+ coldre na coxa direita e bolsos laterais. Na ilustração, fuzil M4 e um manto escuro rasgado. Como Nara, esconde o
+ cabelo num coque sob um lenço.
+ Greg: negro, dreads curtos, bigode e cavanhaque, tatuagens no pescoço, corrente de ouro grossa, jaqueta preta
+ college com o emblema "TF", moletom preto, calça cargo preta, luvas, botas de combate verde-oliva. Na ilustração,
+ fuzil M4.
+Família Vaider
+ Elena Vaider: mãe, enfermeira de plantões longos. "Cuidava de todo mundo, menos dela mesma."
+ Internada em 2008 com problemas psiquiátricos. Destino desconhecido.
+ O pai: sumiu em 2006. Nome desconhecido. Deixou o revólver.
+ O tio: parente distante em Washington, guardião de Alyce.
+5. Facções e organizações
+Os Vagos
+Gangue de Los Angeles liderada pelos irmãos V e Edy Vargas. Depois da queda das cidades, controla o
+comércio de combustível, comida e armas entre grupos de sobreviventes. Tiranos, mas líderes
+carismáticos, com seguidores devotos. Fazem patrulhas, capturam civis (inclusive infectados) e mantêm
+reféns no depósito 3.
+ Importante: "Vagos" é sempre a gangue humana. Os mortos-vivos são chamados de infectados.
+ Nunca usar "Vagos" para os infectados.
+A Agência
+Organização de inteligência do governo para a qual Alyce trabalha. Tem a "única frequência segura que
+ainda restava no país". Sabe do Projeto Harbinger. Seus objetivos reais ainda não foram revelados.
+Projeto Harbinger
+Aliança secreta entre o governo americano e laboratórios internacionais que criou o vírus. Veja a seção 2.
+6. Lugares
+Lugar Descrição Cap.
+Nova York Cidade de Dominic e Greg. Corridas por Chinatown, Brooklyn e túneis de Manhattan. Sempre 1–3
+ "Nova York", nunca "Liberty City".
+Prédio de Greg Harlem, 129th com Malcolm X Boulevard. 3
+Casa dos pais Cidadezinha de Nova Jersey, rua sem saída, dois andares, varanda de madeira, balanço no 4
+de Mavie quintal.
+Aeroporto Nova Jersey, do outro lado do rio. O jato fica no hangar 4. 4
+executivo
+North Platte, Aeroporto municipal abandonado. Parada para reabastecer. Onde Mavie é arranhada. 5
+Nebraska
+Pista na Antiga base de voos executivos no interior. O jato fica ali. 6
+Califórnia
+Mercado A 40 minutos a pé da pista. Abrigo, ataque dos saqueadores. A oficina nos fundos guardava o 6–7
+isolado Dodge.
+Ferro-velho No deserto, perto de Los Angeles. Muralhas de contêineres, antenas, tochas. Torre de vigia, 8,
+dos Vagos depósito 3 (reféns), contêiner-quarto de Nara e o compartimento isolado onde Mavie está: 13,
+ um contêiner com teto pintado de branco e lonas de plástico, que Alyce tentou deixar "estéril". 16–
+ Cheira a ferrugem, sangue seco e produtos químicos. 22
+O Fosso Velha prensa de sucata no centro do ferro-velho, cercada por seis contêineres lacrados com 17,
+ correntes. Prisão dos mutados. 22
+Escritório do V Prédio de tijolos de dois andares, no oeste da base, perto da oficina. Mapas, armas e a pasta 20
+ H-7. Calendário parado no mês do colapso.
+Plataforma do Torre de contêineres no lado norte, com escada de ferro soldada. 19–
+helicóptero 22
+Destino do Destruído na explosão da madrugada do Dia 13. As pilhas desabaram e os tambores de 22
+ferro-velho combustível explodiram em cadeia.
+Túneis do Túneis de manutenção que ligam o subsolo ao antigo canal de drenagem. Refúgio de Mônica 18
+hospital e dos sobreviventes.
+H-7 Ponto marcado no mapa do V, ao norte, perto das montanhas. Destino planejado para Mavie. 17,
+ Não se sabe o que é. 20
+Delegacia Armas, coletes e a ficha de Edy. Pichação: "Não são monstros. São o que sobrou." 9
+abandonada
+Hospital Médio porte, parcialmente saqueado, com rotas subterrâneas. Base de Mônica e Carlos. 9–
+ Muito danificado no ataque. Alvo da bomba de Edy, que nunca saiu do ferro-velho. 13
+Posto Na beira da cidade, com escritório atrás do pátio. Local do reencontro e da horda. 14–
+abandonado 16
+"Acampamento Não existe. É a mentira que Alyce conta a Dominic sobre onde Mavie está. 15
+militar"
+7. Objetos importantes
+Os dois colares de pano azul
+ Elena costurou dois colares iguais, um para cada gêmeo, com "Vaider" bordado em linha branca no
+ verso.
+ 2008: no dia da separação, os gêmeos trocam os colares. É um pacto, não só um presente: "Se um
+ de nós cair, o outro lembra quem somos." Alyce diz que Dominic, por ser o mais velho, "tem que
+ lembrar por nós dois".
+ Por 16 anos, Dominic guarda o de Alyce, junto ao peito, e Alyce guarda o de Dominic.
+ Cap. 13: Nick mostra uma réplica feita por Alyce, como prova. Dominic fica com ela.
+ Cap. 14: no reencontro, cada um devolve ao outro o colar que guardou. Cada gêmeo volta a ter o seu
+ original.
+ Cap. 16: Alyce some com o colar dela entre os dedos; Dominic toca o dele, guardado no peito.
+ Cap. 22: Dominic cai com o colar dele no peito. Alyce aperta o dela no helicóptero.
+Veículos e armas
+ Jato particular: pequeno, branco, faixa preta. Comprado com dinheiro de corridas e apostas. Ficou na
+ pista da Califórnia.
+ Carro de Greg: usado na fuga de Nova York. Ficou no aeroporto de Nova Jersey.
+ Dodge Charger R/T 1969: preto fosco, cromados gastos, capô com entrada de ar, volante original.
+ Carro dos sonhos de Dominic desde a adolescência.
+ Revólver de Dominic: o pai deixou na gaveta quando sumiu.
+ Taco de beisebol de Greg, espingarda de cano curto (Dominic) e pistola semiautomática (Greg), da
+ delegacia. No ferro-velho, Greg pega um fuzil M4 de um guarda.
+ Jipe de Nick: camuflado. Ficou dentro do ferro-velho.
+ Dodge Charger: ficou no estacionamento do hospital.
+ O pássaro: helicóptero UH-60 verde-oliva da Guarda Nacional, tomado pelos Vagos na primeira
+ semana do colapso. Números raspados e "VAGOS" pichado em vermelho na porta. Agora com Nick, a
+ caminho de Los Angeles.
+ A bomba de Edy: três barris azuis, explosivos de mineração de uma pedreira perto de Barstow, um
+ celular trincado como cronômetro e uma chave de segurança vermelha. "HOSPITAL" pichado num
+ barril. Dominic a armou com 3 minutos.
+Documentos
+ Dossiê de Dominic: "Dominic Vaider – Localização desconhecida. Último avistamento: Nova York."
+ Fica no baú de Nara.
+ Ficha de Edy Vargas: achada na delegacia.
+ Caderno de Nara: anotações à mão (computadores e rádios não são confiáveis). Registra as idas de
+ reféns para o Fosso.
+ Pasta H-7: couro, cantos de metal. Documentos em inglês e japonês, plantas de um prédio
+ subterrâneo e a foto de V em Tóquio. Está com Dominic.
+ Soro estabilizador: líquido azulado da Agência, "usar apenas em caso de adaptação confirmada".
+ Alyce aplicou em Mavie.
+ Comunicador da Agência: encontrado por V no baú de Nara.
+ Rádio de pilha do Lucas: amarelo, antena com fita, bobina extra. Pega frequências que nenhum
+ outro rádio pega.
+8. Segredos: quem sabe o quê
+Fim do Livro 1 (madrugada do Dia 13).
+Segredo Quem sabe Quem não sabe
+O vírus foi criado (Projeto Harbinger) e Alyce, a Agência, V (em parte), Dominic (desde o Greg, Mônica,
+todos já estão infectados Cap. 15) Mavie, o público
+Nara é agente da Agência Todos, inclusive V (desde o Dia 12) —
+Nara é irmã de Dominic Alyce, Nick, Greg, Mônica. V adivinhou ("A Nara tem —
+ exatamente os seus olhos").
+A Agência quer Mavie entregue e negou Alyce Greg, Nick, Mavie
+a extração
+Mavie quase matou Greg Greg, Alyce Mavie
+A pasta H-7 e a foto de V em Tóquio Dominic Todos os outros
+Mavie foi arranhada em Nebraska Mavie; os outros descobrem pela febre Ninguém viu na
+ hora
+Alyce estava no ataque ao hospital Alyce, Nick, Dominic, Greg (pelo Lucas) Mônica e Carlos
+ talvez não
+V esteve no Projeto Harbinger Dominic (pela foto), Alyce (pela frase "Em Tóquio") Greg, Nick, Mavie
+Dominic está vivo ou morto Ninguém Todos
+O destino de Elena Vaider Ninguém Os gêmeos
+9. Regras de continuidade e estilo
+Regras fixas
+ Dominic e Alyce são gêmeos. Dominic nasceu primeiro e é tratado como o mais velho.
+ Os dois têm cabelo branco de nascença e pele mais clara que o normal. O cabelo de Alyce nunca é
+ tingido; ela só o esconde.
+ A mãe, Elena, era enfermeira.
+ Sempre dois colares (mais a réplica de Nick).
+ A cidade é Nova York.
+ "Vagos" = gangue. Mortos-vivos = "infectados".
+ O nome é Nick (nunca "Nik"). O sobrenome dele é Evers.
+ Contar o tempo em dias (seção 3). Nada de "semanas" antes do Dia 14.
+ Quem dirige o Dodge é Dominic.
+Estilo da escrita
+ Narração em terceira pessoa, no passado. Flashbacks também no passado, com subtítulo próprio
+ (ex.: "São Francisco, 2008").
+ Diálogos com travessão (—) e falas curtas, coloquiais ("tá", "pra", "a gente").
+ Parágrafos curtos. Frases de impacto sozinhas numa linha ("Encurralados.", "Uma horda.", "Por
+ enquanto.").
+ Reticências para pausas e hesitação.
+ Metáforas de motor, fera e tempestade ("o motor rugiu como uma fera despertando").
+ Capítulos com título "Capítulo X – Título" (com o ícone do livro azul) e subtítulos internos para mudar
+ de cena ou de ponto de vista.
+ Mensagens de rádio, TV e anotações em citação, com ">".
+ Final de capítulo em gancho, quase sempre com uma linha curta e seca.
+10. Pontas soltas para o Livro 2
+ Dominic está vivo? O vão, o mutado, a explosão. Ele estava com a pasta H-7 e o colar.
+ V sobreviveu? E o que ele fará sem o irmão, sem a base e sem Mavie?
+ H-7: o que existe ao norte, perto das montanhas? Quem pagaria por Mavie?
+ A Agência mandou "não interferir". Alyce desobedeceu. O que acontece com uma agente que
+ desobedece?
+ Mavie e o controle da Forma Adaptativa: os sentidos, a força, os olhos escuros e o risco de não voltar
+ da próxima vez.
+ Greg descobre que ama alguém que quase o matou. E carrega a culpa por não ter segurado Dominic.
+ Os mutados que sobreviveram à explosão. O que separa Mavie deles?
+ Mônica, Carlos, as crianças e os reféns do depósito 3 nos túneis do hospital, sem saber o que
+ aconteceu.
+ O destino de Elena Vaider. Ela adoeceu com "esquecimento, confusão" anos antes do surto.
+ Coincidência?
+ Os pais de Mavie em Ohio. O primo de Greg perto de Los Angeles. Os 1% de imunes.
+ SUGESTÃO
+ A doença de Elena (esquecimento, confusão, delírio) bate com os sintomas do vírus no córtex pré-
+ frontal. Se Elena foi uma das primeiras cobaias do Projeto Harbinger, isso ligaria a família Vaider ao
+ vírus desde 2008 e explicaria por que a Agência recrutou Alyce. Os cabelos brancos de nascença dos
+ gêmeos também poderiam ter relação com isso.
+11. Notas para o jogo (Dias de um Apocalipse – Nova York)
+ O Ato 1 do jogo segue o livro: Prólogo → Cap. 1 (corrida) → Cap. 2 (bar e TV) → Cap. 3 (Harlem,
+ Mavie ferida, vulto mancando, carro do Greg, rádio de evacuação).
+ Com o Cap. 4 novo, o Ato 1 pode terminar na casa dos pais de Mavie (fase noturna de vigia, o
+ infectado no quintal) e na decolagem do aeroporto de Nova Jersey.
+ Textos da tela: inimigos = "infectados". "Vagos" só para a gangue humana, se ela aparecer no jogo.
+ Visual dos personagens: seguir os modelos de referência da galeria (seção 4). Dominic com tranças
+ brancas, óculos de aviador, tatuagem no pescoço e jaqueta de couro preta. Greg com dreads, corrente
+ de ouro e jaqueta "TF". Alyce com o macacão tático preto.
+ Ideia de inimigo especial: os mutados (rápidos, saltam entre telhados, fazem o estalo de dentes como
+ aviso sonoro).
+ O jogo usa o mapa no estilo "Liberty City", mas o nome mostrado ao jogador deve ser sempre "Nova
+ York".

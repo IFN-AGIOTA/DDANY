@@ -10,12 +10,18 @@ const ModelosArmas := preload("res://armas/modelos_armas.gd")
 const ALT_QUADRIL := 0.96
 # aparência de cada personagem: pele, cabelo, camisa, calça, sapato, jaqueta (ou null), cabelo comprido, atadura
 const VISUAIS := {
-	"greg": {"pele": Color(0.55, 0.38, 0.27), "cabelo": Color(0.08, 0.06, 0.05), "camisa": Color(0.2, 0.3, 0.24),
-		"calca": Color(0.17, 0.22, 0.32), "sapato": Color(0.12, 0.11, 0.1), "jaqueta": Color(0.24, 0.26, 0.2),
-		"comprido": false, "barba": true, "atadura": false, "largura": 1.06},
-	"dominic": {"pele": Color(0.82, 0.68, 0.58), "cabelo": Color(0.9, 0.9, 0.88), "camisa": Color(0.1, 0.1, 0.11),
-		"calca": Color(0.2, 0.24, 0.33), "sapato": Color(0.2, 0.14, 0.1), "jaqueta": Color(0.3, 0.18, 0.11),
-		"comprido": false, "barba": false, "atadura": false, "largura": 1.02, "oculos": true},
+	# Bíblia da Lore: negro, dreads curtos, bigode e cavanhaque, tatuagens no pescoço, corrente de ouro grossa,
+	# jaqueta preta college com "TF" no peito, moletom escuro, calça cargo preta, luvas, botas verde-oliva
+	"greg": {"pele": Color(0.36, 0.24, 0.17), "cabelo": Color(0.06, 0.05, 0.04), "camisa": Color(0.12, 0.12, 0.13),
+		"calca": Color(0.08, 0.08, 0.09), "sapato": Color(0.3, 0.32, 0.2), "jaqueta": Color(0.06, 0.06, 0.07),
+		"comprido": false, "barba": true, "atadura": false, "largura": 1.06, "dreads": true, "corrente": true,
+		"tatuagem": true, "tf": true, "luvas": Color(0.08, 0.08, 0.08)},
+	# Bíblia da Lore: cabelo branco em tranças finas no topo, laterais raspadas, pele muito clara, óculos de aviador,
+	# tatuagens no pescoço, jaqueta de couro preta, camiseta branca, calça preta, botas pretas
+	"dominic": {"pele": Color(0.93, 0.85, 0.8), "cabelo": Color(0.95, 0.95, 0.93), "camisa": Color(0.88, 0.88, 0.86),
+		"calca": Color(0.08, 0.08, 0.09), "sapato": Color(0.05, 0.05, 0.05), "jaqueta": Color(0.07, 0.07, 0.08),
+		"comprido": false, "barba": false, "atadura": false, "largura": 1.02, "oculos": true, "trancas": true,
+		"tatuagem": true},
 	"garoto": {"pele": Color(0.7, 0.52, 0.4), "cabelo": Color(0.12, 0.09, 0.06), "camisa": Color(0.85, 0.55, 0.15),
 		"calca": Color(0.25, 0.25, 0.27), "sapato": Color(0.9, 0.9, 0.9), "jaqueta": null,
 		"comprido": false, "barba": false, "atadura": false, "largura": 0.85},
@@ -65,13 +71,31 @@ func montar(quem: String, tipo_arma: String) -> void:
 	if jaq != null:
 		c.caixa(Vector3(0, 0.3, -0.122), Vector3(0.16, 0.56, 0.01), v["camisa"])        # camisa aparecendo na frente
 	c.caixa(Vector3(0, -0.02, 0), Vector3(0.38 * L, 0.12, 0.22), v["calca"])
+	if v.get("corrente", false):
+		c.caixa(Vector3(0, 0.5, -0.125), Vector3(0.16, 0.03, 0.02), Color(0.85, 0.68, 0.2))
+		c.caixa(Vector3(0, 0.44, -0.125), Vector3(0.05, 0.08, 0.02), Color(0.85, 0.68, 0.2))
+	if v.get("tf", false):
+		c.caixa(Vector3(-0.11, 0.42, -0.124), Vector3(0.08, 0.06, 0.01), Color(0.8, 0.75, 0.6))   # emblema "TF"
 	_parte(tronco, c)
 	cabeca = _pivo(tronco, Vector3(0, 0.62, 0))
 	c = Malhas.Construtor.new()
 	c.caixa(Vector3(0, 0.03, 0), Vector3(0.1, 0.08, 0.1), v["pele"])                     # pescoço
 	c.caixa(Vector3(0, 0.17, 0), Vector3(0.2, 0.24, 0.22), v["pele"])
-	c.caixa(Vector3(0, 0.3, 0.01), Vector3(0.22, 0.06, 0.24), v["cabelo"])
-	c.caixa(Vector3(0, 0.2, 0.1), Vector3(0.22, 0.16, 0.05), v["cabelo"])               # nuca
+	if v.get("trancas", false):
+		# laterais raspadas (só a pele) e tranças finas no topo, puxadas para trás
+		for k in 5:
+			c.caixa(Vector3(-0.08 + k * 0.04, 0.305, 0.02), Vector3(0.025, 0.035, 0.24), v["cabelo"])
+		c.caixa(Vector3(0, 0.27, 0.15), Vector3(0.12, 0.12, 0.05), v["cabelo"])
+	elif v.get("dreads", false):
+		c.caixa(Vector3(0, 0.3, 0.01), Vector3(0.22, 0.05, 0.24), v["cabelo"])
+		for k in 9:
+			var a := TAU * k / 9.0
+			c.caixa(Vector3(sin(a) * 0.11, 0.27, cos(a) * 0.11 + 0.01), Vector3(0.04, 0.1, 0.04), v["cabelo"])
+	else:
+		c.caixa(Vector3(0, 0.3, 0.01), Vector3(0.22, 0.06, 0.24), v["cabelo"])
+		c.caixa(Vector3(0, 0.2, 0.1), Vector3(0.22, 0.16, 0.05), v["cabelo"])           # nuca
+	if v.get("tatuagem", false):
+		c.caixa(Vector3(0.045, 0.03, -0.045), Vector3(0.03, 0.06, 0.02), Color(0.15, 0.17, 0.22))
 	if v["comprido"]:
 		c.caixa(Vector3(0, 0.05, 0.12), Vector3(0.24, 0.34, 0.06), v["cabelo"])
 	if v["barba"]:
@@ -91,7 +115,7 @@ func montar(quem: String, tipo_arma: String) -> void:
 		var cv := _pivo(o, Vector3(0, -0.29, 0))
 		c = Malhas.Construtor.new()
 		c.caixa(Vector3(0, -0.12, 0), Vector3(0.1, 0.24, 0.1), roupa)
-		c.caixa(Vector3(0, -0.28, 0), Vector3(0.08, 0.09, 0.09), v["pele"])
+		c.caixa(Vector3(0, -0.28, 0), Vector3(0.08, 0.09, 0.09), v.get("luvas", v["pele"]))
 		if v["atadura"] and lado == 0:
 			c.caixa(Vector3(0, -0.17, 0), Vector3(0.115, 0.08, 0.115), Color(0.92, 0.9, 0.86))
 		_parte(cv, c)

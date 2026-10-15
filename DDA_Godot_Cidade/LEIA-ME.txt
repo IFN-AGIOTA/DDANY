@@ -240,8 +240,9 @@ LOOT (mundo/loot_mundo.gd; tabelas no topo, com raridade e quantidades)
 -----------------------------------------------------------------------------------------------------
 6. A HISTÓRIA
 -----------------------------------------------------------------------------------------------------
-Baseada no livro "Dias de um Apocalipse" (Livro 1), na linha do tempo e na lore do Projeto Harbinger
-(PDFs do autor). Falas em historia/historia.gd (tabela FALAS).
+Baseada na BÍBLIA DA LORE e no Livro 1 "Dias de um Apocalipse" (Willian Ulguim e Gabriel Solla), que ficam
+na pasta lore/ do repositório (PDF e texto). A Bíblia vale acima de tudo: se o jogo contradisser, corrige-se o
+jogo. Falas em historia/historia.gd (tabela FALAS).
 
 PERSONAGENS: DOMINIC VAIDER (cabelo branco, óculos de aviador, ex-corredor clandestino, tem um jato),
 GREG (melhor amigo, gosta da Mavie), MAVIE (queria ser médica; infectada, mas não "vira": forma adaptativa),
@@ -256,8 +257,8 @@ NO JOGO (Menu > HISTÓRIA · ATO 1)
 - PRÓLOGO "Antes do Fim" (tela preta).
 - CAPÍTULO 1 · A ÚLTIMA CORRIDA: noite, cidade ainda inteira (sem carros largados, sem infectados). No livro é
   de carro; no jogo é A PÉ: 6 pontos de controle contra o relógio (+6 s por ponto) até "A MORTE DO MEDO".
-- CAPÍTULO 2 · BRILHO ANTES DA TEMPESTADE: o bar; Greg e a Mavie; a TV fala dos ataques em Tóquio, Paris e NY.
-- CAPÍTULO 3 · A PRIMEIRA NOITE (Greg e Mavie viram COMPANHEIROS a partir do encontro): três dias depois, manhã nublada do 4º dia; aviso do aeroporto (voos privados
+- CAPÍTULO 2 · PÂNICO MIDIÁTICO: o bar; Greg e a Mavie; a TV fala dos ataques em Tóquio, Paris e NY.
+- CAPÍTULO 3 · A MANHÃ SEM SOL (Greg e Mavie viram COMPANHEIROS a partir do encontro): três dias depois, manhã nublada do 4º dia; aviso do aeroporto (voos privados
   até as 18h). Dominic sai com jaqueta, mochila e o revólver do pai; a cidade já trinca (carros largados,
   poucos infectados). Objetivos: PRÉDIO DO GREG -> Mavie chega ferida, um vulto manca no fim da rua ->
   CARRO DO GREG (infectados chegando) -> rádio "Evacuação imediata..." -> FIM DO ATO 1.

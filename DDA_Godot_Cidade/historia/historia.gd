@@ -4,8 +4,8 @@ extends CanvasLayer
 #   PRÓLOGO "Antes do Fim" (tela preta)
 #   CAPÍTULO 1 · A Última Corrida: noite, cidade inteira (sem carros largados e sem infectados); no livro é de
 #     carro, aqui é a pé: pontos de controle contra o relógio até a linha "A Morte do Medo".
-#   CAPÍTULO 2 · Brilho Antes da Tempestade: o bar depois da corrida; Greg fala da Mavie; a TV dá as notícias.
-#   CAPÍTULO 3 · A Primeira Noite: três dias depois, manhã do 4º dia, céu fechado. A cidade começa a trincar
+#   CAPÍTULO 2 · Pânico Midiático: o bar depois da corrida; Greg fala da Mavie; a TV dá as notícias.
+#   CAPÍTULO 3 · A Manhã Sem Sol: três dias depois, manhã do 4º dia, céu fechado. A cidade começa a trincar
 #     (carros abandonados, poucos infectados ainda). Dominic pega a jaqueta, a mochila e o revólver do pai e vai
 #     até o prédio do Greg; Mavie chega ferida; um vulto manca no fim da rua; os três correm para o carro do Greg
 #     rumo ao aeroporto (o jato do Dominic). FIM DO ATO 1 (o livro segue com a fuga de jato: Nebraska, Califórnia).
@@ -44,9 +44,9 @@ const FALAS := {
 	"tres_dias": ["Três dias se passaram desde a corrida.",
 		"O mundo parecia dividido entre os que zombavam da “nova gripe” e os que já trancavam portas, empilhando comida e carregando armas.",
 		"Na manhã do quarto dia, o sol não nasceu. Apenas se escondeu atrás de nuvens densas.",
-		"Uma mensagem da central de aviação: “Aeroporto sob risco de fechamento. Todos os voos privados devem ser finalizados até as 18h.”",
+		"Uma mensagem da central de aviação: “Aeroporto sob risco de fechamento. Todos os voos privados devem ser finalizados até as 18h de amanhã.”",
 		"O jato. Era a rota de fuga."],
-	"acordar": [["", "Dominic vestiu a jaqueta de couro, pegou a mochila e o revólver herdado do pai."],
+	"acordar": [["", "Dominic vestiu a jaqueta de couro, pegou a mochila e o revólver que o pai tinha deixado para trás quando sumiu."],
 		["", "Vá até o prédio do Greg (marcado no mapa). As ruas já não são as mesmas: cuidado."]],
 	"greg": [["GREG", "Do jeito que dá pra ficar. A cidade vai fechar. Meu plano é ir pra Los Angeles. Meu primo tem uma propriedade nos arredores."],
 		["DOMINIC", "O aeroporto ainda tá liberado. Meu jato tá lá. Podemos usá-lo."],
@@ -139,11 +139,11 @@ func _ir(e: String) -> void:
 			await _cena(func(): await Cenas.chegada(cs, self, fim, (fim - antes).normalized()))
 			_ir("bar")
 		"bar":
-			titulo("CAPÍTULO 2", "Brilho Antes da Tempestade", func():
+			titulo("CAPÍTULO 2", "Pânico Midiático", func():
 				await _cena(func(): await Cenas.bar(cs, self, FALAS["bar"]))
 				_ir("cap3"))
 		"cap3":
-			titulo("CAPÍTULO 3", "A Primeira Noite", func():
+			titulo("CAPÍTULO 3", "A Manhã Sem Sol", func():
 				_cheio = true
 				dizer(FALAS["tres_dias"], func():
 					_cheio = false
