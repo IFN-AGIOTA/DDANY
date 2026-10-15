@@ -28,9 +28,12 @@ const VISUAIS := {
 	"bartender": {"pele": Color(0.75, 0.6, 0.5), "cabelo": Color(0.3, 0.3, 0.3), "camisa": Color(0.9, 0.9, 0.9),
 		"calca": Color(0.1, 0.1, 0.1), "sapato": Color(0.1, 0.1, 0.1), "jaqueta": Color(0.1, 0.1, 0.12),
 		"comprido": false, "barba": true, "atadura": false, "largura": 1.1},
-	"mavie": {"pele": Color(0.86, 0.7, 0.6), "cabelo": Color(0.2, 0.12, 0.07), "camisa": Color(0.75, 0.73, 0.7),
-		"calca": Color(0.2, 0.22, 0.28), "sapato": Color(0.85, 0.85, 0.85), "jaqueta": Color(0.45, 0.12, 0.12),
-		"comprido": true, "barba": false, "atadura": true, "largura": 0.92},
+	# referência do autor (lore/Mavie_referencia.png): gorro preto, cabelo escuro comprido e liso, moletom escuro
+	# gasto com bolso canguru, atadura no antebraço, mochila com bolso de primeiros socorros, calça escura
+	"mavie": {"pele": Color(0.88, 0.76, 0.68), "cabelo": Color(0.09, 0.07, 0.06), "camisa": Color(0.16, 0.15, 0.14),
+		"calca": Color(0.14, 0.14, 0.15), "sapato": Color(0.12, 0.11, 0.1), "jaqueta": null,
+		"comprido": true, "barba": false, "atadura": true, "largura": 0.92, "gorro": Color(0.1, 0.1, 0.11),
+		"mochila": Color(0.25, 0.22, 0.17), "moletom": true},
 }
 
 var corpo: Node3D               # gira inteiro ao cair (pivô nos pés)
@@ -71,6 +74,19 @@ func montar(quem: String, tipo_arma: String) -> void:
 	if jaq != null:
 		c.caixa(Vector3(0, 0.3, -0.122), Vector3(0.16, 0.56, 0.01), v["camisa"])        # camisa aparecendo na frente
 	c.caixa(Vector3(0, -0.02, 0), Vector3(0.38 * L, 0.12, 0.22), v["calca"])
+	if v.get("moletom", false):
+		c.caixa(Vector3(0, 0.12, -0.125), Vector3(0.26, 0.14, 0.02), v["camisa"].darkened(0.25))         # bolso canguru
+		c.caixa(Vector3(0, 0.58, 0.1), Vector3(0.3, 0.1, 0.08), v["camisa"].darkened(0.15))              # capuz nas costas
+		for x in [-0.04, 0.04]:
+			c.caixa(Vector3(x, 0.45, -0.125), Vector3(0.012, 0.12, 0.01), Color(0.6, 0.6, 0.58))         # cordões
+	if v.has("mochila"):
+		var mo: Color = v["mochila"]
+		c.caixa(Vector3(0, 0.3, 0.22), Vector3(0.32, 0.42, 0.18), mo)
+		c.caixa(Vector3(0.1, 0.24, 0.32), Vector3(0.12, 0.14, 0.04), mo.darkened(0.15))                 # bolso de primeiros socorros
+		c.caixa(Vector3(0.1, 0.24, 0.343), Vector3(0.05, 0.015, 0.005), Color(0.15, 0.12, 0.1))
+		c.caixa(Vector3(0.1, 0.24, 0.343), Vector3(0.015, 0.05, 0.005), Color(0.15, 0.12, 0.1))
+		for x in [-0.1, 0.1]:
+			c.caixa(Vector3(x, 0.38, -0.125), Vector3(0.04, 0.3, 0.012), mo.darkened(0.3))                # alças
 	if v.get("corrente", false):
 		c.caixa(Vector3(0, 0.5, -0.125), Vector3(0.16, 0.03, 0.02), Color(0.85, 0.68, 0.2))
 		c.caixa(Vector3(0, 0.44, -0.125), Vector3(0.05, 0.08, 0.02), Color(0.85, 0.68, 0.2))
@@ -96,6 +112,10 @@ func montar(quem: String, tipo_arma: String) -> void:
 		c.caixa(Vector3(0, 0.2, 0.1), Vector3(0.22, 0.16, 0.05), v["cabelo"])           # nuca
 	if v.get("tatuagem", false):
 		c.caixa(Vector3(0.045, 0.03, -0.045), Vector3(0.03, 0.06, 0.02), Color(0.15, 0.17, 0.22))
+	if v.has("gorro"):
+		c.caixa(Vector3(0, 0.31, 0.01), Vector3(0.24, 0.1, 0.25), v["gorro"])
+		c.caixa(Vector3(0, 0.27, -0.002), Vector3(0.245, 0.05, 0.255), v["gorro"].lightened(0.08))       # barra dobrada
+		c.caixa(Vector3(0, 0.27, -0.13), Vector3(0.12, 0.025, 0.005), Color(0.75, 0.72, 0.6))           # bordado na frente
 	if v["comprido"]:
 		c.caixa(Vector3(0, 0.05, 0.12), Vector3(0.24, 0.34, 0.06), v["cabelo"])
 	if v["barba"]:

@@ -12,4 +12,5 @@
 - A lore oficial fica em `lore/`: `Biblia_da_Lore_Dias_de_um_Apocalipse.pdf` (vale acima de tudo) e o Livro 1 (`DIAS_DE_UM_APOCALIPSE_Livro1.pdf`). Há cópias em texto (`lore/Biblia_da_Lore.txt`, `lore/Livro1.txt`) para consultar rápido.
 - Antes de mexer em história, falas, personagens ou nomes no jogo, consultar a Bíblia. Se algo do jogo contradizer a Bíblia, vale a Bíblia.
 - Regras fixas: "Vagos" é a GANGUE humana (Edy e V); os mortos-vivos são "infectados" (e os "mutados", especiais). A cidade mostrada ao jogador é sempre "Nova York" (nunca "Liberty City"). Dominic e Alyce são gêmeos de cabelo branco. Nick Evers (nunca "Nik").
+- Imagens de referência dos personagens também ficam em `lore/` (ex.: `lore/Mavie_referencia.png`); o visual no jogo fica em `npc/modelo_humano.gd` (tabela VISUAIS).
 - Quando o usuário mandar lore nova, substituir os arquivos em `lore/` e atualizar o jogo e o `LEIA-ME.txt`.
