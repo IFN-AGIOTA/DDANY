@@ -43,7 +43,7 @@ func _montar() -> void:
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(t)
 	var motivo: String = {"infectados": "Os infectados pegaram você.", "fome": "Morreu de fome.", "sede": "Morreu de sede.",
-		"frio": "Morreu de frio.", "sangue": "Perdeu sangue demais.", "infecção": "A infecção venceu."}.get(causa, "")
+		"frio": "Morreu de frio.", "sangue": "Perdeu sangue demais.", "infecção": "A infecção venceu.", "queda": "A queda foi alta demais."}.get(causa, "")
 	var s := int(tempo_vivo)
 	var linha := "%s   Sobreviveu %d min %02d s · %d abates" % [motivo, s / 60, s % 60, abates]
 	var l := UI.rotulo(linha, 3.0 * v, Color(1, 1, 1, 0.85), 700)

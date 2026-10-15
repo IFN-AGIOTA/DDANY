@@ -2,7 +2,9 @@ extends CanvasLayer
 # HUD DE SOBREVIVÊNCIA (estilo DayZ): ícones no canto de baixo à esquerda que mudam de cor
 # (branco = bem · amarelo = atenção · laranja · vermelho = perigo) com setas ▲▼ mostrando se está subindo/caindo:
 #   VIDA (cruz) · SANGUE (gota) · FOME (talheres) · SEDE (copo) · TEMPERATURA (termômetro) · MOLHADO (nuvem)
-#   + gotas vermelhas = quantos SANGRAMENTOS · cruz verde = INFECÇÃO.
+#   + gotas vermelhas = quantos SANGRAMENTOS · cruz verde = INFECÇÃO · osso = PERNA QUEBRADA
+#   + barra de ESTAMINA em cima dos ícones (encolhe com peso demais) e o nome das DOENÇAS
+#   + tela preta quando desmaia
 # Também: tela pisca em vermelho ao levar um golpe; com pouca vida/sangue a tela perde a cor e escurece nas bordas.
 # Mexa AQUI para: posição/tamanho dos ícones, cores e limites de cada estado.
 
@@ -39,6 +41,7 @@ var _mat: ShaderMaterial
 var _golpe := 0.0
 var _fonte: Font
 var _t := 0.0
+var _apagao: ColorRect
 
 func _ready() -> void:
 	layer = 4
@@ -53,6 +56,11 @@ func _ready() -> void:
 	_filtro.material = _mat
 	_filtro.visible = false
 	add_child(_filtro)
+	_apagao = ColorRect.new()
+	_apagao.color = Color(0, 0, 0, 0)
+	_apagao.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_apagao.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_apagao)
 	_tela = Control.new()
 	_tela.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_tela.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -79,6 +87,7 @@ func _process(dt: float) -> void:
 	if jogador.morto:
 		fraco = 1.0
 	var frio := clampf((35.6 - sv.temperatura) / 1.5, 0.0, 1.0)
+	_apagao.color.a = move_toward(_apagao.color.a, 1.0 if sv.desmaiado > 0.0 else 0.0, dt * 2.0)
 	_filtro.visible = _golpe > 0.01 or fraco > 0.01 or frio > 0.01
 	_mat.set_shader_parameter("golpe", _golpe)
 	_mat.set_shader_parameter("fraco", fraco)
@@ -128,6 +137,28 @@ func _desenhar() -> void:
 			var pts := PackedVector2Array([Vector2(cx - s, cy + s * 0.6 * t), Vector2(cx + s, cy + s * 0.6 * t), Vector2(cx, cy - s * 0.8 * t)])
 			_tela.draw_colored_polygon(pts, cor)
 		x += lado + 0.8 * u
+	# estamina (em cima dos ícones)
+	var larg := x - 2.0 * u - 0.8 * u
+	var by := y - 1.4 * u
+	_tela.draw_rect(Rect2(2.0 * u, by, larg, 0.7 * u), Color(0, 0, 0, 0.45))
+	_tela.draw_rect(Rect2(2.0 * u, by, larg * sv.estamina_max / 100.0, 0.7 * u), Color(1, 1, 1, 0.12))
+	var cor_e := Color(0.9, 0.9, 0.9) if sv.estamina > 25.0 else Color(1.0, 0.6, 0.2)
+	_tela.draw_rect(Rect2(2.0 * u, by, larg * sv.estamina / 100.0, 0.7 * u), cor_e)
+	# doenças (nome em cima da barra)
+	var txt := ", ".join(sv.doencas())
+	if sv.perna_quebrada:
+		txt = "PERNA QUEBRADA" + (" · " + txt if txt != "" else "")
+	if txt != "":
+		var tam := int(2.2 * u)
+		_tela.draw_string(_fonte, Vector2(2.0 * u + 1, by - 0.8 * u + 1), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, Color(0, 0, 0, 0.8))
+		_tela.draw_string(_fonte, Vector2(2.0 * u, by - 0.8 * u), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, Color(1.0, 0.75, 0.3, pisca))
+	if sv.perna_quebrada:
+		var c0 := Vector2(x + lado * 0.45, y + lado * 0.5)
+		var oss := Color(0.95, 0.9, 0.8, pisca)
+		_tela.draw_line(c0 + Vector2(-lado * 0.25, lado * 0.25), c0 + Vector2(lado * 0.25, -lado * 0.25), oss, maxf(3.0, lado * 0.12))
+		_tela.draw_circle(c0 + Vector2(-lado * 0.28, lado * 0.2), lado * 0.08, oss)
+		_tela.draw_circle(c0 + Vector2(lado * 0.2, -lado * 0.28), lado * 0.08, oss)
+		x += lado * 0.9
 	# sangramentos e infecção
 	for k in mini(sv.sangramentos, 5):
 		_gota(Vector2(x + lado * 0.3 + k * lado * 0.42, y + lado * 0.5), lado * 0.22, Color(VERMELHO, pisca))

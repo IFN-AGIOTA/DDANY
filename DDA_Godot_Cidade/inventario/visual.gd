@@ -128,6 +128,9 @@ static func _icone(ci: CanvasItem, it, a: Rect2, alfa: float) -> void:
 			"machado":
 				_r(ci, a, 0.45, 0.05, 0.55, 1.0, cabo)
 				_poli(ci, a, [[0.5, 0.05], [0.95, 0.0], [0.95, 0.35], [0.5, 0.25]], metal)
+			"lanca":
+				_r(ci, a, 0.46, 0.15, 0.54, 1.0, cabo)
+				_poli(ci, a, [[0.44, 0.17], [0.56, 0.17], [0.5, 0.0]], metal)
 			"taco":
 				_poli(ci, a, [[0.44, 1.0], [0.56, 1.0], [0.7, 0.0], [0.3, 0.0]], cabo)
 			_:

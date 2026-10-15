@@ -6,12 +6,21 @@ extends Node
 #   temperatura (°C) .... vai para o "conforto": clima + roupas (calor) - chuva/molhado (roupas impermeáveis ajudam)
 #   molhado (0-1) ....... chuva sem cobertura molha; seca devagar
 #   sangramentos ........ cada mordida pode abrir um (atadura/trapos/kit estancam)
-#   infeccao ............ mordidas às vezes infeccionam: a vida cai até tomar antibióticos/vitaminas
+#   infeccao ............ mordidas às vezes infeccionam: a vida cai até tomar antibióticos
+#   ESTAMINA (0-100) .... correr gasta; peso demais deixa a estamina menor; zerou = não corre
+#   PERNA QUEBRADA ...... queda alta ou golpe forte: só anda devagar, sem pular, até usar uma TALA
+#   DESMAIO ............. com pouco sangue o jogador apaga por alguns segundos (tela preta)
+#   DOENÇAS ............. GRIPE (frio/molhado demais: tosse que os infectados ouvem · vitaminas curam)
+#                         CÓLERA (água suja: sede dobrada e vômito · antibióticos curam)
+#                         INTOXICAÇÃO (comida estragada: vômito · carvão ativado cura ou passa sozinha)
+#   FOGUEIRA perto ...... esquenta e seca a roupa
 # Morte: vida 0 ou sangue < 500 -> sinal "morreu". As roupas protegem (campo "protecao" em itens.gd).
 # Mexa AQUI para: velocidade da fome/sede, dano do sangramento, frio, regeneração.
 
 signal morreu(causa: String)
 signal ferido(dano: float)           # tela pisca em vermelho
+signal tossiu(pos: Vector3)          # main avisa os infectados (barulho)
+signal aviso(texto: String)          # mensagens curtas ("VOCÊ VOMITOU", "PERNA QUEBRADA"...)
 
 const FOME_POR_S := 100.0 / 3600.0   # fome zera em ~1 h de jogo andando
 const SEDE_POR_S := 100.0 / 2400.0   # sede zera em ~40 min
@@ -29,6 +38,17 @@ var infeccao := 0.0                  # 0 = saudável · >0 = infectado (sobe com
 var tempo_vivo := 0.0
 var causa := ""
 var imortal := false                 # testes / história
+var estamina := 100.0
+var estamina_max := 100.0
+var perna_quebrada := false
+var desmaiado := 0.0                 # segundos restantes apagado
+var gripe := 0.0                     # 0..1 pegando · >=1 doente
+var colera := 0.0                    # >0 doente
+var intoxicacao := 0.0               # segundos restantes
+var perto_fogo := false
+var _t_tosse := 20.0
+var _t_vomito := 40.0
+var parado := 0.0                    # segundos sem se mexer (vômito)
 
 var jogador: CharacterBody3D
 var clima = null                     # mundo/clima.gd (temperatura do ar, chuva); pode ser null
@@ -80,10 +100,19 @@ func _process(dt: float) -> void:
 		molhado = minf(1.0, molhado + chuva * (1.0 - imperm) * dt / 90.0)
 	else:
 		molhado = maxf(0.0, molhado - dt / (240.0 if ar < 12.0 else 150.0))
+	# fogueira perto: esquenta e seca
+	perto_fogo = false
+	for f in get_tree().get_nodes_in_group("fogueiras"):
+		if is_instance_valid(f) and f.acesa and (f as Node3D).global_position.distance_to(p) < 4.5:
+			perto_fogo = true
+			break
+	if perto_fogo:
+		molhado = maxf(0.0, molhado - dt / 40.0)
 	var calor := _soma_roupas("calor")
-	var alvo := 35.2 + (ar - 10.0) * 0.08 + calor * 2.6 - molhado * 1.6 + (0.6 if v > 5.0 else 0.0)
+	var alvo := 35.2 + (ar - 10.0) * 0.08 + calor * 2.6 - molhado * 1.6 + (0.6 if v > 5.0 else 0.0) + (2.6 if perto_fogo else 0.0)
 	alvo = clampf(alvo, 33.5, 39.5)
 	temperatura += (alvo - temperatura) * minf(1.0, dt / 120.0)
+	_condicoes(dt, v, p)
 	# sangue
 	if sangramentos > 0:
 		sangue -= SANGRA_ML_S * sangramentos * dt
@@ -102,6 +131,10 @@ func _process(dt: float) -> void:
 	if infeccao > 0.0:
 		infeccao += dt / 600.0
 		perda += 0.05 + 0.1 * minf(infeccao, 2.0)
+	if gripe >= 1.0:
+		perda += 0.02
+	if colera > 0.0:
+		perda += 0.05
 	if perda > 0.0:
 		_dano(perda * dt, "fome" if fome <= 0.0 else ("sede" if sede <= 0.0 else ("frio" if temperatura < 35.0 else ("infecção" if infeccao > 0.0 else "sangue"))))
 	elif fome > 50.0 and sede > 50.0 and sangramentos == 0 and sangue > 3500.0:
@@ -161,7 +194,12 @@ func receber_ataque(dano: float, chance_sangrar: float, _origem: Vector3) -> voi
 
 # ---------- consumíveis (inventario.usar chama aqui) ----------
 # devolve "" quando usou; ou um aviso quando não dá para usar (o item não é gasto)
-func aplicar(efeito: Dictionary, _id: String) -> String:
+func aplicar(efeito: Dictionary, _id: String, estado := 1.0) -> String:
+	if efeito.has("tala"):
+		if not perna_quebrada:
+			return "SUA PERNA ESTÁ BOA"
+		perna_quebrada = false
+		return ""
 	if efeito.has("reparo_arma"):
 		var inv = inventario()
 		var arma = inv.slots.get("maos") if inv != null else null
@@ -188,7 +226,100 @@ func aplicar(efeito: Dictionary, _id: String) -> String:
 	sangramentos = maxi(0, sangramentos - int(efeito.get("sangrar", 0)))
 	if float(efeito.get("doenca", 0.0)) < 0.0:
 		infeccao = 0.0
+	for c in efeito.get("cura", []):
+		match c:
+			"gripe":
+				gripe = 0.0
+			"colera":
+				colera = 0.0
+			"intoxicacao":
+				intoxicacao = 0.0
+			"infeccao":
+				infeccao = 0.0
+	# água suja: chance de cólera · comida estragada (estado baixo): chance de intoxicação
+	if efeito.has("suja") and randf() < 0.6:
+		colera = 1.0
+	if (efeito.has("fome")) and estado < 0.3 and randf() < 0.7:
+		intoxicacao = 240.0
+		aviso.emit("ESSA COMIDA ESTAVA ESTRAGADA")
 	return ""
+
+# ---------- estamina, perna, desmaio e doenças ----------
+func _condicoes(dt: float, v: float, p: Vector3) -> void:
+	var inv = inventario()
+	var peso: float = inv.peso_total() if inv != null else 0.0
+	estamina_max = clampf(100.0 - maxf(0.0, peso - 18.0) * 2.5, 35.0, 100.0)
+	if v > 5.0:
+		estamina -= dt * (13.0 + peso * 0.15)
+	elif v > 2.5:
+		estamina += dt * 4.0
+	else:
+		estamina += dt * 9.0
+	estamina = clampf(estamina, 0.0, estamina_max)
+	desmaiado = maxf(0.0, desmaiado - dt)
+	parado = maxf(0.0, parado - dt)
+	if sangue < 2400.0 and desmaiado <= 0.0 and randf() < dt * 0.025:
+		desmaiado = randf_range(3.0, 6.0)
+		aviso.emit("VOCÊ DESMAIOU")
+	# gripe: frio ou roupa molhada por muito tempo
+	if gripe < 1.0:
+		if temperatura < 35.6:
+			gripe += dt / 360.0
+		elif molhado > 0.6:
+			gripe += dt / 900.0
+		else:
+			gripe = maxf(0.0, gripe - dt / 1200.0)
+		if gripe >= 1.0:
+			aviso.emit("VOCÊ PEGOU UMA GRIPE")
+	else:
+		_t_tosse -= dt
+		if _t_tosse <= 0.0:
+			_t_tosse = randf_range(18.0, 45.0)
+			tossiu.emit(p)
+			aviso.emit("*TOSSE*")
+	# cólera e intoxicação: vômito (perde comida e água)
+	if colera > 0.0:
+		sede = maxf(0.0, sede - SEDE_POR_S * dt)
+	if intoxicacao > 0.0:
+		intoxicacao = maxf(0.0, intoxicacao - dt)
+		if intoxicacao <= 0.0:
+			aviso.emit("A INTOXICAÇÃO PASSOU")
+	if colera > 0.0 or intoxicacao > 0.0:
+		_t_vomito -= dt
+		if _t_vomito <= 0.0:
+			_t_vomito = randf_range(45.0, 110.0)
+			fome = maxf(0.0, fome - 15.0)
+			sede = maxf(0.0, sede - 20.0)
+			parado = 2.5
+			tossiu.emit(p)
+			aviso.emit("VOCÊ VOMITOU")
+
+# queda: jogador.gd chama ao pousar com a velocidade vertical (negativa)
+func queda(vel_y: float) -> void:
+	var v := -vel_y
+	if v < 9.5:
+		return
+	var d := (v - 9.5) * 9.0
+	_dano(d, "queda")
+	ferido.emit(d)
+	if v > 11.5 and not perna_quebrada:
+		perna_quebrada = true
+		aviso.emit("PERNA QUEBRADA · USE UMA TALA")
+
+func pode_correr() -> bool:
+	return estamina > 3.0 and not perna_quebrada and desmaiado <= 0.0
+
+func doencas() -> Array:
+	var r := []
+	if gripe >= 1.0:
+		r.append("GRIPE")
+	if colera > 0.0:
+		r.append("CÓLERA")
+	if intoxicacao > 0.0:
+		r.append("INTOXICAÇÃO")
+	if infeccao > 0.0:
+		r.append("INFECÇÃO")
+	return r
 
 # o frio faz a mira tremer (armas.gd multiplica a dispersão)
 func tremor() -> float:
@@ -205,13 +336,21 @@ func reiniciar() -> void:
 	infeccao = 0.0
 	tempo_vivo = 0.0
 	causa = ""
+	estamina = 100.0
+	perna_quebrada = false
+	desmaiado = 0.0
+	gripe = 0.0
+	colera = 0.0
+	intoxicacao = 0.0
 
 func salvar() -> Dictionary:
 	return {"vida": vida, "sangue": sangue, "fome": fome, "sede": sede, "temperatura": temperatura, "molhado": molhado,
-		"sangramentos": sangramentos, "infeccao": infeccao, "tempo_vivo": tempo_vivo}
+		"sangramentos": sangramentos, "infeccao": infeccao, "tempo_vivo": tempo_vivo, "perna": perna_quebrada,
+		"gripe": gripe, "colera": colera, "intoxicacao": intoxicacao}
 
 func carregar(d: Dictionary) -> void:
 	for k in d:
-		if k in ["vida", "sangue", "fome", "sede", "temperatura", "molhado", "infeccao", "tempo_vivo"]:
+		if k in ["vida", "sangue", "fome", "sede", "temperatura", "molhado", "infeccao", "tempo_vivo", "gripe", "colera", "intoxicacao"]:
 			set(k, float(d[k]))
 	sangramentos = int(d.get("sangramentos", 0))
+	perna_quebrada = bool(d.get("perna", false))

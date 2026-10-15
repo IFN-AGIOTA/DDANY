@@ -46,10 +46,11 @@ const WDEF := {
 	"taco": {"nome": "TACO", "corpo": true, "dano": 46.0, "alcance": 2.1, "rate": 0.85, "ruido": 5.0, "vibra": 18, "pose": "branca", "desgaste": 0.003},
 	"machado": {"nome": "MACHADO", "corpo": true, "dano": 85.0, "alcance": 2.1, "rate": 1.25, "ruido": 6.0, "vibra": 24, "pose": "branca", "desgaste": 0.002},
 	"cano": {"nome": "CANO", "corpo": true, "dano": 42.0, "alcance": 2.0, "rate": 0.9, "ruido": 5.0, "vibra": 18, "pose": "branca", "desgaste": 0.001},
+	"lanca": {"nome": "LANÇA", "corpo": true, "dano": 40.0, "alcance": 2.6, "rate": 0.8, "ruido": 3.0, "vibra": 14, "pose": "branca", "desgaste": 0.004},
 	"pe_de_cabra": {"nome": "PÉ DE CABRA", "corpo": true, "dano": 48.0, "alcance": 2.0, "rate": 0.9, "ruido": 5.0, "vibra": 18, "pose": "branca", "desgaste": 0.001},
 	"punhos": {"nome": "PUNHOS", "corpo": true, "dano": 13.0, "alcance": 1.45, "rate": 0.5, "ruido": 2.0, "vibra": 8, "pose": "punhos", "desgaste": 0.0},
 }
-const ORDEM := ["pistola", "m4", "ak", "espingarda", "rifle_caca", "faca", "taco", "machado", "cano", "pe_de_cabra"]
+const ORDEM := ["pistola", "m4", "ak", "espingarda", "rifle_caca", "faca", "taco", "machado", "cano", "pe_de_cabra", "lanca"]
 const MASCARA_TIRO := 1 | 4           # camadas 1 (mundo) e 3 (inimigos)
 
 var atual := ""                       # tipo da arma nas mãos ("" = mãos vazias ou outro item)

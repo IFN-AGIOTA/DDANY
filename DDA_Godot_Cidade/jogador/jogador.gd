@@ -196,12 +196,17 @@ func _physics_process(delta: float) -> void:
 		sprint = controles.correndo()
 		quer_pular = controles.pulando()
 		armas.gatilho = controles.atirando()
-	if morto:
+	if morto or (sobrevivencia != null and (sobrevivencia.desmaiado > 0.0 or sobrevivencia.parado > 0.0)):
 		ix = 0.0
 		iy = 0.0
 		quer_pular = false
 		sprint = false
 		armas.gatilho = false
+	if sobrevivencia != null and not sobrevivencia.pode_correr():
+		sprint = false                   # sem estamina ou perna quebrada
+	var perna: bool = sobrevivencia != null and sobrevivencia.perna_quebrada
+	if perna:
+		quer_pular = false
 	var mag := minf(1.0, Vector2(ix, iy).length())
 	# correr cancela agachar e mirar
 	if sprint and mag >= 0.05:
@@ -224,6 +229,8 @@ func _physics_process(delta: float) -> void:
 			vmax = VEL_TROTE if mag > 0.55 else VEL_ANDAR
 		if mirando:
 			vmax = minf(vmax, VEL_MIRANDO)
+		if perna:
+			vmax = minf(vmax, 1.2)          # mancando
 	var no_chao := is_on_floor()
 	var k := minf(1.0, delta * (9.0 if no_chao else 2.5))
 	velocity.x += (dir.x * vmax - velocity.x) * k
@@ -241,7 +248,11 @@ func _physics_process(delta: float) -> void:
 	else:
 		velocity.y -= GRAVIDADE * delta
 	_pulo_ant = quer_pular
+	var vy_antes := velocity.y
+	var no_ar := not no_chao
 	move_and_slide()
+	if no_ar and is_on_floor() and sobrevivencia != null:
+		sobrevivencia.queda(vy_antes)    # dano de queda / perna quebrada
 	vel_horizontal = Vector2(velocity.x, velocity.z).length()
 	atirando = armas.since < 1.6 or armas.aim > 0.5
 	if not morto:

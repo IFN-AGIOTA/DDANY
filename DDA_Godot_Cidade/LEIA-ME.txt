@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.10 (APK código 6)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.11 (APK código 7)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -92,6 +92,28 @@ SOBREVIVÊNCIA (estilo DayZ)
   perigo. Setas ▲▼ = subindo/caindo.
 - A tela pisca vermelho ao levar um golpe; com pouca vida/sangue perde a cor; no frio as bordas azulam e a
   mira treme.
+- ESTAMINA (barra branca em cima dos ícones): correr gasta, parado recupera. Carregar peso demais (mais de
+  ~18 kg) diminui a barra. Zerou = não corre.
+- QUEDA: cair de alto machuca; muito alto QUEBRA A PERNA (só anda mancando, não corre nem pula) até usar uma TALA.
+- DESMAIO: com pouco sangue (< 2400 ml) você apaga por alguns segundos.
+- DOENÇAS (nome em laranja em cima da barra):
+    GRIPE ......... frio ou roupa molhada por muito tempo. Tosse de vez em quando, e os INFECTADOS OUVEM.
+                    Cura: VITAMINAS.
+    CÓLERA ........ beber ÁGUA SUJA (60% de chance). Sede em dobro e vômito. Cura: ANTIBIÓTICOS.
+    INTOXICAÇÃO ... comer comida ESTRAGADA (item muito danificado/arruinado). Vômito. Cura: CARVÃO ATIVADO
+                    ou passa sozinha em ~4 min.
+    Vomitar faz perder comida e água, deixa você parado 2 s e faz barulho.
+- ÁGUA: beber a garrafa deixa a GARRAFA VAZIA. USAR = ENCHER perto de uma pia/torneira dos prédios (água
+  limpa, abra o armário da cozinha ou do banheiro) ou de um LAGO (água suja). Mar não serve.
+  Água suja: arraste uma PASTILHA PURIFICADORA em cima, ou USAR = FERVER perto de uma fogueira.
+- FOGUEIRA: arraste o ISQUEIRO em cima de 3 GALHOS. Fica acesa ~10 min: ilumina, esquenta (frio, roupa
+  molhada) e ferve água.
+- CRAFTING (arraste um item em cima do outro no inventário):
+    FACA ou MACHADO + roupa ......... rasga em TRAPOS
+    2 TRAPOS + GALHO ................ TALA (conserta perna quebrada)
+    FACA + GALHO .................... LANÇA (arma branca de alcance longo)
+    ISQUEIRO + 3 GALHOS ............. FOGUEIRA
+    PASTILHA + ÁGUA SUJA ............ ÁGUA LIMPA
 - MORTE: tudo o que você carregava cai no chão, onde você caiu. Tela "VOCÊ MORREU" (causa, tempo vivo,
   abates) > RENASCER: você volta numa rua a 0,8–2,5 km dali, só com camiseta, jeans, trapos, lanterna e uma maçã.
 
@@ -215,6 +237,7 @@ ITENS (inventario/itens.gd; item novo = 1 linha na tabela DB)
 - Armas: pistola M9, M4A1, AKM, espingarda 12, rifle de caça · faca, taco, machado, cano, pé de cabra.
 - Munição: 9mm, 5.56, 7.62, cartucho 12, .308 · Pentes: de pistola (12), STANAG (30), de AK (30).
 - Acessórios: silenciador, mira 4x, luneta.
+- Novos: galhos, tala, lança, garrafa vazia, água suja, pastilhas purificadoras, carvão ativado.
 - Médico: atadura, trapos (estancam), analgésicos (+15 vida), soro (+1200 sangue), kit de primeiros socorros
   (estanca tudo, +40 vida), vitaminas, antibióticos (curam infecção).
 - Comida: feijão, atum, sardinha, pêssegos em calda, biscoitos, barra de cereal, salgadinho (dá sede), maçã.

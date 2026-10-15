@@ -15,6 +15,7 @@ const Itens := preload("res://inventario/itens.gd")
 const ItemCls := preload("res://inventario/item.gd")
 const ItemMundo := preload("res://inventario/item_mundo.gd")
 const GradeCls := preload("res://inventario/grade.gd")
+const FogueiraCls := preload("res://mundo/fogueira.gd")
 
 const CONTEINERES_CORPO := ["camisa", "calca", "colete", "cinto", "mochila"]   # ordem na coluna da direita
 const ARMAS_CORPO := ["coldre", "ombro"]
@@ -401,18 +402,31 @@ func acao_rapida(it) -> void:
 
 func usar(it) -> void:
 	var d: Dictionary = it.def()
+	if it.id == "agua_suja" and perto_do_fogo():
+		it.id = "agua"                  # perto da fogueira, USAR = FERVER
+		aviso.emit("FERVEU A ÁGUA")
+		_depois()
+		return
 	if d.get("consome", false):
 		var sv = jogador.get("sobrevivencia")
 		if sv != null and d.has("efeito"):
-			var r: String = sv.aplicar(d["efeito"], it.id)
+			var r: String = sv.aplicar(d["efeito"], it.id, it.estado)
 			if r != "":
 				aviso.emit(r)           # ex.: "NADA PARA CONSERTAR" (o item não é gasto)
 				return
 		aviso.emit(String(d.get("usar", "Usou " + it.nome())).to_upper())
+		if d.has("vira") and it.qtd <= 1:
+			it.id = d["vira"]           # a garrafa fica vazia no mesmo lugar
+			it.estado = maxf(it.estado, 0.5)
+			_depois()
+			return
 		it.qtd -= 1
 		if it.qtd <= 0:
 			retirar(it)
 		_depois()
+	elif it.id == "garrafa_vazia":
+		encher_garrafa(it)
+
 	elif it.eh_pente():
 		encher_pente(it)
 	elif it.eh_arma_de_fogo() and (it.pente_id != "" or not it.acessorios.is_empty()) and it.slot == "maos":
@@ -425,6 +439,10 @@ func nome_acao(it) -> String:
 	if it == null:
 		return "USAR"
 	var d: Dictionary = it.def()
+	if it.id == "garrafa_vazia":
+		return "ENCHER"
+	if it.id == "agua_suja" and perto_do_fogo():
+		return "FERVER"
 	if d.get("consome", false):
 		return {"comida": "COMER", "bebida": "BEBER"}.get(d.get("cat", ""), "USAR")
 	if it.eh_pente():
@@ -432,6 +450,115 @@ func nome_acao(it) -> String:
 	if it.eh_arma_de_fogo() and (it.pente_id != "" or not it.acessorios.is_empty()) and it.slot == "maos":
 		return "DESMONTAR"
 	return "NA MÃO"
+
+# ---------- água e fogo ----------
+func perto_do_fogo() -> bool:
+	for f in get_tree().get_nodes_in_group("fogueiras"):
+		if is_instance_valid(f) and f.acesa and (f as Node3D).global_position.distance_to(jogador.global_position) < 4.5:
+			return true
+	return false
+
+# de onde dá para pegar água aqui: "limpa" (pia/torneira dos prédios), "suja" (lago), "salgada" (mar) ou ""
+func fonte_de_agua() -> String:
+	for c in conteineres_perto():
+		var n: String = String(c.nome)
+		if "COZINHA" in n or "BANHEIRO" in n or "PIA" in n:
+			return "limpa"
+	var mundo = jogador.get("mundo")
+	if mundo == null:
+		return ""
+	var p := jogador.global_position
+	var tipo := ""
+	for k in 9:
+		var a := TAU * k / 8.0
+		var r := 0.0 if k == 8 else 2.5
+		var h: float = mundo.altura(p.x + cos(a) * r, p.z + sin(a) * r)
+		if absf(h - 0.2) < 0.01:
+			return "suja"
+		if h < -0.3:
+			tipo = "salgada"
+	return tipo
+
+func encher_garrafa(g) -> void:
+	match fonte_de_agua():
+		"limpa":
+			g.id = "agua"
+			aviso.emit("ENCHEU COM ÁGUA DA TORNEIRA")
+		"suja":
+			g.id = "agua_suja"
+			aviso.emit("ENCHEU COM ÁGUA DO LAGO (SUJA)")
+		"salgada":
+			aviso.emit("ÁGUA DO MAR NÃO SERVE")
+			return
+		_:
+			aviso.emit("PRECISA DE UM LAGO OU UMA PIA PERTO")
+			return
+	_depois()
+
+# ---------- crafting (arrastar um item em cima de outro) ----------
+# faca/machado + roupa = trapos · 2 trapos + galho = tala · faca + galho = lança · isqueiro + 3 galhos = fogueira
+# pastilha + água suja = água
+func _receita(it, alvo) -> String:
+	var a: String = it.id
+	var b: String = alvo.id
+	var corta := ["faca", "machado"]
+	if a in corta and alvo.def().get("cat", "") == "roupa" and not alvo.tem_conteudo() and alvo.slot == "":
+		return "rasgar"
+	if a in corta and b == "galho":
+		return "lanca"
+	if a == "trapos" and b == "galho" and it.qtd >= 2:
+		return "tala"
+	if a == "galho" and b == "trapos" and alvo.qtd >= 2:
+		return "tala"
+	if a == "isqueiro" and b == "galho" and alvo.qtd >= 3:
+		return "fogueira"
+	if a == "pastilha" and b == "agua_suja":
+		return "purificar"
+	return ""
+
+func _fazer(receita: String, it, alvo) -> void:
+	match receita:
+		"rasgar":
+			var n := clampi(int(alvo.def()["w"]) * int(alvo.def()["h"]) / 3, 1, 4)
+			var orig := _origem(alvo)
+			retirar(alvo)
+			var t = ItemCls.novo("trapos", n)
+			_guardar_em_algum_lugar(t, orig)
+			aviso.emit("RASGOU EM %d TRAPOS" % n)
+		"lanca":
+			var orig := _origem(alvo)
+			_gastar(alvo, 1)
+			var l = ItemCls.novo("lanca")
+			if it.id == "faca":
+				retirar(it)                 # a faca vai amarrada na ponta
+			_guardar_em_algum_lugar(l, orig)
+			aviso.emit("FEZ UMA LANÇA")
+		"tala":
+			var tr = it if it.id == "trapos" else alvo
+			var ga = alvo if it.id == "trapos" else it
+			var orig := _origem(ga)
+			_gastar(tr, 2)
+			_gastar(ga, 1)
+			_guardar_em_algum_lugar(ItemCls.novo("tala"), orig)
+			aviso.emit("FEZ UMA TALA")
+		"fogueira":
+			_gastar(alvo, 3)
+			var f = FogueiraCls.new()
+			var pai := jogador.get_parent()
+			pai.add_child(f)
+			var fwd := -jogador.global_basis.z
+			f.global_position = jogador.global_position + Vector3(fwd.x, 0.0, fwd.z).normalized() * 1.3
+			aviso.emit("ACENDEU UMA FOGUEIRA")
+		"purificar":
+			alvo.id = "agua"
+			_gastar(it, 1)
+			aviso.emit("ÁGUA PURIFICADA")
+	_depois()
+
+func _gastar(it, n: int) -> void:
+	it.qtd -= n
+	if it.qtd <= 0:
+		retirar(it)
 
 # ---------- pentes, munição e acessórios (estilo DayZ) ----------
 # enche o pente com a munição solta que o jogador carrega
@@ -471,6 +598,8 @@ func _guardar_ou_largar(it) -> void:
 func pode_combinar(it, alvo) -> bool:
 	if it == null or alvo == null or it == alvo:
 		return false
+	if _receita(it, alvo) != "":
+		return true
 	var da: Dictionary = alvo.def()
 	if it.def().get("cat", "") == "municao":
 		if alvo.eh_pente():
@@ -488,6 +617,10 @@ func pode_combinar(it, alvo) -> bool:
 func combinar(it, alvo) -> bool:
 	if not pode_combinar(it, alvo):
 		return false
+	var rec := _receita(it, alvo)
+	if rec != "":
+		_fazer(rec, it, alvo)
+		return true
 	if it.def().get("cat", "") == "municao":
 		var n := mini(it.qtd, alvo.capacidade() - alvo.municao)
 		alvo.municao += n

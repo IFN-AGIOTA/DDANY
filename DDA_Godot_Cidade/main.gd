@@ -259,6 +259,7 @@ func _criar_jogo() -> void:
 	vagos.ligar(cidade, mundo, jogador, jogador.armas)
 	vagos.clima = clima
 	vagos.abatido.connect(func(_c): abates += 1)
+	jogador.sobrevivencia.tossiu.connect(func(p): vagos.barulho(p, 18.0, true))   # tosse e vômito fazem barulho
 	companheiros = CompanheirosCls.new()
 	companheiros.name = "Companheiros"
 	jogo.add_child(companheiros)
@@ -268,6 +269,7 @@ func _criar_jogo() -> void:
 	historia.main = self
 	jogo.add_child(historia)
 	jogador.sobrevivencia.morreu.connect(_morreu)
+	jogador.sobrevivencia.aviso.connect(func(t): hud.mostrar_aviso(t))
 	abates = 0
 	estande = EstandeCls.new()
 	estande.name = "EstandeTiro"
