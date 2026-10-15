@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.8 (APK código 4)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.9 (APK código 5)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -158,6 +158,17 @@ INFECTADOS
   deixam um item. Cada um tem roupa diferente (civil, jaqueta, moletom, policial, médico, operário).
 - Com alguém te perseguindo, a música aperta.
 
+COMPANHEIROS: GREG E MAVIE (depois do encontro no Capítulo 3 da história)
+- Andam com você com inteligência própria: Greg à sua direita, Mavie à esquerda, no seu ritmo (andam, trotam,
+  correm), desviam de paredes e, se ficarem presos ou longe, reaparecem atrás de você.
+- LUTAM sozinhos: vão para cima do infectado que está mais perto de VOCÊ (ou deles). Greg usa o TACO,
+  Mavie o CANO (como no livro). Não se afastam mais de ~22 m de você para brigar.
+- Os infectados também atacam os dois. Sem vida eles CAEM (não morrem): fique perto por 3 s para levantar
+  ("LEVANTANDO GREG... 60%"), ou eles levantam sozinhos depois de ~40 s sem infectado perto.
+- FALAM (frase em cima da cabeça): avisam infectado, comemoram, reclamam do golpe, pedem ajuda caídos,
+  avisam quando você está sangrando; a Mavie tosse de vez em quando (a febre da infecção, como no livro).
+- Seus tiros não acertam os dois (sem fogo amigo). Eles vão junto quando você renasce e ficam no jogo salvo.
+
 -----------------------------------------------------------------------------------------------------
 3. CONTROLES
 -----------------------------------------------------------------------------------------------------
@@ -246,7 +257,7 @@ NO JOGO (Menu > HISTÓRIA · ATO 1)
 - CAPÍTULO 1 · A ÚLTIMA CORRIDA: noite, cidade ainda inteira (sem carros largados, sem infectados). No livro é
   de carro; no jogo é A PÉ: 6 pontos de controle contra o relógio (+6 s por ponto) até "A MORTE DO MEDO".
 - CAPÍTULO 2 · BRILHO ANTES DA TEMPESTADE: o bar; Greg e a Mavie; a TV fala dos ataques em Tóquio, Paris e NY.
-- CAPÍTULO 3 · A PRIMEIRA NOITE: três dias depois, manhã nublada do 4º dia; aviso do aeroporto (voos privados
+- CAPÍTULO 3 · A PRIMEIRA NOITE (Greg e Mavie viram COMPANHEIROS a partir do encontro): três dias depois, manhã nublada do 4º dia; aviso do aeroporto (voos privados
   até as 18h). Dominic sai com jaqueta, mochila e o revólver do pai; a cidade já trinca (carros largados,
   poucos infectados). Objetivos: PRÉDIO DO GREG -> Mavie chega ferida, um vulto manca no fim da rua ->
   CARRO DO GREG (infectados chegando) -> rádio "Evacuação imediata..." -> FIM DO ATO 1.
@@ -329,6 +340,12 @@ INFECTADOS (pasta inimigos/; o nome "vagos" nos arquivos veio do HTML)
 - aparência e animação ................ inimigos/modelo_vago.gd
 - quantos aparecem e onde ............. inimigos/vagos.gd
 
+COMPANHEIROS (pasta npc/)
+- inteligência (seguir, lutar, cair,
+  levantar, falas), vida e dano ....... npc/companheiro.gd (tabelas DADOS e FALAS no topo)
+- aparência e animação ................ npc/modelo_humano.gd (tabela VISUAIS)
+- quem está no grupo .................. npc/companheiros.gd
+
 HISTÓRIA (pasta historia/)
 - falas, etapas, corrida .............. historia/historia.gd
 
@@ -374,6 +391,7 @@ MÚSICA (pasta audio/)
 -----------------------------------------------------------------------------------------------------
 - O jogador é o soldado do HTML; o Dominic do livro é civil (jaqueta de couro, cabelo branco): falta o modelo dele.
 - A gangue VAGOS (Edy, V), Alyce, Nick, Mônica e Carlos ainda não aparecem no jogo (são do Ato 2 em diante).
+- Companheiros ainda não recebem ordens (esperar/seguir) nem usam armas de fogo ou itens que você der.
 - Só o TÉRREO dos prédios abre (andares de cima ainda não).
 - História: Ato 1 = capítulos 1 a 3 do livro. O livro segue fora de Nova York (Nebraska, Califórnia, Los
   Angeles), que ainda não existe no jogo.

@@ -105,6 +105,7 @@ var _vel_h := 0.0
 var _quadro := 0
 var _dt_anim := 0.0
 var _consulta: PhysicsRayQueryParameters3D
+var _alvo: Node3D = null              # jogador ou companheiro (gerente.alvo_para)
 
 func _ready() -> void:
 	collision_layer = 4                # camada 3 = inimigos
@@ -234,7 +235,8 @@ func _alertar(quem: Node) -> void:
 	if quem == null or not is_instance_valid(quem) or not (quem is Node3D):
 		return
 	var p: Vector3 = (quem as Node3D).global_position
-	if gerente != null and quem == gerente.jogador:
+	if gerente != null and (quem == gerente.jogador or quem.is_in_group("companheiros")):
+		_alvo = quem as Node3D
 		_ultimo_visto = p
 		_t_sem_ver = 0.0
 		perseguir()
@@ -283,7 +285,9 @@ func _physics_process(dt: float) -> void:
 	if estado == MORTO:
 		_corpo(dt)
 		return
-	var j: Node3D = gerente.jogador
+	if _alvo == null or not is_instance_valid(_alvo):
+		_alvo = gerente.jogador
+	var j: Node3D = _alvo
 	var mundo = gerente.mundo
 	var p := global_position
 	var pj := j.global_position
@@ -301,6 +305,11 @@ func _physics_process(dt: float) -> void:
 	_t_sentidos -= dt
 	if _t_sentidos <= 0.0:
 		_t_sentidos = randf_range(0.2, 0.26)
+		if not esta_cacando() or randf() < 0.15:          # caçando, só às vezes troca de alvo
+			var novo: Node3D = gerente.alvo_para(self)
+			if novo != _alvo:
+				_alvo = novo
+				j = novo
 		_olhar(j)
 	_atordoado = maxf(0.0, _atordoado - dt)
 	_recarga = maxf(0.0, _recarga - dt)

@@ -20,6 +20,7 @@ const ClimaCls := preload("res://mundo/clima.gd")
 const Salvamento := preload("res://menu/salvamento.gd")
 const HistoriaCls := preload("res://historia/historia.gd")
 const VagosCls := preload("res://inimigos/vagos.gd")
+const CompanheirosCls := preload("res://npc/companheiros.gd")
 const AUTOSALVAR := 120.0                   # segundos entre salvamentos automáticos
 const TelaMorteCls := preload("res://menu/tela_morte.gd")
 const ItemMundoCls := preload("res://inventario/item_mundo.gd")
@@ -57,6 +58,7 @@ var mapa: CanvasLayer                       # hud/mapa.gd (minimapa, mapa grande
 var clima: Node                             # mundo/clima.gd (dia/noite, chuva, temperatura, lanterna)
 var historia: CanvasLayer                   # historia/historia.gd (Ato 1)
 var vagos: Node                             # inimigos/vagos.gd (infectados)
+var companheiros: Node                      # npc/companheiros.gd (Greg e Mavie, depois do encontro)
 var abates := 0
 var _tempo_jogo := 0.0
 var _t_salvar := 0.0
@@ -257,6 +259,10 @@ func _criar_jogo() -> void:
 	vagos.ligar(cidade, mundo, jogador, jogador.armas)
 	vagos.clima = clima
 	vagos.abatido.connect(func(_c): abates += 1)
+	companheiros = CompanheirosCls.new()
+	companheiros.name = "Companheiros"
+	jogo.add_child(companheiros)
+	companheiros.ligar(jogador, mundo, vagos)
 	historia = HistoriaCls.new()
 	historia.name = "Historia"
 	historia.main = self
@@ -334,6 +340,8 @@ func _renascer() -> void:
 	jogador.teleportar(Vector3(p.x, mundo.altura(p.x, p.y) + 0.1, p.y), randf() * TAU)
 	controles.set_bloqueado(false)
 	abates = 0
+	if companheiros != null:
+		companheiros.reagrupar()
 	salvar_jogo()
 
 # ponto numa rua a 800-2500 m de onde morreu (como no DayZ: renasce longe das suas coisas)
@@ -371,6 +379,7 @@ func _fechar_jogo() -> void:
 	clima = null
 	historia = null
 	vagos = null
+	companheiros = null
 
 func _process(dt: float) -> void:
 	if Engine.is_editor_hint() or controles == null or not is_instance_valid(controles) or get_tree().paused:

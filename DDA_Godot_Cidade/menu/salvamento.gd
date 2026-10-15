@@ -55,6 +55,7 @@ static func salvar(main) -> bool:
 		"loot": main.loot_mundo.salvar() if main.loot_mundo != null else {},
 		"clima": main.clima.salvar() if main.clima != null and main.clima.has_method("salvar") else {},
 		"historia": main.historia.salvar() if main.get("historia") != null and main.historia.has_method("salvar") else {},
+		"companheiros": main.companheiros.salvar() if main.get("companheiros") != null else {},
 		"chao": _chao(main, p),
 	}
 	var f := FileAccess.open(ARQUIVO, FileAccess.WRITE)
@@ -106,3 +107,5 @@ static func carregar(main, d: Dictionary) -> void:
 		if main.interiores != null:
 			main.interiores.abrir_agora(Vector2(pos.x, pos.z))     # se salvou dentro de um prédio
 		j.teleportar(pos + Vector3(0, 0.05, 0), float(jd.get("yaw", 0.0)))
+	if main.get("companheiros") != null and d.has("companheiros"):
+		main.companheiros.carregar(d["companheiros"])

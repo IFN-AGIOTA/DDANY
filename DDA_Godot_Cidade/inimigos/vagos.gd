@@ -56,6 +56,7 @@ var mundo = null
 var jogador: Node3D = null
 var armas = null
 var vivos: Array = []
+var companheiros: Array = []             # npc/companheiro.gd (Greg, Mavie): também viram alvo
 var corpos: Array = []
 
 var _fila: Array = []                   # [posição, destino do grupo] esperando para nascer
@@ -119,6 +120,20 @@ func escuridao() -> float:
 	if clima != null and clima.has_method("escuridao"):
 		return clampf(float(clima.escuridao()), 0.0, 1.0)
 	return 0.0
+
+# quem este infectado vai caçar: o jogador ou um companheiro (o mais perto, de pé)
+func alvo_para(v: Node3D) -> Node3D:
+	var p := v.global_position
+	var melhor: Node3D = jogador
+	var md := p.distance_squared_to(jogador.global_position)
+	for c in companheiros:
+		if not is_instance_valid(c) or c.morto:
+			continue
+		var d := p.distance_squared_to(c.global_position)
+		if d < md * 0.7:                        # prefere o jogador se estiverem parecidos
+			md = d
+			melhor = c
+	return melhor
 
 func quantos_perseguindo() -> int:
 	var n := 0

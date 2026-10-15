@@ -151,6 +151,9 @@ func _ir(e: String) -> void:
 		"carro":
 			_locais()
 			dizer(FALAS["greg"], func():
+				# a partir daqui Greg e Mavie andam com você (npc/companheiro.gd)
+				if main.get("companheiros") != null:
+					main.companheiros.chegar(["greg", "mavie"])
 				if main.mapa != null:
 					main.mapa.definir_objetivo(_carro_greg, "CARRO DO GREG")
 				_obj_texto("Chegue ao carro do Greg")
