@@ -28,6 +28,12 @@ O QUE JÁ TEM
   Marcadas "(em breve)" (ficam salvas, sem efeito por enquanto): shaders, texturas, modelos, distância dos
   detalhes, efeitos, densidade do cenário, água, fios, halos, anisotrópica; e cockpit, aceleração e minimapa.
 - PAUSA (novo): botão II, P ou Esc · Continuar, Opções, Voltar ao início, Menu principal.
+- MÚSICA PROCEDURAL DE TERROR (novo): nunca repete igual. 13 instrumentos gerados por código (drone grave,
+  vento, cordas, violinos em tremolo, caixinha de música, piano desafinado, sino, coração, tambor, baixo
+  pulsante, coro, prato ao contrário e grito de violinos) com reverb de salão. A TENSÃO sobe com tiros, acertos
+  e corrida e desce sozinha: calma -> suspense (cordas, coro, coração) -> tensão (tremolo, baixo, tambores).
+  De vez em quando vem um SUSTO (prato subindo -> grito + tambor -> silêncio). Menu = versão calma.
+  Opções › Vídeo e som: Música ligada/desligada e Volume da música.
 - INVENTÁRIO ESTILO DAYZ (novo) · botão INV (canto de cima), Tab ou I:
     ESQUERDA = o que está PERTO no mundo: itens no CHÃO, caixas/armários e mochilas jogadas (com o que tem dentro).
     MEIO     = o personagem: CABEÇA, CAMISA, COLETE, CINTO, OMBRO, COLDRE, CALÇA, MOCHILA, as MÃOS e a barra
@@ -98,6 +104,11 @@ INVENTÁRIO / ITENS (pasta inventario/)
 - item no chão · caixa/armário ........ inventario/item_mundo.gd · inventario/caixa_mundo.gd
 - equipamento inicial do jogador ...... inventario/inventario.gd (função equipamento_inicial)
 
+MÚSICA (pasta audio/)
+- compositor (escalas, andamento, quando
+  cada instrumento toca, sustos) ...... audio/musica_procedural.gd (autoload "Musica")
+- timbre dos instrumentos ............. audio/instrumentos.gd (sintetizados por código, sem arquivos de áudio)
+
 MUNDO / CONSTRUÇÕES (pasta mundo/)
 - prédios, ruas, parques, céu, sol .... mundo/cidade.gd
 - colisão com chão/prédios e tiros .... mundo/colisao_mundo.gd
@@ -107,8 +118,11 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 
 CAMADAS DE FÍSICA: 1 = mundo · 2 = jogador · 3 = inimigos/alvos.
 
-ANDROID: para o celular vibrar nos tiros, marque a permissão VIBRATE na exportação (Projeto > Exportar > Android >
-Permissões). Sem ela o jogo funciona normal, só não vibra.
+ANDROID: o APK pronto fica na pasta principal do repositório (DiasDeUmApocalipse.apk, arm64, assinado com
+dda.keystore). Para gerar de novo: Projeto > Exportar > "Android" (já configurado: paisagem, tela cheia, VIBRATE).
+Na exportação de release informe o keystore ../dda.keystore (usuário dda, senha android), ou use as variáveis
+GODOT_ANDROID_KEYSTORE_RELEASE_PATH / _USER / _PASSWORD. Precisa do Android SDK (build-tools) e do Java nas
+Configurações do Editor > Exportar > Android.
 
 LIMITAÇÕES CONHECIDAS (por enquanto)
 - Sem vida do jogador e sem inimigos ainda (o barulho dos tiros já é avisado pelo sinal "barulho", para os Vagos ouvirem).

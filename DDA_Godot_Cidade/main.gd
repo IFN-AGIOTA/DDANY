@@ -89,6 +89,7 @@ func _abrir_menu() -> void:
 	menu.jogar.connect(_jogar)
 	menu.historia.connect(func(): menu.avisar("A História · Ato 1 ainda não chegou na versão Godot. Use Jogar (mundo livre)."))
 	menu.opcoes.connect(_abrir_opcoes)
+	Musica.definir_modo("menu")
 
 func _jogar() -> void:
 	menu.mostrar_carregando()
@@ -215,6 +216,10 @@ func _criar_jogo() -> void:
 	voo.ligar(jogador, controles, mundo, tela_inventario)
 	jogador.camera.make_current()
 	aplicador.aplicar()
+	# música: tiros e acertos aumentam a tensão (ela desce sozinha)
+	Musica.definir_modo("jogo")
+	jogador.armas.disparou.connect(func(_a): Musica.adicionar_tensao(0.05))
+	jogador.armas.acertou.connect(func(_c, matou): Musica.adicionar_tensao(0.12 if matou else 0.03))
 
 func _fechar_jogo() -> void:
 	if jogo != null:
@@ -232,6 +237,8 @@ func _process(dt: float) -> void:
 	if Engine.is_editor_hint() or controles == null or not is_instance_valid(controles) or get_tree().paused:
 		return
 	_tempo_jogo += dt
+	if jogador.vel_horizontal > 5.0:
+		Musica.adicionar_tensao(dt * 0.045)            # correndo: a música aperta
 	if voo.ativo:
 		return
 	var p := jogador.global_position

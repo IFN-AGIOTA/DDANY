@@ -271,6 +271,8 @@ func _pagina_video(v: float) -> Control:
 	_secao(g, "Contador de FPS", _seg("fps", [[false, "Oculto"], [true, "Visível"]]))
 	_secao(g, "Som", _seg("som", [[true, "Ligado"], [false, "Mudo"]]))
 	_deslizante("vol", 0, 100, 5, "%", g, "Volume")
+	_secao(g, "Música", _seg("mus", [[true, "Ligada"], [false, "Desligada"]]))
+	_deslizante("mvol", 0, 100, 5, "%", g, "Volume da música")
 	_secao(g, "Manter tela ligada", _seg("awake", [[false, "Não"], [true, "Sim"]]))
 	var tc := UI.BotaoMenu.new("Alternar tela cheia", "", false, 3.2, 0.0)
 	tc.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN

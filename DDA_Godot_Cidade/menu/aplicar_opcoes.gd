@@ -37,6 +37,10 @@ func aplicar() -> void:
 	var bus := AudioServer.get_bus_index("Master")
 	AudioServer.set_bus_mute(bus, not bool(o["som"]))
 	AudioServer.set_bus_volume_db(bus, linear_to_db(maxf(0.0001, float(o["vol"]) / 100.0)))
+	var bm := AudioServer.get_bus_index("Musica")          # música procedural (audio/musica_procedural.gd)
+	if bm != -1:
+		AudioServer.set_bus_mute(bm, not bool(o.get("mus", true)))
+		AudioServer.set_bus_volume_db(bm, linear_to_db(maxf(0.0001, float(o.get("mvol", 70)) / 100.0)))
 	DisplayServer.screen_set_keep_on(bool(o["awake"]))
 	Engine.max_fps = int(g["cap"])
 	var vp := get_viewport()
