@@ -14,6 +14,7 @@ extends Node3D
 
 const Mat := preload("res://mundo/materiais_cidade.gd")
 const AbandonoCls := preload("res://mundo/abandono.gd")
+const FachadasCls := preload("res://mundo/fachadas.gd")
 
 const CELL := 20.0                          # resolução das máscaras (m)
 const WORLD := Vector2(11000.0, 8600.0)     # metade do mundo (m)
@@ -50,6 +51,7 @@ var mats_agua: Array[ShaderMaterial] = []   # Opções › Gráficos › Água
 var mats_chao: Array[ShaderMaterial] = []   # terra, parque, calçada, asfalto (sombra dos prédios no chão: mundo/mato.gd)
 var detalhes: Array[GeometryInstance3D] = []   # árvores e caixas d'água (Opções › Distância dos detalhes)
 var detalhes_abandono: Array[GeometryInstance3D] = []   # carros, lixo, entulho
+var detalhes_fachada: Array[GeometryInstance3D] = []    # escadas de incêndio e ar-condicionado (mundo/fachadas.gd)
 
 var _mascara: ImageTexture                  # terra (1) / água (0) para praias, mar raso e espuma
 var _nos := {}                              # Vector2i (m) -> {"n": quantas ruas chegam, "r": raio}
@@ -66,6 +68,7 @@ func construir() -> void:
 	_ground(data)
 	_roads(data)
 	_buildings()
+	_fachadas()
 	_abandono()
 	_arvores()
 	print("Cidade pronta em ", Time.get_ticks_msec() - t0, " ms")
@@ -80,6 +83,7 @@ func limpar() -> void:
 	built.clear()
 	detalhes.clear()
 	detalhes_abandono.clear()
+	detalhes_fachada.clear()
 	is_built = false
 
 # grava res://cidade.scn: a cidade vira uma cena de verdade, editável com as ferramentas da Godot
@@ -110,6 +114,9 @@ func aplicar_detalhes(nivel_shaders: int, nivel_distancia: int, agua_completa :=
 	for d in detalhes:
 		if is_instance_valid(d):
 			d.visibility_range_end = alcance
+	for d in detalhes_fachada:
+		if is_instance_valid(d):
+			d.visibility_range_end = FachadasCls.ALCANCES[clampi(nivel_distancia, 0, 3)]
 
 # ---------- ambiente ----------
 func _env() -> void:
@@ -134,7 +141,7 @@ func _env() -> void:
 	env.fog_light_color = Color(0.92, 0.64, 0.45)
 	env.fog_sun_scatter = 0.25
 	env.fog_density = 0.0006
-	env.fog_aerial_perspective = 0.35       # ao longe a neblina pega a cor do céu (o "azul" do horizonte do DayZ)
+	env.fog_aerial_perspective = 0.35      # ao longe a neblina pega a cor do céu (o "azul" do horizonte do DayZ)
 	var we := WorldEnvironment.new()
 	we.environment = env
 	ambiente = env
@@ -654,6 +661,12 @@ func esconder_predio(i: int, esconder: bool) -> void:
 		mm.set_instance_transform(info["idx"], info["t"])
 
 # ---------- cidade abandonada (carros, barreiras, lixo, entulho) ----------
+# escadas de incêndio e aparelhos de ar-condicionado nas fachadas
+func _fachadas() -> void:
+	for mi in FachadasCls.new().montar(self, Y_RUA):
+		_adopt(mi)
+		detalhes_fachada.append(mi)
+
 func _abandono() -> void:
 	var dens := 1.0
 	var cfg = get_node_or_null("/root/Config") if is_inside_tree() else null

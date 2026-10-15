@@ -278,6 +278,27 @@ void fragment() {
 }
 """
 
+# PICHAÇÕES no térreo (prédios de longe e paredes de fora dos interiores): "tags" em ~45% dos trechos de 4 m
+const GRAFITE := """
+vec3 grafite(vec3 c, float u, float v, float sg, float forca) {
+	float cg = floor(u / 4.0);
+	float hg = hash(vec2(cg, sg * 23.0));
+	if (hg > 0.45 || forca <= 0.0 || v > 3.4 || v < 0.2) return c;
+	float gu = fract(u / 4.0) * 4.0;
+	vec2 q = vec2(gu - 2.0, v - 1.6) / vec2(1.55, 0.75);
+	float caixa_g = 1.0 - smoothstep(0.8, 1.0, max(abs(q.x), abs(q.y)));
+	vec2 s = vec2(gu * 1.4, v * 2.2) + hg * 91.0;
+	float traco = 1.0 - smoothstep(0.05, 0.1, abs(ruido(s) - 0.5));
+	float cheio = smoothstep(0.62, 0.66, ruido(s * 0.8 + 3.0)) * step(0.65, hash(vec2(cg, sg + 4.0)));
+	float hc = hash(vec2(cg, sg * 5.0 + 1.0));
+	vec3 tinta = hc < 0.2 ? vec3(0.75, 0.1, 0.08) : (hc < 0.4 ? vec3(0.1, 0.25, 0.7) : (hc < 0.55 ? vec3(0.04) : (hc < 0.7 ? vec3(0.85, 0.85, 0.8) : (hc < 0.85 ? vec3(0.2, 0.6, 0.2) : vec3(0.85, 0.3, 0.6)))));
+	vec3 contorno = hc < 0.4 ? vec3(0.88, 0.88, 0.84) : vec3(0.04);
+	float g = caixa_g * forca;
+	c = mix(c, tinta * (0.75 + 0.25 * ruido(s * 4.0)), cheio * g * 0.9);
+	return mix(c, cheio > 0.5 ? contorno : tinta, traco * g * 0.85);
+}
+"""
+
 # prédios (MultiMesh): INSTANCE_CUSTOM = (largura x, altura, largura z, tipo + semente)
 # tipo: 0 concreto · 1 tijolo · 2 pedra clara · 3 vidro (torres) · 4 ruína (queimada)
 # Cidade abandonada: sujeira escorrendo, janelas quebradas (pretas), vitrines tapadas com tábuas.
@@ -286,10 +307,11 @@ const PREDIO := """
 shader_type spatial;
 uniform float detalhe = 1.0;               // 0 = sem janelas (leve) · 1 = completo
 global uniform float molhado;              // chuva (mundo/clima.gd): paredes escurecem
+global uniform float noite;                // 0 dia · 1 noite (mundo/clima.gd): luzes de sobreviventes nas janelas
 varying vec3 lp;
-varying vec3 tam;
-varying float tipo;
-varying float sem;
+varying flat vec3 tam;                     // flat = igual no prédio todo (interpolado, o sorteio por janela "chiava")
+varying flat float tipo;
+varying flat float sem;
 varying vec3 nl;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float ruido(vec2 p) {
@@ -298,6 +320,7 @@ float ruido(vec2 p) {
 	f = f * f * (3.0 - 2.0 * f);
 	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
+""" + GRAFITE + """
 void vertex() {
 	tam = INSTANCE_CUSTOM.xyz;
 	tipo = floor(INSTANCE_CUSTOM.w);
@@ -333,6 +356,21 @@ void fragment() {
 		float h = hash(cel + sem * 91.0);
 		if (h < 0.22) vidro = vec3(0.015, 0.015, 0.02);                     // quebrada: buraco escuro
 		else if (h > 0.86) vidro *= 0.55;
+		// cortinas, persianas e janelas tapadas com jornal/papelão (só nas inteiras)
+		float wu = clamp((fu - 0.2) / 0.6, 0.0, 1.0);
+		float wv = clamp((fv - 0.22) / 0.64, 0.0, 1.0);
+		float nitido = 1.0 - smoothstep(50.0, 150.0, dist);                 // detalhe fino só de perto (sem chiado)
+		if (h >= 0.22 && tipo < 2.5) {
+			float hc = hash(cel + sem * 53.0 + 7.0);
+			float tc = hash(cel + sem * 17.0);
+			vec3 tecido = hc < 0.3 ? vec3(0.55, 0.47, 0.36) : (hc < 0.5 ? vec3(0.42, 0.18, 0.14) : (hc < 0.7 ? vec3(0.25, 0.32, 0.38) : vec3(0.62, 0.6, 0.55)));
+			if (tc < 0.25) vidro = mix(vidro, tecido * (0.85 + 0.15 * sin(wu * 18.0) * nitido), clamp(step(wu, 0.22 + 0.2 * hc) + step(0.78 - 0.2 * hc, wu), 0.0, 1.0));
+			else if (tc < 0.42) vidro = mix(vidro, vec3(0.55, 0.54, 0.5) * (0.85 + 0.15 * step(0.5, fract(wv * 8.0)) * nitido), step(0.7 - 0.6 * hc, wv));
+			else if (tc < 0.5) vidro = vec3(0.6, 0.58, 0.5) * (0.8 + 0.2 * ruido(vec2(wu, wv) * 3.0 + sem) * nitido);
+		}
+		// luz de sobrevivente (vela/lampião) em pouquíssimas janelas, à noite, em alguns prédios
+		float habitado = step(hash(vec2(sem * 71.0, 2.0)), 0.2);
+		float luz = habitado * step(tipo > 2.5 ? 0.997 : 0.97, hash(cel + sem * 29.0 + 3.0)) * step(0.22, h) * step(tipo, 3.5);
 		vec3 parede = base * (0.9 + 0.12 * hash(vec2(cel.y, sem)));
 		// sujeira escorrendo das janelas e manchas de umidade (cidade abandonada)
 		parede *= 0.8 + 0.2 * ruido(vec2(u * 0.55 + sem * 40.0, v * 0.035));
@@ -343,7 +381,24 @@ void fragment() {
 		vec3 c = mix(parede, vidro, janela);
 		float terreo = step(v, 4.6) * detalhe;
 		float vitrine = terreo * step(0.6, v) * step(v, 3.4) * step(0.12, fract(u / 6.0)) * step(fract(u / 6.0), 0.88);
-		float toldo = terreo * step(3.4, v) * step(v, 4.0) * step(0.35, hash(vec2(sem, 3.0)));   // alguns toldos já caíram
+		// cada loja (trecho de 6 m): toldo, PLACA com letreiro ou nada (caiu)
+		float seg = floor(u / 6.0);
+		float fs = fract(u / 6.0);
+		float hs = hash(vec2(seg, sem * 3.3));
+		float faixa_alta = terreo * step(3.4, v) * step(v, 4.2);
+		float toldo = faixa_alta * step(hs, 0.38) * step(v, 4.0);
+		float placa = faixa_alta * step(0.38, hs) * step(hs, 0.8) * step(0.1, fs) * step(fs, 0.9) * step(3.5, v) * step(v, 4.15);
+		if (hash(vec2(seg, sem + 8.0)) < 0.2) placa *= step(fs, 0.5 + 0.3 * hs);                   // placa quebrada
+		float hp = hash(vec2(seg, sem * 7.7));
+		vec3 cor_placa = hp < 0.25 ? vec3(0.45, 0.08, 0.06) : (hp < 0.5 ? vec3(0.06, 0.18, 0.12) : (hp < 0.7 ? vec3(0.05, 0.08, 0.22) : (hp < 0.85 ? vec3(0.05) : vec3(0.78, 0.76, 0.7))));
+		vec3 cor_letra = hp < 0.85 ? (hash(vec2(seg, 2.2)) < 0.5 ? vec3(0.9, 0.88, 0.8) : vec3(0.9, 0.75, 0.2)) : vec3(0.5, 0.06, 0.05);
+		float lu = (fs - 0.1) / 0.8 * 4.8;
+		float lv = (v - 3.5) / 0.65;
+		float lc = floor(lu / 0.42);
+		vec2 pix = floor(vec2(fract(lu / 0.42) * 4.0, lv * 7.0));
+		float letra = step(1.0, pix.y) * step(pix.y, 5.0) * step(pix.x, 2.0) * step(0.42, hash(vec2(lc * 7.0 + pix.x, pix.y) + seg * 3.1 + sem));
+		letra *= step(0.15, hash(vec2(lc, seg + sem)));                                            // espaços
+		cor_placa = mix(cor_placa, cor_letra, letra) * (0.6 + 0.4 * ruido(vec2(u * 3.0, v * 9.0)));   // desbotada
 		float ht = hash(vec2(floor(u / 6.0), sem));
 		vec3 cor_toldo = ht < 0.33 ? vec3(0.32, 0.12, 0.10) : (ht < 0.66 ? vec3(0.12, 0.22, 0.16) : vec3(0.14, 0.15, 0.22));
 		vec3 cor_vitrine = vec3(0.07, 0.07, 0.08);
@@ -354,6 +409,8 @@ void fragment() {
 		}
 		c = mix(c, cor_vitrine, vitrine * (1.0 - longe));
 		c = mix(c, cor_toldo, toldo * (1.0 - longe));
+		c = mix(c, cor_placa, placa * (1.0 - longe));
+		c = grafite(c, u, v, sem, (1.0 - smoothstep(50.0, 110.0, dist)) * detalhe * step(tipo, 3.5));
 		// HERA subindo pelas paredes (~40% dos prédios), de 2 a 12 m, em manchas
 		float tem_hera = step(hash(vec2(sem * 37.0, 5.1)), 0.4) * (1.0 - longe) * detalhe;
 		float alt_hera = 2.0 + 10.0 * ruido(vec2(u * 0.16, sem * 31.0));
@@ -373,6 +430,8 @@ void fragment() {
 		janela *= 1.0 - hera;
 		ROUGHNESS = mix(0.9, 0.25, janela);
 		SPECULAR = mix(0.3, 0.7, janela);
+		float tremula = 0.75 + 0.25 * sin(TIME * (5.0 + 6.0 * h) + h * 40.0) * sin(TIME * 2.3 + sem * 9.0);
+		EMISSION = vec3(1.0, 0.55, 0.2) * 1.8 * tremula * luz * janela * noite;
 	}
 }
 """
@@ -396,6 +455,7 @@ float ruido(vec2 p) {
 	f = f * f * (3.0 - 2.0 * f);
 	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
+""" + GRAFITE + """
 varying float vertical;
 void vertex() {
 	wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
@@ -432,6 +492,7 @@ void fragment() {
 		float hera = (1.0 - smoothstep(alt_hera - 2.0, alt_hera, v)) * smoothstep(0.42, 0.6, ruido(vec2(u.x, v) * 1.6 + semente * 9.0) + 0.3 * (1.0 - v / alt_hera));
 		hera *= tem_hera * fora * smoothstep(0.3, 0.6, ruido(vec2(u.x * 0.09, semente * 3.0)));
 		c = mix(c, mix(vec3(0.07, 0.13, 0.04), vec3(0.20, 0.28, 0.09), ruido(vec2(u.x, v) * 5.0)), hera);
+		c = mix(c, grafite(c, u.x, v, semente, 1.0 - smoothstep(50.0, 110.0, length(wp - CAMERA_POSITION_WORLD))), fora * step(v, 3.5));
 		c *= mix(1.0, (0.6 + 0.4 * smoothstep(0.0, 2.2, v)) * mix(1.0, 0.72, molhado), fora);
 	}
 	c *= 1.0 - 0.35 * smoothstep(0.7, 0.95, ruido(wp.xz * 0.35 + 3.0)) * step(padrao, 2.5) * step(0.5, padrao);   // manchas no piso

@@ -316,6 +316,7 @@ func restaurar() -> void:
 		if is_equal_approx(env.fog_density, _nevoa_posta):
 			env.fog_density = _nevoa_base
 	RenderingServer.global_shader_parameter_set("molhado", 0.0)
+	RenderingServer.global_shader_parameter_set("noite", 0.0)
 	if _ceu != null:
 		_ceu.sky_top_color = o["topo"]
 		_ceu.sky_horizon_color = o["hor"]
@@ -488,6 +489,7 @@ func _process(dt: float) -> void:
 		molhado = move_toward(molhado, 0.0, dt / (240.0 if _escuridao > 0.5 else 160.0))
 	RenderingServer.global_shader_parameter_set("molhado", molhado)
 	RenderingServer.global_shader_parameter_set("vento", 0.25 + 0.35 * nuvens + 0.9 * chuva)
+	RenderingServer.global_shader_parameter_set("noite", _escuridao)
 	_t_ceu -= dt
 	if _t_ceu <= 0.0:
 		_t_ceu = TICK_CEU
