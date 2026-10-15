@@ -6,7 +6,10 @@ extends RefCounted
 #   - móveis de mundo/moveis.gd arrumados encostados nas paredes/em fileiras, sem bloquear portas;
 #     cidade abandonada: móveis caídos, entulho, papéis e manchas
 #   - colisão (paredes, piso, teto, móveis grandes), loot nos móveis (mundo/loot_mundo.gd) e itens no chão
-#   - acima do térreo, a "casca" do prédio com as mesmas janelas do bloco original
+#   - ANDARES DE CIMA (até 2 além do térreo): escada em rampa com degraus num canto, buraco na laje com corrimão,
+#     cômodos, móveis e loot em cada andar (apartamentos nas casas; escritório/depósito no comércio)
+#   - prédios baixos (até 3 andares): a escada chega ao TELHADO, com mureta em volta
+#   - acima disso, a "casca" do prédio com as mesmas janelas do bloco original
 # Tudo de um prédio vira UMA malha (4 superfícies) + um corpo de colisão: leve no celular.
 # Mexa AQUI para: pé-direito, portas, janelas, divisão dos cômodos e quais móveis vão em cada cômodo.
 
@@ -22,6 +25,10 @@ const ESP := 0.25
 const PORTA_L := 1.8
 const PORTA_A := 2.6
 const DIV := 0.14                     # espessura das paredes internas
+const ALTURA_ANDAR := PE_DIREITO + LAJE   # 4,6 m de um piso ao outro
+const MAX_ANDARES_EXTRA := 2          # além do térreo (os mais altos ficam com a "casca" acima)
+const ESCADA_L := 1.45                # largura de cada lance da escada
+const ESCADA_C := 7.0                 # comprimento de cada lance (rampa com degraus)
 
 # o que vai em cada cômodo: [móvel, modo] · modo: parede / centro / fileiras / meio (centro do cômodo)
 const COMODOS := {
@@ -72,6 +79,11 @@ var comodos: Array = []                # [Rect2, tipo]
 var _pontos: Array = []                # pontos livres no chão (loot solto)
 var _pad_piso := 1.0
 var _malha: ArrayMesh = null
+var nivel := 0                         # 0 = térreo · 1, 2 = andares de cima
+var extras := 0                        # quantos andares de cima este prédio tem abertos
+var telhado := false                   # prédio baixo: a escada chega ao telhado (com mureta)
+var _w_max := 1e9                      # lado da escada: os cômodos vão só até aqui
+var _escada := false
 static var criar_malha_na_thread := true
 
 static func montar(inf: Dictionary, i: int, cidade, lm) -> Node3D:
@@ -80,8 +92,25 @@ static func montar(inf: Dictionary, i: int, cidade, lm) -> Node3D:
 
 # 1ª parte (pode rodar numa thread: só cálculo, sem nós nem física): paredes, cômodos, móveis
 static func preparar(inf: Dictionary, i: int, cidade) -> RefCounted:
-	var m = load("res://mundo/interior.gd").new()
+	var cls = load("res://mundo/interior.gd")
+	var m = cls.new()
+	# quantos níveis cabem na altura do prédio (e se dá para chegar ao telhado)
+	var h: float = inf["h"]
+	var niveis := maxi(1, int(floor((h + 0.8) / ALTURA_ANDAR)))
+	m.extras = clampi(niveis - 1, 0, MAX_ANDARES_EXTRA)
+	m.telhado = niveis <= MAX_ANDARES_EXTRA + 1
+	var prof_min := minf(float(inf["sx"]), float(inf["sz"]))
+	if prof_min < ESCADA_C + 4.5 or maxf(float(inf["sx"]), float(inf["sz"])) < 11.0:
+		m.extras = 0                      # pequeno demais para ter escada
+		m.telhado = false
 	m._gerar(inf, i, cidade)
+	for k in range(1, m.extras + 1):
+		var a = cls.new()
+		a._herdar(m, k)
+		a._gerar_andar()
+		m._anexar(a, k * ALTURA_ANDAR)
+	if criar_malha_na_thread:
+		m._criar_malha()
 	return m
 
 # ---------- fachadas ----------
@@ -224,30 +253,32 @@ func _dividir(fundo: float, tipos_frente, tipos_fundo: Array) -> void:
 	# fundo: faixas lado a lado, cada uma com porta para a frente
 	var o := _meia(frente) - ESP
 	var L := _comp(frente) * 0.5 - ESP
+	var wa := -L
+	var wb := minf(L, _w_max)            # com escada, os cômodos não entram no vão dela
 	var d_div := -o + fundo
 	var frentes: Array = tipos_frente if tipos_frente is Array else [tipos_frente]
 	var nf := frentes.size()
-	var lf := (2.0 * L) / nf
+	var lf := (wb - wa) / nf
 	for k in nf:
-		var w0 := -L + lf * k
+		var w0 := wa + lf * k
 		comodos.append([_ret(d_div, o, w0, w0 + lf), frentes[k]])
 		if k > 0:
 			var prof_f := o - d_div
 			_parede_int(_xz(d_div, w0), _xz(o, w0), [prof_f * r.randf_range(0.35, 0.65)])
 	var n := tipos_fundo.size()
-	var larg := (2.0 * L) / n
+	var larg := (wb - wa) / n
 	var vaos := []
 	for k in n:
-		var w0 := -L + larg * k
+		var w0 := wa + larg * k
 		var w1 := w0 + larg
 		comodos.append([_ret(-o, d_div, w0, w1), tipos_fundo[k]])
 		vaos.append(larg * k + larg * r.randf_range(0.3, 0.7))
 		if k > 0:
 			_parede_int(_xz(-o, w0), _xz(d_div, w0), [])
-	_parede_int(_xz(d_div, -L), _xz(d_div, L), vaos)
+	_parede_int(_xz(d_div, wa), _xz(d_div, wb), vaos)
 
-func _layout() -> void:
-	var uso: String = info["uso"]
+func _layout(uso_forcado := "") -> void:
+	var uso: String = info["uso"] if uso_forcado == "" else uso_forcado
 	var prof := _meia(frente) * 2.0 - ESP * 2.0
 	var largura := _comp(frente) - ESP * 2.0
 	match uso:
@@ -464,20 +495,24 @@ func _gerar(inf: Dictionary, i: int, cidade) -> void:
 					ab.append([s, s + lj, 1.05, 2.5, "janela"])
 			s += passo
 		_fachada(f, ab)
+	_escada = extras > 0 or telhado
+	if _escada:
+		_reservar_escada()
 	_layout()
 	_mobiliar()
+	if _escada:
+		_construir_escada(true, false)
 	# piso e teto
 	var cor_piso: Color = {"residencial": Color(0.5, 0.34, 0.2), "escritorio": Color(0.38, 0.38, 0.4), "loja": Color(0.72, 0.7, 0.64),
 		"mercado": Color(0.75, 0.74, 0.7), "farmacia": Color(0.78, 0.78, 0.76), "clinica": Color(0.7, 0.74, 0.72),
 		"delegacia": Color(0.55, 0.55, 0.52), "restaurante": Color(0.55, 0.36, 0.24)}.get(uso, Color(0.5, 0.5, 0.5))
 	_pad_piso = {"residencial": 2.0, "restaurante": 2.0, "escritorio": 4.0}.get(uso, 1.0)
 	piso.caixa(Vector3(0, -0.05, 0), Vector3(hx * 2.0 - 0.02, 0.1, hz * 2.0 - 0.02), cor_piso, Basis.IDENTITY, true)
-	teto.caixa(Vector3(0, PE_DIREITO + LAJE * 0.5, 0), Vector3(hx * 2.0, LAJE, hz * 2.0), Color(0.78, 0.77, 0.74))
 	col.append([Vector3(0, -0.05, 0), Vector3(hx * 2.0, 0.1, hz * 2.0), 0.0])
-	col.append([Vector3(0, PE_DIREITO + LAJE * 0.5, 0), Vector3(hx * 2.0, LAJE, hz * 2.0), 0.0])
+	_laje(teto, PE_DIREITO, LAJE, _buraco(0) if _escada else Rect2(), Color(0.78, 0.77, 0.74), true, extras > 0)
+	if extras == 0 and telhado:
+		_telhado(PE_DIREITO + LAJE, 0)
 	_pontos = _pontos_chao()
-	if criar_malha_na_thread:
-		_criar_malha()
 
 # a malha (4 superfícies) também pode ser feita na thread (o RenderingServer aceita)
 func _criar_malha() -> void:
@@ -504,8 +539,8 @@ func criar(lm) -> Node3D:
 	raiz.add_child(mi)
 	# casca dos andares de cima (mesmo shader e janelas do bloco original)
 	var h: float = info["h"]
-	var base := PE_DIREITO + LAJE
-	if h > base + 0.5:
+	var base := ALTURA_ANDAR * (extras + 1)
+	if h > base + 0.5 and not telhado:
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.use_colors = true
@@ -517,7 +552,7 @@ func criar(lm) -> Node3D:
 		var hu := h - base
 		mm.set_instance_transform(0, Transform3D(Basis.from_scale(Vector3(hx * 2.0, hu, hz * 2.0)), Vector3(0, base + hu * 0.5, 0)))
 		var cc: Color = info["cor"]
-		cc.a = 1.0 - base / 10.0
+		cc.a = 1.0 - base / 40.0
 		mm.set_instance_color(0, cc)
 		mm.set_instance_custom_data(0, Color(hx * 2.0, hu, hz * 2.0, info["tipo"] + info["sem"]))
 		var casca := MultiMeshInstance3D.new()
@@ -535,7 +570,7 @@ func criar(lm) -> Node3D:
 		var bs := BoxShape3D.new()
 		bs.size = c[1]
 		cs.shape = bs
-		cs.transform = Transform3D(Basis(Vector3.UP, c[2]), c[0])
+		cs.transform = Transform3D(c[3] if c.size() > 3 else Basis(Vector3.UP, c[2]), c[0])
 		corpo.add_child(cs)
 	raiz.add_child(corpo)
 	# loot nos móveis (contêineres invisíveis) e no chão
@@ -567,3 +602,219 @@ func _pontos_chao() -> Array:
 			if ok:
 				pts.append([Vector3(p.x, 0.0, p.y), cm[1]])
 	return pts
+
+# ---------- ANDARES DE CIMA ----------
+func _herdar(m, k: int) -> void:
+	info = m.info
+	idx = m.idx
+	cid = m.cid
+	hx = m.hx
+	hz = m.hz
+	frente = m.frente
+	cor_fora = m.cor_fora
+	extras = m.extras
+	telhado = m.telhado
+	nivel = k
+	r.seed = idx * 7919 + 13 + k * 101
+	cor_dentro = PAPEL_PAREDE[r.randi() % PAPEL_PAREDE.size()]
+
+func _gerar_andar() -> void:
+	# fachadas: só janelas (sem portas, sem vitrine)
+	for f in 4:
+		var L := _comp(f)
+		var ab: Array = []
+		var s := -L * 0.5 + 1.6
+		while s + 1.3 < L * 0.5 - 1.2:
+			if r.randf() < 0.85:
+				ab.append([s, s + 1.3, 1.05, 2.5, "janela"])
+			s += 3.4
+		_fachada(f, ab)
+	_escada = true
+	_reservar_escada()
+	var uso: String = info["uso"]
+	var uso_andar := "residencial" if uso == "residencial" else "escritorio"
+	_layout(uso_andar)
+	_mobiliar()
+	var topo := nivel == extras
+	_construir_escada(not topo or telhado, true)
+	var cor_piso: Color = Color(0.5, 0.34, 0.2) if uso_andar == "residencial" else Color(0.38, 0.38, 0.4)
+	_pad_piso = 2.0 if uso_andar == "residencial" else 4.0
+	_laje(piso, -0.1, 0.1, _buraco(nivel - 1), cor_piso, false, false)
+	var buraco_cima := _buraco(nivel) if (not topo or telhado) else Rect2()
+	_laje(teto, PE_DIREITO, LAJE, buraco_cima, Color(0.78, 0.77, 0.74), true, not topo)
+	if topo and telhado:
+		_telhado(PE_DIREITO + LAJE, nivel)
+	_pontos = _pontos_chao()
+
+# junta um andar (gerado à parte) neste interior, "dy" metros acima
+func _anexar(a, dy: float) -> void:
+	for par in [[paredes, a.paredes], [piso, a.piso], [resto, a.resto], [teto, a.teto]]:
+		var dst = par[0]
+		var src = par[1]
+		for v in src.v:
+			dst.v.append(v + Vector3(0, dy, 0))
+		dst.n.append_array(src.n)
+		dst.c.append_array(src.c)
+		dst.uv.append_array(src.uv)
+	for c in a.col:
+		var e: Array = c.duplicate()
+		e[0] = (c[0] as Vector3) + Vector3(0, dy, 0)
+		col.append(e)
+	for c in a.cont:
+		var e: Dictionary = c.duplicate()
+		e["pos"] = (c["pos"] as Vector3) + Vector3(0, dy, 0)
+		cont.append(e)
+	for p in a._pontos:
+		_pontos.append([(p[0] as Vector3) + Vector3(0, dy, 0), p[1]])
+
+# ---------- escada ----------
+# vão da escada: canto do fundo, encostado na parede lateral. Dois lances lado a lado (A e B):
+#   lance A sobe do fundo para a frente (térreo->1º, 2º->telhado) · lance B sobe da frente para o fundo (1º->2º)
+func _esc() -> Dictionary:
+	var o := _meia(frente) - ESP
+	var lw := _comp(frente) * 0.5 - ESP
+	var d0 := -o + 0.3
+	return {"o": o, "lw": lw, "d0": d0, "d1": d0 + ESCADA_C,
+		"a": [lw - ESCADA_L, lw], "b": [lw - 2.0 * ESCADA_L, lw - ESCADA_L], "parede": lw - 2.0 * ESCADA_L - 0.08}
+
+func _reservar_escada() -> void:
+	var e := _esc()
+	_w_max = float(e["parede"]) - 0.1
+	proibido.append(_ret(-float(e["o"]), float(e["d1"]) + 1.6, float(e["parede"]) - 0.3, float(e["lw"])))
+	# parede do vão da escada (do fundo até um pouco depois do fim dos lances)
+	_parede_int(_xz(-float(e["o"]), float(e["parede"])), _xz(float(e["d1"]) + 0.3, float(e["parede"])), [])
+
+# retângulo (no plano XZ local) do lance que SAI do nível k (para o buraco na laje)
+func _buraco(k: int) -> Rect2:
+	var e := _esc()
+	var faixa: Array = e["a"] if k % 2 == 0 else e["b"]
+	var a := _xz(float(e["d0"]), float(faixa[0]))
+	var b := _xz(float(e["d1"]), float(faixa[1]))
+	return Rect2(Vector2(minf(a.x, b.x), minf(a.y, b.y)), (a - b).abs())
+
+func _tam_xz(ao_longo: float, lateral: float, alto: float) -> Vector3:
+	# tamanho de uma caixa alinhada com a "frente": ao_longo = direção frente/fundo
+	return Vector3(ao_longo, alto, lateral) if frente < 2 else Vector3(lateral, alto, ao_longo)
+
+func _construir_escada(sobe: bool, buraco_embaixo: bool) -> void:
+	var e := _esc()
+	var concreto := Color(0.52, 0.51, 0.49)
+	if sobe:
+		var faixa: Array = e["a"] if nivel % 2 == 0 else e["b"]
+		var w_meio := (float(faixa[0]) + float(faixa[1])) * 0.5
+		var d0: float = e["d0"]
+		var d1: float = e["d1"]
+		var sobe_para_frente := nivel % 2 == 0
+		var n := 20
+		var hd := ALTURA_ANDAR / n
+		var cd := ESCADA_C / n
+		for i in n:
+			var t := (i + 0.5) / n
+			var d := lerpf(d0, d1, t) if sobe_para_frente else lerpf(d1, d0, t)
+			var topo_y := (i + 1) * hd
+			var p := _xz(d, w_meio)
+			resto.caixa(Vector3(p.x, topo_y * 0.5, p.y), _tam_xz(cd + 0.01, ESCADA_L - 0.06, topo_y), concreto * (0.95 if i % 2 == 0 else 1.0))
+		# corrimão do lado de dentro
+		var w_corr := float(faixa[0]) + 0.05
+		for i in range(0, n, 4):
+			var t := (i + 0.5) / n
+			var d := lerpf(d0, d1, t) if sobe_para_frente else lerpf(d1, d0, t)
+			var p := _xz(d, w_corr)
+			resto.cilindro(Vector3(p.x, (i + 1) * hd + 0.5, p.y), 0.025, 1.0, 5, Color(0.25, 0.25, 0.27))
+		# rampa invisível de colisão (sobe suave; o personagem não tropeça nos degraus)
+		var dir3 := Vector3(_n(frente).x, 0.0, _n(frente).y) * (1.0 if sobe_para_frente else -1.0)
+		var lat3 := Vector3(_t(frente).x, 0.0, _t(frente).y)
+		var u := (dir3 * ESCADA_C + Vector3.UP * ALTURA_ANDAR).normalized()
+		var x := lat3
+		var y := u.cross(x)
+		if y.y < 0.0:
+			x = -x
+			y = -y
+		var base := Basis(x, y, u)
+		var meio := _xz((d0 + d1) * 0.5, w_meio)
+		var comp := sqrt(ESCADA_C * ESCADA_C + ALTURA_ANDAR * ALTURA_ANDAR)
+		col.append([Vector3(meio.x, ALTURA_ANDAR * 0.5, meio.y) - y * 0.15, Vector3(ESCADA_L, 0.3, comp + 0.4), 0.0, base])
+	if buraco_embaixo:
+		# corrimão em volta do buraco do lance que chegou de baixo (não deixa cair)
+		var veio_a := (nivel - 1) % 2 == 0
+		var lim: float = float(e["a"][0])          # borda entre os dois lances (a outra é parede)
+		var ini: float = float(e["d0"]) if veio_a else float(e["d0"]) + 1.4
+		var fim: float = float(e["d1"]) - 1.4 if veio_a else float(e["d1"])
+		_grade(_xz(ini, lim), _xz(fim, lim))
+		if not veio_a:
+			# lance B: a ponta da frente do buraco é o pé da escada lá embaixo -> grade atravessada
+			_grade(_xz(float(e["d1"]), float(e["b"][0])), _xz(float(e["d1"]), float(e["b"][1])))
+
+# grade de proteção (1 m de altura) de a até b
+func _grade(a: Vector2, b: Vector2) -> void:
+	var L := a.distance_to(b)
+	if L < 0.1:
+		return
+	var cor := Color(0.25, 0.25, 0.27)
+	var k := 0.0
+	while k <= L:
+		var p := a.lerp(b, k / L)
+		resto.cilindro(Vector3(p.x, 0.5, p.y), 0.025, 1.0, 5, cor)
+		k += 1.0
+	var m := (a + b) * 0.5
+	var em_x := absf(b.x - a.x) > absf(b.y - a.y)
+	var tam := Vector3(L, 0.05, 0.05) if em_x else Vector3(0.05, 0.05, L)
+	resto.caixa(Vector3(m.x, 1.0, m.y), tam, cor)
+	resto.caixa(Vector3(m.x, 0.5, m.y), tam, cor)
+	col.append([Vector3(m.x, 0.55, m.y), Vector3(L, 1.1, 0.08) if em_x else Vector3(0.08, 1.1, L), 0.0])
+
+# laje (piso/teto) com um buraco retangular (o vão da escada)
+func _laje(c, y: float, esp: float, buraco: Rect2, cor: Color, colisao: bool, sem_cima: bool) -> void:
+	var cheio := Rect2(-hx, -hz, hx * 2.0, hz * 2.0)
+	var partes: Array[Rect2] = []
+	if buraco.size.x <= 0.0:
+		partes.append(cheio)
+	else:
+		var b := buraco.intersection(cheio)
+		partes.append(Rect2(cheio.position.x, cheio.position.y, b.position.x - cheio.position.x, cheio.size.y))
+		partes.append(Rect2(b.end.x, cheio.position.y, cheio.end.x - b.end.x, cheio.size.y))
+		partes.append(Rect2(b.position.x, cheio.position.y, b.size.x, b.position.y - cheio.position.y))
+		partes.append(Rect2(b.position.x, b.end.y, b.size.x, cheio.end.y - b.end.y))
+	for p in partes:
+		if p.size.x < 0.02 or p.size.y < 0.02:
+			continue
+		var ctr := p.get_center()
+		c.caixa(Vector3(ctr.x, y + esp * 0.5, ctr.y), Vector3(p.size.x, esp, p.size.y), cor, Basis.IDENTITY, false, sem_cima)
+		if colisao:
+			col.append([Vector3(ctr.x, y + esp * 0.5, ctr.y), Vector3(p.size.x, esp, p.size.y), 0.0])
+
+# telhado: piso de concreto (a laje de cima), mureta em volta e grade no buraco da escada
+func _telhado(y: float, k: int) -> void:
+	var mureta := Color(0.6, 0.58, 0.55)
+	for f in 4:
+		var n := _n(f)
+		var o := _meia(f)
+		var comp := _comp(f)
+		var pc: Vector2 = n * (o - 0.12)
+		var tam := Vector3(0.24, 1.0, comp) if f < 2 else Vector3(comp, 1.0, 0.24)
+		paredes.caixa(Vector3(pc.x, y + 0.5, pc.y), tam, mureta)
+		col.append([Vector3(pc.x, y + 0.5, pc.y), tam + Vector3(0, 0.3, 0), 0.0])
+	# caixa d'água e um varal de antenas para dar vida
+	var cx := Vector2(-hx * 0.4, -hz * 0.4)
+	paredes.cilindro(Vector3(cx.x, y + 1.0, cx.y), 0.9, 2.0, 10, Color(0.45, 0.35, 0.25))
+	col.append([Vector3(cx.x, y + 1.0, cx.y), Vector3(1.8, 2.0, 1.8), 0.0])
+	# grade em volta do buraco da escada que chega ao telhado (aberta só onde se chega)
+	var e := _esc()
+	var veio_a := k % 2 == 0
+	var faixa: Array = e["a"] if veio_a else e["b"]
+	var d0: float = e["d0"]
+	var d1: float = e["d1"]
+	var pe := d0 if veio_a else d1                     # pé da escada (lá embaixo): fechado
+	var chega_ini := d1 - 1.4 if veio_a else d0 + 1.4  # perto de onde se chega: aberto
+	for w in [float(faixa[0]), float(faixa[1])]:
+		_grade_y(_xz(pe, w), _xz(chega_ini, w), y)
+	_grade_y(_xz(pe, float(faixa[0])), _xz(pe, float(faixa[1])), y)
+
+func _grade_y(a: Vector2, b: Vector2, y: float) -> void:
+	var antes_v := resto.v.size()
+	var antes_c := col.size()
+	_grade(a, b)
+	for i in range(antes_v, resto.v.size()):
+		resto.v[i] += Vector3(0, y, 0)
+	for i in range(antes_c, col.size()):
+		col[i][0] += Vector3(0, y, 0)

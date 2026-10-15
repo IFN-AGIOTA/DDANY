@@ -141,7 +141,7 @@ void fragment() {
 # prédios (MultiMesh): INSTANCE_CUSTOM = (largura x, altura, largura z, tipo + semente)
 # tipo: 0 concreto · 1 tijolo · 2 pedra clara · 3 vidro (torres) · 4 ruína (queimada)
 # Cidade abandonada: sujeira escorrendo, janelas quebradas (pretas), vitrines tapadas com tábuas.
-# COLOR.a < 1 = bloco que começa acima do chão (casca de prédio com interior): a = 1 - altura_da_base / 10
+# COLOR.a < 1 = bloco que começa acima do chão (casca de prédio com interior): a = 1 - altura_da_base / 40
 const PREDIO := """
 shader_type spatial;
 uniform float detalhe = 1.0;               // 0 = sem janelas (leve) · 1 = completo
@@ -162,7 +162,7 @@ void vertex() {
 	tipo = floor(INSTANCE_CUSTOM.w);
 	sem = fract(INSTANCE_CUSTOM.w);
 	lp = VERTEX * tam;
-	lp.y += tam.y * 0.5 + (1.0 - COLOR.a) * 10.0;   // altura a partir do chão
+	lp.y += tam.y * 0.5 + (1.0 - COLOR.a) * 40.0;   // altura a partir do chão
 	nl = NORMAL;
 }
 void fragment() {
