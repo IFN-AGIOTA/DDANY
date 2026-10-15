@@ -82,7 +82,7 @@ const DB := {
 		"pente_de": "mun_762", "cap": 30, "desc": "30 balas de 7,62. USAR = encher com a munição que você carrega."},
 	# ----- acessórios (arraste em cima da arma para encaixar) -----
 	"silenciador": {"nome": "SILENCIADOR", "sigla": "SILENC.", "w": 2, "h": 1, "peso": 0.3, "max": 1, "cat": "acessorio", "slot": "",
-		"encaixe": "cano", "serve": ["pistola", "m4", "ak"], "desc": "Tiro bem mais baixo: os Vagos ouvem de bem mais perto."},
+		"encaixe": "cano", "serve": ["pistola", "m4", "ak"], "desc": "Tiro bem mais baixo: os infectados só ouvem de bem perto."},
 	"mira_acog": {"nome": "MIRA 4X", "sigla": "MIRA", "w": 2, "h": 1, "peso": 0.4, "max": 1, "cat": "acessorio", "slot": "",
 		"encaixe": "mira", "serve": ["m4", "ak"], "zoom": 2.0, "desc": "Aproxima bem mais ao mirar (M4A1 e AKM)."},
 	"luneta": {"nome": "LUNETA", "sigla": "LUNETA", "w": 3, "h": 1, "peso": 0.5, "max": 1, "cat": "acessorio", "slot": "",

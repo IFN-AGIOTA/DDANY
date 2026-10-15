@@ -1,39 +1,75 @@
 extends CanvasLayer
-# HISTÓRIA · ATO 1 (porte do HTML v1.1.27, adaptado para a pé). Menu principal › "História · Ato 1".
-#   Prólogo (tela preta) -> CAPÍTULO 1 · A Última Corrida: à noite, cidade ainda inteira (sem carros largados,
-#   sem Vagos), corrida contra o relógio pelos pontos de controle até a linha "A Morte do Medo" -> fim da Parte 1.
-#   -> INTERLÚDIO · O Colapso (provisório, até a Parte 2 ser escrita): a cidade cai, os Vagos aparecem e o
-#   objetivo vira sobreviver e chegar à base militar do aeroporto.
-# Estrutura: a história é uma lista de ETAPAS; cada etapa tem um "começo" (função) e o que precisa acontecer
-# para passar à próxima. Falas: dizer([[quem, texto], ...], depois). Títulos: titulo(grande, pequeno, depois).
+# HISTÓRIA · ATO 1 — segue o livro "Dias de um Apocalipse" (Livro 1), adaptado para o jogo a pé.
+# Menu principal › "História · Ato 1":
+#   PRÓLOGO "Antes do Fim" (tela preta)
+#   CAPÍTULO 1 · A Última Corrida: noite, cidade inteira (sem carros largados e sem infectados); no livro é de
+#     carro, aqui é a pé: pontos de controle contra o relógio até a linha "A Morte do Medo".
+#   CAPÍTULO 2 · Brilho Antes da Tempestade: o bar depois da corrida; Greg fala da Mavie; a TV dá as notícias.
+#   CAPÍTULO 3 · A Primeira Noite: três dias depois, manhã do 4º dia, céu fechado. A cidade começa a trincar
+#     (carros abandonados, poucos infectados ainda). Dominic pega a jaqueta, a mochila e o revólver do pai e vai
+#     até o prédio do Greg; Mavie chega ferida; um vulto manca no fim da rua; os três correm para o carro do Greg
+#     rumo ao aeroporto (o jato do Dominic). FIM DO ATO 1 (o livro segue com a fuga de jato: Nebraska, Califórnia).
+# Depois do Ato 1 o jogo continua em mundo aberto, na cidade caída.
+# NOMES DA LORE: "Vagos" é a GANGUE de Edy e V (Los Angeles); os mortos-vivos são os INFECTADOS.
+# Estrutura: a história é uma lista de ETAPAS; cada etapa tem um "começo" (_ir) e o que precisa acontecer
+# para passar à próxima (_process). Falas: dizer([[quem, texto], ...], depois). Títulos: titulo(grande, pequeno).
 # Objetivo no mapa/bússola: mapa.definir_objetivo(pos, nome).
 # Mexa AQUI para: falas (FALAS), ordem das etapas, pontos da corrida e tempos.
 
 signal etapa_mudou(etapa: String)
 
 const FALAS := {
-	"prologo": ["No começo, ninguém sabia o que estava acontecendo.", "Não havia sirenes. Não havia alertas nas telas. Ninguém dizendo “corram”.",
-		"Foi assim que o mundo começou a cair — quieto."],
-	"pre": [["DOMINIC", "Vamos ver se você consegue me acompanhar hoje."], ["GREG", "Não vou te dar essa vitória fácil, amigo."],
-		["", "Liberty City arde como brasa no asfalto molhado. Seu objetivo: cruzar a cidade correndo e passar a linha chamada “A Morte do Medo”."]],
-	"pos": [["GREG", "Quase te peguei dessa vez!"], ["DOMINIC", "Você está melhorando, mas ainda precisa de mais prática."],
-		["", "Era a última corrida. Ninguém ali sabia ainda."]],
-	# INTERLÚDIO PROVISÓRIO (a Parte 2 — o bar e as notícias — ainda vai ser escrita)
-	"colapso": ["Semanas depois.", "As ruas que vocês atravessavam correndo agora estão paradas. Carros abandonados. Prédios queimados.",
-		"Os que ficaram doentes não morreram. Eles vagam. Por isso as pessoas começaram a chamá-los de Vagos.",
-		"No rádio, uma voz repete a mesma coisa: “Abrigo na base militar do aeroporto”."],
-	"sobreviver": [["", "Você precisa de comida, água e algo para se defender. Procure dentro das casas, lojas e carros."]],
-	"base": [["", "Tem o suficiente para a viagem. Siga para a base militar do aeroporto (marcada no mapa)."]],
-	"fim_ato": [["", "Os portões estão fechados. Do outro lado, ninguém responde."], ["", "Seja lá o que tenha acontecido aqui... você está sozinho agora."]],
+	"prologo": ["No começo, ninguém sabia o que estava acontecendo.",
+		"Não havia sirenes gritando pelas ruas. Não havia alertas piscando nas telas. Não havia ninguém dizendo “corram”.",
+		"Apenas um estranho silêncio… aquele tipo de silêncio que vem antes da tempestade.",
+		"Foi assim que o mundo começou a cair — quieto.",
+		"É nesse mundo quebrado que três nomes ainda tentam lutar: Dominic, Greg e Mavie.",
+		"Quando o mundo acaba, não há mais certo ou errado. Só o que precisa ser feito."],
+	"pre": [["", "As luzes de Nova York ardiam como brasas no asfalto molhado. Era mais uma noite de corrida ilegal. A última."],
+		["DOMINIC", "Vamos ver se você consegue me acompanhar hoje."], ["GREG", "Não vou te dar essa vitória fácil, amigo."],
+		["", "Cruze a cidade pelos pontos de controle e passe a linha que os corredores chamam de “A Morte do Medo”."]],
+	"pos": [["GREG", "Quase te peguei dessa vez!"], ["DOMINIC", "Você está melhorando, mas ainda precisa de mais prática."]],
+	"bar": [["", "No bar de sempre, o cheiro de gasolina ainda impregnava as roupas. Na mesa do canto, a TV passava as notícias."],
+		["DOMINIC", "Então, você e Mavie?"],
+		["GREG", "Ainda não sei. Às vezes acho que ela sente o mesmo… outras vezes, nem tanto."],
+		["DOMINIC", "Bom, se você esperar o mundo acabar, vai perder sua chance."],
+		["TV", "“Relatos de ataques violentos estão surgindo em várias cidades ao redor do mundo. As autoridades investigam uma possível mutação viral associada a um comportamento agressivo extremo...”"],
+		["", "Tóquio. Paris. Nova York. Pessoas correndo, sirenes, sangue."],
+		["GREG", "Você acha que isso é sério?"],
+		["DOMINIC", "Provavelmente só mais um pânico midiático. A mídia vive de medo. Vamos aproveitar a noite."],
+		["", "Mas nenhuma risada veio. Só o silêncio. E o som do noticiário ficando cada vez mais urgente."]],
+	"tres_dias": ["Três dias se passaram desde a corrida.",
+		"O mundo parecia dividido entre os que zombavam da “nova gripe” e os que já trancavam portas, empilhando comida e carregando armas.",
+		"Na manhã do quarto dia, o sol não nasceu. Apenas se escondeu atrás de nuvens densas.",
+		"Uma mensagem da central de aviação: “Aeroporto sob risco de fechamento. Todos os voos privados devem ser finalizados até as 18h.”",
+		"O jato. Era a rota de fuga."],
+	"acordar": [["", "Dominic vestiu a jaqueta de couro, pegou a mochila e o revólver herdado do pai."],
+		["", "Vá até o prédio do Greg (marcado no mapa). As ruas já não são as mesmas: cuidado."]],
+	"greg": [["GREG", "Do jeito que dá pra ficar. A cidade vai fechar. Meu plano é ir pra Los Angeles. Meu primo tem uma propriedade nos arredores."],
+		["DOMINIC", "O aeroporto ainda tá liberado. Meu jato tá lá. Podemos usá-lo."],
+		["GREG", "Você tem um jato?"],
+		["DOMINIC", "Dinheiro das corridas. Nunca soube onde guardar, então... comprei um avião. Ironia, né?"],
+		["GREG", "Irônico seria se você soubesse pilotar."],
+		["DOMINIC", "E eu sei. Mas só se você não me distrair no rádio."],
+		["", "Batidas desesperadas na porta do prédio. Gritos."],
+		["MAVIE", "Greg! Me ajuda, por favor! Eles... estavam em todos os lados..."],
+		["", "Um corte no braço, o rosto sujo de fuligem. Greg a abraça com força."],
+		["", "No fim da rua, um vulto surge mancando, com o corpo contorcido."],
+		["DOMINIC", "Temos que ir agora."]],
+	"carro": [["", "Chegue ao carro do Greg (marcado no mapa). Os infectados estão chegando."]],
+	"fuga": [["RÁDIO", "“Evacuação imediata. Dirijam-se ao sul. Evacuação aérea restrita. Estabeleçam abrigo. Repetindo…”"],
+		["DOMINIC", "Se isso for o fim do mundo… pelo menos estamos juntos."],
+		["GREG", "Ainda não acabou. Não enquanto estivermos vivos."]],
 }
-const LARGADA := Vector2(-1350.0, 512.0)     # Algonquin, como no HTML
+const LARGADA := Vector2(-1350.0, 512.0)     # Algonquin (Manhattan de Liberty City), como no HTML
 const N_PONTOS := 6
 const PASSO_CORRIDA := 230.0                 # metros entre os pontos de controle
 const RAIO_PONTO := 9.0
-const MILBASE := Vector2(6230.0, 690.0)
+const CASA_DOMINIC := Vector2(-1100.0, 150.0)  # onde o capítulo 3 começa
+const DIST_GREG := 450.0                     # o prédio do Greg fica a ~450 m
 
 var main = null
-var etapa := ""                  # "", "prologo", "corrida", "pos", "colapso", "sobreviver", "base", "livre"
+var etapa := ""                  # "", "prologo", "corrida", "pos", "bar", "cap3", "greg", "carro", "fim", "livre"
 var ativa := false
 var _fila: Array = []
 var _depois: Callable = Callable()
@@ -58,6 +94,10 @@ var _limite := 0.0
 var _correndo := false
 var _t_check := 0.0
 var _escondeu := false
+var _casa := Vector2.ZERO        # onde Dominic começa o capítulo 3
+var _predio_greg := Vector2.ZERO # porta do prédio do Greg (na rua)
+var _carro_greg := Vector2.ZERO
+var _max_orig := -1              # quantos infectados o jogo livre usa (volta no fim do ato)
 
 func _ready() -> void:
 	layer = 20
@@ -89,35 +129,50 @@ func _ir(e: String) -> void:
 		"pos":
 			_mostrar_toast("A MORTE DO MEDO", "linha de chegada")
 			await get_tree().create_timer(1.8, true, false, true).timeout
-			dizer(FALAS["pos"], func():
-				titulo("FIM DA PARTE 1", "Continua: o bar e as notícias… (Parte 2)", func(): _ir("colapso")))
-		"colapso":
-			_cheio = true
-			dizer(FALAS["colapso"], func():
-				_cheio = false
-				_colapso()
-				titulo("INTERLÚDIO", "O Colapso", func(): _ir("sobreviver")))
-		"sobreviver":
+			dizer(FALAS["pos"], func(): _ir("bar"))
+		"bar":
+			titulo("CAPÍTULO 2", "Brilho Antes da Tempestade", func():
+				_cheio = true
+				dizer(FALAS["bar"], func():
+					_cheio = false
+					_ir("cap3")))
+		"cap3":
+			titulo("CAPÍTULO 3", "A Primeira Noite", func():
+				_cheio = true
+				dizer(FALAS["tres_dias"], func():
+					_cheio = false
+					_comecar_cap3()
+					dizer(FALAS["acordar"], func(): _ir("greg"))))
+		"greg":
+			_locais()
 			if main.mapa != null:
-				main.mapa.limpar_objetivo()
-			_obj_texto("Encontre comida, água e uma arma")
-			dizer(FALAS["sobreviver"])
-		"base":
-			if main.mapa != null:
-				main.mapa.definir_objetivo(MILBASE, "BASE MILITAR")
-			_obj_texto("Chegue à base militar do aeroporto")
-			dizer(FALAS["base"])
+				main.mapa.definir_objetivo(_predio_greg, "PRÉDIO DO GREG")
+			_obj_texto("Vá até o prédio do Greg")
+		"carro":
+			_locais()
+			dizer(FALAS["greg"], func():
+				if main.mapa != null:
+					main.mapa.definir_objetivo(_carro_greg, "CARRO DO GREG")
+				_obj_texto("Chegue ao carro do Greg")
+				_infectados_na_rua()
+				dizer(FALAS["carro"]))
 		"fim":
 			_obj_texto("")
 			if main.mapa != null:
 				main.mapa.limpar_objetivo()
-			dizer(FALAS["fim_ato"], func():
-				titulo("FIM DO ATO 1", "O mundo continua aberto. Sobreviva.", func(): _ir("livre")))
+			dizer(FALAS["fuga"], func():
+				titulo("FIM DO ATO 1", "Continua: Rota de Fuga — o jato, Nebraska, Califórnia…", func():
+					_mostrar_toast("MUNDO ABERTO", "a cidade caiu · sobreviva")
+					if main.vagos != null:
+						main.vagos.max_ativos = _max_orig if _max_orig > 0 else main.vagos.MAX_ATIVOS_PADRAO
+					if main.clima != null:
+						main.clima.parado = false
+					_ir("livre")))
 		"livre":
 			ativa = false
 			_obj_texto("")
 
-# cidade de antes do colapso: sem carros largados, sem entulho, sem Vagos
+# cidade antes do surto: sem carros largados, sem entulho, sem infectados
 func _cidade_inteira(inteira: bool) -> void:
 	var cid = main.cidade
 	for d in cid.detalhes_abandono:
@@ -129,20 +184,81 @@ func _cidade_inteira(inteira: bool) -> void:
 	if v != null:
 		v.ativo = not inteira
 
-func _colapso() -> void:
+# capítulo 3: manhã nublada do 4º dia; a cidade começa a trincar (poucos infectados ainda)
+func _comecar_cap3() -> void:
 	_cidade_inteira(false)
+	if main.vagos != null:
+		if _max_orig < 0:
+			_max_orig = main.vagos.max_ativos
+		main.vagos.max_ativos = 4
 	if main.clima != null:
-		main.clima.parado = false
-		main.clima.definir_hora(7.5)
+		main.clima.definir_hora(9.0)
 		main.clima.forcar_tempo("nublado", true)
-	# começa de novo, só com o básico, perto da largada
+		main.clima.parado = false
+	# Dominic: jaqueta de couro, mochila e o revólver herdado do pai (no jogo: pistola)
 	var j = main.jogador
-	j.inventario.esvaziar()
-	j.inventario.equipamento_renascer()
-	var p := _rua_perto(LARGADA + Vector2(260.0, 180.0))
-	main.mundo.forcar(p)
-	j.teleportar(Vector3(p.x, main.mundo.altura(p.x, p.y) + 0.1, p.y), randf() * TAU)
-	_mostrar_toast("O COLAPSO", "a cidade não é mais a mesma")
+	var inv = j.inventario
+	inv.esvaziar()
+	var I = load("res://inventario/item.gd")
+	var jaq = I.novo("jaqueta")
+	var calca = I.novo("jeans")
+	var moch = I.novo("mochila_escolar")
+	var arma = I.novo("pistola")
+	for par in [["camisa", jaq], ["calca", calca], ["mochila", moch], ["coldre", arma]]:
+		inv.slots[par[0]] = par[1]
+		par[1].slot = par[0]
+	inv._por(jaq.conteudo, I.novo("mun_9mm", 12))
+	inv._por(jaq.conteudo, I.novo("bandagem", 2))
+	inv._por(calca.conteudo, I.novo("lanterna"))
+	inv._por(moch.conteudo, I.novo("agua"))
+	inv._por(moch.conteudo, I.novo("barra", 2))
+	inv.atalhos[0] = arma
+	inv.mudou.emit()
+	_locais()
+	main.mundo.forcar(_casa)
+	j.teleportar(Vector3(_casa.x, main.mundo.altura(_casa.x, _casa.y) + 0.1, _casa.y), 0.0)
+
+# lugares do capítulo 3 (sempre os mesmos: dependem só da cidade)
+func _locais() -> void:
+	if _casa != Vector2.ZERO:
+		return
+	var cid = main.cidade
+	_casa = _rua_perto(CASA_DOMINIC)
+	# prédio do Greg: residencial com entrada, a ~DIST_GREG m da casa do Dominic
+	var melhor := -1
+	var md := 1e9
+	for i in cid.predio_info.size():
+		var inf: Dictionary = cid.predio_info[i]
+		if inf.get("uso", "") != "residencial" or not inf.get("entra", false) or inf.get("ruina", false):
+			continue
+		var d: float = absf(Vector2(inf["x"], inf["z"]).distance_to(_casa) - DIST_GREG)
+		if d < md:
+			md = d
+			melhor = i
+	var pg := _casa + Vector2(DIST_GREG, 0.0)
+	if melhor >= 0:
+		pg = Vector2(cid.predio_info[melhor]["x"], cid.predio_info[melhor]["z"])
+	_predio_greg = _rua_perto(pg)
+	# carro do Greg: o carro mais perto do prédio (fora do ônibus)
+	_carro_greg = _predio_greg + Vector2(25.0, 0.0)
+	if cid.abandono != null:
+		var mc := 1e9
+		for c in cid.abandono.carros:
+			if c[2] == "onibus":
+				continue
+			var q: Vector3 = c[0]
+			var d := Vector2(q.x, q.z).distance_to(_predio_greg)
+			if d > 20.0 and d < mc:
+				mc = d
+				_carro_greg = Vector2(q.x, q.z)
+
+# "Um vulto surgiu no final da rua, mancando": alguns infectados aparecem e vêm atrás do barulho
+func _infectados_na_rua() -> void:
+	if main.vagos == null:
+		return
+	main.vagos.max_ativos = 7
+	var pj: Vector3 = main.jogador.global_position
+	main.vagos.barulho(pj, 70.0, true)
 
 # ---------- corrida (Capítulo 1) ----------
 func _preparar_corrida() -> void:
@@ -265,28 +381,10 @@ func _process(dt: float) -> void:
 	if _t_check > 0.0:
 		return
 	_t_check = 0.5
-	if etapa == "sobreviver" and _tem_o_basico():
-		_ir("base")
-	elif etapa == "base" and p.distance_to(MILBASE) < 120.0:
+	if etapa == "greg" and p.distance_to(_predio_greg) < 12.0:
+		_ir("carro")
+	elif etapa == "carro" and p.distance_to(_carro_greg) < 5.0 and not _caixa.visible:
 		_ir("fim")
-
-func _tem_o_basico() -> bool:
-	var inv = main.jogador.inventario
-	var comida := false
-	var agua := false
-	var arma := false
-	var lista: Array = []
-	for s in inv.slots:
-		if inv.slots[s] != null:
-			lista.append(inv.slots[s])
-	for g in inv.grades_do_jogador():
-		lista.append_array(g.itens)
-	for it in lista:
-		var cat: String = it.def().get("cat", "")
-		comida = comida or cat == "comida"
-		agua = agua or cat == "bebida"
-		arma = arma or it.eh_arma()
-	return comida and agua and arma
 
 # ---------- falas e títulos ----------
 func dizer(linhas: Array, depois := Callable()) -> void:
@@ -372,11 +470,15 @@ func carregar(d: Dictionary) -> void:
 		etapa = e
 		return
 	ativa = true
-	if e in ["prologo", "corrida", "pos"]:
-		iniciar(main)                                # o capítulo 1 recomeça do início
-	elif e == "colapso" or e == "sobreviver":
-		_ir("sobreviver")
+	if e in ["prologo", "corrida", "pos", "bar"]:
+		iniciar(main)                                # os capítulos 1 e 2 recomeçam do início
+	elif e == "cap3":
+		_ir("cap3")
 	else:
+		# capítulo 3 em andamento: cidade já trincando, objetivo de volta
+		_cidade_inteira(false)
+		if main.vagos != null:
+			main.vagos.max_ativos = 4 if e == "greg" else 7
 		_ir(e)
 
 # ---------- interface ----------

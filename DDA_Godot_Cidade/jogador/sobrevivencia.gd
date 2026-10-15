@@ -139,7 +139,7 @@ func receber_ataque(dano: float, chance_sangrar: float, _origem: Vector3) -> voi
 		return
 	var prot := protecao()
 	var d := dano * (1.0 - prot * 0.6)
-	_dano(d, "Vagos")
+	_dano(d, "infectados")
 	ferido.emit(d)
 	if randf() < chance_sangrar * (1.0 - prot):
 		sangramentos += 1

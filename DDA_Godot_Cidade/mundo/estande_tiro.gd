@@ -1,6 +1,6 @@
 extends Node3D
-# ESTANDE DE TIRO na base militar (para testar as armas enquanto os inimigos Vagos não chegam).
-# Alvos em forma de silhueta a 15, 25, 40 e 60 m: vida 100 como os Vagos do HTML (pistola 34 · M4 21 · cabeça x3).
+# ESTANDE DE TIRO na base militar (para testar as armas os infectados também usam receber_tiro).
+# Alvos em forma de silhueta a 15, 25, 40 e 60 m: vida 100 como os infectados (pistola 34 · M4 21 · cabeça x3).
 # Caem ao "morrer" e levantam sozinhos depois de 3 s. Placar em cima do estande.
 # Cada alvo usa o mesmo contrato que os inimigos vão usar: receber_tiro(dano, ponto, direcao, forma, atirador).
 

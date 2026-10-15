@@ -19,6 +19,7 @@ const MapaCls := preload("res://hud/mapa.gd")
 const ClimaCls := preload("res://mundo/clima.gd")
 const Salvamento := preload("res://menu/salvamento.gd")
 const HistoriaCls := preload("res://historia/historia.gd")
+const VagosCls := preload("res://inimigos/vagos.gd")
 const AUTOSALVAR := 120.0                   # segundos entre salvamentos automáticos
 const TelaMorteCls := preload("res://menu/tela_morte.gd")
 const ItemMundoCls := preload("res://inventario/item_mundo.gd")
@@ -55,6 +56,7 @@ var tela_morte: CanvasLayer
 var mapa: CanvasLayer                       # hud/mapa.gd (minimapa, mapa grande e bússola)
 var clima: Node                             # mundo/clima.gd (dia/noite, chuva, temperatura, lanterna)
 var historia: CanvasLayer                   # historia/historia.gd (Ato 1)
+var vagos: Node                             # inimigos/vagos.gd (infectados)
 var abates := 0
 var _tempo_jogo := 0.0
 var _t_salvar := 0.0
@@ -203,7 +205,7 @@ func _continuar() -> void:
 
 func _estatisticas() -> Array:
 	var s := int(_tempo_jogo)
-	var r := [["tempo de jogo", "%d:%02d" % [s / 60, s % 60]]]
+	var r := [["tempo de jogo", "%d:%02d" % [s / 60, s % 60]], ["infectados abatidos", str(abates)]]
 	if estande != null:
 		r.append(["acertos no estande", str(estande.get("acertos"))])
 		r.append(["tiros na cabeça", str(estande.get("cabecas"))])
@@ -249,6 +251,12 @@ func _criar_jogo() -> void:
 	jogo.add_child(clima)
 	clima.ligar(cidade, jogador)
 	jogador.sobrevivencia.clima = clima
+	vagos = VagosCls.new()
+	vagos.name = "Vagos"
+	jogo.add_child(vagos)
+	vagos.ligar(cidade, mundo, jogador, jogador.armas)
+	vagos.clima = clima
+	vagos.abatido.connect(func(_c): abates += 1)
 	historia = HistoriaCls.new()
 	historia.name = "Historia"
 	historia.main = self
@@ -362,6 +370,7 @@ func _fechar_jogo() -> void:
 	mapa = null
 	clima = null
 	historia = null
+	vagos = null
 
 func _process(dt: float) -> void:
 	if Engine.is_editor_hint() or controles == null or not is_instance_valid(controles) or get_tree().paused:

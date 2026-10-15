@@ -1,5 +1,7 @@
 extends Node
-# VAGOS · gerente dos infectados (inimigos/vago.gd + modelo inimigos/modelo_vago.gd).
+# VAGOS · gerente dos INFECTADOS (inimigos/vago.gd + modelo inimigos/modelo_vago.gd).
+# Nome: os arquivos ficaram "vago/vagos" (vem do HTML), mas na LORE "Vagos" é a GANGUE de Edy e V;
+# no jogo (textos da tela) eles são chamados de INFECTADOS.
 # - Mantém até max_ativos Vagos vivos em volta do jogador: nascem a 55-120 m, na rua/calçada ou em terreno
 #   aberto (nunca dentro de prédio, carro ou água) e de preferência FORA da visão da câmera.
 #   Mais Vagos perto do centro (DOWNTOWN). 15% das vezes vem uma pequena HORDA de 4 a 7 juntos.
@@ -157,11 +159,9 @@ func _process(dt: float) -> void:
 		if Vector2(p.x - pj.x, p.z - pj.z).length_squared() > lim2:
 			corpos.remove_at(i)
 			v.queue_free()
-	if not ativo:
-		return
-	# nascer aos poucos
+	# nascer aos poucos (só com ativo = true)
 	_t_surgir -= dt
-	if _t_surgir <= 0.0:
+	if ativo and _t_surgir <= 0.0:
 		_t_surgir = INTERVALO_SURGIR
 		if not _fila.is_empty():
 			var f: Array = _fila.pop_front()

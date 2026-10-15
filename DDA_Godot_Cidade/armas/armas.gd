@@ -4,11 +4,11 @@ extends Node
 # DayZ: a arma usa PENTE (item); RECARREGAR troca pelo pente mais cheio que você carrega (o vazio volta para o
 # bolso). Sem pente cheio, enche o pente encaixado com munição solta. Espingarda e rifle carregam munição solta.
 # ESTADO da arma: gasta com o uso; gasta = trava de vez em quando (RECARREGAR destrava); arruinada não atira.
-# Silenciador: tiro baixo (os Vagos ouvem de perto). Mira/luneta: aproxima mais ao MIRAR.
+# Silenciador: tiro baixo (os infectados só ouvem de perto). Mira/luneta: aproxima mais ao MIRAR.
 # - O tiro sai do CENTRO DA TELA (mira) e a traçante sai do cano até o ponto acertado.
 # - Mesma munição, cadência, alcance, dispersão, recuo de câmera, recarga em 3 estalos e tempo de saque.
 # - Dispersão maior andando/correndo e no ar; MENOR agachado (0,6x) e mirando (0,5x).
-# - Dano igual aos inimigos Vagos do HTML: pistola 34 · M4 21 · tiro na cabeça x3 (vida 100).
+# - Dano igual ao do HTML: pistola 34 · M4 21 · tiro na cabeça x3 (vida 100).
 # Qualquer coisa atingível precisa ter o método receber_tiro(dano, ponto, direcao, forma, atirador) -> Dictionary
 # INVENTÁRIO: a arma usada é a que está nas MÃOS (inventario/inventario.gd). As balas do pente ficam no próprio
 # item da arma e a recarga puxa munição (mun_9mm / mun_556) dos bolsos e da mochila. Mãos vazias = sem arma.

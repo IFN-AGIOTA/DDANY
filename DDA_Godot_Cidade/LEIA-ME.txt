@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.7 (APK código 3)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.8 (APK código 4)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -116,7 +116,7 @@ ARMAS
 - Armas de fogo: PISTOLA M9, M4A1, AKM, ESPINGARDA 12 (8 chumbos por tiro), RIFLE DE CAÇA (ferrolho).
 - PENTES (DayZ): RECARREGAR troca pelo pente mais cheio que você carrega (o vazio volta para o bolso). Sem pente
   cheio, enche o pente encaixado com munição solta (mais demorado). Espingarda e rifle carregam munição solta.
-- ACESSÓRIOS: SILENCIADOR (pistola, M4, AKM: tiro baixo, sem clarão, os Vagos ouvem de 4x mais perto),
+- ACESSÓRIOS: SILENCIADOR (pistola, M4, AKM: tiro baixo, sem clarão, os infectados só ouvem bem de perto),
   MIRA 4X (M4, AKM) e LUNETA (rifle): aproximam muito mais ao MIRAR. Aparecem no modelo da arma.
 - ESTADO: cada tiro/golpe gasta a arma. Abaixo de "PERFEITO" ela começa a TRAVAR (RECARREGAR destrava);
   ARRUINADA não atira. KIT DE LIMPEZA conserta a arma das mãos.
@@ -145,12 +145,18 @@ MÚSICA PROCEDURAL DE TERROR (nunca repete igual)
 - A TENSÃO sobe com tiros, acertos, corrida e morte e desce sozinha: calma -> suspense -> tensão.
   De vez em quando vem um SUSTO (prato subindo -> grito + tambor -> silêncio). Menu = versão calma.
 
-INFECTADOS ("VAGOS") — EM ANDAMENTO
-- Os arquivos já existem (pasta inimigos/), mas AINDA NÃO ESTÃO LIGADOS no jogo (APK 0.7 não tem Vagos).
-- Como vão funcionar: vagam pelas ruas, ouvem tiros e passos (correr faz mais barulho, agachado quase nada),
-  enxergam num cone à frente (bem menos à noite e com você agachado), perseguem correndo, mordem (podem abrir
-  sangramento e, raramente, infecção), param de seguir se perderem você de vista, às vezes andam em bando,
-  caem com tiro na cabeça (dano x3), deixam itens às vezes. As roupas (proteção) seguram parte das mordidas.
+INFECTADOS
+- Na LORE, "Vagos" é a GANGUE de Edy e V (Los Angeles). Os mortos-vivos são os INFECTADOS (Projeto Harbinger).
+  (Os arquivos em inimigos/ ainda se chamam vago/vagos, nome que veio do HTML.)
+- Vagam pelas ruas (mais no centro), às vezes em HORDAS de 4 a 7; nascem a 55-120 m, fora da sua vista.
+- OUVEM tiros (silenciador = bem menos) e passos (correr faz muito barulho, agachado quase nada).
+- ENXERGAM num cone à frente: ~38 m de dia, ~14 m à noite, menos com você agachado; perdem você de vista e vão
+  procurar no último lugar onde te viram.
+- PERSEGUEM correndo (~5 m/s), cercam, MORDEM (8-14 de dano, podem abrir sangramento e, às vezes, infecção).
+  Roupas com proteção seguram parte das mordidas e gastam no lugar.
+- Vida 100 · tiro na cabeça x3 · golpes corpo a corpo empurram e atordoam. Mortos ficam no chão e às vezes
+  deixam um item. Cada um tem roupa diferente (civil, jaqueta, moletom, policial, médico, operário).
+- Com alguém te perseguindo, a música aperta.
 
 -----------------------------------------------------------------------------------------------------
 3. CONTROLES
@@ -180,7 +186,7 @@ ARMAS (dano por bala/golpe · cadência · alcance · barulho em metros)
   espingarda ...... 15 x 8 chumbos · 0,85 s · 70 m · 95 m · 6 cartuchos
   rifle de caça ... 95 · 1,25 s · 450 m · 120 m · 5 balas
   faca 38 · taco 46 · machado 85 · cano 42 · pé de cabra 48 · punhos 13   (alcance 1,5–2,1 m)
-  Tiro na cabeça = x3. Vida dos alvos/Vagos = 100. Silenciador = barulho x0,22.
+  Tiro na cabeça = x3. Vida dos alvos e infectados = 100. Silenciador = barulho x0,22.
 
 SOBREVIVÊNCIA
   fome zera em ~1 h e sede em ~40 min (correndo gasta mais) · cada sangramento = -5 ml/s de sangue (5000 ml)
@@ -223,18 +229,28 @@ LOOT (mundo/loot_mundo.gd; tabelas no topo, com raridade e quantidades)
 -----------------------------------------------------------------------------------------------------
 6. A HISTÓRIA
 -----------------------------------------------------------------------------------------------------
-Menu > HISTÓRIA · ATO 1 (texto vindo do jogo em HTML; falas em historia/historia.gd, tabela FALAS):
-- PRÓLOGO (tela preta): "No começo, ninguém sabia o que estava acontecendo..."
-- CAPÍTULO 1 · A ÚLTIMA CORRIDA: à noite, cidade ainda inteira (sem carros largados e sem Vagos). DOMINIC e GREG
-  desafiam você; corrida a pé contra o relógio por 6 pontos de controle (anel amarelo + objetivo no
-  mapa/bússola; +6 s por ponto) até a linha "A MORTE DO MEDO". Tempo esgotado = tenta de novo.
-  Fim: "Era a última corrida. Ninguém ali sabia ainda." > FIM DA PARTE 1.
-- INTERLÚDIO · O COLAPSO (PROVISÓRIO, escrito só para ligar a corrida ao mundo aberto; troque pela Parte 2 —
-  "o bar e as notícias" — quando ela existir): semanas depois, a cidade caiu, "Vagos", rádio falando de abrigo
-  na base militar. Objetivos: encontrar comida, água e uma arma > chegar à base militar do aeroporto >
-  FIM DO ATO 1 > mundo aberto.
-- Personagens citados até agora: DOMINIC, GREG (rivais/amigos da corrida).
-- No HTML, a "Última Corrida" era de carro (Algonquin > Bohan/Broker); na Godot o jogo é só a pé.
+Baseada no livro "Dias de um Apocalipse" (Livro 1), na linha do tempo e na lore do Projeto Harbinger
+(PDFs do autor). Falas em historia/historia.gd (tabela FALAS).
+
+PERSONAGENS: DOMINIC VAIDER (cabelo branco, óculos de aviador, ex-corredor clandestino, tem um jato),
+GREG (melhor amigo, gosta da Mavie), MAVIE (queria ser médica; infectada, mas não "vira": forma adaptativa),
+ALYCE VAIDER / "NARA" (irmã de Dominic, agente infiltrada na gangue Vagos), NICK EVERS (aliado de Alyce,
+disfarce "Kyle Harmon"), EDY VARGAS e V (irmãos, líderes dos Vagos), MÔNICA e CARLOS (líderes do hospital),
+JHON (espião de Edy), LUCAS, JOSÉ.
+O VÍRUS: Projeto Harbinger (EUA + laboratórios internacionais), mutação do vírus da raiva; vazou em Tóquio
+(variante aérea); todos carregam o vírus adormecido; ~1% é imune; forma comum (morre e reanima) e forma
+adaptativa (Mavie).
+
+NO JOGO (Menu > HISTÓRIA · ATO 1)
+- PRÓLOGO "Antes do Fim" (tela preta).
+- CAPÍTULO 1 · A ÚLTIMA CORRIDA: noite, cidade ainda inteira (sem carros largados, sem infectados). No livro é
+  de carro; no jogo é A PÉ: 6 pontos de controle contra o relógio (+6 s por ponto) até "A MORTE DO MEDO".
+- CAPÍTULO 2 · BRILHO ANTES DA TEMPESTADE: o bar; Greg e a Mavie; a TV fala dos ataques em Tóquio, Paris e NY.
+- CAPÍTULO 3 · A PRIMEIRA NOITE: três dias depois, manhã nublada do 4º dia; aviso do aeroporto (voos privados
+  até as 18h). Dominic sai com jaqueta, mochila e o revólver do pai; a cidade já trinca (carros largados,
+  poucos infectados). Objetivos: PRÉDIO DO GREG -> Mavie chega ferida, um vulto manca no fim da rua ->
+  CARRO DO GREG (infectados chegando) -> rádio "Evacuação imediata..." -> FIM DO ATO 1.
+- Depois: mundo aberto na cidade caída (o livro segue com o jato: Nebraska, Califórnia, Los Angeles).
 - Para criar mais capítulos: veja o topo de historia/historia.gd (etapas, dizer(...), titulo(...),
   mapa.definir_objetivo(...)).
 
@@ -308,7 +324,7 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - estande de tiro (alvos) ............. mundo/estande_tiro.gd
 - dados do mapa ....................... data/city.json
 
-INFECTADOS (pasta inimigos/) — ainda não ligados no main.gd
+INFECTADOS (pasta inimigos/; o nome "vagos" nos arquivos veio do HTML)
 - comportamento, vida, velocidade ..... inimigos/vago.gd
 - aparência e animação ................ inimigos/modelo_vago.gd
 - quantos aparecem e onde ............. inimigos/vagos.gd
@@ -356,10 +372,11 @@ MÚSICA (pasta audio/)
 -----------------------------------------------------------------------------------------------------
 10. LIMITAÇÕES CONHECIDAS E PRÓXIMOS PASSOS
 -----------------------------------------------------------------------------------------------------
-- Infectados (Vagos) ainda não ligados no jogo (em andamento).
+- O jogador é o soldado do HTML; o Dominic do livro é civil (jaqueta de couro, cabelo branco): falta o modelo dele.
+- A gangue VAGOS (Edy, V), Alyce, Nick, Mônica e Carlos ainda não aparecem no jogo (são do Ato 2 em diante).
 - Só o TÉRREO dos prédios abre (andares de cima ainda não).
-- História: só o Ato 1 · Parte 1 é do texto original; o interlúdio "O Colapso" é provisório. Falta a Parte 2
-  ("o bar e as notícias") e os próximos atos.
+- História: Ato 1 = capítulos 1 a 3 do livro. O livro segue fora de Nova York (Nebraska, Califórnia, Los
+  Angeles), que ainda não existe no jogo.
 - Sem 1ª pessoa (o HTML tinha); o mar é "caminhável"; a base militar ainda não tem os prédios/pistas do HTML.
 - Transformação em carro e jato do HTML foi descartada: o jogo é só a pé.
 - Ideias para depois: andares de cima, cozinhar/fogueira, pescar/caçar, construir base, veículos consertáveis,

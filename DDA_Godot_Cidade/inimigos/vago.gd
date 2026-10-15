@@ -1,5 +1,5 @@
 extends CharacterBody3D
-# VAGO (infectado). Criado e controlado pelo gerente inimigos/vagos.gd (não precisa de cena .tscn).
+# VAGO = um INFECTADO (na lore, "Vagos" é a gangue; o nome do arquivo ficou do HTML). Criado e controlado pelo gerente inimigos/vagos.gd (não precisa de cena .tscn).
 # Estados: VAGANDO (anda devagar à toa) -> INVESTIGANDO (vai até um barulho ou algo que viu de relance)
 #          -> PERSEGUINDO (corre atrás do jogador) -> ATACANDO (prepara 0,4 s e golpeia) · MORTO.
 # Sentidos: AUDIÇÃO (o gerente avisa tiros e passos do jogador) e VISÃO (cone de 110° à frente, 38 m de dia,
@@ -507,9 +507,10 @@ func _mover(dt: float) -> void:
 					if _t_contorno > 15.0:              # rodando demais: tenta pelo outro lado
 						_t_contorno = 0.0
 						_lado = -_lado
-			quer = dir + separacao
-			if quer.length_squared() > 0.0001:
-				quer = quer.normalized() * _vel_alvo
+			quer = dir * _vel_alvo
+	# afasta dos outros Vagos (mesmo parado, para cercarem o jogador em vez de se empilharem)
+	if _atordoado <= 0.0 and estado != MORTO:
+		quer += separacao * 1.6
 	# colado no jogador (atacando/perseguindo): dá meio passo para trás em vez de entrar nele
 	if esta_cacando() and dist_jogador < 0.75 and dist_jogador > 0.01:
 		var pj: Vector3 = gerente.jogador.global_position
