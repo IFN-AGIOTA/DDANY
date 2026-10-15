@@ -2,7 +2,7 @@ extends Node3D
 # COLISÃO DO MUNDO, só em volta do jogador ("streaming").
 # A cidade inteira é visual (malhas + MultiMesh); aqui criamos colisão apenas onde o jogador está:
 #  - CHÃO: um HeightMapShape3D de ~96 m centrado no jogador. A altura de cada ponto vem dos MESMOS dados
-#    que desenham o chão (rua 0.6 · parque 0.4 · lago 0.2 · terra 0.0 · mar -0.5), então o pé encosta no que se vê.
+#    que desenham o chão (rua 0.6 · calçada 0.55 · parque 0.4 · lago 0.2 · terra 0.0 · mar -0.5), então o pé encosta no que se vê.
 #    O recálculo roda aos poucos (poucas linhas por quadro) para não travar o celular.
 #  - PRÉDIOS: um pequeno conjunto (pool) de caixas reaproveitadas, posicionadas só nos prédios próximos.
 # Camadas de física: 1 = mundo · 2 = jogador · 3 = inimigos (futuro).
@@ -12,6 +12,8 @@ const ALT_TERRA := 0.0
 const ALT_LAGO := 0.2
 const ALT_PARQUE := 0.4
 const ALT_RUA := 0.6
+const ALT_CALCADA := 0.55
+const CALCADA := 5.0         # largura da calçada (igual a mundo/cidade.gd)
 const BASE_PREDIO := 0.6
 
 const ESPACO := 2.0          # metros entre amostras do chão
@@ -106,7 +108,8 @@ func configurar(dados: Dictionary, predios: PackedFloat32Array) -> void:
 			var az: float = f[k + 1]
 			var bx: float = f[k + 2]
 			var bz: float = f[k + 3]
-			var r := Rect2(minf(ax, bx) - hw, minf(az, bz) - hw, absf(bx - ax) + 2.0 * hw, absf(bz - az) + 2.0 * hw)
+			var m := hw + CALCADA
+			var r := Rect2(minf(ax, bx) - m, minf(az, bz) - m, absf(bx - ax) + 2.0 * m, absf(bz - az) + 2.0 * m)
 			var seg := [ax, az, bx, bz, hw]
 			var c0 := Vector2i(floori(r.position.x / CEL_RUA), floori(r.position.y / CEL_RUA))
 			var c1 := Vector2i(floori(r.end.x / CEL_RUA), floori(r.end.y / CEL_RUA))
@@ -153,6 +156,7 @@ func _indexar(tmp: Dictionary, r: Rect2, cel: float, idx: int) -> void:
 # altura do chão (m) num ponto do mundo, igual às alturas usadas para desenhar a cidade
 func altura(x: float, z: float) -> float:
 	var key := Vector2i(floori(x / CEL_RUA), floori(z / CEL_RUA))
+	var calcada := false
 	if _r_hash.has(key):
 		var s: PackedFloat32Array = _r_hash[key]
 		for i in range(0, s.size(), 5):
@@ -164,8 +168,13 @@ func altura(x: float, z: float) -> float:
 				t = clampf(((x - s[i]) * dx + (z - s[i + 1]) * dz) / l2, 0.0, 1.0)
 			var qx := s[i] + dx * t - x
 			var qz := s[i + 1] + dz * t - z
-			if qx * qx + qz * qz <= s[i + 4] * s[i + 4]:
+			var d2 := qx * qx + qz * qz
+			if d2 <= s[i + 4] * s[i + 4]:
 				return ALT_RUA          # ruas valem também sobre a água (pontes)
+			if d2 <= (s[i + 4] + CALCADA) * (s[i + 4] + CALCADA):
+				calcada = true
+	if calcada:
+		return ALT_CALCADA
 	var p := Vector2(x, z)
 	var terra := false
 	for i in _t_box.size():

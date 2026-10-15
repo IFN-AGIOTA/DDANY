@@ -1,13 +1,37 @@
 @tool
 extends Node3D
-# CIDADE · CONSTRUÇÕES (Liberty City em blocagem): céu e sol, chão (terra, mar, lagos, parques), ruas e prédios.
-# Dados exportados do jogo em HTML (res://data/city.json, metros, x/z como no jogo).
-# Mexa AQUI para: cor/altura/densidade dos prédios, ruas, parques, céu, neblina, sol.
+# CIDADE · CONSTRUÇÕES (Liberty City): céu e sol, mar com ondas, terra com praias, parques com árvores,
+# ruas com calçadas e faixas, e prédios com janelas. Dados do jogo em HTML (res://data/city.json, metros).
+#   RUAS: cada trecho vira um retângulo e CADA PONTO ganha um disco do mesmo raio, então curvas, esquinas e
+#   cruzamentos se encaixam sem buracos (igual à colisão, que trata a rua como "cápsula"). Pontas que quase
+#   encostavam em outra rua (até 20 m) são puxadas para encostar de verdade. Calçada por baixo, asfalto por
+#   cima, faixas no topo; faixas de pedestre e linha de parada nos cruzamentos.
+#   PRÉDIOS: divididos em blocos de 1 km (o celular só desenha o que a câmera vê), com tipos (concreto,
+#   tijolo, pedra, vidro), torres escalonadas no centro e caixas d'água nos telhados.
+# Mexa AQUI para: densidade/altura dos prédios, largura da calçada, faixas, árvores, céu e sol.
+# Aparência (cores, ondas, janelas): mundo/materiais_cidade.gd.
 # Quem usa: main.gd (cria o nó "Cidade") e mundo/colisao_mundo.gd (recebe dados + predios para a colisão).
+
+const Mat := preload("res://mundo/materiais_cidade.gd")
 
 const CELL := 20.0                          # resolução das máscaras (m)
 const WORLD := Vector2(11000.0, 8600.0)     # metade do mundo (m)
 const DOWNTOWN := Vector2(-1550.0, -237.0)  # centro (Algonquin): prédios mais altos
+const BLOCO := 1000.0                       # tamanho dos blocos de prédios/árvores (m)
+const CALCADA := 5.0                        # largura da calçada de cada lado (m)
+const PUXAR_PONTA := 20.0                   # pontas de rua a até 20 m de outra rua são ligadas
+
+# alturas (iguais às da colisão em mundo/colisao_mundo.gd) e camadas de desenho
+const Y_MAR := -0.5
+const Y_TERRA := 0.0
+const Y_LAGO := 0.2
+const Y_PARQUE := 0.4
+const Y_CALCADA := 0.55
+const Y_RUA := 0.6
+const CAMADA := {"mar": 0.0, "terra": 1.0, "lago": 2.0, "parque": 3.0, "calcada": 4.0, "rua": 5.0, "faixa": 6.0}
+
+const BRANCO := Color(0.92, 0.92, 0.88)
+const AMARELO := Color(0.95, 0.72, 0.15)
 
 var W := 0
 var H := 0
@@ -20,6 +44,12 @@ var dados_cidade = null
 var predios := PackedFloat32Array()         # x, z, tam_x, tam_z, altura de cada prédio (para a colisão)
 var ambiente: Environment                   # céu/neblina (Opções › Gráficos mexe na neblina)
 var sol: DirectionalLight3D                 # Opções › Gráficos › Sombras
+var mat_predio: ShaderMaterial              # Opções › Gráficos › Detalhes dos shaders (janelas)
+var mats_agua: Array[ShaderMaterial] = []   # Opções › Gráficos › Água
+var detalhes: Array[GeometryInstance3D] = []   # árvores e caixas d'água (Opções › Distância dos detalhes)
+
+var _mascara: ImageTexture                  # terra (1) / água (0) para praias, mar raso e espuma
+var _nos := {}                              # Vector2i (m) -> {"n": quantas ruas chegam, "r": raio}
 
 func construir() -> void:
 	is_built = true
@@ -27,11 +57,13 @@ func construir() -> void:
 	W = int(WORLD.x * 2.0 / CELL)
 	H = int(WORLD.y * 2.0 / CELL)
 	var data = JSON.parse_string(FileAccess.get_file_as_string("res://data/city.json"))
+	_ligar_pontas(data)
 	dados_cidade = data
 	_env()
 	_ground(data)
 	_roads(data)
 	_buildings()
+	_arvores()
 	print("Cidade pronta em ", Time.get_ticks_msec() - t0, " ms")
 
 func _adopt(n: Node) -> void:
@@ -42,6 +74,7 @@ func limpar() -> void:
 	for n in built:
 		n.queue_free()
 	built.clear()
+	detalhes.clear()
 	is_built = false
 
 # grava res://cidade.scn: a cidade vira uma cena de verdade, editável com as ferramentas da Godot
@@ -60,29 +93,48 @@ func salvar_cena() -> void:
 		err = ResourceSaver.save(ps, "res://cidade.scn")
 	print("Cena salva em res://cidade.scn (código ", err, " · 0 = ok)")
 
+# Opções › Gráficos: janelas nos prédios (shaders) e até onde aparecem árvores/caixas d'água
+func aplicar_detalhes(nivel_shaders: int, nivel_distancia: int, agua_completa := true) -> void:
+	for m in mats_agua:
+		m.set_shader_parameter("completa", 1.0 if agua_completa else 0.0)
+	if mat_predio != null:
+		mat_predio.set_shader_parameter("detalhe", 0.0 if nivel_shaders <= 0 else (0.6 if nivel_shaders == 1 else 1.0))
+	var alcance: float = [500.0, 900.0, 1500.0, 2400.0][clampi(nivel_distancia, 0, 3)]
+	for d in detalhes:
+		if is_instance_valid(d):
+			d.visibility_range_end = alcance
+
 # ---------- ambiente ----------
 func _env() -> void:
 	var sm := ProceduralSkyMaterial.new()
-	sm.sky_top_color = Color(0.25, 0.40, 0.75)
-	sm.sky_horizon_color = Color(0.95, 0.65, 0.40)
-	sm.ground_horizon_color = Color(0.95, 0.65, 0.40)
-	sm.ground_bottom_color = Color(0.20, 0.20, 0.25)
+	sm.sky_top_color = Color(0.20, 0.33, 0.60)
+	sm.sky_horizon_color = Color(0.98, 0.66, 0.42)
+	sm.sky_curve = 0.12
+	sm.ground_horizon_color = Color(0.92, 0.64, 0.45)     # abaixo do horizonte = cor da névoa (sem faixa escura)
+	sm.ground_bottom_color = Color(0.80, 0.56, 0.42)
+	sm.sun_angle_max = 25.0
+	sm.sun_curve = 0.08
 	var sky := Sky.new()
 	sky.sky_material = sm
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
+	env.ambient_light_energy = 0.9
+	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+	env.tonemap_exposure = 1.05
 	env.fog_enabled = true
-	env.fog_light_color = Color(0.90, 0.62, 0.42)
+	env.fog_light_color = Color(0.92, 0.64, 0.45)
+	env.fog_sun_scatter = 0.25
 	env.fog_density = 0.00025
 	var we := WorldEnvironment.new()
 	we.environment = env
 	ambiente = env
 	_adopt(we)
 	var sun := DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-30.0, -50.0, 0.0)
-	sun.light_color = Color(1.0, 0.82, 0.62)
+	sun.rotation_degrees = Vector3(-24.0, -52.0, 0.0)
+	sun.light_color = Color(1.0, 0.80, 0.60)
+	sun.light_energy = 1.15
 	sun.shadow_enabled = true
 	sun.directional_shadow_max_distance = 500.0
 	_adopt(sun)
@@ -106,7 +158,7 @@ func _tri(v: PackedVector3Array, a: Vector3, b: Vector3, c: Vector3) -> void:
 		v.append(c)
 		v.append(b)
 
-func _add_mesh(verts: PackedVector3Array, col: Color, shadow := false) -> void:
+func _malha(verts: PackedVector3Array, mat: Material, cores := PackedColorArray(), nome := "") -> void:
 	if verts.is_empty():
 		return
 	var normals := PackedVector3Array()
@@ -116,20 +168,19 @@ func _add_mesh(verts: PackedVector3Array, col: Color, shadow := false) -> void:
 	arr.resize(Mesh.ARRAY_MAX)
 	arr[Mesh.ARRAY_VERTEX] = verts
 	arr[Mesh.ARRAY_NORMAL] = normals
+	if not cores.is_empty():
+		arr[Mesh.ARRAY_COLOR] = cores
 	var m := ArrayMesh.new()
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = col
-	mat.roughness = 1.0
 	m.surface_set_material(0, mat)
 	var mi := MeshInstance3D.new()
 	mi.mesh = m
-	if not shadow:
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if nome != "":
+		mi.name = nome
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_adopt(mi)
 
-func _poly_mesh(polys: Array, y: float, col: Color) -> void:
-	var v := PackedVector3Array()
+func _poly(v: PackedVector3Array, polys: Array, y: float) -> void:
 	for p in polys:
 		var idx := Geometry2D.triangulate_polygon(p)
 		if idx.is_empty():
@@ -137,10 +188,40 @@ func _poly_mesh(polys: Array, y: float, col: Color) -> void:
 			continue
 		for k in range(0, idx.size() - 2, 3):
 			_tri(v, Vector3(p[idx[k]].x, y, p[idx[k]].y), Vector3(p[idx[k + 1]].x, y, p[idx[k + 1]].y), Vector3(p[idx[k + 2]].x, y, p[idx[k + 2]].y))
-	_add_mesh(v, col)
+
+# retângulo plano de a até b com meia-largura hw
+func _faixa(v: PackedVector3Array, a: Vector2, b: Vector2, hw: float, y: float) -> void:
+	var d := b - a
+	var l := d.length()
+	if l < 0.01:
+		return
+	var nn := Vector2(-d.y, d.x) / l * hw
+	var a1 := a + nn
+	var a2 := a - nn
+	var b1 := b + nn
+	var b2 := b - nn
+	_tri(v, Vector3(a1.x, y, a1.y), Vector3(a2.x, y, a2.y), Vector3(b1.x, y, b1.y))
+	_tri(v, Vector3(b1.x, y, b1.y), Vector3(a2.x, y, a2.y), Vector3(b2.x, y, b2.y))
+
+# disco plano (fecha curvas, esquinas e cruzamentos)
+func _disco(v: PackedVector3Array, c: Vector2, r: float, y: float, lados := 16) -> void:
+	var cc := Vector3(c.x, y, c.y)
+	for i in lados:
+		var a0 := TAU * i / lados
+		var a1 := TAU * (i + 1) / lados
+		_tri(v, cc, Vector3(c.x + cos(a0) * r, y, c.y + sin(a0) * r), Vector3(c.x + cos(a1) * r, y, c.y + sin(a1) * r))
+
+# retângulo colorido (faixas): centro, direção unitária, comprimento, largura
+func _marca(v: PackedVector3Array, cores: PackedColorArray, c: Vector2, dir: Vector2, comp: float, larg: float, cor: Color) -> void:
+	var a := c - dir * comp * 0.5
+	var b := c + dir * comp * 0.5
+	var n0 := v.size()
+	_faixa(v, a, b, larg * 0.5, Y_RUA)
+	for i in v.size() - n0:
+		cores.append(cor)
 
 # máscara por paridade (par-ímpar): terra com lagos furados, parques
-func _fill(mask: PackedByteArray, polys: Array) -> void:
+func _fill(mask: PackedByteArray, polys: Array, valor := 1) -> void:
 	var rows := []
 	rows.resize(H)
 	for r in H:
@@ -165,10 +246,10 @@ func _fill(mask: PackedByteArray, polys: Array) -> void:
 			var c0 := maxi(int(ceil((xs[k] + WORLD.x) / CELL - 0.5)), 0)
 			var c1 := mini(int(floor((xs[k + 1] + WORLD.x) / CELL - 0.5)), W - 1)
 			for c in range(c0, c1 + 1):
-				mask[r * W + c] = 1
+				mask[r * W + c] = valor
 			k += 2
 
-# ---------- chão: mar, terra, lagos, parques ----------
+# ---------- chão: mar, terra (com praias), lagos, parques ----------
 func _ground(data) -> void:
 	var lands_out := []
 	var lakes := []
@@ -188,69 +269,223 @@ func _ground(data) -> void:
 	road.resize(W * H)
 	_fill(land, lpolys)
 	_fill(park, parks)
+	# máscara terra/água em textura (com mipmaps = versão "borrada" para praias, mar raso e espuma)
+	var terra_tex := PackedByteArray()
+	terra_tex.resize(W * H)
+	_fill(terra_tex, lpolys, 255)
+	var img := Image.create_from_data(W, H, false, Image.FORMAT_L8, terra_tex)
+	img.generate_mipmaps()
+	_mascara = ImageTexture.create_from_image(img)
+	var agua := Mat.material(Mat.AGUA, {"mascara": _mascara, "mundo": WORLD, "ondas_a": Mat.ondas(11, 0.012), "ondas_b": Mat.ondas(23, 0.02), "camada": CAMADA["mar"]})
 	var sea := MeshInstance3D.new()
+	sea.name = "Mar"
 	var pm := PlaneMesh.new()
-	pm.size = Vector2(WORLD.x * 2.0, WORLD.y * 2.0)
+	pm.size = Vector2(WORLD.x * 2.0 + 20000.0, WORLD.y * 2.0 + 20000.0)    # vai além do mapa até o horizonte
+	pm.material = agua
 	sea.mesh = pm
-	var smat := StandardMaterial3D.new()
-	smat.albedo_color = Color(0.16, 0.30, 0.38)
-	smat.roughness = 0.35
-	pm.material = smat
-	sea.position.y = -0.5
+	sea.position.y = Y_MAR
 	sea.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_adopt(sea)
-	_poly_mesh(lands_out, 0.0, Color(0.38, 0.30, 0.24))
-	_poly_mesh(lakes, 0.2, Color(0.16, 0.30, 0.38))
-	_poly_mesh(parks, 0.4, Color(0.25, 0.42, 0.20))
-
-# ---------- ruas ----------
-func _roads(data) -> void:
 	var v := PackedVector3Array()
+	_poly(v, lands_out, Y_TERRA)
+	_malha(v, Mat.material(Mat.TERRA, {"mascara": _mascara, "mundo": WORLD, "camada": CAMADA["terra"]}), PackedColorArray(), "Terra")
+	v = PackedVector3Array()
+	_poly(v, lakes, Y_LAGO)
+	var agua_lago: ShaderMaterial = agua.duplicate()
+	agua_lago.set_shader_parameter("camada", CAMADA["lago"])
+	_malha(v, agua_lago, PackedColorArray(), "Lagos")
+	mats_agua = [agua, agua_lago]
+	v = PackedVector3Array()
+	_poly(v, parks, Y_PARQUE)
+	_malha(v, Mat.material(Mat.PARQUE, {"camada": CAMADA["parque"]}), PackedColorArray(), "Parques")
+
+# ---------- ruas: ligar pontas soltas e marcar cruzamentos ----------
+static func _no(p: Vector2) -> Vector2i:
+	return Vector2i(roundi(p.x), roundi(p.y))
+
+static func _proj(q: Vector2, a: Vector2, b: Vector2) -> Vector2:
+	var d := b - a
+	var l2 := d.length_squared()
+	if l2 < 0.0001:
+		return a
+	return a + d * clampf((q - a).dot(d) / l2, 0.0, 1.0)
+
+func _ligar_pontas(data) -> void:
+	var roads: Array = data["roads"]
+	var hash := {}                     # célula 200 m -> [[rua, i], ...]
+	for ri in roads.size():
+		var f: Array = roads[ri][1]
+		for i in range(0, f.size() - 3, 2):
+			var a := Vector2(f[i], f[i + 1])
+			var b := Vector2(f[i + 2], f[i + 3])
+			for cx in range(floori(minf(a.x, b.x) / 200.0) - 1, floori(maxf(a.x, b.x) / 200.0) + 2):
+				for cz in range(floori(minf(a.y, b.y) / 200.0) - 1, floori(maxf(a.y, b.y) / 200.0) + 2):
+					var k := Vector2i(cx, cz)
+					if not hash.has(k):
+						hash[k] = []
+					hash[k].append([ri, i])
+	# quantas ruas passam/terminam em cada ponto
+	_nos.clear()
+	for rd in roads:
+		var f: Array = rd[1]
+		var hw: float = float(rd[0]) * 0.5
+		var n := f.size() / 2
+		for j in n:
+			var k := _no(Vector2(f[j * 2], f[j * 2 + 1]))
+			var e: Dictionary = _nos.get(k, {"n": 0, "r": 0.0})
+			e["n"] += 1 if (j == 0 or j == n - 1) else 2
+			e["r"] = maxf(e["r"], hw)
+			_nos[k] = e
+	# pontas: encostam no meio de outra rua (T) ou estão quase encostando (puxa até encostar)
+	for ri in roads.size():
+		var f: Array = roads[ri][1]
+		var hw: float = float(roads[ri][0]) * 0.5
+		for j in [0, f.size() / 2 - 1]:
+			var q := Vector2(f[j * 2], f[j * 2 + 1])
+			var e: Dictionary = _nos.get(_no(q), {"n": 1, "r": hw})
+			if e["n"] >= 2:
+				continue                  # já encosta na ponta de outra rua
+			var melhor := INF
+			var ponto := q
+			var hw2 := 0.0
+			for s in hash.get(Vector2i(floori(q.x / 200.0), floori(q.y / 200.0)), []):
+				if s[0] == ri:
+					continue
+				var g: Array = roads[s[0]][1]
+				var p := _proj(q, Vector2(g[s[1]], g[s[1] + 1]), Vector2(g[s[1] + 2], g[s[1] + 3]))
+				var d := p.distance_to(q)
+				if d < melhor:
+					melhor = d
+					ponto = p
+					hw2 = float(roads[s[0]][0]) * 0.5
+			if melhor <= PUXAR_PONTA:
+				f[j * 2] = ponto.x
+				f[j * 2 + 1] = ponto.y
+				var k2 := _no(ponto)
+				var e2: Dictionary = _nos.get(k2, {"n": 0, "r": 0.0})
+				e2["n"] += 3              # encontro em T conta como cruzamento
+				e2["r"] = maxf(e2["r"], maxf(hw, hw2))
+				_nos[k2] = e2
+
+func _cruzamento(p: Vector2) -> float:
+	var e = _nos.get(_no(p))
+	if e == null or e["n"] < 3:
+		return -1.0
+	return e["r"]
+
+# ---------- ruas: calçada, asfalto e faixas ----------
+func _roads(data) -> void:
+	var calc := PackedVector3Array()
+	var asf := PackedVector3Array()
+	var mv := PackedVector3Array()
+	var mc := PackedColorArray()
 	for rd in data["roads"]:
 		var w: float = rd[0]
 		var f: Array = rd[1]
 		var hw := w * 0.5
-		for i in range(0, f.size() - 3, 2):
-			var a := Vector2(f[i], f[i + 1])
-			var b := Vector2(f[i + 2], f[i + 3])
-			var d := b - a
-			var l := d.length()
-			if l < 0.01:
-				continue
-			var nn := Vector2(-d.y, d.x) / l * hw
-			var a1 := a + nn
-			var a2 := a - nn
-			var b1 := b + nn
-			var b2 := b - nn
-			_tri(v, Vector3(a1.x, 0.6, a1.y), Vector3(a2.x, 0.6, a2.y), Vector3(b1.x, 0.6, b1.y))
-			_tri(v, Vector3(b1.x, 0.6, b1.y), Vector3(a2.x, 0.6, a2.y), Vector3(b2.x, 0.6, b2.y))
-			# máscara: onde há rua (+ margem) não nascem prédios
-			var rad := int(ceil((hw + 8.0) / CELL))
-			var steps := int(ceil(l / 8.0))
-			for s in range(steps + 1):
-				var q := a + d * (float(s) / float(steps))
-				var cc := int((q.x + WORLD.x) / CELL)
-				var rr := int((q.y + WORLD.y) / CELL)
-				for dr in range(-rad, rad + 1):
-					for dc in range(-rad, rad + 1):
-						if dr * dr + dc * dc > rad * rad + 1:
-							continue
-						var r2 := rr + dr
-						var c2 := cc + dc
-						if r2 >= 0 and r2 < H and c2 >= 0 and c2 < W:
-							road[r2 * W + c2] = 1
-	_add_mesh(v, Color(0.18, 0.18, 0.20))
+		var pts := _pts(f)
+		for p in pts:
+			_disco(calc, p, hw + CALCADA, Y_CALCADA)
+			_disco(asf, p, hw, Y_RUA)
+		for i in pts.size() - 1:
+			var a := pts[i]
+			var b := pts[i + 1]
+			_faixa(calc, a, b, hw + CALCADA, Y_CALCADA)
+			_faixa(asf, a, b, hw, Y_RUA)
+			# quanto a rua vira em cada ponta (para as faixas se encontrarem em chanfro nas curvas)
+			var giro_a := 0.0
+			var giro_b := 0.0
+			if i > 0:
+				giro_a = (a - pts[i - 1]).angle_to(b - a)
+			if i < pts.size() - 2:
+				giro_b = (b - a).angle_to(pts[i + 2] - b)
+			_faixas_trecho(mv, mc, a, b, hw, i == 0, i == pts.size() - 2, giro_a, giro_b)
+			_mascara_rua(a, b, hw)
+	_malha(calc, Mat.material(Mat.CALCADA, {"camada": CAMADA["calcada"]}), PackedColorArray(), "Calcadas")
+	_malha(asf, Mat.material(Mat.ASFALTO, {"camada": CAMADA["rua"]}), PackedColorArray(), "Asfalto")
+	_malha(mv, Mat.material(Mat.FAIXA, {"camada": CAMADA["faixa"]}), mc, "Faixas")
 
-# ---------- prédios (blocos) ----------
+# faixas de um trecho: linha central (amarela dupla nas avenidas, tracejada branca nas ruas), divisórias de
+# pista tracejadas, bordas, e faixa de pedestre + linha de parada perto dos cruzamentos
+func _faixas_trecho(v: PackedVector3Array, c: PackedColorArray, a: Vector2, b: Vector2, hw: float, inicio: bool, fim: bool, giro_a := 0.0, giro_b := 0.0) -> void:
+	var d := b - a
+	var l := d.length()
+	if l < 4.0:
+		return
+	var dir := d / l
+	var nrm := Vector2(-dir.y, dir.x)
+	var ra := _cruzamento(a)
+	var rb := _cruzamento(b)
+	var t0 := (ra + 7.5) if ra >= 0.0 else (0.0 if not inicio else 1.0)
+	var t1 := l - ((rb + 7.5) if rb >= 0.0 else (0.0 if not fim else 1.0))
+	# linha contínua no deslocamento lateral k: nas curvas encurta/estica k·tan(giro/2) para fechar em chanfro
+	var ta := tan(clampf(giro_a, -1.2, 1.2) * 0.5) if ra < 0.0 else 0.0
+	var tb := tan(clampf(giro_b, -1.2, 1.2) * 0.5) if rb < 0.0 else 0.0
+	if t1 - t0 > 2.0:
+		if hw >= 10.0:
+			for k in [0.3, -0.3, hw - 1.0, -(hw - 1.0)]:
+				var s0: float = t0 + k * ta
+				var s1: float = t1 - k * tb
+				if s1 - s0 > 0.5:
+					_marca(v, c, a + dir * (s0 + s1) * 0.5 + nrm * k, dir, s1 - s0, 0.22 if absf(k) < 1.0 else 0.2, AMARELO if absf(k) < 1.0 else BRANCO)
+			for lado in [-1.0, 1.0]:
+				var t := t0 + 2.0
+				while t + 5.0 < t1:                                                     # divisória de pistas
+					_marca(v, c, a + dir * (t + 2.5) + nrm * lado * hw * 0.5, dir, 5.0, 0.18, BRANCO)
+					t += 12.0
+		else:
+			var t := t0 + 1.0
+			while t + 4.0 < t1:
+				_marca(v, c, a + dir * (t + 2.0), dir, 4.0, 0.18, BRANCO)
+				t += 9.0
+	# faixa de pedestre (zebra) e linha de parada em cada ponta que chega num cruzamento
+	for ponta in [[a, dir, ra], [b, -dir, rb]]:
+		var r: float = ponta[2]
+		if r < 0.0 or l < r * 2.0 + 10.0:
+			continue
+		var o: Vector2 = ponta[0]
+		var di: Vector2 = ponta[1]
+		var centro := o + di * (r + 3.0)
+		var k := -hw + 1.6
+		while k <= hw - 1.6:
+			_marca(v, c, centro + nrm * k, di, 4.0, 0.75, BRANCO)
+			k += 1.6
+		_marca(v, c, o + di * (r + 6.2) - nrm * hw * 0.5, nrm, hw - 0.6, 0.45, BRANCO)
+
+# máscara: onde há rua (+ margem) não nascem prédios
+func _mascara_rua(a: Vector2, b: Vector2, hw: float) -> void:
+	var d := b - a
+	var l := d.length()
+	var rad := int(ceil((hw + 8.0) / CELL))
+	var steps := maxi(1, int(ceil(l / 8.0)))
+	for s in range(steps + 1):
+		var q := a + d * (float(s) / float(steps))
+		var cc := int((q.x + WORLD.x) / CELL)
+		var rr := int((q.y + WORLD.y) / CELL)
+		for dr in range(-rad, rad + 1):
+			for dc in range(-rad, rad + 1):
+				if dr * dr + dc * dc > rad * rad + 1:
+					continue
+				var r2 := rr + dr
+				var c2 := cc + dc
+				if r2 >= 0 and r2 < H and c2 >= 0 and c2 < W:
+					road[r2 * W + c2] = 1
+
+# ---------- prédios ----------
+const CORES_TIPO := [Color(0.60, 0.58, 0.55), Color(0.50, 0.29, 0.21), Color(0.74, 0.67, 0.55), Color(0.30, 0.34, 0.38)]
+
 func _buildings() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 20081029
 	var noise := FastNoiseLite.new()
 	noise.seed = 7
 	noise.frequency = 0.0009
-	var xf: Array[Transform3D] = []
-	var cols: Array[Color] = []
+	var blocos := {}                     # Vector2i -> [[Transform3D, cor, custom], ...]
+	var caixas := {}                     # caixas d'água: Vector2i -> [Transform3D, ...]
+	var extra := RandomNumberGenerator.new()
+	extra.seed = 4242
 	predios = PackedFloat32Array()
+	var n := 0
 	for lr in range(0, H - 1, 2):
 		for lc in range(0, W - 1, 2):
 			var n_land := 0
@@ -275,23 +510,164 @@ func _buildings() -> void:
 			var sz := rng.randf_range(20.0, 34.0)
 			var bx := x + rng.randf_range(-3.0, 3.0)
 			var bz := z + rng.randf_range(-3.0, 3.0)
-			xf.append(Transform3D(Basis.from_scale(Vector3(sx, h, sz)), Vector3(bx, h * 0.5 + 0.6, bz)))
 			predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h]))   # guardado para a colisão
-			var g := rng.randf_range(0.42, 0.62)
-			cols.append(Color(g, g * 0.95, g * 0.9))
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.use_colors = true
-	mm.mesh = BoxMesh.new()
-	mm.instance_count = xf.size()
-	for i in xf.size():
-		mm.set_instance_transform(i, xf[i])
-		mm.set_instance_color(i, cols[i])
-	var mat := StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.roughness = 0.9
-	mm.mesh.material = mat
-	var mi := MultiMeshInstance3D.new()
-	mi.multimesh = mm
-	_adopt(mi)
-	print("Prédios: ", xf.size())
+			# tipo: torres altas quase sempre de vidro; o resto concreto, tijolo ou pedra
+			var tipo: int = 3 if (h > 75.0 and extra.randf() < 0.7) else [0, 1, 1, 2][extra.randi() % 4]
+			var cor: Color = CORES_TIPO[tipo] * extra.randf_range(0.82, 1.12)
+			cor.a = 1.0
+			var sem := extra.randf() * 0.98
+			var chave := Vector2i(floori(bx / BLOCO), floori(bz / BLOCO))
+			if not blocos.has(chave):
+				blocos[chave] = []
+			var h1 := h
+			if h > 60.0 and extra.randf() < 0.55:
+				# torre escalonada: corpo + topo mais estreito
+				h1 = h * extra.randf_range(0.6, 0.75)
+				var k2 := extra.randf_range(0.55, 0.75)
+				var h2 := h - h1 + extra.randf_range(4.0, 16.0)
+				blocos[chave].append([Transform3D(Basis.from_scale(Vector3(sx * k2, h2, sz * k2)), Vector3(bx, Y_RUA + h1 + h2 * 0.5, bz)), cor, Color(sx * k2, h2, sz * k2, tipo + sem)])
+			elif h < 70.0 and extra.randf() < 0.18:
+				# caixa d'água de madeira no telhado (marca registrada de Nova York)
+				if not caixas.has(chave):
+					caixas[chave] = []
+				var off := Vector3(extra.randf_range(-0.25, 0.25) * sx, 0.0, extra.randf_range(-0.25, 0.25) * sz)
+				caixas[chave].append(Transform3D(Basis.from_scale(Vector3.ONE * extra.randf_range(0.8, 1.2)), Vector3(bx, Y_RUA + h1, bz) + off))
+			blocos[chave].append([Transform3D(Basis.from_scale(Vector3(sx, h1, sz)), Vector3(bx, Y_RUA + h1 * 0.5, bz)), cor, Color(sx, h1, sz, tipo + sem)])
+	mat_predio = Mat.material(Mat.PREDIO, {"detalhe": 1.0})
+	var caixa := BoxMesh.new()
+	caixa.material = mat_predio
+	for chave in blocos:
+		var lista: Array = blocos[chave]
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_colors = true
+		mm.use_custom_data = true
+		mm.mesh = caixa
+		mm.instance_count = lista.size()
+		for i in lista.size():
+			mm.set_instance_transform(i, lista[i][0])
+			mm.set_instance_color(i, lista[i][1])
+			mm.set_instance_custom_data(i, lista[i][2])
+		n += lista.size()
+		var mi := MultiMeshInstance3D.new()
+		mi.name = "Predios_%d_%d" % [chave.x, chave.y]
+		mi.multimesh = mm
+		_adopt(mi)
+	var malha_caixa := _malha_caixa_dagua()
+	for chave in caixas:
+		var lista: Array = caixas[chave]
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = malha_caixa
+		mm.instance_count = lista.size()
+		for i in lista.size():
+			mm.set_instance_transform(i, lista[i])
+		var mi := MultiMeshInstance3D.new()
+		mi.name = "CaixasDagua_%d_%d" % [chave.x, chave.y]
+		mi.multimesh = mm
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.visibility_range_end = 1500.0
+		_adopt(mi)
+		detalhes.append(mi)
+	print("Prédios: ", predios.size() / 5, " (", n, " blocos de malha)")
+
+# junta várias malhas prontas (cilindro, cone...) numa só, deslocadas, cada uma com seu material
+static func _juntar(partes: Array) -> ArrayMesh:
+	var am := ArrayMesh.new()
+	for p in partes:
+		var arr: Array = (p[0] as PrimitiveMesh).get_mesh_arrays()
+		var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+		for i in vs.size():
+			vs[i] += p[1]
+		arr[Mesh.ARRAY_VERTEX] = vs
+		am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+		am.surface_set_material(am.get_surface_count() - 1, p[2])
+	return am
+
+static func _mat_simples(cor: Color, rough := 0.9, cor_da_instancia := false) -> StandardMaterial3D:
+	var m := StandardMaterial3D.new()
+	m.albedo_color = cor
+	m.roughness = rough
+	m.vertex_color_use_as_albedo = cor_da_instancia
+	return m
+
+func _malha_caixa_dagua() -> ArrayMesh:
+	var madeira := _mat_simples(Color(0.36, 0.25, 0.17))
+	var ferro := _mat_simples(Color(0.18, 0.17, 0.16), 0.6)
+	var corpo := CylinderMesh.new()
+	corpo.top_radius = 2.0
+	corpo.bottom_radius = 2.0
+	corpo.height = 4.0
+	corpo.radial_segments = 10
+	corpo.rings = 1
+	var teto := CylinderMesh.new()
+	teto.top_radius = 0.0
+	teto.bottom_radius = 2.2
+	teto.height = 1.4
+	teto.radial_segments = 10
+	teto.rings = 1
+	var base := BoxMesh.new()
+	base.size = Vector3(3.6, 2.0, 3.6)
+	return _juntar([[base, Vector3(0, 1.0, 0), ferro], [corpo, Vector3(0, 4.0, 0), madeira], [teto, Vector3(0, 6.7, 0), ferro]])
+
+# ---------- árvores nos parques ----------
+const MAX_ARVORES := 9000
+
+func _arvores() -> void:
+	var celulas := PackedInt32Array()
+	for i in W * H:
+		if park[i] == 1 and land[i] == 1 and road[i] == 0:
+			celulas.append(i)
+	if celulas.is_empty():
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1984
+	var chance := minf(0.6, float(MAX_ARVORES) / celulas.size())
+	var blocos := {}
+	for i in celulas:
+		if rng.randf() > chance:
+			continue
+		var x := (i % W + rng.randf()) * CELL - WORLD.x
+		var z := (i / W + rng.randf()) * CELL - WORLD.y
+		var s := rng.randf_range(0.7, 1.45)
+		var t := Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s, s * rng.randf_range(0.85, 1.2), s)), Vector3(x, Y_PARQUE, z))
+		var verde := Color(0.20, 0.36, 0.14) * rng.randf_range(0.75, 1.25)
+		if rng.randf() < 0.15:
+			verde = Color(0.55, 0.40, 0.15) * rng.randf_range(0.8, 1.1)    # algumas já amareladas (outono)
+		verde.a = 1.0
+		var chave := Vector2i(floori(x / BLOCO), floori(z / BLOCO))
+		if not blocos.has(chave):
+			blocos[chave] = []
+		blocos[chave].append([t, verde])
+	var tronco := CylinderMesh.new()
+	tronco.top_radius = 0.18
+	tronco.bottom_radius = 0.3
+	tronco.height = 3.0
+	tronco.radial_segments = 5
+	tronco.rings = 1
+	var copa := SphereMesh.new()
+	copa.radius = 2.6
+	copa.height = 4.6
+	copa.radial_segments = 7
+	copa.rings = 4
+	var malha := _juntar([[tronco, Vector3(0, 1.5, 0), _mat_simples(Color(0.30, 0.22, 0.15))], [copa, Vector3(0, 4.4, 0), _mat_simples(Color.WHITE, 1.0, true)]])
+	var total := 0
+	for chave in blocos:
+		var lista: Array = blocos[chave]
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_colors = true
+		mm.mesh = malha
+		mm.instance_count = lista.size()
+		for i in lista.size():
+			mm.set_instance_transform(i, lista[i][0])
+			mm.set_instance_color(i, lista[i][1])
+		total += lista.size()
+		var mi := MultiMeshInstance3D.new()
+		mi.name = "Arvores_%d_%d" % [chave.x, chave.y]
+		mi.multimesh = mm
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.visibility_range_end = 1500.0
+		_adopt(mi)
+		detalhes.append(mi)
+	print("Árvores: ", total)

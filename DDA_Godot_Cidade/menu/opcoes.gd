@@ -389,15 +389,15 @@ func _pagina_graficos(v: float) -> Control:
 		_atualizar_gfx())
 	_gfx_widgets["q"] = q
 	_rotulo_preset = _linha_gfx(lista, "Predefinição", "", q, v)
-	_gfx_seg(lista, "shd", "Detalhes dos shaders", "fachadas: janelas, molduras e lojas" + EM_BREVE, NIVEIS, v)
+	_gfx_seg(lista, "shd", "Detalhes dos shaders", "fachadas: janelas, andares e lojas", NIVEIS, v)
 	_gfx_seg(lista, "tex", "Detalhes das texturas", "suavização das texturas" + EM_BREVE, NIVEIS, v)
 	_gfx_seg(lista, "models", "Detalhes dos modelos", "distância em que os prédios simplificam" + EM_BREVE, NIVEIS, v)
-	_gfx_seg(lista, "detd", "Distância dos detalhes", "postes, árvores, semáforos, fios e objetos de rua" + EM_BREVE, NIVEIS, v)
+	_gfx_seg(lista, "detd", "Distância dos detalhes", "árvores e caixas d'água nos telhados", NIVEIS, v)
 	_gfx_seg(lista, "fx", "Detalhes dos efeitos", "fumaça, poeira, nuvens, brilho do sol e marcas de bala" + EM_BREVE, NIVEIS, v)
 	_gfx_seg(lista, "shad", "Sombras", "Simples: mancha sob o personagem · Alta: sombra em tempo real (usa mais GPU)",
 		[[0, "DESLIGADAS"], [1, "SIMPLES"], [2, "ALTA"]], v)
 	_gfx_seg(lista, "den", "Densidade do cenário abandonado", "carros, barricadas e barris nas ruas" + EM_BREVE, [[0, "BAIXA"], [1, "MÉDIA"], [2, "ALTA"]], v)
-	_gfx_seg(lista, "wtr", "Água", "ondas, reflexo do céu e brilho do sol" + EM_BREVE, [[false, "SIMPLES"], [true, "COMPLETA"]], v)
+	_gfx_seg(lista, "wtr", "Água", "ondas, espuma na praia e brilho do sol", [[false, "SIMPLES"], [true, "COMPLETA"]], v)
 	_gfx_seg(lista, "wire", "Fios de poste", EM_BREVE.strip_edges(), [[false, "DESLIGADOS"], [true, "LIGADOS"]], v)
 	_gfx_seg(lista, "halo", "Halos de luz", "semáforos e luzes dos postes à noite" + EM_BREVE, [[false, "DESLIGADOS"], [true, "LIGADOS"]], v)
 	_gfx_seg(lista, "dist", "Distância de visão", "quanto da cidade é desenhado", NIVEIS, v)

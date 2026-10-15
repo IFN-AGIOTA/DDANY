@@ -18,6 +18,11 @@ O QUE JÁ TEM
 - ESTANDE DE TIRO na base militar, na sua frente ao nascer: 8 alvos a 15, 25, 40 e 60 m que caem e levantam,
   com placar (acertos, tiros na cabeça, derrubados).
 - Cidade com colisão (chão e prédios) e câmera que encurta ao bater em parede.
+- CIDADE NOVA (visual): ruas com junções arredondadas que se encaixam em curvas e cruzamentos (pontas que
+  quase encostavam são ligadas), calçadas, faixas amarelas/brancas que fecham em chanfro nas curvas, faixa de
+  pedestre e linha de parada nos cruzamentos; mar com ondas, reflexo do sol, cor rasa na costa e espuma na praia;
+  praias de areia; parques com árvores; prédios com janelas, lojas no térreo, tipos (concreto, tijolo, pedra,
+  vidro), torres escalonadas e caixas d'água. Prédios e árvores em blocos de 1 km (o celular só desenha o que vê).
 - MENU PRINCIPAL igual ao do HTML (novo): cena do pôr do sol com a skyline e o soldado no terraço,
   "DIAS DE UM / APOCALIPSE / NOVA YORK", História · Ato 1 (ainda não existe no porte), Jogar (mundo livre), Opções.
 - OPÇÕES igual ao HTML (novo): Controles · Câmera · HUD · Gráficos · Vídeo e som · Ajuda. Salvas no aparelho.
@@ -110,7 +115,10 @@ MÚSICA (pasta audio/)
 - timbre dos instrumentos ............. audio/instrumentos.gd (sintetizados por código, sem arquivos de áudio)
 
 MUNDO / CONSTRUÇÕES (pasta mundo/)
-- prédios, ruas, parques, céu, sol .... mundo/cidade.gd
+- prédios, ruas, calçadas, faixas,
+  parques/árvores, céu, sol ........... mundo/cidade.gd
+- aparência do mar, chão, asfalto,
+  janelas dos prédios ................. mundo/materiais_cidade.gd (shaders)
 - colisão com chão/prédios e tiros .... mundo/colisao_mundo.gd
 - loot espalhado (chão e caixas) ...... mundo/loot.gd (listas no topo)
 - estande de tiro (alvos) ............. mundo/estande_tiro.gd (use receber_tiro(...) nos inimigos Vagos)

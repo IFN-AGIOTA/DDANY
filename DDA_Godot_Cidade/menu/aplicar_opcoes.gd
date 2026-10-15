@@ -76,6 +76,8 @@ func aplicar() -> void:
 	if cid != null and is_instance_valid(cid):
 		if cid.sol != null:
 			cid.sol.shadow_enabled = int(g["shad"]) >= 2
+		if cid.has_method("aplicar_detalhes"):
+			cid.aplicar_detalhes(int(g["shd"]), int(g["detd"]), bool(g["wtr"]))     # janelas dos prédios · árvores/caixas d'água
 		if cid.ambiente != null:
 			cid.ambiente.fog_density = NEVOA_BASE * NEVOA[clampi(int(g["fog"]), 0, 2)] * NEVOA_DIST[clampi(int(g["dist"]), 0, 3)]
 
