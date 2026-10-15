@@ -5,9 +5,10 @@ extends CharacterBody3D
 # Sentidos: AUDIÇÃO (o gerente avisa tiros e passos do jogador) e VISÃO (cone de 110° à frente, 38 m de dia,
 # ~14 m à noite, menos se o jogador estiver agachado; o raio de visão bate nas paredes = camada 1).
 # Depois de ~8 s sem ver o jogador ele desiste, vai até o último lugar onde o viu e volta a vagar.
-# Movimento: perto do jogador (~32 m, onde existe chão/prédios de física) usa a física de verdade
-# (gravidade + move_and_slide, contorna paredes e carros); longe anda "por conta" na altura do chão
-# (mundo.altura) desviando das plantas dos prédios e dos obstáculos.
+# Movimento (barato para o celular): anda "por conta" na altura do chão (mundo.altura), batendo e deslizando
+# nas plantas dos prédios e nos obstáculos (carros, barreiras) pelos dados do mapa, sem motor de física.
+# Só perto do jogador (~20 m) E perto de um prédio com interior aberto usa a física de verdade
+# (move_and_slide nas paredes/portas/móveis; altura por um raio para baixo).
 # Tiros: receber_tiro(dano, ponto, direcao, forma, atirador) igual aos alvos do estande; forma 1 = cabeça (x3).
 # Golpes corpo a corpo: receber_golpe(dano, direcao, atacante) (empurra e atordoa um pouco).
 # Ataque no jogador: jogador.receber_ataque(dano, chance_sangrar, origem) se o jogador tiver esse método.
@@ -41,8 +42,7 @@ const VISAO_NOITE := 14.0
 const ANGULO_VISAO := 110.0           # graus (cone à frente)
 const FATOR_AGACHADO := 0.55
 const TEMPO_ESQUECER := 8.0           # segundos sem ver o jogador até desistir
-const DIST_FISICA := 32.0             # mais perto que isso do jogador: física de verdade
-const GRAVIDADE := 15.0
+const DIST_FISICA := 20.0             # física de verdade só a menos disso do jogador e perto de interior aberto
 const CHANCE_LOOT := 0.25
 const LOOT := ["bandagem", "feijao", "agua", "mun_9mm"]
 const TEMPO_CORPO := 90.0             # o corpo fica no chão esse tempo e depois afunda
@@ -58,9 +58,6 @@ const NOMES := ["vagando", "investigando", "perseguindo", "atacando", "morto"]
 # sons (gerados uma vez; o gerente chama sintetizar_sons() numa thread e depois definir_sons())
 const TAXA_SOM := 16000
 static var sons := {}
-static var PERF := {}
-static func _pf(k: String, t0: int) -> void:
-	PERF[k] = PERF.get(k, 0) + Time.get_ticks_usec() - t0
 
 var gerente: Node = null              # inimigos/vagos.gd (jogador, mundo, clima)
 var estado := VAGANDO
@@ -93,11 +90,15 @@ var _t_grunhido := 3.0
 var _t_desvio := 0.0
 var _dir_desvio := Vector3.ZERO
 var _lado := 1.0
+var _contorno := false
+var _t_contorno := 0.0
+var _dir_contorno := Vector3.ZERO
 var _t_preso := 0.5
 var _pos_preso := Vector3.ZERO
 var _n_preso := 0
 var _t_predio := 0.0
 var _t_chao := 0.0
+var _t_modo := 0.0
 var _y_chao := 0.0
 var _vel_xz := Vector3.ZERO
 var _vel_h := 0.0
@@ -108,15 +109,17 @@ var _consulta: PhysicsRayQueryParameters3D
 func _ready() -> void:
 	collision_layer = 4                # camada 3 = inimigos
 	collision_mask = 1                 # só o mundo (passa por outros Vagos e pelo jogador)
-	floor_snap_length = 0.35
-	floor_max_angle = deg_to_rad(50.0)
+	# "flutuando": a cápsula não encosta no chão (contato com o mapa de alturas custa caro com muitos Vagos);
+	# a altura vem de um raio para baixo 5x por segundo. Bate só em paredes, prédios, carros e móveis.
+	motion_mode = CharacterBody3D.MOTION_MODE_FLOATING
+	max_slides = 3
 	# forma 0 = corpo · forma 1 = cabeça (os tiros usam o índice da forma)
 	var cap := CapsuleShape3D.new()
 	cap.radius = 0.28
-	cap.height = 1.5
+	cap.height = 1.32
 	_forma_corpo = CollisionShape3D.new()
 	_forma_corpo.shape = cap
-	_forma_corpo.position = Vector3(0, 0.75, 0)
+	_forma_corpo.position = Vector3(0, 0.9, 0)          # de 0,24 m a 1,56 m do chão
 	add_child(_forma_corpo)
 	var esf := SphereShape3D.new()
 	esf.radius = 0.135
@@ -286,37 +289,31 @@ func _physics_process(dt: float) -> void:
 	var pj := j.global_position
 	dist_jogador = Vector2(pj.x - p.x, pj.z - p.z).length()
 	# física só onde existe chão de física (perto do jogador)
-	var quer_fisica: bool = dist_jogador < (DIST_FISICA + 4.0 if _fisica else DIST_FISICA) and mundo.tem_chao_fisico(p.x, p.z)
-	if quer_fisica != _fisica:
-		_trocar_modo(quer_fisica)
+	_t_modo -= dt
+	if _t_modo <= 0.0:
+		_t_modo = 0.5
+		var quer_fisica: bool = dist_jogador < (DIST_FISICA + 4.0 if _fisica else DIST_FISICA) \
+			and mundo.tem_chao_fisico(p.x, p.z) and mundo.perto_de_aberto(p.x, p.z, 10.0 if _fisica else 8.0)
+		if quer_fisica != _fisica:
+			_trocar_modo(quer_fisica)
 	# sentidos: 4-5 vezes por segundo, cada Vago num momento diferente
 	_t_sem_ver += dt
 	_t_sentidos -= dt
 	if _t_sentidos <= 0.0:
 		_t_sentidos = randf_range(0.2, 0.26)
-		var t0 := Time.get_ticks_usec()
 		_olhar(j)
-		_pf("olhar", t0)
 	_atordoado = maxf(0.0, _atordoado - dt)
 	_recarga = maxf(0.0, _recarga - dt)
-	var t1 := Time.get_ticks_usec()
 	_decidir(dt, j)
-	_pf("decidir", t1)
-	t1 = Time.get_ticks_usec()
 	_mover(dt)
-	_pf("mover", t1)
 	# animação: perto todo quadro, longe a cada 2-4 quadros
 	_quadro += 1
 	_dt_anim += dt
 	var a_cada := 1 if dist_jogador < 40.0 else (2 if dist_jogador < 80.0 else 4)
 	if _quadro % a_cada == 0:
-		var t3 := Time.get_ticks_usec()
 		modelo.atualizar(_dt_anim, _vel_h)
 		_dt_anim = 0.0
-		_pf("anim", t3)
-		t3 = Time.get_ticks_usec()
 		_forma_cabeca.position = to_local(modelo.pos_cabeca())
-		_pf("cab", t3)
 	# gemidos
 	_t_grunhido -= dt
 	if _t_grunhido <= 0.0:
@@ -327,13 +324,9 @@ func _physics_process(dt: float) -> void:
 func _trocar_modo(fisica: bool) -> void:
 	_fisica = fisica
 	velocity = Vector3(_vel_xz.x, 0.0, _vel_xz.z)
-	if fisica:
-		var p := global_position
-		p.y = gerente.mundo.altura(p.x, p.z) + 0.05
-		global_position = p
-	else:
-		_y_chao = global_position.y
-		_t_chao = 0.0
+	_y_chao = global_position.y
+	_t_chao = 0.0
+	_pos_preso = global_position
 
 func _olhar(j: Node3D) -> void:
 	if bool(j.get("morto")):
@@ -456,19 +449,40 @@ static func _dist_xz(a: Vector3, b: Vector3) -> float:
 
 # ---------- movimento ----------
 func _bloqueado(q: Vector3) -> bool:
-	var m = gerente.mundo
-	if m.dentro_de_predio(q.x, q.z, 0.4):
-		return true
-	# obstáculos: longe não há colisão de física para eles (a de carros só existe a ~30 m do jogador)
-	return (not _fisica or dist_jogador > 24.0) and m.dentro_de_obstaculo(q.x, q.z, 0.3)
+	return _bate(q, 0.4, 0.3)
 
-func _contornar(p: Vector3, dir: Vector3, olhar: float) -> Vector3:
-	for a in [0.75, 1.4, 2.1]:
+# true se o ponto cai num prédio/obstáculo (sem física, os prédios abertos também contam como parede)
+func _bate(q: Vector3, m_predio: float, m_obst: float) -> bool:
+	var m = gerente.mundo
+	if m.dentro_de_predio(q.x, q.z, m_predio, not _fisica):
+		return true
+	return not _fisica and m.dentro_de_obstaculo(q.x, q.z, m_obst)
+
+# CONTORNAR: se o caminho direto está livre, vai direto. Se não, segue a parede sempre pelo mesmo lado
+# (escolhido pelo lado que abre primeiro), pegando a direção livre mais próxima do destino (de 30 em 30°).
+# Assim ele dá a volta no quarteirão em vez de ficar batendo na parede.
+func _direcao_livre(p: Vector3, dir: Vector3, L: float) -> Vector3:
+	var olhar := clampf(L, 0.5, 1.6)
+	if not _bloqueado(p + dir * olhar):
+		_contorno = false
+		return dir
+	if not _contorno:
+		_contorno = true
+		_t_contorno = 0.0
+		var melhor := 99
+		var melhor_lado := _lado
 		for s in [_lado, -_lado]:
-			var d2 := dir.rotated(Vector3.UP, a * s)
-			if not _bloqueado(p + d2 * olhar):
-				_lado = s
-				return d2
+			for i in range(1, 7):
+				if not _bloqueado(p + dir.rotated(Vector3.UP, s * i * 0.5236) * olhar):
+					if i < melhor:
+						melhor = i
+						melhor_lado = s
+					break
+		_lado = melhor_lado
+	for i in range(1, 7):
+		var d2 := dir.rotated(Vector3.UP, _lado * i * 0.5236)
+		if not _bloqueado(p + d2 * olhar):
+			return d2
 	return -dir
 
 func _mover(dt: float) -> void:
@@ -479,18 +493,20 @@ func _mover(dt: float) -> void:
 		var L := para.length()
 		if L > 0.05:
 			var dir := para / L
-			if _t_desvio > 0.0:
+			if _t_desvio > 0.0:                         # preso: anda de lado um pouco (ver _checar_preso)
 				_t_desvio -= dt
 				dir = _dir_desvio
 			else:
 				_t_predio -= dt
 				if _t_predio <= 0.0:
-					_t_predio = 0.25
-					var olhar := clampf(L, 0.5, 1.8)
-					if _bloqueado(p + dir * olhar):
-						_dir_desvio = _contornar(p, dir, olhar)
-						_t_desvio = randf_range(0.5, 0.9)
-						dir = _dir_desvio
+					_t_predio = 0.12 if (_contorno or _vel_alvo > 2.0) else 0.25
+					_dir_contorno = _direcao_livre(p, dir, L)
+				if _contorno:
+					dir = _dir_contorno
+					_t_contorno += dt
+					if _t_contorno > 15.0:              # rodando demais: tenta pelo outro lado
+						_t_contorno = 0.0
+						_lado = -_lado
 			quer = dir + separacao
 			if quer.length_squared() > 0.0001:
 				quer = quer.normalized() * _vel_alvo
@@ -507,35 +523,50 @@ func _mover(dt: float) -> void:
 	var empurro := _empurrao
 	_empurrao *= exp(-dt * 7.0)
 	if _fisica:
-		velocity.x = _vel_xz.x + empurro.x
-		velocity.z = _vel_xz.z + empurro.z
-		if is_on_floor():
-			velocity.y = -0.5
+		velocity = Vector3(_vel_xz.x + empurro.x, 0.0, _vel_xz.z + empurro.z)
+		if velocity.length_squared() > 0.0025:
+			move_and_slide()
+			var rv := get_real_velocity()
+			_vel_h = Vector2(rv.x, rv.z).length()
 		else:
-			velocity.y -= GRAVIDADE * dt
-		var t2 := Time.get_ticks_usec()
-		move_and_slide()
-		_pf("mas", t2)
-		var rv := get_real_velocity()
-		_vel_h = Vector2(rv.x, rv.z).length()
+			_vel_h = 0.0
 		_checar_preso(dt, quer)
-		# segurança: se escapou do chão de física, volta para a altura certa
+		# chão: raio para baixo (pega rua, calçada e o piso dos interiores) 5x por segundo
+		var g := global_position
 		_t_chao -= dt
 		if _t_chao <= 0.0:
-			_t_chao = 0.5
-			var hy: float = gerente.mundo.altura(global_position.x, global_position.z)
-			if global_position.y < hy - 0.8:
-				global_position.y = hy + 0.05
-				velocity.y = 0.0
+			_t_chao = 0.2
+			_consulta.from = g + Vector3(0, 1.0, 0)
+			_consulta.to = g + Vector3(0, -1.5, 0)
+			var r := get_world_3d().direct_space_state.intersect_ray(_consulta)
+			if r.is_empty():
+				_y_chao = gerente.mundo.altura(g.x, g.z)
+			else:
+				_y_chao = (r["position"] as Vector3).y
+		if absf(g.y - _y_chao) > 0.002:
+			g.y = lerpf(g.y, _y_chao, minf(1.0, dt * 12.0))
+			global_position = g
 	else:
 		var np := p + (_vel_xz + empurro) * dt
+		# bate e desliza nas plantas (prédios são caixas alinhadas aos eixos): tenta só X, depois só Z
+		if (np.x != p.x or np.z != p.z) and _bate(np, 0.3, 0.25) and not _bate(p, 0.3, 0.25):
+			var so_x := Vector3(np.x, np.y, p.z)
+			var so_z := Vector3(p.x, np.y, np.z)
+			if not _bate(so_x, 0.3, 0.25):
+				np = so_x
+			elif not _bate(so_z, 0.3, 0.25):
+				np = so_z
+			else:
+				np = Vector3(p.x, np.y, p.z)
+				_vel_xz *= 0.5
 		_t_chao -= dt
 		if _t_chao <= 0.0:
 			_t_chao = 0.3
 			_y_chao = gerente.mundo.altura(np.x, np.z)
 		np.y = lerpf(p.y, _y_chao, minf(1.0, dt * 8.0))
+		_vel_h = Vector2(np.x - p.x, np.z - p.z).length() / maxf(dt, 0.0001)
 		global_position = np
-		_vel_h = Vector2(_vel_xz.x, _vel_xz.z).length()
+		_checar_preso(dt, quer)
 	# virar para onde anda (ou para o jogador quando ataca / está muito perto)
 	var olha := Vector3.ZERO
 	if estado == ATACANDO or (estado == PERSEGUINDO and dist_jogador < 2.5):
@@ -566,7 +597,7 @@ func _checar_preso(dt: float, quer: Vector3) -> void:
 			return
 		var dir := quer.normalized()
 		var nova := dir.cross(Vector3.UP) * _lado
-		if is_on_wall():
+		if _fisica and is_on_wall():
 			var n := get_wall_normal()
 			n.y = 0.0
 			if n.length_squared() > 0.001:

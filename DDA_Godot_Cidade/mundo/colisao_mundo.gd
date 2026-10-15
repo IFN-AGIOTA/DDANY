@@ -403,9 +403,9 @@ func raio(o: Vector3, d: Vector3, alcance: float) -> Dictionary:
 	return res
 
 # ---------- consultas para os inimigos (inimigos/vago.gd e inimigos/vagos.gd) ----------
-# true se (x, z) cai dentro da planta de um prédio FECHADO (+ margem). Os prédios "abertos" ficam de fora:
-# eles têm paredes e portas de verdade (física).
-func dentro_de_predio(x: float, z: float, margem := 0.0) -> bool:
+# true se (x, z) cai dentro da planta de um prédio FECHADO (+ margem). Os prédios "abertos" ficam de fora
+# (eles têm paredes e portas de verdade, de física), a não ser que com_abertos = true.
+func dentro_de_predio(x: float, z: float, margem := 0.0, com_abertos := false) -> bool:
 	var cx := floori(x / CEL_PREDIO)
 	var cz := floori(z / CEL_PREDIO)
 	for dz in range(-1, 2):
@@ -417,7 +417,7 @@ func dentro_de_predio(x: float, z: float, margem := 0.0) -> bool:
 			for idx in lista:
 				var o := idx * 5
 				if absf(x - _pred[o]) < _pred[o + 2] * 0.5 + margem and absf(z - _pred[o + 1]) < _pred[o + 3] * 0.5 + margem:
-					if abertos.has(idx):
+					if abertos.has(idx) and not com_abertos:
 						continue
 					return true
 	return false
@@ -448,3 +448,11 @@ func dentro_de_obstaculo(x: float, z: float, margem := 0.0) -> bool:
 func tem_chao_fisico(x: float, z: float) -> bool:
 	var lim := (MEIO - 3) * ESPACO
 	return absf(x - _centro.x) < lim and absf(z - _centro.y) < lim
+
+# true se (x, z) está a menos de "margem" metros de um prédio com interior aberto (paredes de física)
+func perto_de_aberto(x: float, z: float, margem := 8.0) -> bool:
+	for idx in abertos:
+		var o: int = int(idx) * 5
+		if absf(x - _pred[o]) < _pred[o + 2] * 0.5 + margem and absf(z - _pred[o + 1]) < _pred[o + 3] * 0.5 + margem:
+			return true
+	return false
