@@ -1,101 +1,249 @@
-DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4 (versão 0.7: sobrevivência estilo DayZ)
-1) Extraia o zip. 2) Godot 4.2+ > Importar projeto > escolha a pasta com project.godot. 3) Rodar (F5).
-Ao abrir leva alguns segundos para montar a cidade (veja "Cidade pronta em ... ms" na saída).
-(Transformação em carro e jato foi descartada: o jogo é só a pé.)
+=====================================================================================================
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.7 (APK código 3)
+=====================================================================================================
+Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
+abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
+e está sendo passado para a Godot 4, um sistema por arquivo.
 
-NOVO NA 0.7
-- CIDADE ABANDONADA: carros largados (estacionados, batidos, capotados, queimados), engarrafamentos, ônibus,
-  barreiras, caçambas, lixo, entulho, postes caídos, semáforos tortos e prédios em RUÍNA (partidos ao meio).
-- PRÉDIOS COM ENTRADA (mais de 70%): ao chegar perto, o térreo "abre" com portas, janelas (algumas tapadas com
-  tábuas), cômodos com móveis conforme o uso — casas (sala, cozinha, quartos, banheiro), lojas, mercados, farmácias,
-  restaurantes, escritórios, delegacias (cela e armário de armas) e clínicas — e sinais de abandono (móveis
-  caídos, entulho, papéis, acampamentos de sobreviventes, barricadas).
-- LOOT POR LUGAR: cada móvel tem o seu (geladeira = bebida, guarda-roupa = roupas, armário de armas = armas...),
-  porta-malas dos carros e itens soltos no chão. Muita coisa já foi saqueada. O que você pega não volta.
-- MAIS DE 60 ITENS: comidas, bebidas, remédios, roupas (calor, chuva, proteção), mochilas, ferramentas.
-- ARMAS ESTILO DAYZ: AKM, espingarda 12, rifle de caça; PENTES de verdade (RECARREGAR troca pelo pente mais
-  cheio; arraste munição em cima do pente para encher, ou USAR = ENCHER); SILENCIADOR, MIRA 4X e LUNETA
-  (arraste em cima da arma); ESTADO dos itens (perfeito ... arruinado): arma gasta TRAVA (RECARREGAR destrava).
-  CORPO A CORPO com faca, taco, machado, cano, pé de cabra e PUNHOS (mãos vazias), no botão ATIRAR.
-- SOBREVIVÊNCIA: vida, sangue, fome, sede, temperatura, molhado, sangramentos e infecção, com ícones no canto
-  de baixo (setas = subindo/caindo). Morreu: suas coisas ficam no chão e você RENASCE longe, só com o básico.
-- INFECTADOS (VAGOS): vagam pelas ruas, ouvem tiros e passos, enxergam (menos à noite e com você agachado),
-  perseguem, mordem (podem abrir sangramento) e às vezes andam em bando.
-- DIA E NOITE (1 dia = 48 min), nuvens, chuva e tempestade com relâmpagos; frio à noite e na chuva;
-  LANTERNA na mão ou LANTERNA DE CABEÇA.
-- MINIMAPA (toque para abrir o MAPA grande: arrastar, pinça, + −), BÚSSOLA no alto com o objetivo.
-- SALVAR: salva sozinho (a cada 2 min, ao pausar e ao sair). No menu aparece CONTINUAR.
-- HISTÓRIA · ATO 1: prólogo, Capítulo 1 "A Última Corrida" (à noite, pontos de controle contra o relógio) e um
-  interlúdio provisório "O Colapso" (até a Parte 2 ser escrita) que leva ao mundo aberto.
+ÍNDICE
+  1. Como abrir, jogar e gerar o APK
+  2. O jogo hoje (tudo o que já existe)
+  3. Controles
+  4. Números do jogo (armas, sobrevivência, clima, infectados)
+  5. Itens e loot
+  6. A história
+  7. MAPA DO PROJETO: que arquivo mexe em cada coisa
+  8. Como funciona por dentro (para quem for mexer no código)
+  9. Como mandar atualizações
+ 10. Limitações conhecidas e próximos passos
 
-O QUE JÁ TEM
-- O SOLDADO ORIGINAL do HTML (camuflagem urbana, colete, mochila, capacete), com a mesma animação por código:
-  passada, corrida, pulo, pouso, inclinação nas curvas, e os braços segurando a arma de verdade (IK).
-- ARMAS iguais às do HTML: PISTOLA (12/60, semiautomática) e M4 (30/180, automática).
-  Mesma cadência, alcance (150 / 260 m), dispersão, recuo de câmera, traçantes, clarão, faíscas, marcas de bala,
-  som e tempo de recarga. Recarga sozinha quando o pente acaba. Dano: pistola 34 · M4 21 · cabeça x3 (vida 100).
-- CORRER (7,2 m/s, cancela agachar e mirar).
-- AGACHAR (novo): anda a 1,0 / 1,8 m/s, mira mais firme (0,6x), cápsula menor. Não levanta debaixo de teto baixo.
-  Pular agachado = levantar.
-- MIRAR (novo): câmera vai para cima do ombro direito e aproxima, mira mais firme (0,5x), anda no máximo 2,2 m/s.
-- HUD de combate: mira que abre ao andar/correr/pular/atirar, munição (fica vermelha com pouca bala),
-  marcador de acerto (vermelho = cabeça ou abate), avisos ("SEM MUNIÇÃO", nome da arma).
-- ESTANDE DE TIRO na base militar, na sua frente ao nascer: 8 alvos a 15, 25, 40 e 60 m que caem e levantam,
-  com placar (acertos, tiros na cabeça, derrubados).
-- Cidade com colisão (chão e prédios) e câmera que encurta ao bater em parede.
-- CIDADE NOVA (visual): ruas com junções arredondadas que se encaixam em curvas e cruzamentos (pontas que
-  quase encostavam são ligadas), calçadas, faixas amarelas/brancas que fecham em chanfro nas curvas, faixa de
-  pedestre e linha de parada nos cruzamentos; mar com ondas, reflexo do sol, cor rasa na costa e espuma na praia;
-  praias de areia; parques com árvores; prédios com janelas, lojas no térreo, tipos (concreto, tijolo, pedra,
-  vidro), torres escalonadas e caixas d'água. Prédios e árvores em blocos de 1 km (o celular só desenha o que vê).
-- MENU PRINCIPAL igual ao do HTML (novo): cena do pôr do sol com a skyline e o soldado no terraço,
-  "DIAS DE UM / APOCALIPSE / NOVA YORK", Continuar (jogo salvo), História · Ato 1, Jogar (mundo livre), Opções.
-- OPÇÕES igual ao HTML (novo): Controles · Câmera · HUD · Gráficos · Vídeo e som · Ajuda. Salvas no aparelho.
-  Funcionam: toque/giroscópio, sensibilidade, eixo invertido, vibração, distância/posição/campo de visão da câmera,
-  personalizar HUD (arrastar e mudar tamanho), opacidade e tamanho da HUD, contador de FPS, som, volume,
-  manter tela ligada, tela cheia, sombras, distância de visão, neblina, resolução (+ dinâmica), anti-aliasing,
-  limite de FPS, brilho, contraste, saturação, vinheta e as predefinições.
-  Marcadas "(em breve)" (ficam salvas, sem efeito por enquanto): shaders, texturas, modelos, distância dos
-  detalhes, efeitos, densidade do cenário, água, fios, halos, anisotrópica; e cockpit e aceleração. (Minimapa agora funciona.)
-- PAUSA (novo): botão II, P ou Esc · Continuar, Opções, Voltar ao início, Menu principal.
-- MÚSICA PROCEDURAL DE TERROR (novo): nunca repete igual. 13 instrumentos gerados por código (drone grave,
-  vento, cordas, violinos em tremolo, caixinha de música, piano desafinado, sino, coração, tambor, baixo
-  pulsante, coro, prato ao contrário e grito de violinos) com reverb de salão. A TENSÃO sobe com tiros, acertos
-  e corrida e desce sozinha: calma -> suspense (cordas, coro, coração) -> tensão (tremolo, baixo, tambores).
+-----------------------------------------------------------------------------------------------------
+1. COMO ABRIR, JOGAR E GERAR O APK
+-----------------------------------------------------------------------------------------------------
+- Celular: instale DiasDeUmApocalipse.apk (pasta principal do repositório; Android arm64, paisagem).
+  Ele é assinado sempre com a mesma chave (dda.keystore), então cada versão nova instala por cima da antiga
+  e o jogo salvo continua.
+- PC: Godot 4.3 > Importar projeto > escolha esta pasta (a que tem project.godot) > Rodar (F5).
+  Renderizador "Compatibilidade" (GL Compatibility), o mesmo do celular.
+  Ao entrar no jogo, a cidade leva ~2 s para ser montada (veja "Cidade pronta em ... ms" na Saída).
+- Gerar o APK: Projeto > Exportar > "Android" (já configurado: paisagem, tela cheia, VIBRATE, arm64, ETC2).
+  Release: keystore ../dda.keystore · usuário dda · senha android (ou as variáveis de ambiente
+  GODOT_ANDROID_KEYSTORE_RELEASE_PATH / _USER / _PASSWORD). Precisa do Android SDK (build-tools) e do Java em
+  Configurações do Editor > Exportar > Android. A cada versão nova, aumente "versão/código" em export_presets.cfg.
+- Se der erro, mande a mensagem exata (painel Saída/Depurador) ou uma foto da tela.
+
+-----------------------------------------------------------------------------------------------------
+2. O JOGO HOJE
+-----------------------------------------------------------------------------------------------------
+MENU PRINCIPAL (igual ao do HTML)
+- Cena 3D do pôr do sol com a skyline e o soldado no terraço; título "DIAS DE UM / APOCALIPSE / NOVA YORK".
+- CONTINUAR (aparece quando existe jogo salvo: dia, hora e minutos jogados) · HISTÓRIA · ATO 1 ·
+  JOGAR / NOVO JOGO (mundo livre) · OPÇÕES · botão de tela cheia.
+- MÚSICA PROCEDURAL DE TERROR em tudo (veja abaixo).
+
+OPÇÕES (iguais às do HTML; salvas no aparelho em user://opcoes.cfg)
+- Abas Controles · Câmera · HUD · Gráficos · Vídeo e som · Ajuda.
+- Funcionam: toque/giroscópio, sensibilidade, eixo invertido, vibração, distância/posição/campo de visão da
+  câmera, PERSONALIZAR HUD (arrastar botões e mudar tamanho), opacidade e tamanho da HUD, contador de FPS,
+  minimapa (visível/oculto), som, volume, música ligada/desligada e volume da música, manter tela ligada, tela
+  cheia, sombras, distância de visão, neblina, resolução (+ dinâmica), anti-aliasing, limite de FPS, brilho,
+  contraste, saturação, vinheta e as predefinições (automático/baixo/médio/alto/ultra).
+- "(em breve)" (ficam salvas, sem efeito ainda): shaders, texturas, modelos, distância dos detalhes, efeitos,
+  água, fios, halos, anisotrópica, cockpit, aceleração. ("Densidade do cenário" já muda a quantidade de carros
+  e entulho quando a cidade é montada.)
+
+PAUSA: botão II, P ou Esc · Continuar · Opções · Voltar ao início (jogo novo) · Menu principal (salva antes).
+
+A CIDADE (Liberty City, dados em data/city.json; o mapa tem ~22 x 17 km)
+- Ruas com junções arredondadas que se encaixam em curvas e cruzamentos, calçadas, faixas amarelas/brancas,
+  faixa de pedestre e linha de parada; mar com ondas, reflexo do sol, água rasa na costa e espuma; praias;
+  parques com árvores; ~18.600 prédios com janelas, lojas no térreo, tipos (concreto, tijolo, pedra, vidro),
+  torres escalonadas e caixas d'água; centro (Algonquin) com os prédios mais altos.
+- CIDADE ABANDONADA: ~11 mil carros largados (estacionados, parados no meio da pista, batidos, capotados,
+  tombados, 20% queimados), engarrafamentos de 3 a 10 carros, engavetamentos nos cruzamentos, táxis, vans e
+  ônibus; barreiras de concreto, caçambas, barris, sacos de lixo, cacos, montes de entulho, postes (alguns
+  caídos), semáforos nas esquinas (alguns tortos), hidrantes, bancos e árvores de calçada. Todos sólidos.
+- PRÉDIOS EM RUÍNA (~7%): partidos ao meio, queimados, com entulho em volta.
+- PRÉDIOS COM ENTRADA (~71% de todos, ~13.200): ao chegar perto, o térreo "abre" de verdade:
+  portas do lado da rua (algumas caídas), janelas com cacos no chão ou tapadas com tábuas, VITRINES nas lojas,
+  paredes, cômodos e móveis conforme o uso do prédio:
+    casa ......... sala (sofá, TV, poltrona, estante, tapete, mesinha, aparador, plantas, quadros, luminária),
+                   sala de jantar, escritório, cozinha (bancada, geladeira, fogão, mesa), quartos (cama,
+                   guarda-roupa, criado-mudo), banheiro (banheira, vaso, pia com espelho)
+    loja / mercado / farmácia ... balcão, prateleiras meio vazias, gôndolas, freezers, araras, depósito
+    restaurante .. mesas com cadeiras, balcão, cozinha industrial
+    escritório ... fileiras de mesas, arquivos, sala de reunião, copa
+    delegacia .... recepção, CELA com grades, sala de armas, mesas
+    clínica ...... sala de espera, consultórios com maca e armário de remédios
+  Sinais de abandono: móveis tombados, portas arrancadas, entulho, papéis, manchas, acampamentos de
+  sobreviventes (colchão com latas vazias) e barricadas de móveis.
+- ESTANDE DE TIRO na base militar do aeroporto (onde o jogo livre começa): 8 alvos a 15/25/40/60 m.
+
+DIA, NOITE E TEMPO
+- 1 dia de jogo = 48 min reais. O jogo livre começa às 8h. Sol nasce ~6h e se põe ~19h30.
+- Amanhecer laranja, dia, entardecer, noite com luar azulado (escura, mas dá para ver as ruas).
+- Tempo muda sozinho: limpo, nublado, chuva, tempestade (com relâmpagos e trovões). Chuva com som; dentro dos
+  prédios fica abafada e não molha.
+- Frio à noite e com chuva. LANTERNA na mão ou LANTERNA DE CABEÇA iluminam.
+
+SOBREVIVÊNCIA (estilo DayZ)
+- Ícones no canto de baixo à esquerda: VIDA, SANGUE, FOME, SEDE, TEMPERATURA (e MOLHADO quando chove),
+  gotas vermelhas = SANGRAMENTOS, cruz verde = INFECÇÃO. Branco = bem · amarelo · laranja · vermelho piscando =
+  perigo. Setas ▲▼ = subindo/caindo.
+- A tela pisca vermelho ao levar um golpe; com pouca vida/sangue perde a cor; no frio as bordas azulam e a
+  mira treme.
+- MORTE: tudo o que você carregava cai no chão, onde você caiu. Tela "VOCÊ MORREU" (causa, tempo vivo,
+  abates) > RENASCER: você volta numa rua a 0,8–2,5 km dali, só com camiseta, jeans, trapos, lanterna e uma maçã.
+
+INVENTÁRIO ESTILO DAYZ · botão INV (canto de cima), Tab ou I
+- ESQUERDA = o que está PERTO (2,2 m): itens no CHÃO, móveis/porta-malas/caixas e mochilas jogadas.
+  MEIO = o personagem: CABEÇA, CAMISA, COLETE, CINTO, OMBRO, COLDRE, CALÇA, MOCHILA, as MÃOS e a barra de atalhos
+  1..8; embaixo, informações do item (peso, balas, ESTADO, descrição) e os botões USAR / PEGAR / LARGAR / DIVIDIR.
+  DIREITA = o que você carrega: bolsos das roupas e a mochila (ex.: "MOCHILA (12/56)").
+- Cada item ocupa um retângulo de células. Arrastar e soltar entre grades/encaixes; durante o arraste,
+  R / Espaço / botão direito / 2º dedo = GIRAR. Soltar em cima de uma pilha igual = juntar.
+- Soltar MUNIÇÃO em cima de um PENTE = enche · PENTE em cima da arma = encaixa (o antigo volta para o lugar) ·
+  SILENCIADOR / MIRA / LUNETA em cima da arma = encaixa.
+- Botão USAR muda conforme o item: COMER, BEBER, USAR (remédios, kits), ENCHER (pente), DESMONTAR (arma na mão:
+  tira pente e acessórios), NA MÃO (o resto).
+- Duplo toque = ação rápida (pegar, vestir, usar, guardar a arma). Soltar no fundo da coluna da esquerda = largar.
+- Bolinha colorida no canto do ícone = estado do item (amarelo gasto ... vermelho muito danificado).
+- Regras: mochila/roupa com coisas dentro não entra em outra grade; nada entra em si mesmo; trocar o que está
+  na mão devolve o antigo ao coldre/ombro, ao inventário ou ao chão.
+
+ARMAS
+- A arma usada é a que está nas MÃOS. Jogo novo: pistola na mão (com pente), M4 no ombro, faca no bolso.
+- Armas de fogo: PISTOLA M9, M4A1, AKM, ESPINGARDA 12 (8 chumbos por tiro), RIFLE DE CAÇA (ferrolho).
+- PENTES (DayZ): RECARREGAR troca pelo pente mais cheio que você carrega (o vazio volta para o bolso). Sem pente
+  cheio, enche o pente encaixado com munição solta (mais demorado). Espingarda e rifle carregam munição solta.
+- ACESSÓRIOS: SILENCIADOR (pistola, M4, AKM: tiro baixo, sem clarão, os Vagos ouvem de 4x mais perto),
+  MIRA 4X (M4, AKM) e LUNETA (rifle): aproximam muito mais ao MIRAR. Aparecem no modelo da arma.
+- ESTADO: cada tiro/golpe gasta a arma. Abaixo de "PERFEITO" ela começa a TRAVAR (RECARREGAR destrava);
+  ARRUINADA não atira. KIT DE LIMPEZA conserta a arma das mãos.
+- CORPO A CORPO no botão ATIRAR: FACA, TACO, MACHADO, CANO, PÉ DE CABRA e PUNHOS (mãos vazias). Golpe com
+  animação (levanta e desce a arma); acerta o que estiver na frente.
+- HUD: mira que abre ao andar/correr/pular/atirar; painel de munição (balas no pente / reserva = munição solta
+  + balas dos outros pentes; vermelho com pouca bala); avisos "SEM PENTE", "TRAVADA", "RECARREGANDO";
+  marcador de acerto (vermelho = cabeça ou abate). Traçantes, clarão, faíscas, marcas de bala, sons sintetizados.
+
+MAPA E BÚSSOLA
+- MINIMAPA redondo no canto de cima à esquerda: gira com você (frente = cima), "N" na borda, ~250 m em volta.
+  Toque nele (ou tecla M) para abrir o MAPA GRANDE: arrastar, pinça / rodinha / + − para zoom, ⌖ volta para você,
+  X fecha. Com zoom alto, ruas e prédios ficam nítidos.
+- BÚSSOLA no alto: N, NE, L, SE, S, SO, O, NO, graus e o OBJETIVO (com distância).
+
+SALVAR
+- Salva sozinho a cada 2 minutos, ao pausar, ao voltar ao menu e quando o celular sai do jogo.
+- Guarda: posição, vida/sangue/fome/sede/temperatura, tudo o que você carrega (com balas, estado, pentes e
+  acessórios), os atalhos, a hora/dia/tempo, o que já foi saqueado em cada móvel/porta-malas, o que ficou no
+  chão dos prédios, itens que você largou (os 300 mais perto) e onde está na história.
+- Arquivo: user://save.json. Morto não salva (só depois de renascer).
+
+MÚSICA PROCEDURAL DE TERROR (nunca repete igual)
+- 13 instrumentos gerados por código: drone grave, vento, cordas, violinos em tremolo, caixinha de música,
+  piano desafinado, sino, coração, tambor, baixo pulsante, coro, prato ao contrário e grito de violinos, com reverb.
+- A TENSÃO sobe com tiros, acertos, corrida e morte e desce sozinha: calma -> suspense -> tensão.
   De vez em quando vem um SUSTO (prato subindo -> grito + tambor -> silêncio). Menu = versão calma.
-  Opções › Vídeo e som: Música ligada/desligada e Volume da música.
-- INVENTÁRIO ESTILO DAYZ (novo) · botão INV (canto de cima), Tab ou I:
-    ESQUERDA = o que está PERTO no mundo: itens no CHÃO, caixas/armários e mochilas jogadas (com o que tem dentro).
-    MEIO     = o personagem: CABEÇA, CAMISA, COLETE, CINTO, OMBRO, COLDRE, CALÇA, MOCHILA, as MÃOS e a barra
-               de atalhos 1..8; embaixo, informações do item tocado e os botões USAR / PEGAR / LARGAR / DIVIDIR.
-    DIREITA  = o que você carrega: bolsos da jaqueta, calça, colete, pochete e a mochila (ex.: "MOCHILA (12/56)").
-  Cada item ocupa um retângulo de células. Arrastar e soltar entre qualquer grade/encaixe; durante o arraste,
-  R / Espaço / botão direito / um 2º dedo na tela = GIRAR. Soltar em cima de uma pilha igual = juntar.
-  Duplo toque = ação rápida (pegar do chão, vestir, usar, guardar a arma). Soltar no fundo da coluna da esquerda
-  = largar no chão. Arrastar um item para a barra liga o atalho; arrastar o atalho para fora desliga.
-  Regras: mochila/roupa com coisas dentro não entra em outra grade; nada entra em si mesmo; trocar o que está
-  na mão devolve o antigo ao coldre/ombro (ou ao lugar de onde o novo veio, ao inventário ou ao chão).
-  Com o inventário aberto o jogador fica parado. Botão PEGAR (ou E) aparece perto de um item no chão.
-- ARMAS + INVENTÁRIO: a arma usada é a que está nas MÃOS. Começa com a pistola na mão e a M4 no ombro.
-  O pente fica na arma; RECARREGAR puxa munição (9MM / 5.56) dos bolsos e da mochila. ARMA/rodinha alterna
-  coldre <-> ombro; 1/2 (atalhos) pegam a pistola/M4 (apertar de novo guarda). Mãos vazias = sem arma.
-- LOOT DE TESTE ao nascer (só no começo de um jogo novo): na sua frente, itens no chão (mochila de combate, munição 5.56, comida...) e uma
-  CAIXA MILITAR (capacete, mochila escolar, pistola, munição 9MM...). Lista em mundo/loot.gd.
 
-CONTROLES (toque: vários dedos ao mesmo tempo)
-- Metade ESQUERDA da tela: joystick (aparece onde você toca; fraco = andar, forte = trote).
-- Metade DIREITA: olhar.
-- ATIRAR (segurar; dá para arrastar o dedo em cima dele para mirar enquanto atira) · CORRER (segurar)
-- PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga) · RECARREGAR · ARMA (troca coldre/ombro) · PEGAR · INV
-- VOO (canto de cima): câmera livre para ver a cidade (SOBE / DESCE / VEL); ao sair, o soldado desce ali.
-- PC: WASD · Shift correr · Espaço pular · C ou Ctrl agachar · F atirar · botão direito do mouse mirar ·
-  R recarregar · 1..8 atalhos · rodinha troca arma · Tab ou I inventário · E pegar ·
-  mouse arrastando na metade direita = olhar · V voo (Q/E no voo).
+INFECTADOS ("VAGOS") — EM ANDAMENTO
+- Os arquivos já existem (pasta inimigos/), mas AINDA NÃO ESTÃO LIGADOS no jogo (APK 0.7 não tem Vagos).
+- Como vão funcionar: vagam pelas ruas, ouvem tiros e passos (correr faz mais barulho, agachado quase nada),
+  enxergam num cone à frente (bem menos à noite e com você agachado), perseguem correndo, mordem (podem abrir
+  sangramento e, raramente, infecção), param de seguir se perderem você de vista, às vezes andam em bando,
+  caem com tiro na cabeça (dano x3), deixam itens às vezes. As roupas (proteção) seguram parte das mordidas.
 
-MAPA DO PROJETO (cada sistema no seu arquivo · numa atualização, mande/troque só os arquivos que mudaram)
+-----------------------------------------------------------------------------------------------------
+3. CONTROLES
+-----------------------------------------------------------------------------------------------------
+TOQUE (vários dedos ao mesmo tempo)
+- Metade ESQUERDA: joystick que aparece onde você toca (fraco = andar, forte = trote).
+- Metade DIREITA: arrastar = olhar. Minimapa: toque = mapa grande.
+- ATIRAR / GOLPEAR (segurar; dá para arrastar o dedo em cima dele para mirar enquanto atira) · CORRER (segurar)
+- PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga) · RECARREGAR · ARMA (troca coldre/ombro) · PEGAR
+  (aparece perto de um item) · INV · II (pausa) · VOO (câmera livre: SOBE / DESCE / VEL).
+- Nas falas da história: toque em qualquer lugar para continuar.
+PC
+- WASD andar · Shift correr · Espaço pular · C ou Ctrl agachar · F atirar/golpear · botão direito mirar ·
+  R recarregar · 1..8 atalhos · rodinha troca arma · Tab ou I inventário · E pegar · M mapa · P/Esc pausa ·
+  V voo (Q/E sobem/descem) · mouse arrastando na metade direita = olhar · Enter/Espaço avança as falas.
 
+-----------------------------------------------------------------------------------------------------
+4. NÚMEROS DO JOGO
+-----------------------------------------------------------------------------------------------------
+JOGADOR: andar 1,7 · trote 3,9 · correr 7,2 · agachado 1,0/1,8 · mirando 2,2 m/s · pulo 5,2 · gravidade 15.
+  Agachado: mira 0,6x mais firme; mirando: 0,5x. Câmera FOV 42, 2,35 m atrás, personagem à esquerda.
+
+ARMAS (dano por bala/golpe · cadência · alcance · barulho em metros)
+  pistola ......... 34 · 0,17 s · 150 m · 28 m · pente 12
+  M4 .............. 21 · 0,085 s (auto) · 260 m · 75 m · pente 30
+  AKM ............. 29 · 0,10 s (auto) · 240 m · 85 m · pente 30
+  espingarda ...... 15 x 8 chumbos · 0,85 s · 70 m · 95 m · 6 cartuchos
+  rifle de caça ... 95 · 1,25 s · 450 m · 120 m · 5 balas
+  faca 38 · taco 46 · machado 85 · cano 42 · pé de cabra 48 · punhos 13   (alcance 1,5–2,1 m)
+  Tiro na cabeça = x3. Vida dos alvos/Vagos = 100. Silenciador = barulho x0,22.
+
+SOBREVIVÊNCIA
+  fome zera em ~1 h e sede em ~40 min (correndo gasta mais) · cada sangramento = -5 ml/s de sangue (5000 ml)
+  sem fome/sede: perde vida · sangue < 2500: perde vida · sangue < 500: morre
+  bem alimentado (> 50) e sem sangrar: vida e sangue voltam devagar
+  temperatura do corpo vai para: clima + roupas (calor) - molhado; < 35 °C perde vida e a mira treme
+  molha com chuva sem teto (roupa impermeável protege); seca em 2,5–4 min
+
+CLIMA: 22 °C às 15h e 9 °C às 3h com céu limpo; chuva até -6 °C, nublado -1,5 °C.
+
+-----------------------------------------------------------------------------------------------------
+5. ITENS E LOOT
+-----------------------------------------------------------------------------------------------------
+ITENS (inventario/itens.gd; item novo = 1 linha na tabela DB)
+- Armas: pistola M9, M4A1, AKM, espingarda 12, rifle de caça · faca, taco, machado, cano, pé de cabra.
+- Munição: 9mm, 5.56, 7.62, cartucho 12, .308 · Pentes: de pistola (12), STANAG (30), de AK (30).
+- Acessórios: silenciador, mira 4x, luneta.
+- Médico: atadura, trapos (estancam), analgésicos (+15 vida), soro (+1200 sangue), kit de primeiros socorros
+  (estanca tudo, +40 vida), vitaminas, antibióticos (curam infecção).
+- Comida: feijão, atum, sardinha, pêssegos em calda, biscoitos, barra de cereal, salgadinho (dá sede), maçã.
+- Bebida: água, refrigerante, suco.
+- Ferramentas: fita adesiva e kit de costura (consertam roupas), kit de limpeza de armas, lanterna, corda,
+  rádio, isqueiro.
+- Roupas (calor / chuva / proteção): capacete tático, gorro, boné, lanterna de cabeça, camiseta, moletom,
+  jaqueta acolchoada, capa de chuva, colete tático, colete à prova de balas, calça cargo, jeans.
+- Mochilas: pochete, mochila escolar, de trilha, de combate.
+- Diversos: ursinho, revista velha, maço de dólares, celular quebrado.
+- ESTADO de todo item: PERFEITO > GASTO > DANIFICADO > MUITO DANIFICADO > ARRUINADO. Roupas gastam com mordidas.
+
+LOOT (mundo/loot_mundo.gd; tabelas no topo, com raridade e quantidades)
+- Cada móvel tem uma tabela: sala, quarto (roupas, às vezes pistola), cozinha (enlatados), geladeira (bebidas),
+  banheiro (remédios), mercado, farmácia, loja, loja de roupas, balcão (dinheiro, às vezes pistola), escritório,
+  ARMÁRIO DE ARMAS da delegacia (pistolas, espingarda, M4, coletes, silenciador), depósito (ferramentas, rifle).
+- PORTA-MALAS dos carros (atrás do carro, a até 14 m aparece na lista "PERTO DE VOCÊ").
+- ITENS SOLTOS no chão dos prédios (até 4 por prédio, conforme o uso).
+- 35% dos móveis já foram saqueados. Armas vêm com pente pela metade (ou sem pente). Itens vêm gastos.
+- O conteúdo é sorteado na 1ª visita e fica guardado (e salvo): o que você pega não volta.
+- No jogo novo: loot de teste na base (itens no chão + CAIXA MILITAR) em mundo/loot.gd.
+
+-----------------------------------------------------------------------------------------------------
+6. A HISTÓRIA
+-----------------------------------------------------------------------------------------------------
+Menu > HISTÓRIA · ATO 1 (texto vindo do jogo em HTML; falas em historia/historia.gd, tabela FALAS):
+- PRÓLOGO (tela preta): "No começo, ninguém sabia o que estava acontecendo..."
+- CAPÍTULO 1 · A ÚLTIMA CORRIDA: à noite, cidade ainda inteira (sem carros largados e sem Vagos). DOMINIC e GREG
+  desafiam você; corrida a pé contra o relógio por 6 pontos de controle (anel amarelo + objetivo no
+  mapa/bússola; +6 s por ponto) até a linha "A MORTE DO MEDO". Tempo esgotado = tenta de novo.
+  Fim: "Era a última corrida. Ninguém ali sabia ainda." > FIM DA PARTE 1.
+- INTERLÚDIO · O COLAPSO (PROVISÓRIO, escrito só para ligar a corrida ao mundo aberto; troque pela Parte 2 —
+  "o bar e as notícias" — quando ela existir): semanas depois, a cidade caiu, "Vagos", rádio falando de abrigo
+  na base militar. Objetivos: encontrar comida, água e uma arma > chegar à base militar do aeroporto >
+  FIM DO ATO 1 > mundo aberto.
+- Personagens citados até agora: DOMINIC, GREG (rivais/amigos da corrida).
+- No HTML, a "Última Corrida" era de carro (Algonquin > Bohan/Broker); na Godot o jogo é só a pé.
+- Para criar mais capítulos: veja o topo de historia/historia.gd (etapas, dizer(...), titulo(...),
+  mapa.definir_objetivo(...)).
+
+-----------------------------------------------------------------------------------------------------
+7. MAPA DO PROJETO (cada sistema no seu arquivo · numa atualização, troque só os arquivos que mudaram)
+-----------------------------------------------------------------------------------------------------
 QUERO MEXER EM...                         ARQUIVO
-- onde o jogador nasce / ordem do jogo .. main.gd (só liga as partes: menu -> jogo -> pausa)
+- onde o jogador nasce / ordem do jogo,
+  morte/renascer, autosave ............ main.gd (só liga as partes: menu -> jogo -> pausa)
 
 MENUS E OPÇÕES (pasta menu/)
 - menu principal (título e botões) .... menu/menu_principal.gd
@@ -106,81 +254,113 @@ MENUS E OPÇÕES (pasta menu/)
 - o que cada opção faz no jogo ........ menu/aplicar_opcoes.gd
 - brilho/contraste/saturação/vinheta .. menu/filtro_tela.gd
 - menu de pausa ....................... menu/pausa.gd
+- tela de morte ....................... menu/tela_morte.gd
+- jogo salvo / continuar .............. menu/salvamento.gd
 - editor da HUD (arrastar botões) ..... menu/editor_hud.gd
 - cores, fontes e formato dos botões .. menu/ui.gd (fonte Roboto Condensed em menu/fontes, licença OFL)
 
 PERSONAGEM (pasta jogador/)
 - andar, correr, agachar, pular, câmera . jogador/jogador.gd (ajustes no Inspetor da cena jogador.tscn)
-- aparência e animação do soldado ...... jogador/soldado.gd
+- vida, sangue, fome, sede, frio ....... jogador/sobrevivencia.gd
+- aparência e animação do soldado ...... jogador/soldado.gd (poses das armas e do corpo a corpo)
 - modelo 3D próprio (.glb) e animações . jogador/animador_modelo.gd + modelos/LEIA-ME.txt
 - botões de toque, joystick, teclado ... jogador/controles.gd (posições e cores no _ready)
 - câmera livre (VOO) .................. jogador/camera_voo.gd
 
 ARMAS (pasta armas/)
-- dano, cadência, pente, alcance ...... armas/armas.gd (tabela WDEF no topo)
-- modelo 3D das armas ................. armas/modelos_armas.gd
+- dano, cadência, pente, alcance,
+  corpo a corpo, travar, desgaste ..... armas/armas.gd (tabela WDEF no topo)
+- modelo 3D das armas e acessórios .... armas/modelos_armas.gd
 - traçantes, clarão, marcas de bala ... armas/efeitos_tiro.gd
-- sons dos tiros ...................... armas/sons_armas.gd
+- sons dos tiros e golpes ............. armas/sons_armas.gd
 - mira e painel de munição (HUD) ...... armas/hud_combate.gd
 
 INVENTÁRIO / ITENS (pasta inventario/)
-- criar/alterar ITENS (tamanho, peso,
-  pilha, onde veste, bolsos) .......... inventario/itens.gd (tabela DB; item novo = 1 linha)
+- criar/alterar ITENS ................. inventario/itens.gd (tabela DB; item novo = 1 linha)
+- um item (estado, pente, acessórios,
+  salvar/carregar) .................... inventario/item.gd
 - regras (pegar, largar, trocar, mãos,
-  atalhos, munição da recarga) ........ inventario/inventario.gd
+  atalhos, pentes, acessórios, usar) .. inventario/inventario.gd
 - tela de 3 colunas ................... inventario/tela_inventario.gd
-- grade com arrastar · encaixes ....... inventario/grade_ui.gd · inventario/slot_ui.gd
+- grade com arrastar · encaixes ....... inventario/grade_ui.gd · inventario/slot_ui.gd · inventario/grade.gd
 - ícones dos itens .................... inventario/visual.gd (ou imagens em inventario/icones/<id>.png)
 - item no chão · caixa/armário ........ inventario/item_mundo.gd · inventario/caixa_mundo.gd
-- equipamento inicial do jogador ...... inventario/inventario.gd (função equipamento_inicial)
+- equipamento inicial / ao renascer ... inventario/inventario.gd (equipamento_inicial / equipamento_renascer)
+
+HUD (pasta hud/)
+- ícones de status, tela vermelha ..... hud/hud_status.gd
+- minimapa, mapa grande, bússola ...... hud/mapa.gd
+
+MUNDO / CONSTRUÇÕES (pasta mundo/)
+- prédios, ruas, calçadas, faixas,
+  parques/árvores, céu, sol, ruínas ... mundo/cidade.gd
+- aparência do mar, chão, asfalto,
+  janelas, interiores (shaders) ....... mundo/materiais_cidade.gd
+- colisão com chão/prédios/carros e tiros mundo/colisao_mundo.gd
+- cidade abandonada (carros, entulho) . mundo/abandono.gd
+- prédios por dentro (cômodos, portas) mundo/interior.gd
+- móveis .............................. mundo/moveis.gd (tamanhos em TAM)
+- quais prédios abrem perto do jogador, porta-malas mundo/interiores.gd
+- loot de cada móvel/carro/chão ....... mundo/loot_mundo.gd (tabelas no topo)
+- loot de teste na base ............... mundo/loot.gd
+- dia/noite, chuva, frio, lanterna .... mundo/clima.gd
+- juntar caixas numa malha só ......... mundo/malhas.gd
+- estande de tiro (alvos) ............. mundo/estande_tiro.gd
+- dados do mapa ....................... data/city.json
+
+INFECTADOS (pasta inimigos/) — ainda não ligados no main.gd
+- comportamento, vida, velocidade ..... inimigos/vago.gd
+- aparência e animação ................ inimigos/modelo_vago.gd
+- quantos aparecem e onde ............. inimigos/vagos.gd
+
+HISTÓRIA (pasta historia/)
+- falas, etapas, corrida .............. historia/historia.gd
 
 MÚSICA (pasta audio/)
 - compositor (escalas, andamento, quando
   cada instrumento toca, sustos) ...... audio/musica_procedural.gd (autoload "Musica")
 - timbre dos instrumentos ............. audio/instrumentos.gd (sintetizados por código, sem arquivos de áudio)
 
-MUNDO / CONSTRUÇÕES (pasta mundo/)
-- prédios, ruas, calçadas, faixas,
-  parques/árvores, céu, sol ........... mundo/cidade.gd
-- aparência do mar, chão, asfalto,
-  janelas dos prédios ................. mundo/materiais_cidade.gd (shaders)
-- colisão com chão/prédios e tiros .... mundo/colisao_mundo.gd
-- loot espalhado (chão e caixas) ...... mundo/loot.gd (listas no topo)
-- estande de tiro (alvos) ............. mundo/estande_tiro.gd (use receber_tiro(...) nos inimigos Vagos)
-- cidade abandonada (carros, entulho) .. mundo/abandono.gd
-- prédios por dentro (cômodos, portas) . mundo/interior.gd · móveis: mundo/moveis.gd
-- quais prédios abrem perto do jogador . mundo/interiores.gd
-- loot de cada móvel/carro/chão ........ mundo/loot_mundo.gd (tabelas no topo)
-- dia/noite, chuva, frio, lanterna ..... mundo/clima.gd
-- juntar caixas numa malha só .......... mundo/malhas.gd
-- dados do mapa ....................... data/city.json
+-----------------------------------------------------------------------------------------------------
+8. COMO FUNCIONA POR DENTRO
+-----------------------------------------------------------------------------------------------------
+- Godot 4.3, GDScript, renderizador GL Compatibility (celular). Sem arquivos de som/textura: sons, música,
+  ícones, armas, soldado e móveis são feitos por código. Fonte Roboto Condensed (menu/fontes).
+- Autoloads: Config (menu/config.gd) e Musica (audio/musica_procedural.gd).
+- Fluxo (main.gd): MENU -> _jogar() -> cidade.construir() (uma vez) -> _criar_jogo() cria o nó "Jogo" com:
+  Controles, ColisaoMundo, Jogador (+ Inventario, Sobrevivencia, Armas), HudCombate, HudStatus, Mapa, Clima,
+  Historia, EstandeTiro, TelaInventario, Interiores, CameraVoo. Voltar ao menu apaga o nó "Jogo".
+- Coordenadas: x = leste, z = sul (NORTE = -Z). 1 unidade = 1 metro. Rua em y 0,6, calçada 0,55.
+- Camadas de física: 1 = mundo · 2 = jogador · 3 = inimigos/alvos. Quem leva tiro tem
+  receber_tiro(dano, ponto, direcao, forma, atirador) -> {"cabeca", "morto"} (forma 1 = cabeça);
+  golpe corpo a corpo: receber_golpe(dano, direcao, atacante). Jogador recebe mordida: receber_ataque(dano,
+  chance_sangrar, origem). Tiros avisam o sinal armas.barulho(posição, raio).
+- Desenho leve: prédios, árvores, carros e entulho em MultiMesh por blocos de 1 km com distância de visão;
+  shaders próprios (água, asfalto, prédios com janelas, interiores). Shaders iguais são compilados uma vez só.
+- Colisão só perto do jogador: chão em heightmap de 96 m que acompanha o jogador, caixas dos prédios (40 m) e
+  dos carros/obstáculos (30 m). Tiros longe usam os dados da cidade.
+- Interiores (streaming): até 5 prédios abertos, a 42 m da parede abre e a 62 m fecha; a parte pesada é feita
+  numa thread (WorkerThreadPool) e cada interior vira 1 malha (4 superfícies) + 1 corpo de colisão.
+  O bloco original do prédio some enquanto o interior está aberto.
+- Mapa: imagem do mapa feita uma vez (SubViewport), minimapa girado por shader.
+- Arquivos do aparelho: user://opcoes.cfg (opções) e user://save.json (jogo salvo).
 
-INFECTADOS (pasta inimigos/)
-- comportamento (ouvir, ver, perseguir,
-  morder), vida, velocidade ........... inimigos/vago.gd
-- aparência e animação ................ inimigos/modelo_vago.gd
-- quantos aparecem e onde ............. inimigos/vagos.gd
+-----------------------------------------------------------------------------------------------------
+9. COMO MANDAR ATUALIZAÇÕES
+-----------------------------------------------------------------------------------------------------
+- A cada atualização vêm SÓ os arquivos que mudaram, num .zip já com as pastas certas: extraia por cima desta
+  pasta (DDA_Godot_Cidade/) e confirme substituir. Junto vem a lista de arquivos alterados/novos/apagados e o
+  que mudou em cada um. O APK novo fica na pasta principal do repositório.
+- Para pedir mudanças, diga o sistema (use o MAPA acima) ou mande foto/mensagem de erro.
 
-SOBREVIVÊNCIA / HUD / HISTÓRIA
-- vida, sangue, fome, sede, frio ...... jogador/sobrevivencia.gd
-- ícones de status, tela vermelha ..... hud/hud_status.gd
-- minimapa, mapa grande, bússola ...... hud/mapa.gd
-- tela de morte ....................... menu/tela_morte.gd
-- jogo salvo / continuar .............. menu/salvamento.gd
-- história (falas, etapas, corrida) ... historia/historia.gd
-
-CAMADAS DE FÍSICA: 1 = mundo · 2 = jogador · 3 = inimigos/alvos.
-
-ANDROID: o APK pronto fica na pasta principal do repositório (DiasDeUmApocalipse.apk, arm64, assinado com
-dda.keystore). Para gerar de novo: Projeto > Exportar > "Android" (já configurado: paisagem, tela cheia, VIBRATE).
-Na exportação de release informe o keystore ../dda.keystore (usuário dda, senha android), ou use as variáveis
-GODOT_ANDROID_KEYSTORE_RELEASE_PATH / _USER / _PASSWORD. Precisa do Android SDK (build-tools) e do Java nas
-Configurações do Editor > Exportar > Android.
-
-LIMITAÇÕES CONHECIDAS (por enquanto)
-- Só o TÉRREO dos prédios abre (os andares de cima ainda não).
-- História: só o Ato 1 · Parte 1 é do texto original; o interlúdio "O Colapso" é provisório.
-- Sem 1ª pessoa (o HTML tinha); o mar é "caminhável".
-- A base militar ainda não tem os prédios/pistas do HTML.
-
-Se der erro, me mande a mensagem exata (painel "Saída"/"Depurador") ou uma foto da tela.
+-----------------------------------------------------------------------------------------------------
+10. LIMITAÇÕES CONHECIDAS E PRÓXIMOS PASSOS
+-----------------------------------------------------------------------------------------------------
+- Infectados (Vagos) ainda não ligados no jogo (em andamento).
+- Só o TÉRREO dos prédios abre (andares de cima ainda não).
+- História: só o Ato 1 · Parte 1 é do texto original; o interlúdio "O Colapso" é provisório. Falta a Parte 2
+  ("o bar e as notícias") e os próximos atos.
+- Sem 1ª pessoa (o HTML tinha); o mar é "caminhável"; a base militar ainda não tem os prédios/pistas do HTML.
+- Transformação em carro e jato do HTML foi descartada: o jogo é só a pé.
+- Ideias para depois: andares de cima, cozinhar/fogueira, pescar/caçar, construir base, veículos consertáveis,
+  outros sobreviventes (NPCs), mais atos da história.
