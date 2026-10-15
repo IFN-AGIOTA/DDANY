@@ -347,11 +347,16 @@ func atualizar_procedural(dt: float, j) -> void:
 func _pose_arma(j, R: float, air: float) -> void:
 	var ar = j.get("armas")
 	var tipo := ""
+	var pose := ""
 	if ar != null:
 		tipo = ar.atual
+		pose = String(ar.WDEF.get(tipo, {}).get("pose", tipo))
 	for t in armas_seguradas:
 		(armas_seguradas[t] as Node3D).visible = (t == tipo)
-	if tipo == "" or not armas_seguradas.has(tipo) or not POSE.has(tipo):
+	if pose == "branca" or pose == "punhos":
+		_pose_corpo_a_corpo(ar, tipo, pose, R, air)
+		return
+	if tipo == "" or not armas_seguradas.has(tipo) or not POSE.has(pose):
 		# sem arma: braços balançam como no HTML
 		for i in 2:
 			var a: Dictionary = arms[i]
@@ -360,7 +365,7 @@ func _pose_arma(j, R: float, air: float) -> void:
 			p.rotation = Vector3(lerpf(-0.5, -0.25, R) - sa * (0.12 + 0.5 * R) * mv - 0.35 * air, 0.0, -a["s"] * (0.32 - 0.12 * R) + a["s"] * air * 0.45)
 			(a["e"] as Node3D).rotation = Vector3(-1.05 - R * 0.5 - 0.25 * R * mv * maxf(0.0, sa), 0.0, 0.0)
 		return
-	var P: Dictionary = POSE[tipo]
+	var P: Dictionary = POSE[pose]
 	var g: Node3D = armas_seguradas[tipo]
 	var aim: float = ar.aim
 	var dr: float = ar.draw
@@ -378,6 +383,46 @@ func _pose_arma(j, R: float, air: float) -> void:
 	var l: Array = P["l"]
 	_ik(arms[1], gt * Vector3(r[0], r[1], r[2]))    # mão direita (empunhadura)
 	_ik(arms[0], gt * Vector3(l[0], l[1], l[2]))    # mão esquerda (apoio)
+
+# armas brancas e socos: arma na mão direita, golpe de cima para baixo; a esquerda protege o rosto
+func _pose_corpo_a_corpo(ar, tipo: String, pose: String, R: float, air: float) -> void:
+	var gp: float = ar.golpe            # 1 (começo) -> 0 (fim)
+	var fase := 1.0 - gp
+	if pose == "punhos":
+		if gp <= 0.0:
+			for i in 2:
+				var a: Dictionary = arms[i]
+				var sa := sin(ph + (PI if i == 1 else 0.0) + PI)
+				(a["p"] as Node3D).rotation = Vector3(lerpf(-0.5, -0.25, R) - sa * (0.12 + 0.5 * R) * mv - 0.35 * air, 0.0, -a["s"] * (0.32 - 0.12 * R))
+				(a["e"] as Node3D).rotation = Vector3(-1.05 - R * 0.5, 0.0, 0.0)
+			return
+		var soco := sin(clampf(fase / 0.6, 0.0, 1.0) * PI)
+		_ik(arms[1], Vector3(-0.1, 0.42, 0.18 + 0.32 * soco))
+		_ik(arms[0], Vector3(0.1, 0.44, 0.2))
+		return
+	if not armas_seguradas.has(tipo):
+		return
+	var g: Node3D = armas_seguradas[tipo]
+	# parado: arma em pé ao lado do corpo · golpe: levanta para trás (0-35%) e desce na frente (35-70%)
+	var ang := -1.25
+	var pos := Vector3(-0.2, 0.2, 0.18)
+	if gp > 0.0:
+		if fase < 0.35:
+			var t := fase / 0.35
+			ang = lerpf(-1.25, -2.4, t)
+			pos = pos.lerp(Vector3(-0.18, 0.5, 0.0), t)
+		elif fase < 0.7:
+			var t := (fase - 0.35) / 0.35
+			ang = lerpf(-2.4, 0.7, t)
+			pos = Vector3(-0.18, 0.5, 0.0).lerp(Vector3(-0.08, 0.28, 0.42), t)
+		else:
+			var t := (fase - 0.7) / 0.3
+			ang = lerpf(0.7, -1.25, t)
+			pos = Vector3(-0.08, 0.28, 0.42).lerp(Vector3(-0.2, 0.2, 0.18), t)
+	g.position = pos
+	g.rotation = Vector3(ang, 0.0, 0.0)
+	_ik(arms[1], pos + Vector3(0.0, -0.02, 0.0))
+	_ik(arms[0], Vector3(0.12, 0.38, 0.16))
 
 # pose parada do MENU PRINCIPAL (porte do menuPose do HTML): peso numa perna, respirando, M4 baixa,
 # cabeça virada para o sol. t = tempo em segundos.

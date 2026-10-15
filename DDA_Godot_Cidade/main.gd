@@ -14,6 +14,14 @@ const EstandeCls := preload("res://mundo/estande_tiro.gd")
 const LootCls := preload("res://mundo/loot.gd")
 const LootMundoCls := preload("res://mundo/loot_mundo.gd")
 const InterioresCls := preload("res://mundo/interiores.gd")
+const HudStatusCls := preload("res://hud/hud_status.gd")
+const MapaCls := preload("res://hud/mapa.gd")
+const ClimaCls := preload("res://mundo/clima.gd")
+const Salvamento := preload("res://menu/salvamento.gd")
+const HistoriaCls := preload("res://historia/historia.gd")
+const AUTOSALVAR := 120.0                   # segundos entre salvamentos automáticos
+const TelaMorteCls := preload("res://menu/tela_morte.gd")
+const ItemMundoCls := preload("res://inventario/item_mundo.gd")
 const ControlesCls := preload("res://jogador/controles.gd")
 const CameraVooCls := preload("res://jogador/camera_voo.gd")
 const HudCls := preload("res://armas/hud_combate.gd")
@@ -42,7 +50,14 @@ var pausa: CanvasLayer
 var aplicador: Node
 var loot_mundo                              # mundo/loot_mundo.gd (o que tem em cada móvel/carro, guardado)
 var interiores: Node                        # mundo/interiores.gd (prédios por dentro perto do jogador)
+var hud_status: CanvasLayer                 # hud/hud_status.gd (vida, sangue, fome, sede, temperatura)
+var tela_morte: CanvasLayer
+var mapa: CanvasLayer                       # hud/mapa.gd (minimapa, mapa grande e bússola)
+var clima: Node                             # mundo/clima.gd (dia/noite, chuva, temperatura, lanterna)
+var historia: CanvasLayer                   # historia/historia.gd (Ato 1)
+var abates := 0
 var _tempo_jogo := 0.0
+var _t_salvar := 0.0
 
 # Preview dentro do editor (não é salvo na cena; leva alguns segundos e pesa no celular)
 @export var preview_no_editor := false:
@@ -91,11 +106,12 @@ func _abrir_menu() -> void:
 	menu.name = "MenuPrincipal"
 	add_child(menu)
 	menu.jogar.connect(_jogar)
-	menu.historia.connect(func(): menu.avisar("A História · Ato 1 ainda não chegou na versão Godot. Use Jogar (mundo livre)."))
+	menu.continuar.connect(func(): _jogar(true))
+	menu.historia.connect(func(): _jogar(false, true))
 	menu.opcoes.connect(_abrir_opcoes)
 	Musica.definir_modo("menu")
 
-func _jogar() -> void:
+func _jogar(carregar_salvo := false, modo_historia := false) -> void:
 	menu.mostrar_carregando()
 	await get_tree().process_frame          # deixa o "CARREGANDO" aparecer antes de montar a cidade
 	await get_tree().process_frame
@@ -107,6 +123,22 @@ func _jogar() -> void:
 		cidade.construir()
 	cidade.visible = true
 	_criar_jogo()
+	if carregar_salvo:
+		var d := Salvamento.ler()
+		if not d.is_empty():
+			Salvamento.carregar(self, d)
+	elif modo_historia:
+		historia.iniciar(self)
+
+func salvar_jogo() -> void:
+	if jogo != null and jogador != null:
+		_t_salvar = 0.0
+		Salvamento.salvar(self)
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		if not Engine.is_editor_hint():
+			salvar_jogo()
 
 func _abrir_opcoes() -> void:
 	if opcoes != null:
@@ -144,6 +176,7 @@ func _pausar() -> void:
 		return
 	if tela_inventario != null and tela_inventario.aberto:
 		tela_inventario.fechar()
+	salvar_jogo()
 	get_tree().paused = true
 	pausa = PausaCls.new()
 	pausa.name = "Pausa"
@@ -156,6 +189,7 @@ func _pausar() -> void:
 		_fechar_jogo()
 		_criar_jogo())
 	pausa.menu_principal.connect(func():
+		salvar_jogo()
 		_continuar()
 		_abrir_menu())
 
@@ -202,6 +236,25 @@ func _criar_jogo() -> void:
 	hud.name = "HudCombate"
 	jogo.add_child(hud)
 	hud.ligar(jogador.armas, jogador)
+	hud_status = HudStatusCls.new()
+	hud_status.name = "HudStatus"
+	jogo.add_child(hud_status)
+	hud_status.ligar(jogador)
+	mapa = MapaCls.new()
+	mapa.name = "Mapa"
+	jogo.add_child(mapa)
+	mapa.ligar(cidade, jogador, controles)
+	clima = ClimaCls.new()
+	clima.name = "Clima"
+	jogo.add_child(clima)
+	clima.ligar(cidade, jogador)
+	jogador.sobrevivencia.clima = clima
+	historia = HistoriaCls.new()
+	historia.name = "Historia"
+	historia.main = self
+	jogo.add_child(historia)
+	jogador.sobrevivencia.morreu.connect(_morreu)
+	abates = 0
 	estande = EstandeCls.new()
 	estande.name = "EstandeTiro"
 	estande.mundo = mundo
@@ -232,7 +285,66 @@ func _criar_jogo() -> void:
 	jogador.armas.disparou.connect(func(_a): Musica.adicionar_tensao(0.05))
 	jogador.armas.acertou.connect(func(_c, matou): Musica.adicionar_tensao(0.12 if matou else 0.03))
 
+# ---------- morte e renascimento ----------
+func _morreu(causa: String) -> void:
+	if jogador == null:
+		return
+	# tudo o que ele carregava cai no chão, junto do corpo
+	var p := jogador.global_position
+	for it in jogador.inventario.esvaziar():
+		var a := randf() * TAU
+		var r := randf_range(0.3, 1.1)
+		ItemMundoCls.soltar(jogo, it, p + Vector3(cos(a) * r, 0.02, sin(a) * r))
+	Musica.adicionar_tensao(1.0)
+	await get_tree().create_timer(2.5).timeout
+	if jogador == null or not jogador.morto or tela_morte != null:
+		return
+	tela_morte = TelaMorteCls.new()
+	tela_morte.causa = causa
+	tela_morte.tempo_vivo = jogador.sobrevivencia.tempo_vivo
+	tela_morte.abates = abates
+	add_child(tela_morte)
+	controles.set_bloqueado(true)
+	tela_morte.renascer.connect(_renascer)
+	tela_morte.menu_principal.connect(func():
+		_fechar_morte()
+		_abrir_menu())
+
+func _fechar_morte() -> void:
+	if tela_morte != null:
+		tela_morte.queue_free()
+		tela_morte = null
+
+func _renascer() -> void:
+	_fechar_morte()
+	var morte := Vector2(jogador.global_position.x, jogador.global_position.z)
+	var p := _ponto_renascer(morte)
+	jogador.morto = false
+	jogador.sobrevivencia.reiniciar()
+	jogador.inventario.equipamento_renascer()
+	mundo.forcar(p)
+	jogador.teleportar(Vector3(p.x, mundo.altura(p.x, p.y) + 0.1, p.y), randf() * TAU)
+	controles.set_bloqueado(false)
+	abates = 0
+	salvar_jogo()
+
+# ponto numa rua a 800-2500 m de onde morreu (como no DayZ: renasce longe das suas coisas)
+func _ponto_renascer(longe_de: Vector2) -> Vector2:
+	var r := RandomNumberGenerator.new()
+	r.randomize()
+	for tentativa in 400:
+		var c := r.randi_range(0, cidade.W - 1)
+		var l := r.randi_range(0, cidade.H - 1)
+		if cidade.road[l * cidade.W + c] != 1:
+			continue
+		var p := Vector2((c + 0.5) * cidade.CELL - cidade.WORLD.x, (l + 0.5) * cidade.CELL - cidade.WORLD.y)
+		var d := p.distance_to(longe_de)
+		if d > 800.0 and d < 2500.0:
+			return p
+	return SPAWN
+
 func _fechar_jogo() -> void:
+	_fechar_morte()
 	if interiores != null and is_instance_valid(interiores):
 		interiores.fechar_todos()           # devolve os blocos dos prédios para a cidade
 	interiores = null
@@ -246,11 +358,18 @@ func _fechar_jogo() -> void:
 	estande = null
 	tela_inventario = null
 	voo = null
+	hud_status = null
+	mapa = null
+	clima = null
+	historia = null
 
 func _process(dt: float) -> void:
 	if Engine.is_editor_hint() or controles == null or not is_instance_valid(controles) or get_tree().paused:
 		return
 	_tempo_jogo += dt
+	_t_salvar += dt
+	if _t_salvar >= AUTOSALVAR:
+		salvar_jogo()
 	if jogador.vel_horizontal > 5.0:
 		Musica.adicionar_tensao(dt * 0.045)            # correndo: a música aperta
 	if voo.ativo:

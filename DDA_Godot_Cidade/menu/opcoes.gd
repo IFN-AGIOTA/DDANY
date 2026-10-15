@@ -3,7 +3,7 @@ extends CanvasLayer
 # Tudo é salvo na hora em Config (menu/config.gd) e aplicado no jogo por menu/aplicar_opcoes.gd.
 # Na aba Gráficos as mudanças só valem ao tocar APLICAR (como no HTML).
 # Opções marcadas "(em breve)" ficam salvas, mas ainda não têm efeito na versão Godot (não existe carro,
-# minimapa, câmera cockpit, fachadas com shader, fios, halos etc. ainda).
+# câmera cockpit, fachadas com shader, fios, halos etc. ainda).
 # Mexa AQUI para: o que aparece em cada aba e os textos da Ajuda.
 
 signal fechar
@@ -261,7 +261,7 @@ func _pagina_hud(v: float) -> Control:
 	col.add_child(b2)
 	_secao(g, "Posição e tamanho dos botões", col)
 	_secao(g, "Minimapa", _seg("map", [[true, "Visível"], [false, "Oculto"]],
-		{true: "O minimapa ainda não existe na versão Godot (fica salvo).", false: "O minimapa ainda não existe na versão Godot (fica salvo)."}))
+		{true: "Minimapa no canto de cima (toque nele para abrir o mapa grande).", false: "Sem minimapa: só a bússola. O mapa grande abre com M."}))
 	_deslizante("op", 35, 100, 5, "%", g, "Opacidade da HUD")
 	_deslizante("sc", 70, 125, 5, "%", g, "Tamanho geral da HUD")
 	return _rolavel(g)

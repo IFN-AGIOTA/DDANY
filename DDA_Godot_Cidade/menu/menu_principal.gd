@@ -4,10 +4,12 @@ extends CanvasLayer
 # Mexa AQUI para: textos e botões do menu principal. (A cena 3D de fundo é menu/cena_menu.gd.)
 
 signal jogar
+signal continuar
 signal historia
 signal opcoes
 
 const UI := preload("res://menu/ui.gd")
+const Salvamento := preload("res://menu/salvamento.gd")
 
 var _raiz: Control
 var _aviso: Label
@@ -97,11 +99,18 @@ func _montar() -> void:
 	nav.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var b1 := UI.BotaoMenu.new("História · Ato 1", "Parte 1 · A Última Corrida", true, 3.8)
 	b1.apertado.connect(func(): historia.emit())
-	var b2 := UI.BotaoMenu.new("Jogar", "Mundo livre", false, 3.8)
+	var salvo: String = Salvamento.resumo()
+	var b2 := UI.BotaoMenu.new("Novo jogo" if salvo != "" else "Jogar", "Mundo livre", false, 3.8)
 	b2.apertado.connect(func(): jogar.emit())
 	var b3 := UI.BotaoMenu.new("Opções", "", false, 3.8)
 	b3.apertado.connect(func(): opcoes.emit())
-	for b in [b1, b2, b3]:
+	var botoes: Array = [b1, b2, b3]
+	if salvo != "":
+		var b0 := UI.BotaoMenu.new("Continuar", salvo, true, 3.8)
+		b0.apertado.connect(func(): continuar.emit())
+		botoes.push_front(b0)
+		b1.primario = false
+	for b in botoes:
 		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		nav.add_child(b)
 	col.add_child(nav)

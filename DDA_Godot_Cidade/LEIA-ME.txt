@@ -1,7 +1,32 @@
-DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4 (passo 3: jogabilidade do soldado)
+DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4 (versão 0.7: sobrevivência estilo DayZ)
 1) Extraia o zip. 2) Godot 4.2+ > Importar projeto > escolha a pasta com project.godot. 3) Rodar (F5).
 Ao abrir leva alguns segundos para montar a cidade (veja "Cidade pronta em ... ms" na saída).
 (Transformação em carro e jato foi descartada: o jogo é só a pé.)
+
+NOVO NA 0.7
+- CIDADE ABANDONADA: carros largados (estacionados, batidos, capotados, queimados), engarrafamentos, ônibus,
+  barreiras, caçambas, lixo, entulho, postes caídos, semáforos tortos e prédios em RUÍNA (partidos ao meio).
+- PRÉDIOS COM ENTRADA (mais de 70%): ao chegar perto, o térreo "abre" com portas, janelas (algumas tapadas com
+  tábuas), cômodos com móveis conforme o uso — casas (sala, cozinha, quartos, banheiro), lojas, mercados, farmácias,
+  restaurantes, escritórios, delegacias (cela e armário de armas) e clínicas — e sinais de abandono (móveis
+  caídos, entulho, papéis, acampamentos de sobreviventes, barricadas).
+- LOOT POR LUGAR: cada móvel tem o seu (geladeira = bebida, guarda-roupa = roupas, armário de armas = armas...),
+  porta-malas dos carros e itens soltos no chão. Muita coisa já foi saqueada. O que você pega não volta.
+- MAIS DE 60 ITENS: comidas, bebidas, remédios, roupas (calor, chuva, proteção), mochilas, ferramentas.
+- ARMAS ESTILO DAYZ: AKM, espingarda 12, rifle de caça; PENTES de verdade (RECARREGAR troca pelo pente mais
+  cheio; arraste munição em cima do pente para encher, ou USAR = ENCHER); SILENCIADOR, MIRA 4X e LUNETA
+  (arraste em cima da arma); ESTADO dos itens (perfeito ... arruinado): arma gasta TRAVA (RECARREGAR destrava).
+  CORPO A CORPO com faca, taco, machado, cano, pé de cabra e PUNHOS (mãos vazias), no botão ATIRAR.
+- SOBREVIVÊNCIA: vida, sangue, fome, sede, temperatura, molhado, sangramentos e infecção, com ícones no canto
+  de baixo (setas = subindo/caindo). Morreu: suas coisas ficam no chão e você RENASCE longe, só com o básico.
+- INFECTADOS (VAGOS): vagam pelas ruas, ouvem tiros e passos, enxergam (menos à noite e com você agachado),
+  perseguem, mordem (podem abrir sangramento) e às vezes andam em bando.
+- DIA E NOITE (1 dia = 48 min), nuvens, chuva e tempestade com relâmpagos; frio à noite e na chuva;
+  LANTERNA na mão ou LANTERNA DE CABEÇA.
+- MINIMAPA (toque para abrir o MAPA grande: arrastar, pinça, + −), BÚSSOLA no alto com o objetivo.
+- SALVAR: salva sozinho (a cada 2 min, ao pausar e ao sair). No menu aparece CONTINUAR.
+- HISTÓRIA · ATO 1: prólogo, Capítulo 1 "A Última Corrida" (à noite, pontos de controle contra o relógio) e um
+  interlúdio provisório "O Colapso" (até a Parte 2 ser escrita) que leva ao mundo aberto.
 
 O QUE JÁ TEM
 - O SOLDADO ORIGINAL do HTML (camuflagem urbana, colete, mochila, capacete), com a mesma animação por código:
@@ -24,14 +49,14 @@ O QUE JÁ TEM
   praias de areia; parques com árvores; prédios com janelas, lojas no térreo, tipos (concreto, tijolo, pedra,
   vidro), torres escalonadas e caixas d'água. Prédios e árvores em blocos de 1 km (o celular só desenha o que vê).
 - MENU PRINCIPAL igual ao do HTML (novo): cena do pôr do sol com a skyline e o soldado no terraço,
-  "DIAS DE UM / APOCALIPSE / NOVA YORK", História · Ato 1 (ainda não existe no porte), Jogar (mundo livre), Opções.
+  "DIAS DE UM / APOCALIPSE / NOVA YORK", Continuar (jogo salvo), História · Ato 1, Jogar (mundo livre), Opções.
 - OPÇÕES igual ao HTML (novo): Controles · Câmera · HUD · Gráficos · Vídeo e som · Ajuda. Salvas no aparelho.
   Funcionam: toque/giroscópio, sensibilidade, eixo invertido, vibração, distância/posição/campo de visão da câmera,
   personalizar HUD (arrastar e mudar tamanho), opacidade e tamanho da HUD, contador de FPS, som, volume,
   manter tela ligada, tela cheia, sombras, distância de visão, neblina, resolução (+ dinâmica), anti-aliasing,
   limite de FPS, brilho, contraste, saturação, vinheta e as predefinições.
   Marcadas "(em breve)" (ficam salvas, sem efeito por enquanto): shaders, texturas, modelos, distância dos
-  detalhes, efeitos, densidade do cenário, água, fios, halos, anisotrópica; e cockpit, aceleração e minimapa.
+  detalhes, efeitos, densidade do cenário, água, fios, halos, anisotrópica; e cockpit e aceleração. (Minimapa agora funciona.)
 - PAUSA (novo): botão II, P ou Esc · Continuar, Opções, Voltar ao início, Menu principal.
 - MÚSICA PROCEDURAL DE TERROR (novo): nunca repete igual. 13 instrumentos gerados por código (drone grave,
   vento, cordas, violinos em tremolo, caixinha de música, piano desafinado, sino, coração, tambor, baixo
@@ -54,7 +79,7 @@ O QUE JÁ TEM
 - ARMAS + INVENTÁRIO: a arma usada é a que está nas MÃOS. Começa com a pistola na mão e a M4 no ombro.
   O pente fica na arma; RECARREGAR puxa munição (9MM / 5.56) dos bolsos e da mochila. ARMA/rodinha alterna
   coldre <-> ombro; 1/2 (atalhos) pegam a pistola/M4 (apertar de novo guarda). Mãos vazias = sem arma.
-- LOOT DE TESTE ao nascer: na sua frente, itens no chão (mochila de combate, munição 5.56, comida...) e uma
+- LOOT DE TESTE ao nascer (só no começo de um jogo novo): na sua frente, itens no chão (mochila de combate, munição 5.56, comida...) e uma
   CAIXA MILITAR (capacete, mochila escolar, pistola, munição 9MM...). Lista em mundo/loot.gd.
 
 CONTROLES (toque: vários dedos ao mesmo tempo)
@@ -122,7 +147,27 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - colisão com chão/prédios e tiros .... mundo/colisao_mundo.gd
 - loot espalhado (chão e caixas) ...... mundo/loot.gd (listas no topo)
 - estande de tiro (alvos) ............. mundo/estande_tiro.gd (use receber_tiro(...) nos inimigos Vagos)
+- cidade abandonada (carros, entulho) .. mundo/abandono.gd
+- prédios por dentro (cômodos, portas) . mundo/interior.gd · móveis: mundo/moveis.gd
+- quais prédios abrem perto do jogador . mundo/interiores.gd
+- loot de cada móvel/carro/chão ........ mundo/loot_mundo.gd (tabelas no topo)
+- dia/noite, chuva, frio, lanterna ..... mundo/clima.gd
+- juntar caixas numa malha só .......... mundo/malhas.gd
 - dados do mapa ....................... data/city.json
+
+INFECTADOS (pasta inimigos/)
+- comportamento (ouvir, ver, perseguir,
+  morder), vida, velocidade ........... inimigos/vago.gd
+- aparência e animação ................ inimigos/modelo_vago.gd
+- quantos aparecem e onde ............. inimigos/vagos.gd
+
+SOBREVIVÊNCIA / HUD / HISTÓRIA
+- vida, sangue, fome, sede, frio ...... jogador/sobrevivencia.gd
+- ícones de status, tela vermelha ..... hud/hud_status.gd
+- minimapa, mapa grande, bússola ...... hud/mapa.gd
+- tela de morte ....................... menu/tela_morte.gd
+- jogo salvo / continuar .............. menu/salvamento.gd
+- história (falas, etapas, corrida) ... historia/historia.gd
 
 CAMADAS DE FÍSICA: 1 = mundo · 2 = jogador · 3 = inimigos/alvos.
 
@@ -133,8 +178,9 @@ GODOT_ANDROID_KEYSTORE_RELEASE_PATH / _USER / _PASSWORD. Precisa do Android SDK 
 Configurações do Editor > Exportar > Android.
 
 LIMITAÇÕES CONHECIDAS (por enquanto)
-- Sem vida do jogador e sem inimigos ainda (o barulho dos tiros já é avisado pelo sinal "barulho", para os Vagos ouvirem).
-- Sem 1ª pessoa (o HTML tinha); a HUD ainda não é editável; o mar é "caminhável".
+- Só o TÉRREO dos prédios abre (os andares de cima ainda não).
+- História: só o Ato 1 · Parte 1 é do texto original; o interlúdio "O Colapso" é provisório.
+- Sem 1ª pessoa (o HTML tinha); o mar é "caminhável".
 - A base militar ainda não tem os prédios/pistas do HTML.
 
 Se der erro, me mande a mensagem exata (painel "Saída"/"Depurador") ou uma foto da tela.

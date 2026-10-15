@@ -58,6 +58,9 @@ const NOMES := ["vagando", "investigando", "perseguindo", "atacando", "morto"]
 # sons (gerados uma vez; o gerente chama sintetizar_sons() numa thread e depois definir_sons())
 const TAXA_SOM := 16000
 static var sons := {}
+static var PERF := {}
+static func _pf(k: String, t0: int) -> void:
+	PERF[k] = PERF.get(k, 0) + Time.get_ticks_usec() - t0
 
 var gerente: Node = null              # inimigos/vagos.gd (jogador, mundo, clima)
 var estado := VAGANDO
@@ -291,19 +294,29 @@ func _physics_process(dt: float) -> void:
 	_t_sentidos -= dt
 	if _t_sentidos <= 0.0:
 		_t_sentidos = randf_range(0.2, 0.26)
+		var t0 := Time.get_ticks_usec()
 		_olhar(j)
+		_pf("olhar", t0)
 	_atordoado = maxf(0.0, _atordoado - dt)
 	_recarga = maxf(0.0, _recarga - dt)
+	var t1 := Time.get_ticks_usec()
 	_decidir(dt, j)
+	_pf("decidir", t1)
+	t1 = Time.get_ticks_usec()
 	_mover(dt)
+	_pf("mover", t1)
 	# animação: perto todo quadro, longe a cada 2-4 quadros
 	_quadro += 1
 	_dt_anim += dt
 	var a_cada := 1 if dist_jogador < 40.0 else (2 if dist_jogador < 80.0 else 4)
 	if _quadro % a_cada == 0:
+		var t3 := Time.get_ticks_usec()
 		modelo.atualizar(_dt_anim, _vel_h)
 		_dt_anim = 0.0
+		_pf("anim", t3)
+		t3 = Time.get_ticks_usec()
 		_forma_cabeca.position = to_local(modelo.pos_cabeca())
+		_pf("cab", t3)
 	# gemidos
 	_t_grunhido -= dt
 	if _t_grunhido <= 0.0:
@@ -398,7 +411,7 @@ func _decidir(dt: float, j: Node3D) -> void:
 				return
 			_vel_alvo = _vel_correr
 			if dist_jogador < 2.5:
-				_vel_alvo = clampf((dist_jogador - 0.85) * 3.0, 0.0, _vel_correr)
+				_vel_alvo = clampf((dist_jogador - 0.95) * 3.0, 0.0, _vel_correr)
 			var dy := absf(j.global_position.y - p.y)
 			if dist_jogador < DIST_ATAQUE and _recarga <= 0.0 and _t_sem_ver < 1.0 and dy < 1.6 and _atordoado <= 0.0:
 				estado = ATACANDO
@@ -481,7 +494,15 @@ func _mover(dt: float) -> void:
 			quer = dir + separacao
 			if quer.length_squared() > 0.0001:
 				quer = quer.normalized() * _vel_alvo
-	var acel := 7.0 if _vel_alvo > 2.0 else 3.5
+	# colado no jogador (atacando/perseguindo): dá meio passo para trás em vez de entrar nele
+	if esta_cacando() and dist_jogador < 0.75 and dist_jogador > 0.01:
+		var pj: Vector3 = gerente.jogador.global_position
+		quer = Vector3(p.x - pj.x, 0.0, p.z - pj.z).normalized() * 0.8
+	var acel := 3.5
+	if _vel_alvo > 2.0:
+		acel = 7.0
+	if quer.length_squared() < _vel_xz.length_squared():
+		acel = 14.0                                     # frear é mais rápido que acelerar
 	_vel_xz = _vel_xz.move_toward(quer, acel * dt)
 	var empurro := _empurrao
 	_empurrao *= exp(-dt * 7.0)
@@ -492,7 +513,9 @@ func _mover(dt: float) -> void:
 			velocity.y = -0.5
 		else:
 			velocity.y -= GRAVIDADE * dt
+		var t2 := Time.get_ticks_usec()
 		move_and_slide()
+		_pf("mas", t2)
 		var rv := get_real_velocity()
 		_vel_h = Vector2(rv.x, rv.z).length()
 		_checar_preso(dt, quer)

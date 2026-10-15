@@ -26,6 +26,7 @@ const ALTURA_EM_PE := 1.8
 const ALTURA_AGACHADO := 1.3
 const EXTENSOES_MODELO := ["tscn", "scn", "glb", "gltf", "fbx"]
 const InventarioCls := preload("res://inventario/inventario.gd")
+const SobrevivenciaCls := preload("res://jogador/sobrevivencia.gd")
 
 @export_group("Câmera")
 @export var distancia_camera := 2.35
@@ -48,6 +49,7 @@ var giro_zero := Vector3.ZERO
 
 var controles = null                # controles.gd (toque/teclado)
 var inventario: Node = null         # inventario/inventario.gd
+var sobrevivencia: Node = null      # jogador/sobrevivencia.gd (vida, sangue, fome, sede, temperatura)
 var mundo = null                    # colisao_mundo.gd (altura do chão e raio dos tiros)
 var ativo := true
 var morto := false
@@ -86,6 +88,9 @@ func _ready() -> void:
 	inventario.name = "Inventario"
 	add_child(inventario)
 	inventario.equipamento_inicial()
+	sobrevivencia = SobrevivenciaCls.new()
+	sobrevivencia.name = "Sobrevivencia"
+	add_child(sobrevivencia)
 	armas.ligar_inventario(inventario)
 	_carregar_modelo_do_projeto()
 
@@ -130,6 +135,11 @@ func trocar_modelo(no: Node3D, importado := true) -> void:
 	_slot.add_child(no)
 	animador.configurar(no)
 	armas.anexar(no, animador.ponto_arma())
+
+# mordida/golpe de um infectado (inimigos/vago.gd chama aqui)
+func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3) -> void:
+	if sobrevivencia != null:
+		sobrevivencia.receber_ataque(dano, chance_sangrar, origem)
 
 func teleportar(pos: Vector3, yaw_camera: float) -> void:
 	global_position = pos
@@ -264,7 +274,7 @@ func _process(delta: float) -> void:
 	var alvo_y := lerpf(altura_alvo, altura_alvo_agachado, fator_agachado) + 0.1 * fator_mira
 	_pivo.global_position = Vector3(global_position.x, _y_cam + alvo_y, global_position.z)
 	_pivo.rotation = Vector3(-(cam_pit - armas.kick), cam_yaw + armas.ky, 0.0)
-	var fov_base := lerpf(fov_camera, fov_mirando, fator_mira)
+	var fov_base := lerpf(fov_camera, fov_mirando / armas.zoom_mira(), fator_mira)
 	var fov_alvo := fov_base + 5.0 * clampf((vel_horizontal - 3.0) / 4.0, 0.0, 1.0)
 	camera.fov = lerpf(camera.fov, fov_alvo, minf(1.0, delta * 4.0 + 0.02))
 	var dist := lerpf(distancia_camera, distancia_mirando, fator_mira)

@@ -1,6 +1,8 @@
 extends RefCounted
-# MODELOS 3D DAS ARMAS (iguais aos do HTML). Origem = empunhadura · frente (cano) = +Z.
-# Cada arma tem um nó filho "Cano" na ponta, de onde saem o clarão e a traçante.
+# MODELOS 3D DAS ARMAS (pistola e M4 iguais aos do HTML). Origem = empunhadura · frente (cano) = +Z.
+# Cada arma de fogo tem um nó filho "Cano" na ponta (clarão e traçante) e acessórios escondidos
+# "Acc_cano" (silenciador) e "Acc_mira" (mira/luneta), que aparecem quando estão encaixados.
+# Armas brancas: o cabo fica na origem e a lâmina/cabeça vai para +Z.
 
 static func _mat(cor: Color, rough: float, metal := 0.0, sem_luz := false) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
@@ -47,29 +49,88 @@ static func construir(tipo: String) -> Node3D:
 	var cano := Node3D.new()
 	cano.name = "Cano"
 	g.add_child(cano)
-	if tipo == "pistola":
-		_B(g, 0.034, 0.042, 0.2, metal, 0, 0.03, 0.07)
-		_B(g, 0.03, 0.022, 0.17, black, 0, 0, 0.06)
-		_C(g, 0.008, 0.008, 0.03, metal, 0, 0.03, 0.19)
-		_B(g, 0.03, 0.1, 0.045, black, 0, -0.05, -0.005, 0.2)
-		_B(g, 0.02, 0.012, 0.055, black, 0, -0.018, 0.055)
-		_B(g, 0.01, 0.014, 0.012, grey, 0, 0.056, 0.16)
-		_B(g, 0.018, 0.014, 0.012, grey, 0, 0.056, -0.02)
-		cano.position = Vector3(0, 0.03, 0.2)
-	else:
-		_B(g, 0.05, 0.075, 0.3, metal, 0, 0.04, 0.02)
-		_B(g, 0.05, 0.06, 0.22, black, 0, -0.015, 0)
-		_B(g, 0.06, 0.065, 0.26, black, 0, 0.03, 0.3)
-		_B(g, 0.062, 0.012, 0.26, grey, 0, 0.066, 0.3)
-		_C(g, 0.011, 0.011, 0.2, metal, 0, 0.04, 0.53)
-		_C(g, 0.017, 0.017, 0.065, black, 0, 0.04, 0.645)
-		_B(g, 0.01, 0.045, 0.012, black, 0, 0.09, 0.5)
-		_B(g, 0.036, 0.03, 0.09, black, 0, 0.095, 0.03)
-		_B(g, 0.042, 0.042, 0.075, black, 0, 0.125, 0.04)
-		_B(g, 0.03, 0.028, 0.006, red, 0, 0.125, 0.079)
-		_B(g, 0.04, 0.14, 0.07, black, 0, -0.1, 0.09, -0.12)
-		_B(g, 0.035, 0.1, 0.05, black, 0, -0.09, -0.06, 0.3)
-		_C(g, 0.02, 0.02, 0.2, metal, 0, 0.025, -0.3)
-		_B(g, 0.045, 0.09, 0.17, black, 0, 0, -0.4)
-		cano.position = Vector3(0, 0.04, 0.69)
+	var mad := _mat(Color("#5a3820"), 0.8)
+	var aco := _mat(Color("#9aa0a6"), 0.35, 0.8)
+	match tipo:
+		"pistola":
+			_B(g, 0.034, 0.042, 0.2, metal, 0, 0.03, 0.07)
+			_B(g, 0.03, 0.022, 0.17, black, 0, 0, 0.06)
+			_C(g, 0.008, 0.008, 0.03, metal, 0, 0.03, 0.19)
+			_B(g, 0.03, 0.1, 0.045, black, 0, -0.05, -0.005, 0.2)
+			_B(g, 0.02, 0.012, 0.055, black, 0, -0.018, 0.055)
+			_B(g, 0.01, 0.014, 0.012, grey, 0, 0.056, 0.16)
+			_B(g, 0.018, 0.014, 0.012, grey, 0, 0.056, -0.02)
+			cano.position = Vector3(0, 0.03, 0.2)
+			_acessorio(g, "Acc_cano", black, Vector3(0, 0.03, 0.27), 0.017, 0.14)
+		"m4":
+			_B(g, 0.05, 0.075, 0.3, metal, 0, 0.04, 0.02)
+			_B(g, 0.05, 0.06, 0.22, black, 0, -0.015, 0)
+			_B(g, 0.06, 0.065, 0.26, black, 0, 0.03, 0.3)
+			_B(g, 0.062, 0.012, 0.26, grey, 0, 0.066, 0.3)
+			_C(g, 0.011, 0.011, 0.2, metal, 0, 0.04, 0.53)
+			_C(g, 0.017, 0.017, 0.065, black, 0, 0.04, 0.645)
+			_B(g, 0.01, 0.045, 0.012, black, 0, 0.09, 0.5)
+			_B(g, 0.036, 0.03, 0.09, black, 0, 0.095, 0.03)
+			_B(g, 0.042, 0.042, 0.075, black, 0, 0.125, 0.04)
+			_B(g, 0.03, 0.028, 0.006, red, 0, 0.125, 0.079)
+			_B(g, 0.04, 0.14, 0.07, black, 0, -0.1, 0.09, -0.12)
+			_B(g, 0.035, 0.1, 0.05, black, 0, -0.09, -0.06, 0.3)
+			_C(g, 0.02, 0.02, 0.2, metal, 0, 0.025, -0.3)
+			_B(g, 0.045, 0.09, 0.17, black, 0, 0, -0.4)
+			cano.position = Vector3(0, 0.04, 0.69)
+			_acessorio(g, "Acc_cano", black, Vector3(0, 0.04, 0.76), 0.022, 0.16)
+			_acessorio(g, "Acc_mira", black, Vector3(0, 0.15, 0.06), 0.022, 0.14)
+		"ak":
+			_B(g, 0.05, 0.07, 0.34, metal, 0, 0.035, 0.05)
+			_B(g, 0.055, 0.06, 0.24, mad, 0, 0.03, 0.33)
+			_C(g, 0.011, 0.011, 0.26, metal, 0, 0.045, 0.56)
+			_B(g, 0.01, 0.04, 0.012, black, 0, 0.08, 0.64)
+			_B(g, 0.038, 0.16, 0.06, metal, 0, -0.1, 0.13, -0.35)
+			_B(g, 0.035, 0.1, 0.05, mad, 0, -0.08, -0.06, 0.3)
+			_B(g, 0.045, 0.1, 0.32, mad, 0, -0.02, -0.3, -0.12)
+			cano.position = Vector3(0, 0.045, 0.7)
+			_acessorio(g, "Acc_cano", black, Vector3(0, 0.045, 0.78), 0.022, 0.16)
+			_acessorio(g, "Acc_mira", black, Vector3(0, 0.1, 0.08), 0.022, 0.14)
+		"espingarda":
+			_B(g, 0.05, 0.07, 0.26, metal, 0, 0.03, 0.05)
+			_C(g, 0.014, 0.014, 0.5, metal, 0, 0.05, 0.42)
+			_C(g, 0.017, 0.017, 0.42, black, 0, 0.015, 0.38)
+			_B(g, 0.05, 0.05, 0.16, mad, 0, 0.0, 0.33)
+			_B(g, 0.035, 0.1, 0.05, mad, 0, -0.08, -0.06, 0.3)
+			_B(g, 0.048, 0.1, 0.34, mad, 0, -0.02, -0.3, -0.12)
+			cano.position = Vector3(0, 0.05, 0.68)
+		"rifle_caca":
+			_B(g, 0.04, 0.06, 0.3, metal, 0, 0.035, 0.08)
+			_C(g, 0.012, 0.012, 0.6, metal, 0, 0.045, 0.5)
+			_B(g, 0.05, 0.06, 0.5, mad, 0, 0.0, 0.2)
+			_C(g, 0.007, 0.007, 0.06, metal, 0.04, 0.05, 0.0)
+			_B(g, 0.035, 0.1, 0.05, mad, 0, -0.07, -0.06, 0.3)
+			_B(g, 0.05, 0.11, 0.36, mad, 0, -0.02, -0.32, -0.1)
+			cano.position = Vector3(0, 0.045, 0.8)
+			_acessorio(g, "Acc_mira", black, Vector3(0, 0.11, 0.1), 0.026, 0.3)
+		"faca":
+			_B(g, 0.025, 0.03, 0.11, black, 0, 0, 0.0)
+			_B(g, 0.05, 0.035, 0.012, metal, 0, 0, 0.06)
+			_B(g, 0.006, 0.03, 0.17, aco, 0, 0.004, 0.15)
+		"taco":
+			_C(g, 0.016, 0.02, 0.3, mad, 0, 0, 0.05)
+			_C(g, 0.035, 0.02, 0.5, mad, 0, 0, 0.45)
+		"machado":
+			_C(g, 0.016, 0.016, 0.7, mad, 0, 0, 0.25)
+			_B(g, 0.012, 0.16, 0.1, aco, 0, 0.06, 0.55)
+			_B(g, 0.03, 0.05, 0.08, metal, 0, -0.03, 0.55)
+		"cano":
+			_C(g, 0.02, 0.02, 0.75, _mat(Color("#55575a"), 0.5, 0.6), 0, 0, 0.25)
+			_C(g, 0.028, 0.028, 0.05, metal, 0, 0, 0.62)
+		"pe_de_cabra":
+			_C(g, 0.012, 0.012, 0.65, _mat(Color("#7a1a14"), 0.5, 0.4), 0, 0, 0.25)
+			_B(g, 0.02, 0.09, 0.03, _mat(Color("#7a1a14"), 0.5, 0.4), 0, 0.035, 0.58, 0.6)
 	return g
+
+# acessório escondido (armas.gd mostra quando está encaixado)
+static func _acessorio(g: Node3D, nome: String, m: Material, pos: Vector3, raio: float, comp: float) -> void:
+	var a := Node3D.new()
+	a.name = nome
+	a.visible = false
+	g.add_child(a)
+	_C(a, raio, raio, comp, m, pos.x, pos.y, pos.z)

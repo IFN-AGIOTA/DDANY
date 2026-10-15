@@ -24,23 +24,24 @@ const HORA_INICIAL := 8.0
 const TICK_CEU := 0.5                # de quanto em quanto tempo céu/sol/neblina são atualizados (s)
 const TICK_LANTERNA := 0.2           # de quanto em quanto tempo olha o inventário (s)
 const TICK_ABRIGO := 0.25            # de quanto em quanto tempo vê se tem teto em cima da câmera (s)
+const REFLEXO_LIMIAR := 0.012        # quanto céu/sol precisam mudar para refazer o reflexo do céu
 
 # sol: nasce às 6h e se põe às 19h30; altura máxima (graus) ao meio-dia
 const NASCER := 6.0
 const POR := 19.5
 const SOL_ALTURA_MAX := 65.0
 const LUA_COR := Color(0.62, 0.72, 1.0)
-const LUA_ENERGIA := 0.11            # luar (0.08 - 0.12: escuro mas dá para ver)
+const LUA_ENERGIA := 0.12            # luar (0.08 - 0.12: escuro mas dá para ver)
 
 # cada hora-chave: cor/força do sol, céu (topo e horizonte), neblina, luz ambiente, exposição e escuridão.
 # amb_cor/amb_ceu: parte da luz ambiente vem de uma cor fixa (amb_cor) para a noite não ficar preta.
 const HORAS := [
 	{"h": 0.0, "sol": Color(1.0, 0.7, 0.5), "e": 0.0, "topo": Color(0.012, 0.018, 0.045), "hor": Color(0.05, 0.065, 0.11),
-		"nev": Color(0.045, 0.06, 0.10), "amb": 1.0, "amb_cor": Color(0.15, 0.19, 0.30), "amb_ceu": 0.25, "exp": 1.45, "nd": 1.3, "esc": 1.0},
+		"nev": Color(0.045, 0.06, 0.10), "amb": 1.0, "amb_cor": Color(0.25, 0.28, 0.40), "amb_ceu": 0.2, "exp": 1.5, "nd": 1.3, "esc": 1.0},
 	{"h": 4.6, "sol": Color(1.0, 0.7, 0.5), "e": 0.0, "topo": Color(0.012, 0.018, 0.045), "hor": Color(0.05, 0.065, 0.11),
-		"nev": Color(0.045, 0.06, 0.10), "amb": 1.0, "amb_cor": Color(0.15, 0.19, 0.30), "amb_ceu": 0.25, "exp": 1.45, "nd": 1.3, "esc": 1.0},
+		"nev": Color(0.045, 0.06, 0.10), "amb": 1.0, "amb_cor": Color(0.25, 0.28, 0.40), "amb_ceu": 0.2, "exp": 1.5, "nd": 1.3, "esc": 1.0},
 	{"h": 5.5, "sol": Color(1.0, 0.55, 0.40), "e": 0.0, "topo": Color(0.06, 0.09, 0.20), "hor": Color(0.36, 0.30, 0.38),
-		"nev": Color(0.30, 0.27, 0.33), "amb": 1.0, "amb_cor": Color(0.18, 0.19, 0.26), "amb_ceu": 0.5, "exp": 1.3, "nd": 1.6, "esc": 0.65},
+		"nev": Color(0.30, 0.27, 0.33), "amb": 1.0, "amb_cor": Color(0.27, 0.27, 0.34), "amb_ceu": 0.5, "exp": 1.35, "nd": 1.6, "esc": 0.65},
 	{"h": 6.5, "sol": Color(1.0, 0.56, 0.30), "e": 0.7, "topo": Color(0.18, 0.28, 0.50), "hor": Color(0.98, 0.62, 0.40),
 		"nev": Color(0.86, 0.60, 0.46), "amb": 0.9, "amb_cor": Color(0.20, 0.17, 0.16), "amb_ceu": 0.9, "exp": 1.1, "nd": 1.7, "esc": 0.15},
 	{"h": 8.0, "sol": Color(1.0, 0.86, 0.70), "e": 1.05, "topo": Color(0.22, 0.38, 0.66), "hor": Color(0.86, 0.80, 0.72),
@@ -54,9 +55,9 @@ const HORAS := [
 	{"h": 19.1, "sol": Color(1.0, 0.42, 0.22), "e": 0.75, "topo": Color(0.13, 0.17, 0.36), "hor": Color(0.92, 0.40, 0.26),
 		"nev": Color(0.66, 0.38, 0.32), "amb": 0.95, "amb_cor": Color(0.16, 0.12, 0.14), "amb_ceu": 0.85, "exp": 1.15, "nd": 1.05, "esc": 0.3},
 	{"h": 20.2, "sol": Color(1.0, 0.42, 0.22), "e": 0.0, "topo": Color(0.035, 0.05, 0.13), "hor": Color(0.17, 0.15, 0.26),
-		"nev": Color(0.13, 0.12, 0.20), "amb": 1.0, "amb_cor": Color(0.16, 0.18, 0.28), "amb_ceu": 0.4, "exp": 1.35, "nd": 1.15, "esc": 0.75},
+		"nev": Color(0.13, 0.12, 0.20), "amb": 1.0, "amb_cor": Color(0.26, 0.27, 0.38), "amb_ceu": 0.4, "exp": 1.4, "nd": 1.15, "esc": 0.75},
 	{"h": 21.5, "sol": Color(1.0, 0.7, 0.5), "e": 0.0, "topo": Color(0.012, 0.018, 0.045), "hor": Color(0.05, 0.065, 0.11),
-		"nev": Color(0.045, 0.06, 0.10), "amb": 1.0, "amb_cor": Color(0.15, 0.19, 0.30), "amb_ceu": 0.25, "exp": 1.45, "nd": 1.3, "esc": 1.0},
+		"nev": Color(0.045, 0.06, 0.10), "amb": 1.0, "amb_cor": Color(0.25, 0.28, 0.40), "amb_ceu": 0.2, "exp": 1.5, "nd": 1.3, "esc": 1.0},
 ]
 
 # tempos: nuvens e chuva-alvo, duração (min..max, segundos de verdade)
@@ -78,7 +79,7 @@ const VEL_CHUVA := 1.0 / 120.0       # idem para a chuva (0..1 em 2 min)
 
 # chuva visível
 const GOTAS := 1500                  # máximo de riscos de chuva
-const CAIXA_CHUVA := Vector3(24.0, 18.0, 24.0)   # volume em volta da câmera onde a chuva aparece (m)
+const CAIXA_CHUVA := Vector3(20.0, 15.0, 20.0)   # volume em volta da câmera onde a chuva aparece (m)
 const VEL_GOTA := 11.0               # m/s
 const TROVAO_INTERVALO := Vector2(10.0, 35.0)    # segundos entre relâmpagos na tempestade
 
@@ -89,7 +90,7 @@ const TEMP_CHUVA := 6.0              # quanto a chuva forte esfria
 
 # lanterna
 const LANTERNA_COR := Color(1.0, 0.93, 0.80)
-const LANTERNA_ENERGIA := 2.5
+const LANTERNA_ENERGIA := 3.0
 const LANTERNA_ALCANCE := 35.0
 const LANTERNA_ANGULO := 28.0
 const CABECA_ENERGIA := 1.9
@@ -101,7 +102,7 @@ const TAXA := 22050                  # taxa dos sons sintetizados
 const SHADER_CHUVA := """
 shader_type spatial;
 render_mode unshaded, blend_mix, depth_draw_never, cull_disabled, shadows_disabled;
-uniform vec3 caixa = vec3(24.0, 18.0, 24.0);
+uniform vec3 caixa = vec3(20.0, 15.0, 20.0);
 uniform float quantidade = 0.0;              // 0..1 das gotas aparecem
 uniform float velocidade = 11.0;
 uniform vec2 vento = vec2(0.0);
@@ -121,7 +122,7 @@ void vertex() {
 		vec3 para_cam = cam - w;
 		float dist = length(para_cam);
 		vec3 lado = normalize(cross(dir, para_cam));
-		float larg = clamp(dist * 0.0018, 0.006, 0.04);
+		float larg = clamp(dist * 0.0018, 0.008, 0.04);
 		float comp = comprimento * (0.8 + 0.4 * fract(r * 91.7));
 		vec3 p = w + lado * UV.x * larg + dir * (UV.y * comp);
 		VERTEX = p - NODE_POSITION_WORLD;
@@ -160,10 +161,11 @@ var _t_abrigo := 0.0
 var _coberto := false                # câmera e jogador debaixo de teto (dentro de prédio)
 var _chuva_visual := 0.0             # chuva mostrada (some dentro dos prédios)
 var _amb_base := 0.9
-var _brilho_dia := 1.0
 var _nevoa_base := 0.00025
 var _nevoa_posta := -1.0
 var _rng := RandomNumberGenerator.new()
+var _assinatura_reflexo: Array = []
+var refletiu := 0                    # quantas vezes o reflexo do céu foi refeito (para testes)
 
 var _ceu: ProceduralSkyMaterial
 var _malha_chuva: MeshInstance3D
@@ -300,6 +302,7 @@ func restaurar() -> void:
 	for m in cidade.mats_agua:
 		if is_instance_valid(m):
 			m.set_shader_parameter("cor_ceu", o["mar_ceu"])
+	_refletir_ceu([], true)
 	cidade.remove_meta("_clima_dono")
 	cidade.remove_meta("_clima_nevoa")
 
@@ -400,8 +403,8 @@ func _nova_lanterna(nome: String, energia: float, alcance: float, angulo: float)
 	l.light_specular = 0.35
 	l.spot_range = alcance
 	l.spot_angle = angulo
-	l.spot_angle_attenuation = 0.8
-	l.spot_attenuation = 0.9
+	l.spot_angle_attenuation = 0.6
+	l.spot_attenuation = 0.7
 	l.shadow_enabled = false
 	l.visible = false
 	add_child(l)
@@ -561,7 +564,7 @@ func _atualizar_ceu() -> void:
 	var env: Environment = cidade.ambiente
 	if env != null:
 		_amb_base = float(k["amb"]) * (1.0 + 0.25 * n * luz_dia)
-		env.ambient_light_energy = _amb_base + _flash * 1.5
+		env.ambient_light_energy = _amb_base + _flash * 0.9
 		env.ambient_light_color = k["amb_cor"]
 		env.ambient_light_sky_contribution = k["amb_ceu"]
 		env.fog_light_color = nev
@@ -575,11 +578,31 @@ func _atualizar_ceu() -> void:
 	for m in cidade.mats_agua:
 		if is_instance_valid(m):
 			m.set_shader_parameter("cor_ceu", hor)
+	if sol != null:
+		var dir := -sol.global_transform.basis.z
+		_refletir_ceu([topo.r, topo.g, topo.b, hor.r, hor.g, hor.b, nev.r, nev.g, nev.b,
+			cor_luz.r * energia, cor_luz.g * energia, cor_luz.b * energia, dir.x, dir.y, dir.z])
 	_escuridao = clampf(float(k["esc"]) + (1.0 - float(k["esc"])) * (0.12 * n + 0.1 * c), 0.0, 1.0)
-	_brilho_dia = luz_dia
 	if _mat_chuva != null:
 		var b := lerpf(0.22, 0.78, luz_dia) * (1.0 - 0.25 * n)
 		_mat_chuva.set_shader_parameter("cor", Color(b * 0.92, b * 0.96, b, lerpf(0.22, 0.32, c)))
+
+# O reflexo do céu (luz que as paredes/vidros/chão refletem) NÃO se atualiza sozinho no renderizador
+# Compatibility quando as cores do céu mudam. Trocar o process_mode do Sky obriga a refazer o reflexo
+# (1 vez, no mesmo quadro). Só fazemos isso quando céu/sol mudaram o bastante (custa alguns ms no celular).
+func _refletir_ceu(assinatura: Array, forcar := false) -> void:
+	if _ceu == null or cidade.ambiente == null or cidade.ambiente.sky == null:
+		return
+	if not forcar and _assinatura_reflexo.size() == assinatura.size():
+		var dif := 0.0
+		for i in assinatura.size():
+			dif = maxf(dif, absf(float(assinatura[i]) - float(_assinatura_reflexo[i])))
+		if dif < REFLEXO_LIMIAR:
+			return
+	_assinatura_reflexo = assinatura
+	var sky: Sky = cidade.ambiente.sky
+	sky.process_mode = Sky.PROCESS_MODE_QUALITY if sky.process_mode == Sky.PROCESS_MODE_AUTOMATIC else Sky.PROCESS_MODE_AUTOMATIC
+	refletiu += 1
 
 # ---------- chuva e trovões ----------
 func _ver_abrigo() -> void:
@@ -641,9 +664,9 @@ func _atualizar_trovoes(dt: float) -> void:
 			_piscadas.clear()
 			_flash = 0.0
 		_relampago.visible = _flash > 0.01
-		_relampago.light_energy = _flash * 2.2 * (1.0 if not _coberto else 0.4)
+		_relampago.light_energy = _flash * 1.8 * (1.0 if not _coberto else 0.4)
 		if cidade != null and is_instance_valid(cidade) and cidade.ambiente != null:
-			cidade.ambiente.ambient_light_energy = _amb_base + _flash * 1.5
+			cidade.ambiente.ambient_light_energy = _amb_base + _flash * 0.9
 	if _trovao_em >= 0.0:
 		_trovao_em -= dt
 		if _trovao_em < 0.0 and _som_trovao.stream != null:

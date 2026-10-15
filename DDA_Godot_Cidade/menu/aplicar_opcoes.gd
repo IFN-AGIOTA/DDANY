@@ -72,6 +72,10 @@ func aplicar() -> void:
 	var h = main.get("hud")
 	if h != null and is_instance_valid(h):
 		h.aplicar_estilo(float(o["sc"]) / 100.0, float(o["op"]) / 100.0)
+	for nome in ["mapa", "hud_status"]:
+		var x = main.get(nome)
+		if x != null and is_instance_valid(x):
+			x.aplicar_estilo(float(o["sc"]) / 100.0, float(o["op"]) / 100.0)
 	var cid = main.get("cidade")
 	if cid != null and is_instance_valid(cid):
 		if cid.sol != null:

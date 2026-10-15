@@ -99,20 +99,25 @@ func _desenhar() -> void:
 	if _aviso_t > 0.0:
 		_texto(_aviso, c.x, vs.y * 0.3, int(4.0 * vh), Color(1, 1, 1, minf(1.0, _aviso_t * 3.0)))
 	# ----- painel de munição (só com arma nas mãos) -----
-	if armas.atual == "":
+	if armas.atual == "" or armas.eh_corpo():
 		return
 	var W: Dictionary = armas.WDEF[armas.atual]
 	var A: Dictionary = armas.estado()
+	var cap: int = maxi(1, armas.capacidade())
 	var pw := 26.0 * vh
 	var ph := 11.5 * vh
 	var px := c.x - pw * 0.5
 	var py := vs.y - 3.0 * vh - ph
-	var baixo: bool = int(A["mag"]) <= int(ceil(float(W["mag"]) * 0.25))
+	var baixo: bool = int(A["mag"]) <= int(ceil(float(cap) * 0.25))
 	_tela.draw_rect(Rect2(px, py, pw, ph), Color(0.03, 0.05, 0.08, 0.58))
 	_tela.draw_rect(Rect2(px, py, 0.7 * vh, ph), AMBAR)
 	var nome: String = W["nome"]
 	if armas.rel > 0.0:
-		nome += " · RECARREGANDO"
+		nome += " · DESTRAVANDO" if armas.travada else " · RECARREGANDO"
+	elif armas.travada:
+		nome += " · TRAVADA"
+	elif armas.item_arma != null and armas.item_arma.usa_pente() != "" and armas.item_arma.pente_id == "":
+		nome += " · SEM PENTE"
 	_texto(nome, c.x, py + 3.0 * vh, int(2.4 * vh), Color(1, 1, 1, 0.85))
 	var mag := str(A["mag"])
 	var res := "/ " + str(A["res"])
@@ -123,6 +128,6 @@ func _desenhar() -> void:
 	var x0 := c.x - (wm + wr + vh) * 0.5
 	_tela.draw_string(_fonte, Vector2(x0, py + 8.4 * vh), mag, HORIZONTAL_ALIGNMENT_LEFT, -1, tm, VERMELHO if baixo else Color.WHITE)
 	_tela.draw_string(_fonte, Vector2(x0 + wm + vh, py + 8.4 * vh), res, HORIZONTAL_ALIGNMENT_LEFT, -1, tr, Color(1, 1, 1, 0.7))
-	var frac: float = (1.0 - armas.rel / armas.rel_tot) if armas.rel > 0.0 else float(A["mag"]) / float(W["mag"])
+	var frac: float = (1.0 - armas.rel / armas.rel_tot) if armas.rel > 0.0 else float(A["mag"]) / float(cap)
 	_tela.draw_rect(Rect2(px + 1.5 * vh, py + ph - 1.6 * vh, pw - 3.0 * vh, 0.6 * vh), Color(1, 1, 1, 0.15))
 	_tela.draw_rect(Rect2(px + 1.5 * vh, py + ph - 1.6 * vh, (pw - 3.0 * vh) * clampf(frac, 0.0, 1.0), 0.6 * vh), VERMELHO if baixo else AMBAR)

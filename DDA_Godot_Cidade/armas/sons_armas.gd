@@ -12,8 +12,14 @@ var _ci := 0
 var volume_db := 0.0
 
 func _ready() -> void:
-	sons["tiro_pistola"] = _tiro(false)
-	sons["tiro_m4"] = _tiro(true)
+	sons["tiro_pistola"] = _tiro(4200.0, 0.42, 0.22, 130.0, 1717)
+	sons["tiro_m4"] = _tiro(3200.0, 0.5, 0.16, 170.0, 4242)
+	sons["tiro_ak"] = _tiro(2700.0, 0.62, 0.2, 140.0, 777)
+	sons["tiro_espingarda"] = _tiro(2000.0, 0.75, 0.32, 105.0, 1212)
+	sons["tiro_rifle_caca"] = _tiro(3000.0, 0.72, 0.3, 118.0, 3030)
+	sons["tiro_silenciado"] = _tiro(1300.0, 0.3, 0.07, 240.0, 99, 0.35)
+	sons["golpe"] = _vulto()
+	sons["impacto"] = _tiro(700.0, 0.6, 0.08, 90.0, 55, 0.7)
 	sons["clique_380"] = _clique(380.0, 0.09)
 	sons["clique_620"] = _clique(620.0, 0.09)
 	sons["clique_300"] = _clique(300.0, 0.1)
@@ -49,18 +55,14 @@ func _wav(amostras: PackedFloat32Array) -> AudioStreamWAV:
 static func _exp(v0: float, v1: float, t: float, T: float) -> float:
 	return v0 * pow(v1 / v0, clampf(t / T, 0.0, 1.0))
 
-func _tiro(m4: bool) -> AudioStreamWAV:
-	var n := int(TAXA * 0.3)
+func _tiro(f0: float, g0: float, dur: float, o0: float, semente: int, grave := 0.5) -> AudioStreamWAV:
+	var n := int(TAXA * maxf(0.3, dur + 0.12))
 	var a := PackedFloat32Array()
 	a.resize(n)
 	var rng := RandomNumberGenerator.new()
-	rng.seed = 4242 if m4 else 1717
+	rng.seed = semente
 	var lp := 0.0
 	var fase := 0.0
-	var f0 := 3200.0 if m4 else 4200.0
-	var g0 := 0.5 if m4 else 0.42
-	var dur := 0.16 if m4 else 0.22
-	var o0 := 170.0 if m4 else 130.0
 	for i in n:
 		var t := float(i) / TAXA
 		var fc := _exp(f0, 400.0, t, 0.14)
@@ -70,8 +72,26 @@ func _tiro(m4: bool) -> AudioStreamWAV:
 		var fo := _exp(o0, 45.0, t, 0.12)
 		fase += fo / TAXA
 		var tri := 4.0 * absf(fase - floorf(fase + 0.5)) - 1.0
-		var og := _exp(0.5, 0.001, t, 0.14) if t < 0.14 else 0.0
+		var og := _exp(grave, 0.001, t, 0.14) if t < 0.14 else 0.0
 		a[i] = (lp * g * 1.8 + tri * og) * 0.85
+	return _wav(a)
+
+# "vuuush" do golpe corpo a corpo (ruído que sobe e desce)
+func _vulto() -> AudioStreamWAV:
+	var n := int(TAXA * 0.26)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 808
+	var lp := 0.0
+	var lp2 := 0.0
+	for i in n:
+		var t := float(i) / n
+		var fc := 300.0 + 1800.0 * sin(t * PI)
+		var k := 1.0 - exp(-TAU * fc / TAXA)
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * k
+		lp2 += (lp - lp2) * k
+		a[i] = (lp - lp2) * sin(t * PI) * 1.6
 	return _wav(a)
 
 func _clique(freq: float, vol: float) -> AudioStreamWAV:

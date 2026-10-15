@@ -92,7 +92,10 @@ var _mini: ColorRect
 var _mat: ShaderMaterial
 var _sobre: Control
 var _camada: CanvasLayer
-var _tela: Control
+var _tela: ColorRect                # fundo (mar) do mapa aberto
+var _mundo: Node2D                  # imagem + vetores, em metros (mover/zoom = só muda a transformação)
+var _ui: Control                    # jogador, objetivo, botões, títulos
+var _area_vet := Rect2()            # área do mundo já desenhada em vetor (zoom alto)
 var _fonte: Font
 var _mini_c := Vector2.ZERO
 var _mini_r := 0.0
@@ -107,7 +110,7 @@ var _toques := {}                   # índice do dedo -> posição
 var _img: Image = null
 var _tarefa := -1
 var _grade_predios := {}            # Vector2i -> PackedInt32Array (índices em cidade.predios)
-var _grade_ruas := {}               # Vector2i -> PackedFloat32Array (ax, az, bx, bz, meia largura)
+var _grade_ruas := {}               # Vector2i -> PackedFloat32Array (ax, az, bx, bz, meia largura, último trecho)
 var _ruina := PackedByteArray()
 
 func _ready() -> void:
@@ -139,12 +142,20 @@ func _ready() -> void:
 	_camada.layer = 15
 	_camada.visible = false
 	add_child(_camada)
-	_tela = Control.new()
+	_tela = ColorRect.new()
+	_tela.color = COR_AGUA
 	_tela.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_tela.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_tela.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-	_tela.draw.connect(_desenhar_mapa)
 	_camada.add_child(_tela)
+	_mundo = Node2D.new()
+	_mundo.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	_mundo.draw.connect(_desenhar_mundo)
+	_tela.add_child(_mundo)
+	_ui = Control.new()
+	_ui.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_ui.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui.draw.connect(_desenhar_mapa)
+	_tela.add_child(_ui)
 	var cfg := get_node_or_null("/root/Config")
 	if cfg != null:
 		_mostrar_mini = bool(cfg.valor("map"))
@@ -202,7 +213,8 @@ func abrir_mapa() -> void:
 	_limitar()
 	_camada.visible = true
 	_raiz.visible = false
-	_tela.queue_redraw()
+	_atualizar_mundo()
+	_ui.queue_redraw()
 
 # restaurar = false quando outra tela (inventário) já assumiu os controles
 func fechar_mapa(restaurar := true) -> void:
@@ -278,6 +290,7 @@ func _terminar_textura() -> void:
 func _usar_textura() -> void:
 	_mat.set_shader_parameter("mapa", _tex)
 	_mat.set_shader_parameter("pronto", 1.0)
+	_mundo.queue_redraw()
 
 static func _pts(f: Array) -> PackedVector2Array:
 	var o := PackedVector2Array()
@@ -356,7 +369,7 @@ func _montar_grades() -> void:
 					var ch := Vector2i(cx, cz)
 					if not _grade_ruas.has(ch):
 						_grade_ruas[ch] = PackedFloat32Array()
-					_grade_ruas[ch].append_array(PackedFloat32Array([a.x, a.y, b.x, b.y, hw]))
+					_grade_ruas[ch].append_array(PackedFloat32Array([a.x, a.y, b.x, b.y, hw, 1.0 if i == pts.size() - 2 else 0.0]))
 
 # ---------- quadro a quadro ----------
 func _process(_dt: float) -> void:
@@ -367,11 +380,12 @@ func _process(_dt: float) -> void:
 		return
 	_observador()
 	if aberto and (not visivel_hud or bool(controles.editando)):
-		fechar_mapa(false)
+		fechar_mapa()
 	if aberto:
 		if _seguir:
 			_centro = _pos
-		_tela.queue_redraw()
+		_atualizar_mundo()
+		_ui.queue_redraw()
 		return
 	_raiz.visible = visivel_hud and not bool(controles.bloqueado)
 	if not _raiz.visible:
@@ -381,7 +395,8 @@ func _process(_dt: float) -> void:
 	var topo := 12.0
 	var info: Label = controles.get("info")
 	if info != null and info.visible and info.text != "":
-		topo = info.position.y + info.size.y + 1.8 * vh
+		topo = info.position.y + info.size.y
+	topo += 1.8 * vh                    # espaço para o "N" da borda
 	_mini_r = TAM_MINI * vh * 0.5
 	_mini_c = Vector2(16.0 + _mini_r, topo + _mini_r)
 	_mini.visible = _mostrar_mini
@@ -557,7 +572,6 @@ func _apertar(id: String) -> void:
 			_seguir = true
 			_centro = _pos
 			_limitar()
-	_tela.queue_redraw()
 
 # ---------- desenho: texto e símbolos ----------
 func _texto(ci: CanvasItem, txt: String, centro: Vector2, tam: int, cor: Color, alinhar := 0) -> void:
@@ -576,7 +590,7 @@ func _largura(txt: String, tam: int) -> float:
 
 # seta do jogador (ponta para cima quando ang = 0; ang no sentido horário)
 func _seta(ci: CanvasItem, c: Vector2, ang: float, tam: float, cor: Color) -> void:
-	var base := [Vector2(0, -1.0), Vector2(0.72, 0.8), Vector2(0, 0.38), Vector2(-0.72, 0.8)]
+	var base := [Vector2(0, -1.0), Vector2(0.75, 0.85), Vector2(0, 0.48), Vector2(-0.75, 0.85)]
 	var pts := PackedVector2Array()
 	for v in base:
 		pts.append(c + (v as Vector2).rotated(ang) * tam)
@@ -726,19 +740,34 @@ func _desenhar_bussola(vs: Vector2, vh: float) -> void:
 	_texto(ci, txt_rumo, caixa_txt.get_center(), tr, Color(1, 1, 1, 0.95))
 
 # ---------- desenho: mapa aberto ----------
+# mover/zoom só mudam a transformação do nó _mundo; ele só é redesenhado quando o zoom alto precisa de
+# vetores de uma área nova (com folga de 15%), então arrastar o mapa não refaz milhares de prédios por quadro
+func _atualizar_mundo() -> void:
+	var vs := _tela.get_viewport_rect().size
+	var k := 1.0 / _mpp
+	_mundo.position = vs * 0.5 - _centro * k
+	_mundo.scale = Vector2(k, k)
+	var quer := _tex != null and _mpp < _ret.size.x / float(_tex.get_width()) * 0.5   # imagem ampliada 2x ou mais
+	if quer:
+		var vis := Rect2(_tela_para_mundo(Vector2.ZERO), vs * _mpp)
+		if not _area_vet.encloses(vis):
+			_area_vet = vis.grow(maxf(vis.size.x, vis.size.y) * 0.15)
+			_mundo.queue_redraw()
+	elif _area_vet.has_area():
+		_area_vet = Rect2()
+		_mundo.queue_redraw()
+
+func _desenhar_mundo() -> void:
+	if _tex == null:
+		return
+	_mundo.draw_texture_rect(_tex, _ret, false)
+	if _area_vet.has_area():
+		_desenhar_vetores(_mundo, _area_vet)
+
 func _desenhar_mapa() -> void:
-	var ci := _tela
+	var ci := _ui
 	var vs := ci.get_viewport_rect().size
 	var vh := vs.y / 100.0
-	ci.draw_rect(Rect2(Vector2.ZERO, vs), COR_AGUA)
-	var k := 1.0 / _mpp
-	ci.draw_set_transform(vs * 0.5 - _centro * k, 0.0, Vector2(k, k))
-	if _tex != null:
-		ci.draw_texture_rect(_tex, _ret, false)
-		var mpp_tex := _ret.size.x / float(_tex.get_width())
-		if _mpp < mpp_tex * 0.85:
-			_desenhar_vetores(ci, Rect2(_tela_para_mundo(Vector2.ZERO), vs * _mpp))
-	ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if _tex == null:
 		_texto(ci, "PREPARANDO O MAPA...", vs * 0.5, int(3.0 * vh), UI.TEXTO)
 	# objetivo
@@ -768,7 +797,7 @@ func _desenhar_mapa() -> void:
 	# jogador
 	var pj := _mundo_para_tela(_pos)
 	ci.draw_circle(pj, 3.4 * vh, Color(COR_JOGADOR.r, COR_JOGADOR.g, COR_JOGADOR.b, 0.15))
-	_seta(ci, pj, _rumo, 2.0 * vh, COR_JOGADOR)
+	_seta(ci, pj, _rumo, 2.5 * vh, COR_JOGADOR)
 	# título, norte e dicas
 	UI.caixa_arredondada(ci, Rect2(2.0 * vh, 2.0 * vh, 30.0 * vh, 9.6 * vh), COR_FUNDO, 1.0 * vh)
 	ci.draw_string(UI.fonte(900), Vector2(3.4 * vh, 6.8 * vh), "MAPA", HORIZONTAL_ALIGNMENT_LEFT, -1, int(4.4 * vh), UI.AMBAR)
@@ -837,12 +866,13 @@ func _desenhar_vetores(ci: CanvasItem, area: Rect2) -> void:
 				if segs == null:
 					continue
 				var s: PackedFloat32Array = segs
-				for i in range(0, s.size(), 5):
+				for i in range(0, s.size(), 6):
 					var a := Vector2(s[i], s[i + 1])
 					var b := Vector2(s[i + 2], s[i + 3])
 					var hw := s[i + 4] + extra
 					ci.draw_circle(a, hw, cor)
-					ci.draw_circle(b, hw, cor)
+					if s[i + 5] > 0.5:
+						ci.draw_circle(b, hw, cor)
 					ci.draw_line(a, b, cor, hw * 2.0)
 	var pr: PackedFloat32Array = cidade.predios
 	for cx in range(c0.x, c1.x + 1):
@@ -852,6 +882,4 @@ func _desenhar_vetores(ci: CanvasItem, area: Rect2) -> void:
 				continue
 			for i in (lista as PackedInt32Array):
 				var k := i * 5
-				var r := Rect2(pr[k] - pr[k + 2] * 0.5, pr[k + 1] - pr[k + 3] * 0.5, pr[k + 2], pr[k + 3])
-				ci.draw_rect(r, _cor_predio(i, pr[k + 4]))
-				ci.draw_rect(r, Color(0, 0, 0, 0.35), false, _mpp * 1.0)
+				ci.draw_rect(Rect2(pr[k] - pr[k + 2] * 0.5, pr[k + 1] - pr[k + 3] * 0.5, pr[k + 2], pr[k + 3]), _cor_predio(i, pr[k + 4]))

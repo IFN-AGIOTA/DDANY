@@ -491,7 +491,7 @@ static func _criar_variante(semente: int) -> Dictionary:
 		h.caixa(Vector3(0, 0.24, -0.14), Vector3(0.2, 0.014, 0.07), Color(0.04, 0.04, 0.05))       # aba
 		h.caixa(Vector3(0, 0.27, -0.118), Vector3(0.05, 0.03, 0.006), Color(0.75, 0.62, 0.25))
 	elif tipo == "operario" and r.randf() < 0.7:
-		var cap := [Color(0.85, 0.7, 0.1), Color(0.85, 0.85, 0.82), Color(0.8, 0.4, 0.1)][r.randi() % 3]
+		var cap: Color = [Color(0.85, 0.7, 0.1), Color(0.85, 0.85, 0.82), Color(0.8, 0.4, 0.1)][r.randi() % 3]
 		h.caixa(Vector3(0, 0.27, 0.0), Vector3(0.235, 0.075, 0.245), cap)                       # capacete
 		h.caixa(Vector3(0, 0.235, -0.01), Vector3(0.26, 0.012, 0.28), _tom(cap, 0.9))
 		h.caixa(Vector3(0, 0.31, 0.0), Vector3(0.04, 0.02, 0.22), _tom(cap, 1.05))

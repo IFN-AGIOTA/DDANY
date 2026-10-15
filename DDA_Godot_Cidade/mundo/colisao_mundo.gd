@@ -92,8 +92,11 @@ func _ready() -> void:
 		_pool_forma.append(bs)
 
 # dados = conteúdo de data/city.json · predios = x, z, tam_x, tam_z, altura (5 floats por prédio)
+# pode ser chamada de novo (a história tira os carros largados antes do colapso e põe de volta depois)
 func configurar_obstaculos(lista: PackedFloat32Array) -> void:
 	_obst = lista
+	_obst_hash.clear()
+	_ult_obst = Vector2(1.0e9, 1.0e9)
 	var tmp := {}
 	for i in range(lista.size() / 7):
 		var key := Vector2i(floori(lista[i * 7] / CEL_OBST), floori(lista[i * 7 + 1] / CEL_OBST))
@@ -102,6 +105,11 @@ func configurar_obstaculos(lista: PackedFloat32Array) -> void:
 		tmp[key].append(i)
 	for k in tmp:
 		_obst_hash[k] = PackedInt32Array(tmp[k])
+	if not _pool_obst.is_empty():
+		for k in _obst_uso:
+			_pool_obst[k].position = Vector3(0.0, -10000.0, 0.0)
+		_obst_uso = 0
+		return
 	for i in POOL_OBST:
 		var sb := StaticBody3D.new()
 		sb.collision_layer = 1
