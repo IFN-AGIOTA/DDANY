@@ -14,6 +14,8 @@ const EstandeCls := preload("res://mundo/estande_tiro.gd")
 const LootCls := preload("res://mundo/loot.gd")
 const LootMundoCls := preload("res://mundo/loot_mundo.gd")
 const InterioresCls := preload("res://mundo/interiores.gd")
+const MatoCls := preload("res://mundo/mato.gd")
+const FumacaCls := preload("res://mundo/fumaca.gd")
 const HudStatusCls := preload("res://hud/hud_status.gd")
 const MapaCls := preload("res://hud/mapa.gd")
 const ClimaCls := preload("res://mundo/clima.gd")
@@ -59,6 +61,7 @@ var clima: Node                             # mundo/clima.gd (dia/noite, chuva, 
 var historia: CanvasLayer                   # historia/historia.gd (Ato 1)
 var vagos: Node                             # inimigos/vagos.gd (infectados)
 var companheiros: Node                      # npc/companheiros.gd (Greg e Mavie, depois do encontro)
+var mato: Node3D                            # mundo/mato.gd (mato perto do jogador + sombra dos prédios no chão)
 var abates := 0
 var _tempo_jogo := 0.0
 var _t_salvar := 0.0
@@ -258,6 +261,15 @@ func _criar_jogo() -> void:
 	jogo.add_child(vagos)
 	vagos.ligar(cidade, mundo, jogador, jogador.armas)
 	vagos.clima = clima
+	mato = MatoCls.new()
+	mato.name = "Mato"
+	jogo.add_child(mato)
+	mato.ligar(cidade, mundo, jogador)
+	vagos.mato = mato
+	var fumaca := FumacaCls.new()
+	fumaca.name = "Fumaca"
+	jogo.add_child(fumaca)
+	fumaca.montar(cidade)
 	vagos.abatido.connect(func(_c): abates += 1)
 	jogador.sobrevivencia.tossiu.connect(func(p): vagos.barulho(p, 18.0, true))   # tosse e vômito fazem barulho
 	companheiros = CompanheirosCls.new()

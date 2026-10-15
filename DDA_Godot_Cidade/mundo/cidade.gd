@@ -47,6 +47,7 @@ var ambiente: Environment                   # céu/neblina (Opções › Gráfic
 var sol: DirectionalLight3D                 # Opções › Gráficos › Sombras
 var mat_predio: ShaderMaterial              # Opções › Gráficos › Detalhes dos shaders (janelas)
 var mats_agua: Array[ShaderMaterial] = []   # Opções › Gráficos › Água
+var mats_chao: Array[ShaderMaterial] = []   # terra, parque, calçada, asfalto (sombra dos prédios no chão: mundo/mato.gd)
 var detalhes: Array[GeometryInstance3D] = []   # árvores e caixas d'água (Opções › Distância dos detalhes)
 var detalhes_abandono: Array[GeometryInstance3D] = []   # carros, lixo, entulho
 
@@ -103,6 +104,8 @@ func aplicar_detalhes(nivel_shaders: int, nivel_distancia: int, agua_completa :=
 		m.set_shader_parameter("completa", 1.0 if agua_completa else 0.0)
 	if mat_predio != null:
 		mat_predio.set_shader_parameter("detalhe", 0.0 if nivel_shaders <= 0 else (0.6 if nivel_shaders == 1 else 1.0))
+	for m in mats_chao:
+		m.set_shader_parameter("detalhe", 0.0 if nivel_shaders <= 0 else 1.0)
 	var alcance: float = [500.0, 900.0, 1500.0, 2400.0][clampi(nivel_distancia, 0, 3)]
 	for d in detalhes:
 		if is_instance_valid(d):
@@ -130,7 +133,8 @@ func _env() -> void:
 	env.fog_enabled = true
 	env.fog_light_color = Color(0.92, 0.64, 0.45)
 	env.fog_sun_scatter = 0.25
-	env.fog_density = 0.00025
+	env.fog_density = 0.0006
+	env.fog_aerial_perspective = 0.35       # ao longe a neblina pega a cor do céu (o "azul" do horizonte do DayZ)
 	var we := WorldEnvironment.new()
 	we.environment = env
 	ambiente = env
@@ -292,7 +296,8 @@ func _ground(data) -> void:
 	_adopt(sea)
 	var v := PackedVector3Array()
 	_poly(v, lands_out, Y_TERRA)
-	_malha(v, Mat.material(Mat.TERRA, {"mascara": _mascara, "mundo": WORLD, "camada": CAMADA["terra"]}), PackedColorArray(), "Terra")
+	var mt := Mat.material(Mat.TERRA, {"mascara": _mascara, "mundo": WORLD, "camada": CAMADA["terra"]})
+	_malha(v, mt, PackedColorArray(), "Terra")
 	v = PackedVector3Array()
 	_poly(v, lakes, Y_LAGO)
 	var agua_lago: ShaderMaterial = agua.duplicate()
@@ -301,7 +306,9 @@ func _ground(data) -> void:
 	mats_agua = [agua, agua_lago]
 	v = PackedVector3Array()
 	_poly(v, parks, Y_PARQUE)
-	_malha(v, Mat.material(Mat.PARQUE, {"camada": CAMADA["parque"]}), PackedColorArray(), "Parques")
+	var mp := Mat.material(Mat.PARQUE, {"camada": CAMADA["parque"]})
+	_malha(v, mp, PackedColorArray(), "Parques")
+	mats_chao = [mt, mp]
 
 # ---------- ruas: ligar pontas soltas e marcar cruzamentos ----------
 static func _no(p: Vector2) -> Vector2i:
@@ -405,8 +412,11 @@ func _roads(data) -> void:
 				giro_b = (b - a).angle_to(pts[i + 2] - b)
 			_faixas_trecho(mv, mc, a, b, hw, i == 0, i == pts.size() - 2, giro_a, giro_b)
 			_mascara_rua(a, b, hw)
-	_malha(calc, Mat.material(Mat.CALCADA, {"camada": CAMADA["calcada"]}), PackedColorArray(), "Calcadas")
-	_malha(asf, Mat.material(Mat.ASFALTO, {"camada": CAMADA["rua"]}), PackedColorArray(), "Asfalto")
+	var m_calc := Mat.material(Mat.CALCADA, {"camada": CAMADA["calcada"]})
+	var m_asf := Mat.material(Mat.ASFALTO, {"camada": CAMADA["rua"]})
+	_malha(calc, m_calc, PackedColorArray(), "Calcadas")
+	_malha(asf, m_asf, PackedColorArray(), "Asfalto")
+	mats_chao.append_array([m_calc, m_asf])
 	_malha(mv, Mat.material(Mat.FAIXA, {"camada": CAMADA["faixa"]}), mc, "Faixas")
 
 # faixas de um trecho: linha central (amarela dupla nas avenidas, tracejada branca nas ruas), divisórias de

@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.12 (APK código 8)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.13 (APK código 9)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -85,6 +85,22 @@ A CIDADE (Liberty City, dados em data/city.json; o mapa tem ~22 x 17 km)
   No último andar a escada continua até o TELHADO: mureta de 1 m em volta, caixa d'água e grade em volta
   do vão da escada. Bom para olhar a rua de cima. Prédios mais altos que isso só abrem o térreo + 2 andares.
 - ESTANDE DE TIRO na base militar do aeroporto (onde o jogo livre começa): 8 alvos a 15/25/40/60 m.
+
+VISUAL ESTILO DAYZ (0.13)
+- NEBLINA: ar mais pesado, o horizonte some numa névoa (como no DayZ). De manhã (do amanhecer até ~9h) vem
+  NEBLINA MATINAL branco-acinzentada, mais grossa perto do mar/rios/lagos; cada dia sorteia a força dela.
+- FUMAÇA NO HORIZONTE: até 14 colunas de fumaça escura saindo de prédios em ruína, vistas de longe.
+- CHÃO: asfalto com remendos, buracos, manchas de óleo e rachaduras; calçada com placas soltas, musgo nas
+  juntas e rachaduras; terrenos com concreto velho, terra batida, cascalho e musgo; parques com grama seca e
+  terra pisada. Folhas secas e papéis espalhados (mais junto das paredes).
+- CHUVA: chão e paredes molham (escurecem e brilham) e aparecem POÇAS, que enchem os buracos do asfalto;
+  depois que a chuva para, tudo seca em uns 3–4 min.
+- MATO (só perto do jogador): tufos nos terrenos, no pé das paredes, nas rachaduras da calçada e da rua;
+  arbustos; CAPIM ALTO nos parques. Balança com o vento (mais na tempestade) e se abre quando você passa.
+  Agachado no capim alto, os infectados enxergam você na metade da distância.
+- HERA subindo pelas paredes de ~40% dos prédios.
+- SOMBRA NOS CANTOS: chão mais escuro junto das paredes, pé das paredes escuro, base dos carros/móveis/
+  objetos mais escura, e por dentro dos prédios o rodapé e o canto do teto escurecem.
 
 DIA, NOITE E TEMPO
 - 1 dia de jogo = 48 min reais. O jogo livre começa às 8h. Sol nasce ~6h e se põe ~19h30.
@@ -366,7 +382,11 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - quais prédios abrem perto do jogador, porta-malas mundo/interiores.gd
 - loot de cada móvel/carro/chão ....... mundo/loot_mundo.gd (tabelas no topo)
 - loot de teste na base ............... mundo/loot.gd
-- dia/noite, chuva, frio, lanterna .... mundo/clima.gd
+- dia/noite, chuva, frio, lanterna,
+  neblina da manhã, chão molhado ...... mundo/clima.gd
+- mato, capim alto, arbustos e a
+  sombra dos prédios no chão .......... mundo/mato.gd
+- colunas de fumaça no horizonte ...... mundo/fumaca.gd
 - juntar caixas numa malha só ......... mundo/malhas.gd
 - estande de tiro (alvos) ............. mundo/estande_tiro.gd
 - dados do mapa ....................... data/city.json
@@ -419,6 +439,17 @@ MÚSICA (pasta audio/)
   as lajes têm um vão onde passa a escada; a subida usa uma rampa invisível inclinada (colisão) por baixo
   dos degraus. A parte do prédio acima dos andares abertos continua desenhada pelo shader PREDIO.
 - Mapa: imagem do mapa feita uma vez (SubViewport), minimapa girado por shader.
+- Visual 0.13 (pensado para o celular, renderizador Compatibility, que não tem AO nem neblina volumétrica):
+  · Mato: pedaços de 32 x 32 m num raio de 40–90 m (Opções › Distância dos detalhes); quantidade pela
+    Densidade do cenário. Cada pedaço = até 3 MultiMesh (tufo, capim alto, arbusto), ~2–4 ms para montar,
+    1 por quadro (ao nascer/teleportar monta todos de uma vez). Vento e "abrir" no shader (sem física).
+  · Sombra no chão: mundo/mato.gd manda as plantas dos 24 prédios mais perto (a cada 6 m andados) para os
+    shaders do chão (trecho CHAO de mundo/materiais_cidade.gd), que escurecem até 2,4 m das paredes.
+  · Sombra pintada: mundo/malhas.gd escurece os vértices de baixo de cada caixa (variável "ao").
+  · Valores globais de shader (project.godot › shader_globals): "molhado" (chuva, vem do clima),
+    "vento" (clima) e "pos_jogador" (mato).
+  · Detalhes finos do chão (rachaduras, folhas, buracos) só aparecem perto da câmera e somem com
+    Opções › Gráficos › Detalhes dos shaders = baixo.
 - Arquivos do aparelho: user://opcoes.cfg (opções) e user://save.json (jogo salvo).
 
 -----------------------------------------------------------------------------------------------------
@@ -440,5 +471,6 @@ MÚSICA (pasta audio/)
   Angeles), que ainda não existe no jogo.
 - Sem 1ª pessoa (o HTML tinha); o mar é "caminhável"; a base militar ainda não tem os prédios/pistas do HTML.
 - Transformação em carro e jato do HTML foi descartada: o jogo é só a pé.
-- Ideias para depois: elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,
+- Ideias para depois: escadas de incêndio/ar-condicionado/placas nas fachadas, loot por região, lugares
+  especiais (postos do exército, quarentena, metrô), helicópteros caídos, elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,
   outros sobreviventes (NPCs), mais atos da história.

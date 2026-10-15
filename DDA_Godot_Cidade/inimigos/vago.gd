@@ -344,6 +344,8 @@ func _olhar(j: Node3D) -> void:
 	var alcance := lerpf(VISAO_DIA, VISAO_NOITE, gerente.escuridao())
 	if bool(j.get("agachado")):
 		alcance *= FATOR_AGACHADO
+		if j == gerente.jogador and gerente.mato != null and gerente.mato.no_capim:
+			alcance *= 0.5                              # escondido no capim alto dos parques
 	if cacando:
 		alcance *= 1.35                                 # já está de olho nele
 	var visto := false

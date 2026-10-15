@@ -68,73 +68,213 @@ void fragment() {
 }
 """
 
+# ---------- trecho dos pisos: chuva (molhado/poças), sombra perto dos prédios, rachaduras e folhas ----------
+# molhado (0..1) vem do clima (mundo/clima.gd) · ao_caixas = plantas dos prédios mais perto do jogador
+# (mundo/mato.gd manda até 24), para escurecer o chão junto das paredes (o "AO" que o renderizador do celular
+# não tem). Tudo que é detalhe fino some com a distância (fica leve e não "chuvisca" ao longe).
+const CHAO := """
+global uniform float molhado;
+uniform float detalhe = 1.0;            // Opções › Gráficos › Detalhes dos shaders: 0 = sem os detalhes finos
+uniform vec4 ao_caixas[24];
+uniform int ao_n = 0;
+float sombra_predios(vec2 p, float dist) {
+	if (dist > 70.0 || ao_n == 0) return 1.0;
+	float a = 1.0;
+	for (int i = 0; i < 24; i++) {
+		if (i >= ao_n) break;
+		vec2 d = abs(p - ao_caixas[i].xy) - ao_caixas[i].zw;
+		float dd = length(max(d, vec2(0.0))) + min(max(d.x, d.y), 0.0);
+		a = min(a, smoothstep(-0.1, 2.4, dd));
+	}
+	return mix(a, 1.0, smoothstep(45.0, 70.0, dist));
+}
+// rachaduras: bordas de células (voronoi). Devolve 0..1 (1 = em cima da rachadura)
+float rachas(vec2 p, float largura) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	float d1 = 8.0;
+	float d2 = 8.0;
+	for (int y = -1; y <= 1; y++) {
+		for (int x = -1; x <= 1; x++) {
+			vec2 g = vec2(float(x), float(y));
+			vec2 o = vec2(hash(i + g), hash(i + g + 17.31));
+			float d = length(g + o - f);
+			if (d < d1) { d2 = d1; d1 = d; } else if (d < d2) { d2 = d; }
+		}
+	}
+	return 1.0 - smoothstep(0.0, largura, d2 - d1);
+}
+// folhas secas, papéis e lixinho espalhados (mais onde "dens" é alto). rgb = cor, a = quanto cobre
+vec4 folhas(vec2 p, float dens) {
+	vec2 c = floor(p * 2.6);
+	float h = hash(c + 3.7);
+	if (h > dens) return vec4(0.0);
+	vec2 o = vec2(hash(c + 11.1), hash(c + 5.3)) * 0.6 + 0.2;
+	float r = 0.05 + 0.06 * hash(c + 2.9);
+	float m = 1.0 - smoothstep(r * 0.7, r, length(fract(p * 2.6) - o) / 2.6);
+	float t = hash(c + 8.8);
+	vec3 cf = t < 0.35 ? vec3(0.36, 0.20, 0.07) : (t < 0.65 ? vec3(0.50, 0.33, 0.10) : (t < 0.85 ? vec3(0.28, 0.24, 0.12) : vec3(0.55, 0.54, 0.50)));
+	return vec4(cf, m * 0.85);
+}
+// poças: onde o chão é mais baixo (ruído). Secas = mancha escura; com chuva = água que reflete o céu
+float pocas(vec2 p) { return smoothstep(0.60, 0.64, fbm(p * 0.11 + 4.0)); }
+void molhar(inout vec3 c, inout float rough, inout float spec, float poca) {
+	c *= mix(1.0, 0.92, poca);                                    // marca de poça seca
+	c *= mix(1.0, 0.62, molhado);                                 // chão molhado escurece
+	rough = mix(rough, 0.38, molhado);
+	float agua = poca * smoothstep(0.15, 0.6, molhado);
+	c = mix(c, c * 0.35, agua);
+	rough = mix(rough, 0.12, agua);
+	spec = mix(spec, 0.5, agua);
+}
+"""
+
 const TERRA := """
 shader_type spatial;
 uniform sampler2D mascara : filter_linear_mipmap;
 uniform vec2 mundo = vec2(11000.0, 8600.0);
 uniform vec3 cor_chao : source_color = vec3(0.42, 0.40, 0.37);
 uniform vec3 cor_areia : source_color = vec3(0.80, 0.70, 0.52);
-""" + COMUM + VERTICE_CAMADA + """
+""" + COMUM + CHAO + VERTICE_CAMADA + """
 void fragment() {
 	vec2 uv = (wp.xz + mundo) / (2.0 * mundo);
 	float terra = textureLod(mascara, uv, 1.0).r;
+	float dist = length(wp - CAMERA_POSITION_WORLD);
+	float perto = (1.0 - smoothstep(35.0, 90.0, dist)) * detalhe;
 	float n = fbm(wp.xz * 0.02);
 	vec3 cor = cor_chao * (0.82 + 0.3 * n);
-	cor = mix(cor, cor * vec3(0.95, 1.04, 0.86), smoothstep(0.6, 0.85, fbm(wp.xz * 0.004)));   // manchas de mato
-	cor = mix(cor, cor * vec3(1.08, 0.98, 0.9), smoothstep(0.55, 0.8, fbm(wp.xz * 0.011 + 7.0)) * 0.5);   // terra batida
+	// terrenos da cidade: concreto velho em placas OU terra batida com cascalho, conforme a mancha
+	float barro = smoothstep(0.45, 0.7, fbm(wp.xz * 0.013 + 7.0));
+	vec2 g = abs(fract(wp.xz / 3.5) - 0.5);
+	float junta = smoothstep(0.475, 0.5, max(g.x, g.y)) * perto * (1.0 - barro);
+	cor *= 1.0 - junta * 0.3;
+	cor = mix(cor, vec3(0.36, 0.30, 0.22) * (0.8 + 0.4 * fbm(wp.xz * 0.5)), barro * 0.85);              // terra
+	cor *= 1.0 - 0.25 * step(0.86, hash(floor(wp.xz * 9.0))) * perto * barro;                           // cascalho
+	cor = mix(cor, cor * vec3(0.78, 0.95, 0.62), smoothstep(0.55, 0.8, fbm(wp.xz * 0.004)) * 0.8);    // mato baixo
+	cor = mix(cor, vec3(0.20, 0.27, 0.12), smoothstep(0.6, 0.75, fbm(wp.xz * 0.09 + 2.0)) * 0.55 * perto);   // tufos de musgo
+	float r = rachas(wp.xz * 0.3, 0.03) * perto * (1.0 - barro) * smoothstep(0.5, 0.68, fbm(wp.xz * 0.05));
+	cor *= 1.0 - r * 0.3;
 	float praia = 1.0 - smoothstep(0.80, 0.96, terra);
-	ALBEDO = mix(cor, cor_areia * (0.9 + 0.15 * n), praia);
-	ROUGHNESS = 0.95;
+	vec4 fo = folhas(wp.xz, 0.04 + 0.2 * smoothstep(0.5, 0.8, fbm(wp.xz * 0.03))) * perto * (1.0 - praia);
+	cor = mix(cor, fo.rgb, fo.a);
+	float rough = 0.95;
+	float spec = 0.3;
+	molhar(cor, rough, spec, pocas(wp.xz) * (1.0 - praia));
+	cor *= sombra_predios(wp.xz, dist);
+	ALBEDO = mix(cor, cor_areia * (0.9 + 0.15 * n) * mix(1.0, 0.75, molhado), praia);
+	ROUGHNESS = rough;
+	SPECULAR = spec;
 }
 """
 
 const PARQUE := """
 shader_type spatial;
 uniform vec3 cor_grama : source_color = vec3(0.24, 0.40, 0.17);
-""" + COMUM + VERTICE_CAMADA + """
+""" + COMUM + CHAO + VERTICE_CAMADA + """
 void fragment() {
+	float dist = length(wp - CAMERA_POSITION_WORLD);
+	float perto = (1.0 - smoothstep(35.0, 90.0, dist)) * detalhe;
 	float n = fbm(wp.xz * 0.05);
 	float m = fbm(wp.xz * 0.008);
-	vec3 cor = cor_grama * (0.75 + 0.45 * n);
-	cor = mix(cor, vec3(0.42, 0.42, 0.18), smoothstep(0.6, 0.85, m) * 0.6);     // grama seca
+	vec3 cor = cor_grama * (0.7 + 0.5 * n);
+	cor = mix(cor, vec3(0.42, 0.40, 0.18), smoothstep(0.55, 0.85, m) * 0.7);     // grama seca (sem ninguém cuidar)
+	cor = mix(cor, vec3(0.33, 0.27, 0.18), smoothstep(0.62, 0.72, fbm(wp.xz * 0.04 + 9.0)) * 0.8);   // terra pisada
+	cor *= 0.88 + 0.22 * ruido(wp.xz * 1.7);
+	vec4 fo = folhas(wp.xz, 0.05 + 0.25 * smoothstep(0.45, 0.8, fbm(wp.xz * 0.02 + 3.0))) * perto;
+	cor = mix(cor, fo.rgb, fo.a);
+	float rough = 1.0;
+	float spec = 0.25;
+	molhar(cor, rough, spec, pocas(wp.xz * 0.8) * 0.8);
 	ALBEDO = cor;
-	ROUGHNESS = 1.0;
+	ROUGHNESS = rough;
+	SPECULAR = spec;
 }
 """
 
 const ASFALTO := """
 shader_type spatial;
 uniform vec3 cor : source_color = vec3(0.16, 0.16, 0.17);
-""" + COMUM + VERTICE_CAMADA + """
+""" + COMUM + CHAO + VERTICE_CAMADA + """
 void fragment() {
+	float dist = length(wp - CAMERA_POSITION_WORLD);
+	float perto = (1.0 - smoothstep(40.0, 110.0, dist)) * detalhe;
 	float n = fbm(wp.xz * 0.35);
 	float m = fbm(wp.xz * 0.012);
 	vec3 c = cor * (0.85 + 0.3 * n) * (0.9 + 0.2 * m);
-	float rachado = smoothstep(0.97, 1.0, 1.0 - abs(ruido(wp.xz * 0.08) - 0.5) * 2.0);   // rachaduras finas
-	c *= 1.0 - rachado * 0.35 * (1.0 - smoothstep(80.0, 250.0, length(wp - CAMERA_POSITION_WORLD)));
+	// remendos (asfalto novo, mais escuro, ou velho, mais claro) em retângulos
+	vec2 cr = floor(wp.xz / 7.0);
+	vec2 fr = fract(wp.xz / 7.0);
+	float hr = hash(cr + 1.3);
+	vec2 tr = vec2(0.25 + 0.5 * hash(cr + 2.1), 0.2 + 0.5 * hash(cr + 4.2));
+	float remendo = step(hr, 0.16) * step(abs(fr.x - 0.5), tr.x * 0.5) * step(abs(fr.y - 0.5), tr.y * 0.5);
+	c *= mix(1.0, hash(cr + 6.6) < 0.5 ? 0.72 : 1.25, remendo);
+	// manchas de óleo
+	vec2 co = floor(wp.xz / 4.0);
+	float oleo = step(hash(co + 9.1), 0.12) * (1.0 - smoothstep(0.3, 1.3, length(fract(wp.xz / 4.0) * 4.0 - 2.0 - vec2(hash(co), hash(co + 1.0)) + 0.5) * (0.8 + 0.4 * ruido(wp.xz * 2.0))));
+	c *= 1.0 - oleo * 0.45;
+	// buracos: borda clara quebrada, fundo escuro (enchem de água na chuva)
+	vec2 cb = floor(wp.xz / 9.0);
+	vec2 pb = fract(wp.xz / 9.0) * 9.0 - 4.5 + (vec2(hash(cb + 3.3), hash(cb + 7.7)) - 0.5) * 5.0;
+	float rb = 0.45 + 0.6 * hash(cb + 5.5);
+	float db = length(pb * vec2(1.0, 1.3)) + (ruido(wp.xz * 3.0) - 0.5) * 0.35;
+	float buraco = step(hash(cb + 8.4), 0.10) * (1.0 - smoothstep(rb - 0.08, rb, db)) * perto;
+	float borda = step(hash(cb + 8.4), 0.10) * (1.0 - smoothstep(rb, rb + 0.25, db)) * (1.0 - buraco) * perto;
+	c = mix(c, c * 1.5, borda * 0.6);
+	c = mix(c, vec3(0.06, 0.055, 0.05), buraco);
+	// rachaduras (rede fina) só onde o asfalto está mais gasto
+	float gasto = smoothstep(0.4, 0.7, fbm(wp.xz * 0.03 + 1.7));
+	float r = rachas(wp.xz * 0.32, 0.03) * gasto * perto;
+	r = max(r, smoothstep(0.97, 1.0, 1.0 - abs(ruido(wp.xz * 0.08) - 0.5) * 2.0) * (1.0 - smoothstep(80.0, 250.0, dist)));
+	c *= 1.0 - r * 0.45;
+	vec4 fo = folhas(wp.xz, 0.04 + 0.12 * gasto) * perto;
+	c = mix(c, fo.rgb * 0.8, fo.a);
+	float rough = 0.92;
+	float spec = 0.35;
+	molhar(c, rough, spec, max(pocas(wp.xz) * 0.9, buraco));
+	c *= sombra_predios(wp.xz, dist);
 	ALBEDO = c;
-	ROUGHNESS = 0.92;
+	ROUGHNESS = rough;
+	SPECULAR = spec;
 }
 """
 
 const CALCADA := """
 shader_type spatial;
 uniform vec3 cor : source_color = vec3(0.56, 0.54, 0.50);
-""" + COMUM + VERTICE_CAMADA + """
+""" + COMUM + CHAO + VERTICE_CAMADA + """
 void fragment() {
+	float dist = length(wp - CAMERA_POSITION_WORLD);
+	float perto = (1.0 - smoothstep(30.0, 120.0, dist)) * detalhe;
+	vec2 placa = floor(wp.xz / 1.6);
 	vec2 g = abs(fract(wp.xz / 1.6) - 0.5);
-	float junta = smoothstep(0.47, 0.5, max(g.x, g.y)) * (1.0 - smoothstep(30.0, 120.0, length(wp - CAMERA_POSITION_WORLD)));
-	ALBEDO = cor * (0.88 + 0.18 * fbm(wp.xz * 0.6)) * (1.0 - junta * 0.25);
-	ROUGHNESS = 0.9;
+	float junta = smoothstep(0.47, 0.5, max(g.x, g.y)) * perto;
+	vec3 c = cor * (0.88 + 0.18 * fbm(wp.xz * 0.6));
+	c *= 0.9 + 0.16 * hash(placa + 0.5) * perto;                                       // cada placa num tom
+	c = mix(c, c * 0.8, step(hash(placa + 4.4), 0.08) * perto);                         // placas soltas/sujas
+	c = mix(c * (1.0 - junta * 0.25), vec3(0.22, 0.28, 0.13), junta * 0.7 * smoothstep(0.35, 0.65, fbm(wp.xz * 0.08)));   // musgo nas juntas
+	float r = rachas(wp.xz * 0.55, 0.03) * perto * smoothstep(0.5, 0.7, fbm(wp.xz * 0.04 + 5.0));
+	c *= 1.0 - r * 0.3;
+	c *= 1.0 - 0.3 * smoothstep(0.62, 0.8, fbm(wp.xz * 0.25 + 2.0)) * perto;           // manchas
+	float ao = sombra_predios(wp.xz, dist);
+	vec4 fo = folhas(wp.xz, 0.05 + 0.3 * (1.0 - ao)) * perto;                           // o vento junta folhas nas paredes
+	c = mix(c, fo.rgb, fo.a);
+	float rough = 0.9;
+	float spec = 0.3;
+	molhar(c, rough, spec, pocas(wp.xz * 1.3) * 0.7);
+	ALBEDO = c * ao;
+	ROUGHNESS = rough;
+	SPECULAR = spec;
 }
 """
 
 const FAIXA := """
 shader_type spatial;
+global uniform float molhado;
 """ + COMUM + VERTICE_CAMADA + """
 void fragment() {
-	ALBEDO = COLOR.rgb * (0.85 + 0.15 * ruido(wp.xz * 2.0));
-	ROUGHNESS = 0.7;
+	float gasta = smoothstep(0.35, 0.75, fbm(wp.xz * 0.4));                              // tinta descascada
+	ALBEDO = mix(COLOR.rgb * (0.85 + 0.15 * ruido(wp.xz * 2.0)), vec3(0.17), gasta * 0.65) * mix(1.0, 0.65, molhado);
+	ROUGHNESS = mix(0.7, 0.35, molhado);
 }
 """
 
@@ -145,6 +285,7 @@ void fragment() {
 const PREDIO := """
 shader_type spatial;
 uniform float detalhe = 1.0;               // 0 = sem janelas (leve) · 1 = completo
+global uniform float molhado;              // chuva (mundo/clima.gd): paredes escurecem
 varying vec3 lp;
 varying vec3 tam;
 varying float tipo;
@@ -213,7 +354,15 @@ void fragment() {
 		}
 		c = mix(c, cor_vitrine, vitrine * (1.0 - longe));
 		c = mix(c, cor_toldo, toldo * (1.0 - longe));
-		c *= 0.72 + 0.28 * smoothstep(0.0, 6.0, v);                                // sombra perto do chão
+		// HERA subindo pelas paredes (~40% dos prédios), de 2 a 12 m, em manchas
+		float tem_hera = step(hash(vec2(sem * 37.0, 5.1)), 0.4) * (1.0 - longe) * detalhe;
+		float alt_hera = 2.0 + 10.0 * ruido(vec2(u * 0.16, sem * 31.0));
+		float hera = (1.0 - smoothstep(alt_hera - 2.0, alt_hera, v)) * smoothstep(0.42, 0.6, ruido(vec2(u, v) * 1.6 + sem * 9.0) + 0.3 * (1.0 - v / alt_hera));
+		hera *= tem_hera * smoothstep(0.3, 0.6, ruido(vec2(u * 0.09, sem * 3.0)));
+		c = mix(c, mix(vec3(0.07, 0.13, 0.04), vec3(0.20, 0.28, 0.09), ruido(vec2(u, v) * 5.0)), hera);
+		// sombra no pé da parede (forte nos primeiros 2 m) + o resto do térreo
+		c *= (0.6 + 0.4 * smoothstep(0.0, 2.2, v)) * (0.85 + 0.15 * smoothstep(0.0, 7.0, v));
+		c *= mix(1.0, 0.7 + 0.12 * ruido(vec2(u * 0.5, v * 0.05)), molhado);       // chuva: parede molhada, escorrida
 		if (tipo > 3.5) {
 			// ruína: fuligem subindo das janelas, sem vidro, buracos
 			float fumo = smoothstep(0.3, 0.8, ruido(vec2(u * 0.25 + sem * 9.0, v * 0.06)));
@@ -221,6 +370,7 @@ void fragment() {
 			c = mix(c, vec3(0.02), janela);
 		}
 		ALBEDO = c;
+		janela *= 1.0 - hera;
 		ROUGHNESS = mix(0.9, 0.25, janela);
 		SPECULAR = mix(0.3, 0.7, janela);
 	}
@@ -235,6 +385,8 @@ shader_type spatial;
 uniform vec4 caixa = vec4(0.0, 0.0, 10.0, 10.0);   // centro x, z e meia-largura x, z (por dentro)
 uniform float padrao = 0.0;
 uniform float sol_dentro = 0.12;
+uniform float semente = 0.0;                  // a mesma do prédio (hera do lado de fora parecida com a de longe)
+global uniform float molhado;
 varying vec3 wp;
 varying float dentro;
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -244,7 +396,11 @@ float ruido(vec2 p) {
 	f = f * f * (3.0 - 2.0 * f);
 	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
 }
-void vertex() { wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz; }
+varying float vertical;
+void vertex() {
+	wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	vertical = step(abs(NORMAL.y), 0.5);
+}
 void fragment() {
 	vec2 d = abs(wp.xz - caixa.xy) - caixa.zw;
 	dentro = 1.0 - smoothstep(-0.02, 0.06, max(d.x, d.y));
@@ -267,7 +423,22 @@ void fragment() {
 		c *= 0.85 + 0.25 * ruido(u * 2.0);
 	}
 	c *= 0.78 + 0.3 * ruido(u * 1.3 + wp.xz * 0.05);                                        // sujeira
+	if (padrao > 2.5 && padrao < 3.5) {
+		// lado de FORA das paredes: hera e chuva (igual ao prédio visto de longe)
+		float fora = 1.0 - dentro;
+		float v = wp.y - 0.6;
+		float tem_hera = step(hash(vec2(semente * 37.0, 5.1)), 0.4);
+		float alt_hera = 2.0 + 10.0 * ruido(vec2(u.x * 0.16, semente * 31.0));
+		float hera = (1.0 - smoothstep(alt_hera - 2.0, alt_hera, v)) * smoothstep(0.42, 0.6, ruido(vec2(u.x, v) * 1.6 + semente * 9.0) + 0.3 * (1.0 - v / alt_hera));
+		hera *= tem_hera * fora * smoothstep(0.3, 0.6, ruido(vec2(u.x * 0.09, semente * 3.0)));
+		c = mix(c, mix(vec3(0.07, 0.13, 0.04), vec3(0.20, 0.28, 0.09), ruido(vec2(u.x, v) * 5.0)), hera);
+		c *= mix(1.0, (0.6 + 0.4 * smoothstep(0.0, 2.2, v)) * mix(1.0, 0.72, molhado), fora);
+	}
 	c *= 1.0 - 0.35 * smoothstep(0.7, 0.95, ruido(wp.xz * 0.35 + 3.0)) * step(padrao, 2.5) * step(0.5, padrao);   // manchas no piso
+	// sombra nos cantos: rodapé (parede encontrando o piso) e junto do teto, em cada andar (4,6 m)
+	float va = mod(wp.y - 0.6, 4.6);
+	float canto = (0.62 + 0.38 * smoothstep(0.0, 0.9, va)) * (0.8 + 0.2 * (1.0 - smoothstep(3.3, 3.98, va)));
+	c *= mix(1.0, canto, dentro * vertical);
 	ALBEDO = c;
 	ROUGHNESS = 0.9;
 	SPECULAR = 0.2;

@@ -50,6 +50,7 @@ var ativo := true:
 		if not v:
 			limpar()
 var clima = null
+var mato = null                        # mundo/mato.gd (agachado no capim alto = quase invisível)
 var abates := 0
 var cidade = null
 var mundo = null

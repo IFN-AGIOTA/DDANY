@@ -32,3 +32,18 @@ pointing/emulate_touch_from_mouse=true
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
+
+[shader_globals]
+
+molhado={
+"type": "float",
+"value": 0.0
+}
+pos_jogador={
+"type": "vec3",
+"value": Vector3(0, -1000, 0)
+}
+vento={
+"type": "float",
+"value": 0.3
+}

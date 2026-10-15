@@ -146,6 +146,8 @@ var chuva := 0.0                     # 0..1 (força da chuva agora)
 var nuvens := 0.0                    # 0..1 (céu coberto)
 var estado := "limpo"                # limpo · nublado · chuva · tempestade
 var lanterna_acesa := false          # a lanterna (mão ou cabeça) está acesa agora
+var molhado := 0.0                   # 0..1 chão e paredes molhados (molha rápido na chuva, seca devagar)
+var neblina_manha := 0.0             # 0..1 neblina baixa do amanhecer agora (mais forte perto do mar/rios)
 
 var cidade: Node3D
 var jogador: Node3D
@@ -161,7 +163,7 @@ var _t_abrigo := 0.0
 var _coberto := false                # câmera e jogador debaixo de teto (dentro de prédio)
 var _chuva_visual := 0.0             # chuva mostrada (some dentro dos prédios)
 var _amb_base := 0.9
-var _nevoa_base := 0.00025
+var _nevoa_base := 0.0006
 var _nevoa_posta := -1.0
 var _rng := RandomNumberGenerator.new()
 var _assinatura_reflexo: Array = []
@@ -186,6 +188,10 @@ var _tarefa_sons := -1
 var _wav_chuva: AudioStreamWAV
 var _wav_trovao: AudioStreamWAV
 var _ligado := false
+var _nevoa_dia := 0.6                # quanto de neblina vai ter na manhã de hoje (sorteado a cada dia)
+var _dia_nevoa := -1
+var _perto_agua := 0.0               # 0..1 quanto de água há em volta do jogador (costa, rios, lagos)
+var _t_agua := 0.0
 
 # ---------- API ----------
 func ligar(c: Node3D, j: Node3D) -> void:
@@ -256,7 +262,7 @@ func escuridao() -> float:
 
 func salvar() -> Dictionary:
 	return {"hora": hora, "dia": dia, "chuva": chuva, "nuvens": nuvens, "estado": estado,
-		"t_estado": _t_estado, "parado": parado}
+		"t_estado": _t_estado, "parado": parado, "molhado": molhado}
 
 func carregar(d: Dictionary) -> void:
 	hora = fposmod(float(d.get("hora", HORA_INICIAL)), 24.0)
@@ -270,8 +276,28 @@ func carregar(d: Dictionary) -> void:
 	nuvens = clampf(float(d.get("nuvens", _alvo_nuvens)), 0.0, 1.0)
 	_t_estado = float(d.get("t_estado", 300.0))
 	parado = bool(d.get("parado", false))
+	molhado = clampf(float(d.get("molhado", chuva)), 0.0, 1.0)
 	if _ligado:
 		_atualizar_ceu()
+
+const CidadeCls := preload("res://mundo/cidade.gd")
+
+# quanto de água (mar, rio, lago) existe num raio de ~350 m do jogador (0..1)
+func _medir_agua() -> float:
+	if jogador == null or cidade == null or cidade.land.is_empty():
+		return 0.0
+	var p := jogador.global_position
+	var n := 0
+	var agua := 0
+	for r in [120.0, 240.0, 360.0]:
+		for i in 12:
+			var a := TAU * i / 12.0
+			var x := int((p.x + cos(a) * r + CidadeCls.WORLD.x) / CidadeCls.CELL)
+			var z := int((p.z + sin(a) * r + CidadeCls.WORLD.y) / CidadeCls.CELL)
+			n += 1
+			if x < 0 or z < 0 or x >= cidade.W or z >= cidade.H or cidade.land[z * cidade.W + x] == 0:
+				agua += 1
+	return clampf(float(agua) / float(n) * 2.5, 0.0, 1.0)
 
 # devolve sol, céu, neblina e mar da cidade como estavam antes do clima (menu / sair do jogo)
 func restaurar() -> void:
@@ -289,6 +315,7 @@ func restaurar() -> void:
 		env.tonemap_exposure = o["exp"]
 		if is_equal_approx(env.fog_density, _nevoa_posta):
 			env.fog_density = _nevoa_base
+	RenderingServer.global_shader_parameter_set("molhado", 0.0)
 	if _ceu != null:
 		_ceu.sky_top_color = o["topo"]
 		_ceu.sky_horizon_color = o["hor"]
@@ -454,6 +481,13 @@ func _process(dt: float) -> void:
 		_t_abrigo = TICK_ABRIGO
 		_ver_abrigo()
 	_chuva_visual = move_toward(_chuva_visual, 0.0 if _coberto else chuva, dt * 1.5)
+	# chão molhado: encharca em ~30 s de chuva e seca em ~4 min (sol seca mais rápido)
+	if chuva > 0.08:
+		molhado = move_toward(molhado, 1.0, dt * chuva / 30.0)
+	else:
+		molhado = move_toward(molhado, 0.0, dt / (240.0 if _escuridao > 0.5 else 160.0))
+	RenderingServer.global_shader_parameter_set("molhado", molhado)
+	RenderingServer.global_shader_parameter_set("vento", 0.25 + 0.35 * nuvens + 0.9 * chuva)
 	_t_ceu -= dt
 	if _t_ceu <= 0.0:
 		_t_ceu = TICK_CEU
@@ -572,8 +606,23 @@ func _atualizar_ceu() -> void:
 		# a neblina das Opções é a base; se alguém (Opções) mudou, ela vira a nova base
 		if not is_equal_approx(env.fog_density, _nevoa_posta):
 			_nevoa_base = env.fog_density
-		_nevoa_posta = _nevoa_base * float(k["nd"]) * (1.0 + 0.6 * n + 2.6 * c)
+		# NEBLINA DA MANHÃ (como no DayZ): do amanhecer até ~9h, mais grossa perto da água; cada dia sorteia a força
+		if dia != _dia_nevoa:
+			_dia_nevoa = dia
+			var r := RandomNumberGenerator.new()
+			r.seed = dia * 7919 + 11
+			_nevoa_dia = r.randf_range(0.15, 1.0)
+		_t_agua -= TICK_CEU
+		if _t_agua <= 0.0:
+			_t_agua = 4.0
+			_perto_agua = _medir_agua()
+		var manha := smoothstep(4.8, 6.2, hora) * (1.0 - smoothstep(7.8, 9.6, hora))
+		neblina_manha = manha * _nevoa_dia * (0.45 + 0.55 * _perto_agua)
+		_nevoa_posta = _nevoa_base * float(k["nd"]) * (1.0 + 0.6 * n + 2.6 * c) * (1.0 + 5.0 * neblina_manha)
 		env.fog_density = _nevoa_posta
+		# neblina da manhã é branco-acinzentada (não laranja como o horizonte do nascer do sol)
+		var lum := nev.r * 0.3 + nev.g * 0.55 + nev.b * 0.15
+		env.fog_light_color = nev.lerp(Color(lum * 1.0, lum * 1.03, lum * 1.08), neblina_manha * 0.8)
 		cidade.set_meta("_clima_nevoa", [_nevoa_base, _nevoa_posta])
 	for m in cidade.mats_agua:
 		if is_instance_valid(m):

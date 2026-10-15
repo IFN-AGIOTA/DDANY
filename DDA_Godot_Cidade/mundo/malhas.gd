@@ -5,22 +5,30 @@ extends RefCounted
 #   c.caixa(Vector3(0, 0.5, 0), Vector3(1, 1, 1), Color.RED)
 #   var malha := c.malha(material)
 # UV de cada face = tamanho em metros (texturas e shaders repetem certo em qualquer tamanho).
+# SOMBRA PINTADA (AO): a parte de baixo de cada caixa sai mais escura (o renderizador do celular não faz
+# sombra de contato). "ao" = quanto escurece embaixo (0 = desliga).
 
 class Construtor:
 	var v := PackedVector3Array()
 	var n := PackedVector3Array()
 	var c := PackedColorArray()
 	var uv := PackedVector2Array()
+	var ao := 0.28
 
 	func vazio() -> bool:
 		return v.is_empty()
 
-	func _quad(a: Vector3, b: Vector3, cc: Vector3, d: Vector3, nn: Vector3, cor: Color, ua: Vector2, ub: Vector2, uc: Vector2, ud: Vector2) -> void:
+	func _quad(a: Vector3, b: Vector3, cc: Vector3, d: Vector3, nn: Vector3, cor: Color, ua: Vector2, ub: Vector2, uc: Vector2, ud: Vector2, cores := []) -> void:
 		# a b c d em volta da face; os triângulos saem no sentido horário visto de fora (frente na Godot)
-		for p in [[a, ua], [cc, uc], [b, ub], [a, ua], [d, ud], [cc, uc]]:
+		# cores (opcional) = cor de cada canto a, b, c, d
+		var ca: Color = cores[0] if cores.size() == 4 else cor
+		var cb: Color = cores[1] if cores.size() == 4 else cor
+		var ccc: Color = cores[2] if cores.size() == 4 else cor
+		var cd: Color = cores[3] if cores.size() == 4 else cor
+		for p in [[a, ua, ca], [cc, uc, ccc], [b, ub, cb], [a, ua, ca], [d, ud, cd], [cc, uc, ccc]]:
 			v.append(p[0])
 			n.append(nn)
-			c.append(cor)
+			c.append(p[2])
 			uv.append(p[1])
 
 	# caixa com centro, tamanho, cor e (opcional) rotação; faces: todas ou só algumas (sem_baixo para pisos)
@@ -34,18 +42,22 @@ class Construtor:
 		var ex := base.x.normalized()
 		var ey := base.y.normalized()
 		var ez := base.z.normalized()
+		# embaixo mais escuro (em caixas altas, como paredes, bem menos: o degradê pegaria a parede toda)
+		var f := 1.0 - ao * clampf(1.5 / maxf(tam.y, 0.01), 0.25, 1.0)
+		var cb := Color(cor.r * f, cor.g * f, cor.b * f, cor.a)
+		var lat := [cb, cb, cor, cor]
 		# +Z
-		_quad(p[4], p[5], p[6], p[7], ez, cor, Vector2(0, tam.y), Vector2(tam.x, tam.y), Vector2(tam.x, 0), Vector2(0, 0))
+		_quad(p[4], p[5], p[6], p[7], ez, cor, Vector2(0, tam.y), Vector2(tam.x, tam.y), Vector2(tam.x, 0), Vector2(0, 0), lat)
 		# -Z
-		_quad(p[1], p[0], p[3], p[2], -ez, cor, Vector2(0, tam.y), Vector2(tam.x, tam.y), Vector2(tam.x, 0), Vector2(0, 0))
+		_quad(p[1], p[0], p[3], p[2], -ez, cor, Vector2(0, tam.y), Vector2(tam.x, tam.y), Vector2(tam.x, 0), Vector2(0, 0), lat)
 		# +X
-		_quad(p[5], p[1], p[2], p[6], ex, cor, Vector2(0, tam.y), Vector2(tam.z, tam.y), Vector2(tam.z, 0), Vector2(0, 0))
+		_quad(p[5], p[1], p[2], p[6], ex, cor, Vector2(0, tam.y), Vector2(tam.z, tam.y), Vector2(tam.z, 0), Vector2(0, 0), lat)
 		# -X
-		_quad(p[0], p[4], p[7], p[3], -ex, cor, Vector2(0, tam.y), Vector2(tam.z, tam.y), Vector2(tam.z, 0), Vector2(0, 0))
+		_quad(p[0], p[4], p[7], p[3], -ex, cor, Vector2(0, tam.y), Vector2(tam.z, tam.y), Vector2(tam.z, 0), Vector2(0, 0), lat)
 		if not sem_cima:
 			_quad(p[7], p[6], p[2], p[3], ey, cor, Vector2(0, 0), Vector2(tam.x, 0), Vector2(tam.x, tam.z), Vector2(0, tam.z))
 		if not sem_baixo:
-			_quad(p[0], p[1], p[5], p[4], -ey, cor, Vector2(0, 0), Vector2(tam.x, 0), Vector2(tam.x, tam.z), Vector2(0, tam.z))
+			_quad(p[0], p[1], p[5], p[4], -ey, cb, Vector2(0, 0), Vector2(tam.x, 0), Vector2(tam.x, tam.z), Vector2(0, tam.z))
 
 	# cilindro em pé (eixo Y local) com tampas
 	func cilindro(centro: Vector3, raio: float, altura: float, lados: int, cor: Color, base := Basis.IDENTITY, raio_topo := -1.0) -> void:

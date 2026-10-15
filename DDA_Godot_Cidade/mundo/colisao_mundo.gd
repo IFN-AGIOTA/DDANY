@@ -226,6 +226,13 @@ func _indexar(tmp: Dictionary, r: Rect2, cel: float, idx: int) -> void:
 
 # altura do chão (m) num ponto do mundo, igual às alturas usadas para desenhar a cidade
 func altura(x: float, z: float) -> float:
+	var r := altura_rua(x, z)
+	if r > -100.0:
+		return r
+	return altura_sem_rua(x, z)
+
+# só ruas e calçadas: ALT_RUA, ALT_CALCADA ou -1000 (não é rua)
+func altura_rua(x: float, z: float) -> float:
 	var key := Vector2i(floori(x / CEL_RUA), floori(z / CEL_RUA))
 	var calcada := false
 	if _r_hash.has(key):
@@ -246,6 +253,10 @@ func altura(x: float, z: float) -> float:
 				calcada = true
 	if calcada:
 		return ALT_CALCADA
+	return -1000.0
+
+# terra, parque, lago ou mar (ignorando as ruas)
+func altura_sem_rua(x: float, z: float) -> float:
 	var p := Vector2(x, z)
 	var terra := false
 	for i in _t_box.size():
@@ -421,6 +432,24 @@ func dentro_de_predio(x: float, z: float, margem := 0.0, com_abertos := false) -
 						continue
 					return true
 	return false
+
+# índices dos prédios cuja planta fica a menos de "raio" m de (x, z) (para a sombra no chão: mundo/mato.gd)
+func predios_perto(x: float, z: float, raio: float) -> PackedInt32Array:
+	var o := PackedInt32Array()
+	var c0 := Vector2i(floori((x - raio - 60.0) / CEL_PREDIO), floori((z - raio - 60.0) / CEL_PREDIO))
+	var c1 := Vector2i(floori((x + raio + 60.0) / CEL_PREDIO), floori((z + raio + 60.0) / CEL_PREDIO))
+	for cz in range(c0.y, c1.y + 1):
+		for cx in range(c0.x, c1.x + 1):
+			var key := Vector2i(cx, cz)
+			if not _pred_hash.has(key):
+				continue
+			for idx: int in _pred_hash[key]:
+				var k: int = idx * 5
+				var dx := maxf(absf(x - _pred[k]) - _pred[k + 2] * 0.5, 0.0)
+				var dz := maxf(absf(z - _pred[k + 1]) - _pred[k + 3] * 0.5, 0.0)
+				if dx * dx + dz * dz < raio * raio:
+					o.append(idx)
+	return o
 
 # true se (x, z) cai dentro de um obstáculo (carro, barreira, caçamba, entulho), em qualquer distância
 func dentro_de_obstaculo(x: float, z: float, margem := 0.0) -> bool:

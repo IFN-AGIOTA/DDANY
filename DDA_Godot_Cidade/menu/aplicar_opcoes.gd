@@ -12,7 +12,7 @@ const RESOLUCAO := [0.5, 0.65, 0.8, 1.0]
 const ALCANCE := [900.0, 1800.0, 3200.0, 5000.0]                     # distância de visão (m)
 const NEVOA_DIST := [2.2, 1.45, 1.0, 0.75]
 const NEVOA := [1.9, 1.0, 0.45]                                      # densa / normal / limpa
-const NEVOA_BASE := 0.00025
+const NEVOA_BASE := 0.0006                                          # neblina "normal" (antes 0.00025: cidade limpa demais)
 const MSAA := [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_4X, Viewport.MSAA_8X]
 
 var main: Node = null              # main.gd (tem jogador, controles, hud, cidade quando o jogo está rodando)
