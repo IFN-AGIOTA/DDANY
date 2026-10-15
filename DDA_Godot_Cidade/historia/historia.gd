@@ -18,6 +18,9 @@ extends CanvasLayer
 
 signal etapa_mudou(etapa: String)
 
+const CutsceneCls := preload("res://historia/cutscene.gd")
+const Cenas := preload("res://historia/cenas.gd")
+
 const FALAS := {
 	"prologo": ["No começo, ninguém sabia o que estava acontecendo.",
 		"Não havia sirenes gritando pelas ruas. Não havia alertas piscando nas telas. Não havia ninguém dizendo “corram”.",
@@ -97,7 +100,10 @@ var _escondeu := false
 var _casa := Vector2.ZERO        # onde Dominic começa o capítulo 3
 var _predio_greg := Vector2.ZERO # porta do prédio do Greg (na rua)
 var _carro_greg := Vector2.ZERO
-var _max_orig := -1              # quantos infectados o jogo livre usa (volta no fim do ato)
+var _max_orig := -1
+var cs: Node3D = null            # historia/cutscene.gd (cenas de cinema; roteiro em historia/cenas.gd)
+var _inicio := Vector2.ZERO      # largada da corrida
+var _dir_corrida := Vector2.RIGHT              # quantos infectados o jogo livre usa (volta no fim do ato)
 
 func _ready() -> void:
 	layer = 20
@@ -125,17 +131,17 @@ func _ir(e: String) -> void:
 				_cheio = false
 				titulo("CAPÍTULO 1", "A Última Corrida", func():
 					_preparar_corrida()
-					dizer(FALAS["pre"], func(): _largar())))
+					await _cena(func(): await Cenas.largada(cs, self, _inicio, _dir_corrida))
+					_largar()))
 		"pos":
-			_mostrar_toast("A MORTE DO MEDO", "linha de chegada")
-			await get_tree().create_timer(1.8, true, false, true).timeout
-			dizer(FALAS["pos"], func(): _ir("bar"))
+			var fim: Vector2 = _pontos[_pontos.size() - 1]
+			var antes: Vector2 = _pontos[_pontos.size() - 2] if _pontos.size() > 1 else _inicio
+			await _cena(func(): await Cenas.chegada(cs, self, fim, (fim - antes).normalized()))
+			_ir("bar")
 		"bar":
 			titulo("CAPÍTULO 2", "Brilho Antes da Tempestade", func():
-				_cheio = true
-				dizer(FALAS["bar"], func():
-					_cheio = false
-					_ir("cap3")))
+				await _cena(func(): await Cenas.bar(cs, self, FALAS["bar"]))
+				_ir("cap3"))
 		"cap3":
 			titulo("CAPÍTULO 3", "A Primeira Noite", func():
 				_cheio = true
@@ -150,30 +156,39 @@ func _ir(e: String) -> void:
 			_obj_texto("Vá até o prédio do Greg")
 		"carro":
 			_locais()
-			dizer(FALAS["greg"], func():
-				# a partir daqui Greg e Mavie andam com você (npc/companheiro.gd)
-				if main.get("companheiros") != null:
-					main.companheiros.chegar(["greg", "mavie"])
-				if main.mapa != null:
-					main.mapa.definir_objetivo(_carro_greg, "CARRO DO GREG")
-				_obj_texto("Chegue ao carro do Greg")
-				_infectados_na_rua()
-				dizer(FALAS["carro"]))
+			await _cena(func(): await Cenas.greg_mavie(cs, self, FALAS["greg"]))
+			# a partir daqui Greg e Mavie andam com você (npc/companheiro.gd)
+			if main.get("companheiros") != null:
+				main.companheiros.chegar(["greg", "mavie"])
+			if main.mapa != null:
+				main.mapa.definir_objetivo(_carro_greg, "CARRO DO GREG")
+			_obj_texto("Chegue ao carro do Greg")
+			_infectados_na_rua()
+			dizer(FALAS["carro"])
 		"fim":
 			_obj_texto("")
 			if main.mapa != null:
 				main.mapa.limpar_objetivo()
-			dizer(FALAS["fuga"], func():
-				titulo("FIM DO ATO 1", "Continua: Rota de Fuga — o jato, Nebraska, Califórnia…", func():
-					_mostrar_toast("MUNDO ABERTO", "a cidade caiu · sobreviva")
-					if main.vagos != null:
-						main.vagos.max_ativos = _max_orig if _max_orig > 0 else main.vagos.MAX_ATIVOS_PADRAO
-					if main.clima != null:
-						main.clima.parado = false
-					_ir("livre")))
+			await _cena(func(): await Cenas.fuga(cs, self, FALAS["fuga"]))
+			titulo("FIM DO ATO 1", "Continua: Rota de Fuga — o jato, Nebraska, Califórnia…", func():
+				_mostrar_toast("MUNDO ABERTO", "a cidade caiu · sobreviva")
+				if main.vagos != null:
+					main.vagos.max_ativos = _max_orig if _max_orig > 0 else main.vagos.MAX_ATIVOS_PADRAO
+				if main.clima != null:
+					main.clima.parado = false
+				_ir("livre"))
 		"livre":
 			ativa = false
 			_obj_texto("")
+
+# roda uma cutscene (historia/cenas.gd) e espera ela acabar
+func _cena(f: Callable) -> void:
+	if cs == null:
+		cs = CutsceneCls.new()
+		cs.name = "Cutscene"
+		cs.main = main
+		main.jogo.add_child(cs)
+	await cs.tocar(f)
 
 # cidade antes do surto: sem carros largados, sem entulho, sem infectados
 func _cidade_inteira(inteira: bool) -> void:
@@ -272,6 +287,8 @@ func _preparar_corrida() -> void:
 	var j = main.jogador
 	main.mundo.forcar(p)
 	j.teleportar(Vector3(p.x, main.mundo.altura(p.x, p.y) + 0.1, p.y), atan2(-dir.x, -dir.y))
+	_inicio = p
+	_dir_corrida = dir
 	var atual := p
 	for k in N_PONTOS:
 		var alvo := _rua_perto(atual + dir * PASSO_CORRIDA)
@@ -341,6 +358,11 @@ func _atualizar_ponto() -> void:
 		main.mapa.definir_objetivo(q, "PONTO %d" % (_ponto + 1) if _ponto < N_PONTOS - 1 else "A MORTE DO MEDO")
 
 func _process(dt: float) -> void:
+	# durante uma cutscene ela cuida da tela; a história só espera
+	if cs != null and cs.rodando:
+		_ui.visible = false
+		return
+	_ui.visible = true
 	if main != null and main.controles != null and is_instance_valid(main.controles):
 		var cena := _caixa.visible or _titulo.visible
 		if cena != _escondeu:

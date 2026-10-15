@@ -13,11 +13,21 @@ const VISUAIS := {
 	"greg": {"pele": Color(0.55, 0.38, 0.27), "cabelo": Color(0.08, 0.06, 0.05), "camisa": Color(0.2, 0.3, 0.24),
 		"calca": Color(0.17, 0.22, 0.32), "sapato": Color(0.12, 0.11, 0.1), "jaqueta": Color(0.24, 0.26, 0.2),
 		"comprido": false, "barba": true, "atadura": false, "largura": 1.06},
+	"dominic": {"pele": Color(0.82, 0.68, 0.58), "cabelo": Color(0.9, 0.9, 0.88), "camisa": Color(0.1, 0.1, 0.11),
+		"calca": Color(0.2, 0.24, 0.33), "sapato": Color(0.2, 0.14, 0.1), "jaqueta": Color(0.3, 0.18, 0.11),
+		"comprido": false, "barba": false, "atadura": false, "largura": 1.02, "oculos": true},
+	"garoto": {"pele": Color(0.7, 0.52, 0.4), "cabelo": Color(0.12, 0.09, 0.06), "camisa": Color(0.85, 0.55, 0.15),
+		"calca": Color(0.25, 0.25, 0.27), "sapato": Color(0.9, 0.9, 0.9), "jaqueta": null,
+		"comprido": false, "barba": false, "atadura": false, "largura": 0.85},
+	"bartender": {"pele": Color(0.75, 0.6, 0.5), "cabelo": Color(0.3, 0.3, 0.3), "camisa": Color(0.9, 0.9, 0.9),
+		"calca": Color(0.1, 0.1, 0.1), "sapato": Color(0.1, 0.1, 0.1), "jaqueta": Color(0.1, 0.1, 0.12),
+		"comprido": false, "barba": true, "atadura": false, "largura": 1.1},
 	"mavie": {"pele": Color(0.86, 0.7, 0.6), "cabelo": Color(0.2, 0.12, 0.07), "camisa": Color(0.75, 0.73, 0.7),
 		"calca": Color(0.2, 0.22, 0.28), "sapato": Color(0.85, 0.85, 0.85), "jaqueta": Color(0.45, 0.12, 0.12),
 		"comprido": true, "barba": false, "atadura": true, "largura": 0.92},
 }
 
+var corpo: Node3D               # gira inteiro ao cair (pivô nos pés)
 var quadril: Node3D
 var tronco: Node3D
 var cabeca: Node3D
@@ -27,6 +37,8 @@ var coxa: Array[Node3D] = []
 var joelho: Array[Node3D] = []
 var arma: Node3D = null
 var caido := false
+var pose := ""                   # "" (anda/para) · "sentado" · "acenar" · "abraco" · "dirigindo" · "segurar_luz"
+var escala := 1.0
 
 static var _mat: StandardMaterial3D = null
 var _t := 0.0
@@ -43,7 +55,8 @@ func montar(quem: String, tipo_arma: String) -> void:
 		_mat = Malhas.mat_cores(0.9)
 	var v: Dictionary = VISUAIS.get(quem, VISUAIS["greg"])
 	var L: float = v["largura"]
-	quadril = _pivo(self, Vector3(0, ALT_QUADRIL, 0))
+	corpo = _pivo(self, Vector3.ZERO)
+	quadril = _pivo(corpo, Vector3(0, ALT_QUADRIL, 0))
 	tronco = _pivo(quadril, Vector3.ZERO)
 	var c := Malhas.Construtor.new()
 	var jaq = v["jaqueta"]
@@ -65,6 +78,9 @@ func montar(quem: String, tipo_arma: String) -> void:
 		c.caixa(Vector3(0, 0.09, -0.1), Vector3(0.19, 0.08, 0.04), v["cabelo"].lightened(0.1))
 	for s in [-1.0, 1.0]:
 		c.caixa(Vector3(s * 0.05, 0.19, -0.112), Vector3(0.035, 0.02, 0.01), Color(0.08, 0.08, 0.1))  # olhos
+	if v.get("oculos", false):
+		c.caixa(Vector3(0, 0.19, -0.118), Vector3(0.21, 0.055, 0.02), Color(0.04, 0.04, 0.05))      # óculos de aviador
+		c.caixa(Vector3(0, 0.215, -0.12), Vector3(0.21, 0.012, 0.022), Color(0.7, 0.6, 0.3))
 	_parte(cabeca, c)
 	for lado in 2:
 		var s := -1.0 if lado == 0 else 1.0
@@ -165,6 +181,34 @@ func atualizar(dt: float, vel: float) -> void:
 		tronco.rotation.y = lerpf(0.35, -0.3, clampf((f - 0.35) / 0.4, 0.0, 1.0))
 		if _golpe >= DUR_GOLPE:
 			_golpe = -1.0
+	_poses()
 	# caído: deita de costas (pivô nos pés)
-	rotation.x = -_queda * PI * 0.5
-	position.y = _queda * 0.12
+	corpo.rotation.x = -_queda * PI * 0.5
+	corpo.position.y = _queda * 0.12
+
+# poses fixas das cutscenes (por cima da animação de andar)
+func _poses() -> void:
+	match pose:
+		"sentado", "dirigindo":
+			for i in 2:
+				coxa[i].rotation.x = -1.45
+				joelho[i].rotation.x = 1.45
+			quadril.position.y = 0.5
+			tronco.rotation.x = 0.05
+			if pose == "dirigindo":
+				for i in 2:
+					ombro[i].rotation = Vector3(-1.1, 0.0, 0.0)
+					cotovelo[i].rotation.x = -0.6
+			else:
+				ombro[0].rotation = Vector3(-0.6, 0.0, -0.1)
+				cotovelo[0].rotation.x = -1.2
+		"acenar":
+			ombro[0].rotation = Vector3(0.0, 0.0, -2.6 + sin(_t * 9.0) * 0.25)
+			cotovelo[0].rotation.x = -0.4
+		"abraco":
+			for i in 2:
+				ombro[i].rotation = Vector3(-1.35, 0.0, (0.55 if i == 0 else -0.55))
+				cotovelo[i].rotation.x = -1.0
+		"segurar_luz":
+			ombro[1].rotation = Vector3(0.0, 0.0, 2.9)
+			cotovelo[1].rotation.x = 0.0

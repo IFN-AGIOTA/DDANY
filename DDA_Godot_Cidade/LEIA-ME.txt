@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.9 (APK código 5)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.10 (APK código 6)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -261,6 +261,10 @@ NO JOGO (Menu > HISTÓRIA · ATO 1)
   até as 18h). Dominic sai com jaqueta, mochila e o revólver do pai; a cidade já trinca (carros largados,
   poucos infectados). Objetivos: PRÉDIO DO GREG -> Mavie chega ferida, um vulto manca no fim da rua ->
   CARRO DO GREG (infectados chegando) -> rádio "Evacuação imediata..." -> FIM DO ATO 1.
+- CUTSCENES (cenas de cinema, com faixas pretas, legendas e botão PULAR / Esc; toque = próxima fala):
+  a largada da corrida (Dominic, Greg e o garoto com a luz), a chegada e o abraço, o bar com a TV dando as
+  notícias, o encontro com Greg e a chegada da Mavie (e o vulto mancando no fim da rua) e a fuga no carro do Greg.
+  Nelas aparece o DOMINIC do livro (cabelo branco, óculos de aviador, jaqueta de couro).
 - Depois: mundo aberto na cidade caída (o livro segue com o jato: Nebraska, Califórnia, Los Angeles).
 - Para criar mais capítulos: veja o topo de historia/historia.gd (etapas, dizer(...), titulo(...),
   mapa.definir_objetivo(...)).
@@ -348,6 +352,10 @@ COMPANHEIROS (pasta npc/)
 
 HISTÓRIA (pasta historia/)
 - falas, etapas, corrida .............. historia/historia.gd
+- roteiro das cutscenes (câmera,
+  atores, falas de cada cena) ......... historia/cenas.gd
+- sistema de cutscene (faixas, legenda,
+  PULAR, atores, cenário do bar) ...... historia/cutscene.gd
 
 MÚSICA (pasta audio/)
 - compositor (escalas, andamento, quando
