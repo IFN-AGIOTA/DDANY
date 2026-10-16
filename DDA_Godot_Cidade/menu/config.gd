@@ -5,7 +5,7 @@ extends Node
 
 signal mudou(chave: String)          # "gfx" quando os gráficos foram aplicados; "hud" quando a HUD foi editada
 
-const VERSAO := "0.27"
+const VERSAO := "0.28"
 const ARQUIVO := "user://opcoes.cfg"
 
 const PADRAO := {
@@ -18,6 +18,7 @@ const PADRAO := {
 	"dif": 1,                             # dificuldade do modo livre: 0 fácil, 1 normal, 2 difícil
 	"abertura_vista": false,
 	"rec_tempo": 0.0, "rec_abates": 0,    # recordes (tela de morte)              # a abertura (trailer) da história já passou uma vez
+	"nome_rede": "", "ip_rede": "",       # multijogador: seu nome e o último IP digitado (menu/tela_multijogador.gd)
 }
 
 # shd/tex/models/detd/fx: 0..3 · shad: 0..2 · den: 0..2 · fog: 0 densa, 1 normal, 2 limpa · dist/res: 0..3

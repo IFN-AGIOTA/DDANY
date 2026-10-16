@@ -1,12 +1,13 @@
 extends CanvasLayer
 # MENU PRINCIPAL (igual ao do HTML): "DIAS DE UM / APOCALIPSE / NOVA YORK", versão, botões
-# História · Ato 1 · Jogar (mundo livre) · Opções · Créditos (menu/creditos.gd), e o ícone de tela cheia no canto. Fica por cima da cena_menu.gd.
+# História · Ato 1 · Jogar (mundo livre) · Multijogador (menu/tela_multijogador.gd) · Opções · Créditos (menu/creditos.gd), e o ícone de tela cheia no canto. Fica por cima da cena_menu.gd.
 # Mexa AQUI para: textos e botões do menu principal. (A cena 3D de fundo é menu/cena_menu.gd.)
 
 signal jogar
 signal continuar
 signal historia
 signal opcoes
+signal multijogador
 
 const UI := preload("res://menu/ui.gd")
 const Salvamento := preload("res://menu/salvamento.gd")
@@ -118,11 +119,13 @@ func _montar() -> void:
 			b2.queue_redraw()
 			return
 		jogar.emit())
+	var bm := UI.BotaoMenu.new("Multijogador", "Mundo livre com amigos · mesma rede Wi-Fi", false, 3.8)
+	bm.apertado.connect(func(): multijogador.emit())
 	var b3 := UI.BotaoMenu.new("Opções", "", false, 3.8)
 	b3.apertado.connect(func(): opcoes.emit())
 	var b4 := UI.BotaoMenu.new("Créditos", "", false, 3.0, 26.0)
 	b4.apertado.connect(_abrir_creditos)
-	var botoes: Array = [b1, b2, b3, b4]
+	var botoes: Array = [b1, b2, bm, b3, b4]
 	if salvo != "":
 		var b0 := UI.BotaoMenu.new("Continuar", salvo, true, 3.8)
 		b0.apertado.connect(func(): continuar.emit())

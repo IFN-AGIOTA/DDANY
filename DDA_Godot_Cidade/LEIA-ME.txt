@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.27 (APK código 23)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.28 (APK código 24)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,17 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.28 · BASE DO MULTIJOGADOR (modo livre)
+- Botão MULTIJOGADOR no menu (menu/tela_multijogador.gd): seu nome, CRIAR PARTIDA (você vira o host),
+  PARTIDAS NA REDE (achadas sozinhas no mesmo Wi-Fi) e ENTRAR POR IP. Até 8 jogadores. Porta UDP 24560
+  (partida) e 24561 (anúncio na rede local). Os dois aparelhos precisam estar na MESMA VERSÃO.
+- Já funciona: cada um vê os outros andando, correndo, agachando, mirando, atirando (som de longe e traçante),
+  recarregando/golpeando/comendo, com a ROUPA e a ARMA certas e o NOME em cima da cabeça. A hora e o clima
+  são os do host. O loot sai IGUAL para todos (mesma semente). Os infectados de cada um ouvem os tiros dos outros.
+  Entrou/saiu aparece na tela; se o host sai, todos voltam ao menu com o aviso. Pausar não para o mundo em rede.
+- AINDA NÃO (próximos passos, seção 10): infectados iguais para todos, itens pegos/largados, dano entre
+  jogadores, salvar a partida em rede, jogar pela internet (fora do Wi-Fi).
+
 ATUALIZAÇÃO 0.27 · PERSONAGEM NOVO E ANIMAÇÕES REFINADAS (resumo do que mudou)
 - O DOMINIC 3D foi CANCELADO (a pasta personagens/ e npc/ator_rigado.gd saíram; as cutscenes voltaram como
   eram). As ferramentas de modelagem continuam em ferramentas/dominic/ só como referência.
@@ -573,6 +584,18 @@ SOBREVIVENTE (jogador no modo livre)
 - quando usa (modo livre) ............. main.gd (_jogar) e jogador/jogador.gd (usar_sobrevivente)
 - quantos aparecem e onde ............. inimigos/vagos.gd
 
+MULTIJOGADOR (pasta rede/ · modo livre)
+- conexão (criar/entrar/sair, porta,
+  limite de jogadores, versão, anúncio
+  no Wi-Fi) ........................... rede/rede.gd (autoload "Rede")
+- o que vai pela rede no jogo (estado
+  15x/s, roupa, ações, tiros, clima) .. rede/sessao_rede.gd
+- o boneco do outro jogador (suavizado,
+  nome em cima, roupa, arma) .......... rede/jogador_remoto.gd
+- tela do menu ........................ menu/tela_multijogador.gd
+- liga ao jogo (semente do loot, nascer
+  perto, pausa, sem salvar em rede) ... main.gd (_ligar_rede, _rede_caiu)
+
 COMPANHEIROS (pasta npc/)
 - inteligência (seguir, lutar, cair,
   levantar, falas), vida e dano ....... npc/companheiro.gd (tabelas DADOS e FALAS no topo)
@@ -647,6 +670,19 @@ MÚSICA (pasta audio/)
     janela (hash) variava de pixel para pixel e as janelas/vitrines ficavam com pontinhos/listras.
   · Valor global de shader "noite" (clima) acende as janelas dos sobreviventes.
 - Arquivos do aparelho: user://opcoes.cfg (opções) e user://save.json (jogo salvo).
+- MULTIJOGADOR (0.28): multijogador de alto nível da Godot (ENetMultiplayerPeer + @rpc no autoload Rede,
+  que tem o mesmo caminho /root/Rede em todos os aparelhos). O host (id 1) repassa as mensagens dos clientes.
+  · Entrada: cliente conecta -> manda _ola(nome, protocolo, versão) -> host confere e responde _aceito(lista de
+    jogadores, mundo = semente do loot + clima) -> o cliente monta a cidade -> evento "cheguei" -> todos
+    respondem com a roupa (e o host com o clima).
+  · Cada aparelho simula SÓ o seu jogador (física, inventário, vida) e manda o ESTADO (canal 1, unreliable
+    ordered, 15/s: [posição, giro, velocidade, bits agachado/mirando/morto/no ar, arma, mira, tempo do tiro]);
+    o jogador_remoto.gd mostra 0,12 s no passado, interpolando entre dois estados (não treme com a rede).
+  · EVENTOS (canal 2, reliable): cheguei, roupa, acao, tiro, mundo (só aceito do host).
+  · A cidade já sai igual em todos sem passar pela rede: é gerada com sementes fixas (mundo/cidade.gd).
+  · Para o próximo passo (infectados e itens iguais para todos) o caminho é o HOST mandar neles: ele simula os
+    infectados e manda posição/estado; os clientes pedem "peguei o item X" / "acertei o infectado Y" e o host
+    confirma para todos.
 
 -----------------------------------------------------------------------------------------------------
 9. COMO MANDAR ATUALIZAÇÕES
@@ -671,6 +707,10 @@ MÚSICA (pasta audio/)
 - Sobrevivente: rosto liso de manequim; fuzis também ficam só na mão direita (a animação é de pistola).
 - Infectados: os rostos são simples (manequim, olhos pintados); as cutscenes ainda usam o infectado
   antigo, de caixas.
+- MULTIJOGADOR (base da 0.28), falta: infectados iguais para todos (hoje cada aparelho tem os seus, que só
+  caçam o próprio jogador), itens pegos/largados e caixas sincronizados (hoje dá para os dois pegarem o mesmo
+  item), dano entre jogadores, jogadores sem colisão entre si, salvar a partida em rede (em rede não salva),
+  outros jogadores no mapa/minimapa, chat, jogar pela internet (hoje só Wi-Fi/IP direto).
 - Ideias para depois: loot por região, lugares
   especiais (postos do exército, quarentena, metrô), helicópteros caídos, elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,
   outros sobreviventes (NPCs), mais atos da história.

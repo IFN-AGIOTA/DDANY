@@ -39,6 +39,8 @@ const PausaCls := preload("res://menu/pausa.gd")
 const EditorHudCls := preload("res://menu/editor_hud.gd")
 const AplicarOpcoesCls := preload("res://menu/aplicar_opcoes.gd")
 const JOGADOR_CENA := preload("res://jogador/jogador.tscn")
+const SessaoRedeCls := preload("res://rede/sessao_rede.gd")
+const TelaMultiCls := preload("res://menu/tela_multijogador.gd")
 
 var cidade: Node3D
 var jogo: Node3D                            # tudo do jogo em andamento (apagado ao voltar ao menu)
@@ -66,6 +68,8 @@ var historia: CanvasLayer                   # historia/historia.gd (Ato 1)
 var vagos: Node                             # inimigos/vagos.gd (infectados)
 var companheiros: Node                      # npc/companheiros.gd (Greg e Mavie, depois do encontro)
 var mato: Node3D                            # mundo/mato.gd (mato perto do jogador + sombra dos prédios no chão)
+var sessao_rede: Node = null                # rede/sessao_rede.gd (só na partida multijogador)
+var tela_multi: CanvasLayer = null          # menu/tela_multijogador.gd
 var abates := 0
 var _tempo_jogo := 0.0
 var _t_salvar := 0.0
@@ -96,6 +100,7 @@ func _ready() -> void:
 	aplicador.name = "AplicarOpcoes"
 	aplicador.main = self
 	add_child(aplicador)
+	Rede.caiu.connect(_rede_caiu)
 	_abrir_menu()
 
 # nó "Cidade" (construções). No editor é criado sem dono, então não é salvo na cena.
@@ -109,6 +114,7 @@ func _cidade() -> Node3D:
 # ---------- telas ----------
 func _abrir_menu() -> void:
 	_fechar_jogo()
+	Rede.sair()                              # voltou ao menu: sai da partida em rede (se estava)
 	if cidade != null:
 		cidade.visible = false
 	cena_menu = CenaMenuCls.new()
@@ -121,6 +127,7 @@ func _abrir_menu() -> void:
 	menu.continuar.connect(func(): _jogar(true))
 	menu.historia.connect(func(): _jogar(false, true))
 	menu.opcoes.connect(_abrir_opcoes)
+	menu.multijogador.connect(_abrir_multijogador)
 	Musica.definir_modo("menu")
 
 func _jogar(carregar_salvo := false, modo_historia := false) -> void:
@@ -145,8 +152,48 @@ func _jogar(carregar_salvo := false, modo_historia := false) -> void:
 	elif modo_historia:
 		historia.iniciar(self)
 	jogador.usar_sobrevivente()             # o personagem do jogador (livre e história): jogador/modelo_sobrevivente.gd
+	_ligar_rede()
+
+# ---------- multijogador (rede/rede.gd) ----------
+func _abrir_multijogador() -> void:
+	if tela_multi != null:
+		return
+	tela_multi = TelaMultiCls.new()
+	tela_multi.name = "TelaMultijogador"
+	add_child(tela_multi)
+	tela_multi.fechar.connect(func():
+		tela_multi.queue_free()
+		tela_multi = null)
+	tela_multi.comecar.connect(func():
+		tela_multi.queue_free()
+		tela_multi = null
+		_jogar())
+
+# partida em rede: mesma semente de loot do host, nasce perto dos outros e liga a sessão (rede/sessao_rede.gd)
+func _ligar_rede() -> void:
+	if not Rede.ligado or jogo == null:
+		return
+	loot_mundo.semente = int(Rede.mundo.get("semente", loot_mundo.semente))
+	if Rede.eh_cliente():
+		var a := randf() * TAU
+		var p := SPAWN + Vector2(cos(a), sin(a)) * randf_range(2.0, 5.0)
+		jogador.teleportar(Vector3(p.x, mundo.altura(p.x, p.y) + 0.05, p.y), PI)
+	sessao_rede = SessaoRedeCls.new()
+	sessao_rede.name = "SessaoRede"
+	jogo.add_child(sessao_rede)
+	sessao_rede.ligar(self)
+
+func _rede_caiu(motivo: String) -> void:
+	if jogo == null:
+		return
+	_continuar()
+	_abrir_menu()
+	if menu != null:
+		menu.avisar(motivo)
 
 func salvar_jogo() -> void:
+	if Rede.ligado:
+		return                               # partida em rede ainda não salva (não estraga o jogo salvo sozinho)
 	if jogo != null and jogador != null:
 		_t_salvar = 0.0
 		Salvamento.salvar(self)
@@ -161,7 +208,9 @@ func _notification(what: int) -> void:
 
 # botão VOLTAR do Android (e Esc): fecha a tela de cima; no jogo, pausa; no menu, sai
 func _voltar() -> void:
-	if opcoes != null:
+	if tela_multi != null:
+		tela_multi._sair()
+	elif opcoes != null:
 		_fechar_opcoes()
 	elif pausa != null:
 		_continuar()
@@ -213,7 +262,9 @@ func _pausar() -> void:
 	if tela_inventario != null and tela_inventario.aberto:
 		tela_inventario.fechar()
 	salvar_jogo()
-	get_tree().paused = true
+	get_tree().paused = not Rede.ligado          # em rede o mundo não para (os outros continuam jogando)
+	if Rede.ligado:
+		controles.set_bloqueado(true)
 	pausa = PausaCls.new()
 	pausa.name = "Pausa"
 	pausa.estatisticas = _estatisticas()
@@ -224,7 +275,8 @@ func _pausar() -> void:
 		_continuar()
 		_fechar_jogo()
 		_criar_jogo()
-		jogador.usar_sobrevivente())
+		jogador.usar_sobrevivente()
+		_ligar_rede())
 	pausa.menu_principal.connect(func():
 		salvar_jogo()
 		_continuar()
@@ -237,6 +289,8 @@ func _continuar() -> void:
 		pausa.queue_free()
 		pausa = null
 	get_tree().paused = false
+	if Rede.ligado and controles != null and is_instance_valid(controles) and tela_morte == null:
+		controles.set_bloqueado(false)
 
 func _estatisticas() -> Array:
 	var s := int(_tempo_jogo)
@@ -245,6 +299,9 @@ func _estatisticas() -> Array:
 		r.append(["dia de sobrevivência", str(int(clima.dia))])
 	if missoes != null:
 		r.append(["suprimentos achados", str(missoes.encontrados)])
+	if Rede.ligado:
+		var ips := Rede.meus_ips()
+		r.append(["partida em rede", "%d jogador(es)%s" % [Rede.jogadores.size(), (" · seu IP " + ", ".join(ips)) if Rede.eh_host() and not ips.is_empty() else ""]])
 	var rt := int(float(Config.valor("rec_tempo")))
 	r.append(["recorde vivo", "%d:%02d" % [rt / 60, rt % 60]])
 	if estande != null and int(estande.get("acertos")) > 0:
@@ -369,7 +426,8 @@ func _morreu(causa: String) -> void:
 		var a := randf() * TAU
 		var r := randf_range(0.3, 1.1)
 		ItemMundoCls.soltar(jogo, it, p + Vector3(cos(a) * r, 0.02, sin(a) * r))
-	Salvamento.salvar(self, true)                     # a morte vale: sair agora não desfaz
+	if not Rede.ligado:
+		Salvamento.salvar(self, true)                 # a morte vale: sair agora não desfaz
 	Musica.adicionar_tensao(1.0)
 	await get_tree().create_timer(2.5).timeout
 	if jogador == null or not jogador.morto or tela_morte != null:
@@ -443,6 +501,7 @@ func _fechar_jogo() -> void:
 	vagos = null
 	missoes = null
 	companheiros = null
+	sessao_rede = null
 
 func _process(dt: float) -> void:
 	if Engine.is_editor_hint() or controles == null or not is_instance_valid(controles) or get_tree().paused:

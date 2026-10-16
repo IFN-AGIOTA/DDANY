@@ -15,6 +15,8 @@ extends Node
 #     andando = só a parte de cima (jogador/camada_acao.gd), as pernas continuam;
 #   · morte com 3 variações.
 
+signal tocou_acao(nome: String, velocidade: float, corpo_todo: bool)   # multijogador repassa (rede/sessao_rede.gd)
+
 enum Estado { PARADO, ANDAR, CORRER, PULAR, CAINDO, MIRAR, ATIRAR, MORRER, AGACHADO, ANDAR_AGACHADO }
 
 const NOMES := ["parado", "andar", "correr", "pular", "cair", "mirar", "atirar", "morrer", "agachado", "andar_agachado"]
@@ -254,6 +256,7 @@ func atualizar_estado(dt: float, vel_h: float, no_chao: bool, vel_v: float, mira
 func acao(nome: String, velocidade := 1.0, corpo_todo := true) -> void:
 	if not _tem(nome):
 		return
+	tocou_acao.emit(nome, velocidade, corpo_todo)
 	var a := _ap.get_animation(nome)
 	var parado := _vel_h < 0.6 and _no_chao
 	if corpo_todo and parado:
