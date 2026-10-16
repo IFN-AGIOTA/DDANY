@@ -10,6 +10,7 @@ extends Node
 
 signal mudou
 signal aviso(texto: String)
+signal animar(nome: String)          # pede uma animação ao corpo do jogador (pegar do chão, comer, curar...)
 
 const Itens := preload("res://inventario/itens.gd")
 const ItemCls := preload("res://inventario/item.gd")
@@ -347,6 +348,7 @@ func largar(it) -> bool:
 func pegar(it) -> bool:
 	if it == null or do_jogador(it):
 		return false
+	animar.emit("pegar_chao" if it.no_mundo != null else "pegar")
 	var pref: String = it.def().get("slot", "")
 	if pref != "" and slots.get(pref) == null:
 		retirar(it)
@@ -407,6 +409,7 @@ func usar(it) -> void:
 		_depois()
 		return
 	if d.get("consome", false):
+		animar.emit("consumir" if d.get("cat", "") in ["comida", "bebida"] else "usar_item")
 		var sv = jogador.get("sobrevivencia")
 		if sv != null and d.has("efeito"):
 			var r: String = sv.aplicar(d["efeito"], it.id, it.estado)

@@ -22,6 +22,9 @@ const EQUIPE := [
 const RECURSOS := [
 	["Modelos 3D (manequins) e animações dos infectados e do sobrevivente", "Quaternius · \"Universal Animation Library\" 1 e 2",
 		"CC0 1.0 (domínio público)", "quaternius.com · opengameart.org/content/universal-animation-library-2"],
+	["Animações de andar de lado e de costas, fuzil (mirar, atirar, recarregar), golpes com arma, pegar do chão, levar golpe, mortes e sentar",
+		"Kay Lousberg · \"KayKit Character Animations\" (convertidas para o esqueleto do jogo)",
+		"CC0 1.0 (domínio público)", "kaylousberg.itch.io/kaykit-character-animations · kaylousberg.com"],
 	["Pistola, rifle de caça, faca, facão, taco, machado e pé de cabra (modelos realistas)",
 		"Poly Haven · Mateusz Sadek, Ulan Cabanilla, Enrique Martín, James Ray Cock, Alexander Otterbeck",
 		"CC0 1.0 (domínio público)", "polyhaven.com (lista completa em armas/modelos/LICENCA.txt)"],

@@ -3,3 +3,14 @@ Corpo (manequim masculino) e animações do sobrevivente: Quaternius (https://qu
     https://opengameart.org/content/universal-animation-library-2
     https://opengameart.org/content/universal-animation-library
 Licença: CC0 1.0 (domínio público). Convertido por ferramentas/preparar_jogador.gd.
+
+Animações extras (0.26), em animacoes.res, convertidas para este esqueleto por ferramentas/retarget_kaykit.gd:
+- correr_esq, correr_dir, andar_tras, correr_fuzil, andar_furtivo, esquivas, rastejar, mirar_fuzil, atirar_fuzil,
+  recarregar_fuzil, golpes (golpe_2m, golpe_1m, facada, chute), pegar_chao, usar_item, levar_golpe, morrer_a/b,
+  arremessar, arrombar, acenar, sentar/deitar no chão:
+  Kay Lousberg, "KayKit Character Animations" 1.1 - CC0 1.0 - https://kaylousberg.itch.io/kaykit-character-animations
+- recarregar_pistola, socos, lanterna, conversar, sentar, dirigir, consertar, empurrar, golpe de espada, trote:
+  Quaternius, "Universal Animation Library" (UAL1) - CC0 1.0 - https://quaternius.itch.io/universal-animation-library
+- consumir, abrir_bau, soco_gancho, golpe_1m_a/b, machadada, empurrado, levantar_do_chao, braços cruzados, falar no
+  rádio, segurar lanterna, andar carregando, arremesso, sim/não, deslizar:
+  Quaternius, "Universal Animation Library 2" (UAL2) - CC0 1.0 - https://quaternius.itch.io/universal-animation-library-2

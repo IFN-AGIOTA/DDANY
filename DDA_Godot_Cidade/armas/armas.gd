@@ -243,6 +243,7 @@ func recarregar() -> void:
 		rel = float(W["rel"]) + float(W.get("rel_bala", 0.0)) * _encher
 	rel_tot = rel
 	rel_s = 0
+	_animar(("recarregar_fuzil" if atual in ["m4", "ak", "espingarda", "rifle_caca"] else "recarregar_pistola"), rel, false)
 	_vibrar(10)
 	mudou.emit()
 
@@ -426,6 +427,20 @@ func _atirar(W: Dictionary) -> void:
 	mudou.emit()
 
 # ---------- corpo a corpo ----------
+# animação de cada arma branca (alterna entre as da lista)
+const GOLPES := {"faca": ["facada", "golpe_1m_diag"], "machado": ["golpe_2m", "golpe_2m_lado"], "taco": ["golpe_2m_lado", "golpe_2m"],
+	"punhos": ["soco", "soco_cruzado", "soco_gancho"], "lanca": ["facada"], "facao": ["golpe_1m_a", "golpe_1m_b", "golpe_1m"],
+	"cano": ["golpe_1m_a", "golpe_1m_b"], "pe_de_cabra": ["golpe_1m_b", "golpe_1m_a"]}
+var _n_golpe := 0
+
+# toca a animação do corpo com a duração pedida (o jogador/animador_modelo.gd decide corpo todo ou só parte de cima)
+func _animar(nome: String, duracao: float, corpo_todo: bool) -> void:
+	var an = jogador.get("animador") if jogador != null else null
+	if an == null or not an.has_method("acao") or an._ap == null or not an._ap.has_animation(nome):
+		return
+	var a: Animation = an._ap.get_animation(nome)
+	an.acao(nome, clampf(a.length / maxf(duracao, 0.1), 0.5, 3.0), corpo_todo)
+
 func _corpo_a_corpo(dt: float) -> void:
 	var W: Dictionary = WDEF[atual]
 	var held := gatilho and pode_usar()
@@ -456,6 +471,9 @@ func _corpo_a_corpo(dt: float) -> void:
 		golpe = 1.0
 		_golpe_pend = true
 		sons.tocar("golpe", -4.0)
+		_n_golpe += 1
+		var anims: Array = GOLPES.get(atual, ["golpe_1m_a", "golpe_1m_b"])
+		_animar(anims[_n_golpe % anims.size()], maxf(float(W["rate"]) * 0.9, 0.5), true)
 	if _golpe_pend and golpe < 0.62:      # o golpe acerta no meio do movimento
 		_golpe_pend = false
 		_acertar_golpe(W)

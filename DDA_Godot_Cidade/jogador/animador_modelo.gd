@@ -7,6 +7,13 @@ extends Node
 # Animações em arquivos separados (como o Mixamo entrega): coloque em res://modelos/animacoes/ e elas são
 # adicionadas ao modelo sozinhas (veja importar_animacoes).
 # Para fixar nomes exatos: animador.nomes_exatos["correr"] = "Rifle Run"
+# EXTRAS (quando o modelo tem as animações do jogo, jogador/sobrevivente/animacoes.res):
+#   · 8 DIREÇÕES: mirando/atirando o corpo fica virado para a mira; as pernas andam/correm de frente, de costas
+#     (andar_tras) ou de lado (correr_esq / correr_dir), escolhendo pela direção do movimento em relação ao corpo;
+#   · fuzil na mão: correr_fuzil e mirar_fuzil;
+#   · AÇÕES (acao()): recarregar, golpes, pegar do chão, comer/beber, curar, levar golpe. Parado = corpo todo;
+#     andando = só a parte de cima (jogador/camada_acao.gd), as pernas continuam;
+#   · morte com 3 variações.
 
 enum Estado { PARADO, ANDAR, CORRER, PULAR, CAINDO, MIRAR, ATIRAR, MORRER, AGACHADO, ANDAR_AGACHADO }
 
@@ -39,6 +46,13 @@ var _esqueleto: Skeleton3D
 var _ponto_arma: Node3D
 var _atual := -1
 var _achadas := {}            # Estado (int) -> nome da animação ("" = não achou)
+var _nome_atual := ""
+var _t_acao := 0.0            # ação no corpo todo tocando (segundos que faltam)
+var _camada = null            # jogador/camada_acao.gd do modelo (parte de cima)
+var _morte := ""
+var _vel_h := 0.0
+var _no_chao := true
+const FUZIS := ["m4", "ak", "espingarda", "rifle_caca"]
 
 func configurar(modelo: Node3D) -> void:
 	_modelo = modelo
@@ -54,6 +68,10 @@ func configurar(modelo: Node3D) -> void:
 	var sks := modelo.find_children("*", "Skeleton3D", true, false)
 	if sks.size() > 0:
 		_esqueleto = sks[0] as Skeleton3D
+	_camada = modelo.get("camada")
+	_nome_atual = ""
+	_t_acao = 0.0
+	_morte = ""
 	_resolver()
 
 # use depois de mudar nomes_exatos ou palavras
@@ -158,26 +176,98 @@ func atualizar(dt: float, j) -> void:
 		if _modelo != null and _modelo.has_method("atualizar_procedural"):
 			_modelo.call("atualizar_procedural", dt, j)
 		return
-	var tiro_recente: bool = j.armas != null and j.armas.since < 0.25
-	atualizar_estado(dt, j.vel_horizontal, j.is_on_floor(), j.velocity.y, j.mirando or (j.armas != null and j.armas.aim > 0.6), tiro_recente, j.morto, j.agachado)
+	var tiro_recente: bool = j.armas != null and j.armas.since < 0.25 and not (j.armas.eh_corpo() if j.armas.has_method("eh_corpo") else false)
+	var mira: bool = j.mirando or (j.armas != null and j.armas.aim > 0.6)
+	# direção do movimento em relação ao corpo (frente = -Z do jogador)
+	var yaw: float = j.rotation.y
+	var v: Vector3 = j.velocity
+	var frente := Vector3(-sin(yaw), 0, -cos(yaw))
+	var lado := Vector3(cos(yaw), 0, -sin(yaw))
+	_dir = Vector2(v.dot(lado), v.dot(frente))
+	_fuzil = j.armas != null and str(j.armas.atual) in FUZIS
+	atualizar_estado(dt, j.vel_horizontal, j.is_on_floor(), j.velocity.y, mira, tiro_recente, j.morto, j.agachado)
+
+var _dir := Vector2.ZERO      # (lado, frente) da velocidade em relação ao corpo
+var _fuzil := false
+
+func _tem(n: String) -> bool:
+	return n != "" and _ap != null and _ap.has_animation(n)
 
 func atualizar_estado(dt: float, vel_h: float, no_chao: bool, vel_v: float, mirando: bool, atirando: bool, morto: bool, agachado := false) -> void:
 	if _ap == null:
 		return
+	_vel_h = vel_h
+	_no_chao = no_chao
+	# ação no corpo todo (pegar do chão, comer parado...): espera acabar; se começar a correr, corta
+	if _t_acao > 0.0:
+		_t_acao -= dt
+		if morto or vel_h > 1.2 or not no_chao:
+			_t_acao = 0.0
+		else:
+			return
 	var e := decidir(vel_h, no_chao, vel_v, mirando, atirando, morto, agachado)
-	if e != _atual:
-		_atual = e
-		var nome := _nome_para(e)
-		if nome != "" and _ap.current_animation != nome:
-			_ap.play(nome, 0.1 if e == Estado.MORRER else mistura)
-	if _atual == Estado.ANDAR:
-		_ap.speed_scale = clampf(vel_h / 1.7, 0.7, 1.5)
-	elif _atual == Estado.ANDAR_AGACHADO:
-		_ap.speed_scale = clampf(vel_h / 1.0, 0.7, 1.6)
-	elif _atual == Estado.CORRER:
-		_ap.speed_scale = clampf(vel_h / 5.5, 0.8, 1.5)
-	else:
-		_ap.speed_scale = 1.0
+	_atual = e
+	var nome := _nome_para(e)
+	var escala := 1.0
+	match e:
+		Estado.ANDAR:
+			escala = clampf(vel_h / 1.7, 0.7, 1.5)
+		Estado.ANDAR_AGACHADO:
+			escala = clampf(vel_h / 1.0, 0.7, 1.6)
+		Estado.CORRER:
+			escala = clampf(vel_h / 5.5, 0.8, 1.5)
+			if _fuzil and _tem("correr_fuzil"):
+				nome = "correr_fuzil"
+				escala = clampf(vel_h / 4.5, 0.8, 1.4)
+		Estado.MIRAR, Estado.PARADO:
+			if mirando and _fuzil and _tem("mirar_fuzil"):
+				nome = "mirar_fuzil"
+		Estado.MORRER:
+			if _morte == "":
+				var op: Array = ["morrer", "morrer_a", "morrer_b"].filter(func(x): return _tem(x))
+				_morte = op[randi() % op.size()] if not op.is_empty() else nome
+			nome = _morte
+	if e != Estado.MORRER:
+		_morte = ""
+	# 8 direções: mirando/atirando e andando, as pernas seguem a direção em relação ao corpo
+	if (mirando or atirando) and no_chao and not agachado and not morto and vel_h > VEL_ANDAR:
+		var ang := atan2(_dir.x, _dir.y)               # 0 = frente, + = direita
+		if absf(ang) > 2.25 and _tem("andar_tras"):
+			nome = "andar_tras"
+			escala = clampf(vel_h / 1.5, 0.7, 1.8)
+		elif ang > 0.95 and _tem("correr_dir"):
+			nome = "correr_dir"
+			escala = clampf(vel_h / 4.0, 0.55, 1.4)
+		elif ang < -0.95 and _tem("correr_esq"):
+			nome = "correr_esq"
+			escala = clampf(vel_h / 4.0, 0.55, 1.4)
+		elif vel_h <= VEL_CORRER:
+			nome = _nome_para(Estado.ANDAR)
+			escala = clampf(vel_h / 1.7, 0.7, 1.5)
+	if nome != "" and nome != _nome_atual:
+		_nome_atual = nome
+		_ap.play(nome, 0.1 if e == Estado.MORRER else mistura)
+	_ap.speed_scale = escala
+
+# AÇÃO por cima do estado: recarregar, golpe, pegar, comer... (nome da animação, velocidade).
+# corpo_todo: parado usa o corpo todo; andando/correndo vira camada só na parte de cima.
+func acao(nome: String, velocidade := 1.0, corpo_todo := true) -> void:
+	if not _tem(nome):
+		return
+	var a := _ap.get_animation(nome)
+	var parado := _vel_h < 0.6 and _no_chao
+	if corpo_todo and parado:
+		if _camada != null:
+			_camada.parar()
+		_ap.play(nome, 0.12)
+		_ap.speed_scale = velocidade
+		_nome_atual = nome
+		_t_acao = a.length / maxf(velocidade, 0.05)
+	elif _camada != null:
+		_camada.tocar(a, velocidade)
+
+func tocando_acao() -> bool:
+	return _t_acao > 0.0 or (_camada != null and _camada.tocando())
 
 # adiciona ao modelo as animações de arquivos separados (.glb/.gltf/.fbx/.tscn) de uma pasta.
 # Arquivo com UMA animação: ela ganha o nome do arquivo ("Rifle Run.glb" -> "Rifle Run").

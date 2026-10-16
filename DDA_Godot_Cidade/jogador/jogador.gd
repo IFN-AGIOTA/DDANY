@@ -98,6 +98,11 @@ func _ready() -> void:
 	sobrevivencia = SobrevivenciaCls.new()
 	sobrevivencia.name = "Sobrevivencia"
 	add_child(sobrevivencia)
+	# animações das ações (jogador/animador_modelo.gd): pegar do chão, comer/curar, levar golpe
+	inventario.animar.connect(func(n: String): animador.acao(n, 1.35 if n.begins_with("pegar") else 1.0, true))
+	sobrevivencia.atingido.connect(func(_o: Vector3):
+		if not morto:
+			animador.acao(["levar_golpe_a", "levar_golpe_b"][randi() % 2], 1.3, false))
 	armas.ligar_inventario(inventario)
 	_carregar_modelo_do_projeto()
 	# sons do corpo: passos e dor (audio/sons_corpo.gd)

@@ -195,7 +195,7 @@ OLHOS = [na_ref(J["joint-l-eye"]), na_ref(J["joint-r-eye"])]
 _bm = partes["cabeca"]
 _pesc = [f for f in _bm.faces if f.calc_center_median().z < QUEIXO + 0.004]
 _ares = list({e for f in _pesc for e in f.edges})
-bmesh.ops.subdivide_edges(_bm, edges=_ares, cuts=2, use_grid_fill=True)
+bmesh.ops.subdivide_edges(_bm, edges=_ares, cuts=3, use_grid_fill=True)
 bmesh.ops.triangulate(_bm, faces=_bm.faces[:])
 BOCA = na_ref(boca)
 print("cabeça MakeHuman: escala", K, "olhos", OLHOS, "boca", BOCA)
@@ -263,11 +263,31 @@ PELE = np.array([0.95, 0.87, 0.82])
 RASPADO = np.array([0.84, 0.81, 0.78])
 CABELO = np.array([0.93, 0.93, 0.91])
 Z_QUEIXO = D["z_pescoco"]
+TATUAGEM = np.array([0.24, 0.16, 0.12])
+def cor_tatuagem(c):
+	"""tatuagem geométrica do pescoço (como no desenho): linha no meio, Vs, verticais e faixa na base"""
+	pts = [p for p in cab_pts if 1.53 < p.z < 1.57]
+	cx = sum(p.x for p in pts) / len(pts)
+	cy = sum(p.y for p in pts) / len(pts)
+	a = math.atan2(c.x - cx, -(c.y - cy))                 # 0 = frente
+	u = a / math.radians(120)
+	h = (c.z - 1.53) / max(0.01, QUEIXO - 0.015 - 1.53)
+	au = abs(u)
+	if au > 1.0 or h < 0.0 or h > 1.0:
+		return PELE * (0.95 + 0.04 * random.random())
+	risco = au < 0.05
+	risco |= abs(h - (0.18 + au * 1.0)) < 0.07 and au < 0.6
+	risco |= abs(h - (0.58 + au * 0.85)) < 0.07 and au < 0.45
+	risco |= 0.3 < au < 0.37 and 0.12 < h < 0.95
+	risco |= 0.62 < au < 0.69 and h < 0.8
+	risco |= h < 0.1 and au < 0.8
+	return TATUAGEM if risco else PELE * (0.93 + 0.04 * random.random())
+
 def cor_cabeca(f):
 	c = f.calc_center_median()
 	n = f.normal
 	if c.z < QUEIXO - 0.006 and not (n.y < -0.6 and c.z > QUEIXO - 0.02):
-		return cor_face(f, img=COR)                         # pescoço: tatuagem do desenho
+		return cor_tatuagem(c)                              # pescoço: tatuagem geométrica
 	frente = n.y < -0.3 and c.y < OLHOS[0].y + 0.03
 	z_cabelo = OLHOS[0].z + 0.052                           # linha do cabelo na testa
 	if c.z > z_cabelo and abs(c.x) < 0.047:
@@ -307,7 +327,9 @@ def cor_roupa(f, sem_bracos=False, so_frente_costas=False):
 		return CALCA * (0.95 + 0.1 * random.random())
 	# painéis de tons (como as facetas cinza da referência)
 	from mathutils import noise as nz
-	return JAQUETA * (0.85 + 0.7 * max(0.0, nz.noise(c * 7.0)) + 0.08 * random.random())
+	v = nz.noise(c * 4.5)
+	tom = 0.75 if v < -0.15 else (1.15 if v < 0.25 else 1.7)
+	return JAQUETA * (tom + 0.06 * random.random())
 
 def cor_face(f, so_frente_costas=False, img=None, sem_bracos=False):
 	c = f.calc_center_median()
