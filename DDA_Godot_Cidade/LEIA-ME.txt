@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.24 (APK código 20)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.25 (APK código 21)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,18 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.25 · ITENS REALISTAS (resumo do que mudou)
+- As ARMAS e os ITENS QUE O JOGADOR PEGA deixaram o estilo low poly: modelos 3D realistas, com texturas de
+  verdade, baixados com licença CC0 (Poly Haven e OpenGameArt; créditos no menu Créditos e nos LICENCA.txt):
+  pistola, M4A1, AKM, espingarda, rifle de caça, faca, taco, machado, pé de cabra; kit médico, fita/atadura,
+  latas (feijão, tomate, peixe, sardinha, leite condensado), leite em caixa, maçã, garrafa térmica (água),
+  lanterna, isqueiro, rádio, caixa de munição, pente de pistola, kit de armas, kit de costura, galhos e a
+  caixa do SUPRIMENTO MILITAR. Refrigerante e remédios viraram lata/frascos feitos por código.
+- Ícones do inventário refeitos a partir dos modelos novos (fotos 3D).
+- Itens novos: FACÃO (arma branca rápida, corta roupa e galho como a faca) e LEITE CONDENSADO (comida).
+- Renomeados para combinar com o modelo: "Pêssegos em calda" -> TOMATES EM LATA; "Caixa de suco" -> LEITE EM CAIXA.
+- Ainda low poly: lança, mochilas, capacete, boné, silenciador/mira/luneta e o corpo dos personagens.
+
 GRANDE ATUALIZAÇÃO 0.24 (resumo do que mudou)
 - LOOT: os móveis só sorteiam o que CABE neles (antes a M4/espingarda nunca cabiam no armário de armas e
   muitos móveis vinham vazios sem querer). AKM, pente de AK, 7.62, mira 4x e luneta agora aparecem.
@@ -451,7 +463,8 @@ PERSONAGEM (pasta jogador/)
 ARMAS (pasta armas/)
 - dano, cadência, pente, alcance,
   corpo a corpo, travar, desgaste ..... armas/armas.gd (tabela WDEF no topo)
-- modelo 3D das armas e acessórios .... armas/modelos_armas.gd (usa armas/modelos/*.scn quando existe)
+- modelo 3D das armas e acessórios .... armas/modelos_armas.gd (usa armas/modelos/<arma>.glb realistas;
+                                        .scn antigo só para a lança; cano de ferro feito por código)
 - traçantes, clarão, marcas de bala ... armas/efeitos_tiro.gd
 - sons dos tiros e golpes ............. armas/sons_armas.gd
 - mira e painel de munição (HUD) ...... armas/hud_combate.gd
@@ -468,6 +481,8 @@ INVENTÁRIO / ITENS (pasta inventario/)
 - ícones dos itens .................... inventario/visual.gd (desenho) e inventario/icones/<id>.png (fotos
                                         3D; refazer com ferramentas/gerar_icones.gd, instruções no topo)
 - item no chão · caixa/armário ........ inventario/item_mundo.gd · inventario/caixa_mundo.gd
+- modelo 3D realista de cada item ..... inventario/modelos_itens.gd (tabela ITENS: item -> modelo, tamanho,
+                                        deitado) · arquivos em inventario/modelos/*.glb (LICENCA.txt)
 - equipamento inicial / ao renascer ... inventario/inventario.gd (equipamento_inicial / equipamento_renascer)
 
 HUD (pasta hud/)
@@ -520,8 +535,11 @@ SOBREVIVENTE (jogador no modo livre)
 - equipamentos 3D no corpo (onde cada
   um encaixa: ENCAIXE) e peças feitas
   por código (gorro, lanterna, pochete) equipamentos/modelos_equip.gd
-- modelos baixados .................... armas/modelos/*.scn, equipamentos/modelos/*.res (LICENCA.txt)
-- converter armas e equipamentos ...... ferramentas/preparar_equipamentos.gd
+- modelos baixados .................... armas/modelos/*.glb e *.scn, inventario/modelos/*.glb,
+                                        equipamentos/modelos/*.res (cada pasta tem LICENCA.txt)
+- converter armas e itens realistas ... ferramentas/preparar_itens_realistas.py (roda no Blender 4.2;
+                                        instruções no topo) e depois ferramentas/gerar_icones.gd
+- converter equipamentos low poly ..... ferramentas/preparar_equipamentos.gd
 - quando usa (modo livre) ............. main.gd (_jogar) e jogador/jogador.gd (usar_sobrevivente)
 - quantos aparecem e onde ............. inimigos/vagos.gd
 

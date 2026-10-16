@@ -1,8 +1,21 @@
-Modelos 3D das armas (convertidos por ferramentas/preparar_equipamentos.gd: cores nos vértices, tamanho real,
-cano para a frente; o rifle de caça teve a luneta embutida removida):
-- pistola, m4, ak, espingarda, rifle_caca (+ silenciador, mira e luneta em equipamentos/modelos/):
-  Quaternius, "Ultimate Gun Pack" - CC0 1.0 - https://opengameart.org/content/low-poly-guns-pack
-- faca, machado: Quaternius, "Survival Pack" - CC0 1.0 - https://opengameart.org/content/lowpoly-survival-pack
-- taco: LonesomeDucky, "Old wooden baseball bat" - CC0 1.0 - https://opengameart.org/content/old-wooden-baseball-bat
+Modelos 3D das armas. Os realistas (.glb) foram preparados por ferramentas/preparar_itens_realistas.py
+(no Blender: tamanho real, cano para a frente, origem na empunhadura, menos triângulos e texturas menores).
+
+REALISTAS (.glb):
+- pistola: Mateusz Sadek, "Service Pistol" - CC0 1.0 - https://polyhaven.com/a/service_pistol
+- rifle_caca: Mateusz Sadek, "Bolt Action Rifle 7.62" - CC0 1.0 - https://polyhaven.com/a/bolt_action_rifle_7_62
+- m4: nisu, "M4A1 Assault Rifle" - CC0 1.0 - https://opengameart.org/content/m4a1-assault-rifle
+- ak: LonesomeDucky, "AKM" - CC0 1.0 - https://opengameart.org/content/akm
+- espingarda: MikeMoon, "Shotgun" (Remington 870; cores dos materiais ajustadas) - CC0 1.0 - https://opengameart.org/content/shotgun-1
+- faca: Mateusz Sadek, "Fish Knife" - CC0 1.0 - https://polyhaven.com/a/fish_knife
+- facao: Ulan Cabanilla, "Machete" - CC0 1.0 - https://polyhaven.com/a/machete
+- taco: Enrique Martín, "Baseball Bat" - CC0 1.0 - https://polyhaven.com/a/baseball_bat
+- machado: James Ray Cock e Ulan Cabanilla, "Hatchet" - CC0 1.0 - https://polyhaven.com/a/hatchet
+- pe_de_cabra: Alexander Otterbeck, "Crowbar 01" - CC0 1.0 - https://polyhaven.com/a/crowbar_01
+
+LOW POLY (.scn, antigos, convertidos por ferramentas/preparar_equipamentos.gd):
 - lanca: Hernandack, "Low Poly Survival Toolkit (weapon)" - CC0 1.0 - https://opengameart.org/content/low-poly-survival-toolkit-weapon
-Cano e pé de cabra: feitos por código (armas/modelos_armas.gd).
+Silenciador, mira e luneta (equipamentos/modelos/): Quaternius, "Ultimate Gun Pack" - CC0 1.0 - https://opengameart.org/content/low-poly-guns-pack
+Cano de ferro: feito por código (armas/modelos_armas.gd).
+
+CC0 1.0 = domínio público: https://creativecommons.org/publicdomain/zero/1.0/

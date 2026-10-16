@@ -1,13 +1,15 @@
 extends Node3D
 # ITEM JOGADO NO CHÃO. Aparece na coluna da ESQUERDA do inventário quando o jogador está perto.
 # Armas usam o mesmo modelo 3D das armas do jogador; equipamentos com modelo 3D (capacete, boné, gorro,
-# lanterna de cabeça, mochilas, pochete: equipamentos/modelos_equip.gd) aparecem com ele; o resto vira uma
-# caixinha da cor da categoria.
+# lanterna de cabeça, mochilas, pochete: equipamentos/modelos_equip.gd) aparecem com ele; comida, remédios,
+# ferramentas e munição usam os modelos realistas de inventario/modelos_itens.gd; o resto vira uma caixinha
+# da cor da categoria.
 # Criar por código: ItemMundo.soltar(pai, item, posicao)
 
 const Itens := preload("res://inventario/itens.gd")
 const ModelosArmas := preload("res://armas/modelos_armas.gd")
 const Equip := preload("res://equipamentos/modelos_equip.gd")
+const ModelosItens := preload("res://inventario/modelos_itens.gd")
 
 var item = null               # item.gd
 
@@ -41,6 +43,10 @@ func _ready() -> void:
 			eq.rotation.x = -PI * 0.5            # mochila deitada de costas no chão
 			eq.position.y = 0.1
 		add_child(eq)
+		return
+	var mod := ModelosItens.instancia(item.id) if ModelosItens.tem(item.id) else null
+	if mod != null:
+		add_child(mod)
 		return
 	var w := float(d["w"]) * 0.09
 	var h := float(d["h"]) * 0.09

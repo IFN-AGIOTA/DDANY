@@ -3,9 +3,12 @@ extends RefCounted
 # Cada arma de fogo tem um nó filho "Cano" na ponta (clarão e traçante) e acessórios escondidos
 # "Acc_cano" (silenciador) e "Acc_mira" (mira/luneta), que aparecem quando estão encaixados.
 # Armas brancas: o cabo fica na origem e a lâmina/cabeça vai para +Z.
-# MODELOS BAIXADOS (low poly, licença livre; créditos no menu Créditos e em armas/modelos/LICENCA.txt):
-# se existir armas/modelos/<tipo>.scn ele é usado (convertido por ferramentas/preparar_equipamentos.gd,
-# já com "Cano", "Acc_cano" e "Acc_mira"); senão vale o modelo de caixas abaixo (cano e pé de cabra).
+# MODELOS BAIXADOS (licença livre; créditos no menu Créditos e em armas/modelos/LICENCA.txt):
+#   1º armas/modelos/<tipo>.glb: REALISTAS (texturas de verdade), preparados por
+#      ferramentas/preparar_itens_realistas.py com os nós "Cano" (boca do cano) e "Mira" (onde a mira encaixa);
+#      aqui ganham "Acc_cano" (silenciador) e "Acc_mira" (mira 4x ou luneta) escondidos;
+#   2º armas/modelos/<tipo>.scn: low poly antigos (só a lança ainda usa);
+#   3º o modelo de caixas abaixo (cano de ferro).
 
 static func _mat(cor: Color, rough: float, metal := 0.0, sem_luz := false) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
@@ -43,16 +46,48 @@ static func _C(g: Node3D, r0: float, r1: float, comp: float, m: Material, x: flo
 	g.add_child(o)
 
 static var _cenas := {}
+static var _acess := {}
+# quais acessórios cada arma de fogo aceita (o mesmo que "acess" em inventario/itens.gd)
+const SILENCIADOR := ["pistola", "m4", "ak", "rifle_caca"]
+const MIRA := {"m4": "mira_acog", "ak": "mira_acog", "rifle_caca": "luneta"}
 
 static func construir(tipo: String) -> Node3D:
-	var arq := "res://armas/modelos/%s.scn" % tipo
 	if not _cenas.has(tipo):
-		_cenas[tipo] = load(arq) if ResourceLoader.exists(arq) else null
+		var glb := "res://armas/modelos/%s.glb" % tipo
+		var scn := "res://armas/modelos/%s.scn" % tipo
+		_cenas[tipo] = load(glb) if ResourceLoader.exists(glb) else (load(scn) if ResourceLoader.exists(scn) else null)
 	if _cenas[tipo] != null:
 		var n: Node3D = _cenas[tipo].instantiate()
 		n.name = "Arma_" + tipo
+		for mi in n.find_children("*", "MeshInstance3D", true, false):
+			(mi as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		var mira := n.get_node_or_null("Mira") as Node3D
+		var cano := n.get_node_or_null("Cano") as Node3D
+		if cano != null and tipo in SILENCIADOR and n.get_node_or_null("Acc_cano") == null:
+			var sil := _peca("silenciador")
+			sil.position = cano.position - Vector3(0, sil.mesh.get_aabb().size.y * 0.5, 0.01)
+			_esconder_em(n, "Acc_cano", sil)
+		if mira != null and MIRA.has(tipo) and n.get_node_or_null("Acc_mira") == null:
+			var mi := _peca(MIRA[tipo])
+			mi.position = mira.position
+			_esconder_em(n, "Acc_mira", mi)
 		return n
 	return construir_caixas(tipo)
+
+static func _peca(id: String) -> MeshInstance3D:
+	if not _acess.has(id):
+		_acess[id] = load("res://equipamentos/modelos/%s.res" % id)
+	var mi := MeshInstance3D.new()
+	mi.mesh = _acess[id]
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	return mi
+
+static func _esconder_em(n: Node3D, nome: String, peca: Node3D) -> void:
+	var a := Node3D.new()
+	a.name = nome
+	a.visible = false
+	n.add_child(a)
+	a.add_child(peca)
 
 # modelo antigo, feito de caixas (reserva quando não há modelo baixado)
 static func construir_caixas(tipo: String) -> Node3D:

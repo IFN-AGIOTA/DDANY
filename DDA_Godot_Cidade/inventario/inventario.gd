@@ -525,7 +525,7 @@ func encher_garrafa(g) -> void:
 func _receita(it, alvo) -> String:
 	var a: String = it.id
 	var b: String = alvo.id
-	var corta := ["faca", "machado"]
+	var corta := ["faca", "facao", "machado"]
 	if a in corta and alvo.def().get("cat", "") == "roupa" and not alvo.tem_conteudo() and alvo.slot == "":
 		return "rasgar"
 	if a in corta and b == "galho":

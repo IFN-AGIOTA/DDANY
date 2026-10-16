@@ -1,0 +1,21 @@
+Modelos 3D realistas dos itens (o que aparece no chão e nas fotos do inventário), preparados por
+ferramentas/preparar_itens_realistas.py (no Blender: tamanho real, em pé, menos triângulos, texturas menores).
+Todos CC0 1.0 (domínio público: https://creativecommons.org/publicdomain/zero/1.0/), do Poly Haven:
+
+- kit_medico ............ Ulan Cabanilla, "Medical Box" - https://polyhaven.com/a/medical_box
+- fita (e atadura) ...... Miroslav Turura, "Medical Tape" - https://polyhaven.com/a/medical_tape
+- lata_feijao, lata_tomate, lata_sardinha, caixa_leite ... Mia Pecina Zorko, "Long Life Food" - https://polyhaven.com/a/long_life_food
+- lata_peixe, lata_leite  Kosan Aziz, "Russian Food Cans 01" - https://polyhaven.com/a/russian_food_cans_01
+- maca .................. Oliver Harries, "Food Apple 01" - https://polyhaven.com/a/food_apple_01
+- garrafa_termica ....... PierreB3D, "Plastic Thermos" - https://polyhaven.com/a/plastic_thermos
+- lanterna .............. Abiyyu Panggalih, "Small Plastic Torch" - https://polyhaven.com/a/small_plastic_torch
+- isqueiro .............. Slinc, "Vintage Lighter" - https://polyhaven.com/a/vintage_lighter
+- radio ................. Thomas Paul Mouilleron, "Boombox" - https://polyhaven.com/a/boombox
+- municao ............... DanKit, "Ammo Box" - https://polyhaven.com/a/ammo_box
+- pente_pistola ......... Mateusz Sadek, "Service Pistol" (o pente) - https://polyhaven.com/a/service_pistol
+- caixa_ferramentas ..... Mateusz Sadek, "Metal Toolbox" - https://polyhaven.com/a/metal_toolbox
+- pote_plastico ......... PierreB3D, "Plastic Container" - https://polyhaven.com/a/plastic_container
+- galho ................. Rico Cilliers, "Dry Branches Medium 01" - https://polyhaven.com/a/dry_branches_medium_01
+- caixa_militar ......... Jack Mava, "Old Military Crate" - https://polyhaven.com/a/old_military_crate
+
+Refrigerante e frascos de remédio: feitos por código (inventario/modelos_itens.gd).

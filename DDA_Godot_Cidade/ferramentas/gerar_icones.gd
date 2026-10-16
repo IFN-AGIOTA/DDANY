@@ -1,6 +1,6 @@
 extends SceneTree
 # GERA OS ÍCONES DO INVENTÁRIO a partir dos MODELOS 3D do jogo ("foto" de cada item, fundo transparente):
-#   armas de fogo (e as versões com silenciador/mira encaixados: m4_cano, m4_mira, m4_cano_mira...),
+#   comida, remédios e ferramentas com modelo realista (inventario/modelos_itens.gd), armas de fogo (e as versões com silenciador/mira encaixados: m4_cano, m4_mira, m4_cano_mira...),
 #   armas brancas, acessórios, chapéus/capacete, mochilas, pochete, coletes e roupas (camisas e calças
 #   são feitas da própria malha do sobrevivente, "estendidas" como numa vitrine).
 # Saída: inventario/icones/<id>.png, já no formato do item na grade (w x h células). O inventário
@@ -14,6 +14,10 @@ const Itens := preload("res://inventario/itens.gd")
 const ModelosArmas := preload("res://armas/modelos_armas.gd")
 const Equip := preload("res://equipamentos/modelos_equip.gd")
 const Sob := preload("res://jogador/modelo_sobrevivente.gd")
+const ModelosItens := preload("res://inventario/modelos_itens.gd")
+# itens com modelo realista que continuam com o ícone desenhado por código (o desenho diferencia melhor:
+# munições de calibres diferentes, água limpa x suja x garrafa vazia)
+const SEM_FOTO := ["mun_9mm", "mun_556", "mun_762", "mun_12", "mun_308", "agua_suja", "garrafa_vazia", "bandagem"]
 
 const PASTA := "res://inventario/icones/"
 const CEL := 64                        # pixels por célula da grade
@@ -45,8 +49,14 @@ func _rodar() -> void:
 				nome += "_" + a
 			await _foto(nome, Itens.def(id), _arma(id, c), "lado")
 	# armas brancas: em pé (cabo embaixo)
-	for id in ["faca", "taco", "machado", "cano", "lanca", "pe_de_cabra"]:
-		await _foto(id, Itens.def(id), _arma(id, []), "lado_em_pe_virado" if id in ["faca", "machado"] else "lado_em_pe")
+	for id in ["faca", "facao", "taco", "machado", "cano", "lanca", "pe_de_cabra"]:
+		await _foto(id, Itens.def(id), _arma(id, []), "lado_em_pe")
+	# comida, remédios, ferramentas (modelos realistas de inventario/modelos_itens.gd)
+	var com_modelo: Array = ModelosItens.ITENS.keys() + ["refrigerante", "analgesico", "vitaminas", "antibiotico", "carvao", "pastilha"]
+	for id in com_modelo:
+		if id in SEM_FOTO:
+			continue
+		await _foto(id, Itens.def(id), ModelosItens.instancia(id, false), "de_cima" if id == "galho" else "tres_quartos")
 	# acessórios
 	for id in ["silenciador", "mira_acog", "luneta"]:
 		var mi := MeshInstance3D.new()
@@ -246,6 +256,8 @@ func _foto(nome: String, d: Dictionary, n: Node3D, vista: String) -> void:
 		"lado_em_pe_virado":                        # idem, mostrando o lado chato da lâmina
 			suporte.rotation = Vector3(-PI * 0.5, 0.0, 0.0)
 			suporte.rotate_y(PI * 0.5)
+		"de_cima":                                  # deitado no chão, visto de cima, comprido na vertical da tela
+			suporte.rotation = Vector3(0.0, PI * 0.5, 0.0)
 	var dir_cam := Vector3.ZERO                     # de onde a câmera olha
 	match vista:
 		"lado":
@@ -258,6 +270,8 @@ func _foto(nome: String, d: Dictionary, n: Node3D, vista: String) -> void:
 			dir_cam = Vector3(-0.5, 0.3, -1.0)
 		"frente":
 			dir_cam = Vector3(0.0, 0.08, 1.0)
+		"de_cima":
+			dir_cam = Vector3(0.0, 1.0, 0.02)
 	await process_frame
 	var caixa := _aabb(suporte)
 	var centro := caixa.get_center()

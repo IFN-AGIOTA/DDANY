@@ -1,6 +1,6 @@
 extends Node
 # SISTEMA DE ARMAS (porte do HTML v1.1.18 + estilo DayZ): pistola, M4, AKM, espingarda, rifle de caça e
-# armas brancas (faca, taco, machado, cano, pé de cabra) + PUNHOS com as mãos vazias.
+# armas brancas (faca, facão, taco, machado, cano, pé de cabra) + PUNHOS com as mãos vazias.
 # DayZ: a arma usa PENTE (item); RECARREGAR troca pelo pente mais cheio que você carrega (o vazio volta para o
 # bolso). Sem pente cheio, enche o pente encaixado com munição solta. Espingarda e rifle carregam munição solta.
 # ESTADO da arma: gasta com o uso; gasta = trava de vez em quando (RECARREGAR destrava); arruinada não atira.
@@ -47,10 +47,11 @@ const WDEF := {
 	"machado": {"nome": "MACHADO", "corpo": true, "dano": 85.0, "alcance": 2.1, "rate": 1.25, "ruido": 6.0, "vibra": 24, "pose": "branca", "desgaste": 0.002},
 	"cano": {"nome": "CANO", "corpo": true, "dano": 42.0, "alcance": 2.0, "rate": 0.9, "ruido": 5.0, "vibra": 18, "pose": "branca", "desgaste": 0.001},
 	"lanca": {"nome": "LANÇA", "corpo": true, "dano": 40.0, "alcance": 2.6, "rate": 0.8, "ruido": 3.0, "vibra": 14, "pose": "branca", "desgaste": 0.004},
+	"facao": {"nome": "FACÃO", "corpo": true, "dano": 55.0, "alcance": 1.95, "rate": 0.7, "ruido": 4.0, "vibra": 16, "pose": "branca", "desgaste": 0.002},
 	"pe_de_cabra": {"nome": "PÉ DE CABRA", "corpo": true, "dano": 48.0, "alcance": 2.0, "rate": 0.9, "ruido": 5.0, "vibra": 18, "pose": "branca", "desgaste": 0.001},
 	"punhos": {"nome": "PUNHOS", "corpo": true, "dano": 13.0, "alcance": 1.45, "rate": 0.5, "ruido": 2.0, "vibra": 8, "pose": "punhos", "desgaste": 0.0},
 }
-const ORDEM := ["pistola", "m4", "ak", "espingarda", "rifle_caca", "faca", "taco", "machado", "cano", "pe_de_cabra", "lanca"]
+const ORDEM := ["pistola", "m4", "ak", "espingarda", "rifle_caca", "faca", "facao", "taco", "machado", "cano", "pe_de_cabra", "lanca"]
 const MASCARA_TIRO := 1 | 4           # camadas 1 (mundo) e 3 (inimigos)
 
 var atual := ""                       # tipo da arma nas mãos ("" = mãos vazias ou outro item)
