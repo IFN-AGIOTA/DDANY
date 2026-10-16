@@ -22,6 +22,7 @@ extends Node3D
 const Malhas := preload("res://mundo/malhas.gd")
 const Equip := preload("res://equipamentos/modelos_equip.gd")
 const ModelosArmas := preload("res://armas/modelos_armas.gd")
+const IkFuzil := preload("res://jogador/ik_fuzil.gd")
 const PASTA := "res://jogador/sobrevivente/"
 const NOMES_ANIM := {"parado": "parado", "andar": "andar", "correr": "correr", "pular": "pular", "cair": "cair",
 	"mirar": "mirar", "atirar": "atirar", "morrer": "morrer", "agachado": "agachado", "andar_agachado": "andar_agachado"}
@@ -62,6 +63,12 @@ var anim: AnimationPlayer
 var _mat: ShaderMaterial
 var _cores: Array = []
 var _ponto_arma: Node3D
+# FUZIS (m4, ak, espingarda, rifle de caça) são segurados com as DUAS mãos: o fuzil fica preso ao peito e
+# as mãos vão até ele por IK (cinemática inversa, jogador/ik_fuzil.gd). Arma baixa (diagonal na frente do corpo) ou no ombro mirando.
+const FUZIS := ["m4", "ak", "espingarda", "rifle_caca"]
+var _ponto_fuzil: Node3D
+var _ik: IkFuzil
+var _mira := 0.0
 var _pecas := {}                       # chave ("cabeca", "mochila", "cinto", "ombro", "coldre") -> [id, nó]
 var _colete: MeshInstance3D
 var _colete_id := ""
@@ -86,6 +93,7 @@ func _ready() -> void:
 	anim.add_animation_library("", _anims)
 	anim.play("parado")
 	_criar_ponto_arma()
+	_criar_ponto_fuzil()
 	vestir(null)
 
 # ---------- roupa ----------
@@ -113,8 +121,7 @@ func vestir(inventario) -> void:
 		for reg in [QUADRIL, COXA, CANELA]:
 			_cores[reg] = CALCAS[it.id]
 	it = slots.get("cabeca")
-	if it != null and (CABECA.has(it.id) or it.id == "lanterna_cabeca"):
-		_cores[CABELO] = CABECA.get(it.id, CABELO_COR)
+	# chapéus e capacete são peças 3D (equipamentos/modelos_equip.gd): o cabelo continua cabelo por baixo
 	var cores := PackedColorArray()
 	for c in _cores:
 		cores.append(c)
@@ -150,7 +157,7 @@ func _peca(chave: String, item) -> void:
 		return
 	var enc: Array = Equip.ENCAIXE[id]
 	_anexo(enc[0]).add_child(mi)
-	mi.transform = _no_osso(enc[0], Transform3D(Basis(Vector3.UP, deg_to_rad(enc[2])).scaled(Vector3.ONE * enc[3]), enc[1]))
+	mi.transform = _no_osso(enc[0], Transform3D(Basis.from_euler(enc[2] * PI / 180.0).scaled(Vector3.ONE * enc[3]), enc[1]))
 	_pecas[chave] = [id, mi]
 
 # arma pendurada: ombro = nas costas, na diagonal (por cima da mochila) · coldre = na cintura, cano para baixo
@@ -288,8 +295,43 @@ func _criar_ponto_arma() -> void:
 	_ponto_arma.transform = gh.affine_inverse() * Transform3D(Basis.IDENTITY, palma)
 	anim.play("parado")
 
-func segurar_arma(_tipo: String, no: Node3D) -> void:
-	_ponto_arma.add_child(no)
+func segurar_arma(tipo: String, no: Node3D) -> void:
+	if tipo in FUZIS:
+		_ponto_fuzil.add_child(no)
+	else:
+		_ponto_arma.add_child(no)
+
+func _criar_ponto_fuzil() -> void:
+	# preso ao ESQUELETO (sempre de frente), não ao peito: a animação de mirar (de pistola) gira o tronco para o
+	# lado e o fuzil ficaria atravessado. jogador/ik_fuzil.gd põe o fuzil no lugar e leva as mãos até ele.
+	_ponto_fuzil = Node3D.new()
+	_ponto_fuzil.name = "PontoFuzil"
+	esqueleto.add_child(_ponto_fuzil)
+	_ik = IkFuzil.new()
+	_ik.name = "IkFuzil"
+	_ik.ponto = _ponto_fuzil
+	esqueleto.add_child(_ik)
+	_ik.preparar(esqueleto, anim)
+	_ik.active = false
+
+func _process(dt: float) -> void:
+	# IK só com um fuzil visível na mão
+	var arma: Node3D = null
+	for c in _ponto_fuzil.get_children():
+		if c is Node3D and c.visible:
+			arma = c
+	_ik.active = arma != null
+	if arma == null:
+		return
+	# a mão esquerda segura mais ou menos no meio do caminho entre a empunhadura e a boca do cano
+	var cano := arma.get_node_or_null("Cano") as Node3D
+	_ik.mao_esq_z = clampf(cano.position.z * 0.5, 0.22, 0.38) if cano != null else 0.25
+	var j = get_parent().get_parent() if get_parent() != null else null
+	var alvo := 0.0
+	if j != null and j.get("armas") != null:
+		alvo = clampf(float(j.armas.aim), 0.0, 1.0)
+	_mira = move_toward(_mira, alvo, dt * 5.0)
+	_ik.mira = _mira
 
 func pegar_ponto_arma() -> Node3D:
 	return _ponto_arma

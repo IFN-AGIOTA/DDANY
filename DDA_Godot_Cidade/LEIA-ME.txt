@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.19 (APK código 15)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.20 (APK código 16)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -122,7 +122,10 @@ O SOBREVIVENTE (personagem do MODO LIVRE, 0.18)
   · cabeça (capacete, gorro, boné) -> topo da cabeça · mochila -> mochila 3D nas costas
   · sem nada: regata clara, short escuro e botas
 - Animações próprias: parado, andar, correr, pular, cair, mirar, atirar, morrer, agachado e andar agachado.
-  A arma fica presa ao peito, apontando para a frente.
+  Pistola e armas brancas ficam na MÃO DIREITA. FUZIS (M4, AKM, espingarda, rifle de caça) são segurados
+  com as DUAS MÃOS (0.20): direita na empunhadura, esquerda embaixo do guarda-mão (IK de braço e antebraço).
+  Arma baixa = atravessada na frente da barriga, cano para baixo; mirando = coronha no ombro, rosto encostado
+  na coronha, cano para a frente. Vale parado, andando, correndo e agachado.
 - O MODO HISTÓRIA continua com o soldado antigo (até termos o modelo do Dominic).
 - EQUIPAMENTOS 3D (0.19): modelos LOW POLY baixados (licença livre, créditos no menu Créditos):
   · armas: pistola, M4, AKM, espingarda, rifle de caça (Quaternius); faca e machado (Quaternius);
@@ -133,6 +136,10 @@ O SOBREVIVENTE (personagem do MODO LIVRE, 0.18)
   · a arma da mão fica na MÃO DIREITA (aponta para a frente ao mirar); o fuzil/espingarda do OMBRO fica
     pendurado nas costas (por cima da mochila) e a pistola do COLDRE na cintura, quando não estão na mão.
   · no CHÃO, armas, capacete, boné, gorro, mochilas e pochete aparecem com o modelo 3D.
+- ÍCONES 3D NO INVENTÁRIO (0.20): armas (também com silenciador/mira encaixados), armas brancas, acessórios,
+  capacete, boné, gorro, lanterna de cabeça, mochilas, pochete, coletes, camisas e calças aparecem com a
+  "foto" do modelo 3D (inventario/icones/*.png, gerados por ferramentas/gerar_icones.gd). Item girado na
+  grade = foto girada. Os outros itens continuam com o desenho feito por código.
 
 DIA, NOITE E TEMPO
 - 1 dia de jogo = 48 min reais. O jogo livre começa às 8h. Sol nasce ~6h e se põe ~19h30.
@@ -400,7 +407,8 @@ INVENTÁRIO / ITENS (pasta inventario/)
   atalhos, pentes, acessórios, usar) .. inventario/inventario.gd
 - tela de 3 colunas ................... inventario/tela_inventario.gd
 - grade com arrastar · encaixes ....... inventario/grade_ui.gd · inventario/slot_ui.gd · inventario/grade.gd
-- ícones dos itens .................... inventario/visual.gd (ou imagens em inventario/icones/<id>.png)
+- ícones dos itens .................... inventario/visual.gd (desenho) e inventario/icones/<id>.png (fotos
+                                        3D; refazer com ferramentas/gerar_icones.gd, instruções no topo)
 - item no chão · caixa/armário ........ inventario/item_mundo.gd · inventario/caixa_mundo.gd
 - equipamento inicial / ao renascer ... inventario/inventario.gd (equipamento_inicial / equipamento_renascer)
 
@@ -447,6 +455,8 @@ SOBREVIVENTE (jogador no modo livre)
 - corpo, roupa aparecendo no corpo,
   mochila 3D e onde a arma fica ....... jogador/modelo_sobrevivente.gd (tabelas CAMISAS, CALCAS,
                                         COLETES, CABECA no topo: item novo = cor nova ali)
+- fuzil nas duas mãos (posição do fuzil
+  baixo/mirando e das mãos, IK) ....... jogador/ik_fuzil.gd
 - malha e animações ................... jogador/sobrevivente/corpo.scn e animacoes.res
 - converter de novo ................... ferramentas/preparar_jogador.gd
 - equipamentos 3D no corpo (onde cada

@@ -1,6 +1,7 @@
 extends RefCounted
-# DESENHO DOS ÍCONES (sem imagens: tudo desenhado por código, como o resto da HUD).
-# Para usar imagens próprias: ponha res://inventario/icones/<id>.png e elas substituem o desenho.
+# DESENHO DOS ÍCONES. Itens com modelo 3D (armas, acessórios, chapéus, mochilas, roupas, coletes) usam a
+# "foto" do modelo em res://inventario/icones/<id>.png, gerada por ferramentas/gerar_icones.gd (armas com
+# silenciador/mira encaixados usam <id>_cano.png, <id>_mira.png, <id>_cano_mira.png). O resto é desenhado por código.
 
 const Itens := preload("res://inventario/itens.gd")
 
@@ -16,6 +17,19 @@ static func _imagem(id: String) -> Texture2D:
 		_cache_icones[id] = load(c) if ResourceLoader.exists(c) else null
 	return _cache_icones[id]
 
+# foto do item; arma com acessório encaixado usa a foto com ele (ex.: m4_cano_mira)
+static func _imagem_item(it) -> Texture2D:
+	var acess: Dictionary = it.acessorios
+	if not acess.is_empty():
+		var nome: String = it.id
+		for enc in ["cano", "mira"]:
+			if acess.has(enc):
+				nome += "_" + enc
+		var t := _imagem(nome)
+		if t != null:
+			return t
+	return _imagem(it.id)
+
 static func texto(ci: CanvasItem, f: Font, t: String, pos: Vector2, tam: int, cor: Color, sombra := true) -> void:
 	if sombra:
 		ci.draw_string(f, pos + Vector2(1, 1), t, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, Color(0, 0, 0, 0.8 * cor.a))
@@ -27,11 +41,23 @@ static func desenhar_item(ci: CanvasItem, it, r: Rect2, f: Font, girado: bool, a
 	var caixa := r.grow(-2.0)
 	ci.draw_rect(caixa, Color(c.r * 0.45, c.g * 0.45, c.b * 0.45, 0.94 * alfa))
 	ci.draw_rect(caixa, Color(c.r * 1.3, c.g * 1.3, c.b * 1.3, 0.9 * alfa), false, 1.5)
-	var img := _imagem(it.id)
-	var margem := minf(caixa.size.x, caixa.size.y) * 0.14
+	var img := _imagem_item(it)
+	var margem := minf(caixa.size.x, caixa.size.y) * (0.05 if img != null else 0.14)
 	var area := caixa.grow(-margem)
 	if img != null:
-		ci.draw_texture_rect(img, area, false, Color(1, 1, 1, alfa))
+		# a foto mantém a proporção (num lugar do corpo quadrado o fuzil não fica esticado)
+		var tam_img := img.get_size()
+		if girado:
+			# a foto é do item deitado: gira 90° para caber no retângulo em pé
+			var e := minf(area.size.y / tam_img.x, area.size.x / tam_img.y)
+			var sz := tam_img * e
+			ci.draw_set_transform(area.get_center(), PI * 0.5, Vector2.ONE)
+			ci.draw_texture_rect(img, Rect2(-sz * 0.5, sz), false, Color(1, 1, 1, alfa))
+			ci.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		else:
+			var e := minf(area.size.x / tam_img.x, area.size.y / tam_img.y)
+			var sz := tam_img * e
+			ci.draw_texture_rect(img, Rect2(area.get_center() - sz * 0.5, sz), false, Color(1, 1, 1, alfa))
 	elif girado:
 		# ícone desenhado deitado e girado 90° para caber no retângulo em pé
 		var centro := area.get_center()
