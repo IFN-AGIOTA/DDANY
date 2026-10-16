@@ -1,0 +1,5 @@
+Corpo (manequim masculino) e animações do sobrevivente: Quaternius (https://quaternius.com)
+  - "Universal Animation Library 2" (manequim) e "Universal Animation Library" (animações, versão Unreal)
+    https://opengameart.org/content/universal-animation-library-2
+    https://opengameart.org/content/universal-animation-library
+Licença: CC0 1.0 (domínio público). Convertido por ferramentas/preparar_jogador.gd.

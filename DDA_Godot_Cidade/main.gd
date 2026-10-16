@@ -136,6 +136,8 @@ func _jogar(carregar_salvo := false, modo_historia := false) -> void:
 			Salvamento.carregar(self, d)
 	elif modo_historia:
 		historia.iniciar(self)
+	if not historia.ativa:
+		jogador.usar_sobrevivente()         # modo livre: o sobrevivente (a história continua com o soldado)
 
 func salvar_jogo() -> void:
 	if jogo != null and jogador != null:
@@ -194,7 +196,8 @@ func _pausar() -> void:
 	pausa.reiniciar.connect(func():
 		_continuar()
 		_fechar_jogo()
-		_criar_jogo())
+		_criar_jogo()
+		jogador.usar_sobrevivente())
 	pausa.menu_principal.connect(func():
 		salvar_jogo()
 		_continuar()

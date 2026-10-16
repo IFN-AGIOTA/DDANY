@@ -19,7 +19,7 @@ const EQUIPE := [
 ]
 # [o quê, autor, licença, endereço]
 const RECURSOS := [
-	["Modelos 3D (manequins) e animações dos infectados", "Quaternius · \"Universal Animation Library\" 1 e 2",
+	["Modelos 3D (manequins) e animações dos infectados e do sobrevivente", "Quaternius · \"Universal Animation Library\" 1 e 2",
 		"CC0 1.0 (domínio público)", "quaternius.com · opengameart.org/content/universal-animation-library-2"],
 	["Fonte Roboto Condensed", "Christian Robertson · Google Fonts (Copyright 2011 Google Inc.)",
 		"SIL Open Font License 1.1", "fonts.google.com/specimen/Roboto+Condensed"],

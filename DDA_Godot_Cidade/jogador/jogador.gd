@@ -136,6 +136,23 @@ func trocar_modelo(no: Node3D, importado := true) -> void:
 	animador.configurar(no)
 	armas.anexar(no, animador.ponto_arma())
 
+# MODO LIVRE: troca o soldado pelo sobrevivente (jogador/modelo_sobrevivente.gd), que mostra no corpo a roupa
+# equipada no inventário
+func usar_sobrevivente() -> void:
+	var m = load("res://jogador/modelo_sobrevivente.gd").new()
+	m.name = "Sobrevivente"
+	trocar_modelo(m, true)
+	animador.nomes_exatos = m.NOMES_ANIM
+	animador.atualizar_mapa()
+	m.vestir(inventario)
+	if not inventario.mudou.is_connected(_vestir):
+		inventario.mudou.connect(_vestir)
+
+func _vestir() -> void:
+	var m = _slot.get_node_or_null("Sobrevivente")
+	if m != null:
+		m.vestir(inventario)
+
 # mordida/golpe de um infectado (inimigos/vago.gd chama aqui)
 func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3) -> void:
 	if sobrevivencia != null:
