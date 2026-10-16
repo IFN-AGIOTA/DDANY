@@ -3,6 +3,9 @@ extends RefCounted
 # Cada arma de fogo tem um nó filho "Cano" na ponta (clarão e traçante) e acessórios escondidos
 # "Acc_cano" (silenciador) e "Acc_mira" (mira/luneta), que aparecem quando estão encaixados.
 # Armas brancas: o cabo fica na origem e a lâmina/cabeça vai para +Z.
+# MODELOS BAIXADOS (low poly, licença livre; créditos no menu Créditos e em armas/modelos/LICENCA.txt):
+# se existir armas/modelos/<tipo>.scn ele é usado (convertido por ferramentas/preparar_equipamentos.gd,
+# já com "Cano", "Acc_cano" e "Acc_mira"); senão vale o modelo de caixas abaixo (cano e pé de cabra).
 
 static func _mat(cor: Color, rough: float, metal := 0.0, sem_luz := false) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
@@ -39,7 +42,20 @@ static func _C(g: Node3D, r0: float, r1: float, comp: float, m: Material, x: flo
 	o.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	g.add_child(o)
 
+static var _cenas := {}
+
 static func construir(tipo: String) -> Node3D:
+	var arq := "res://armas/modelos/%s.scn" % tipo
+	if not _cenas.has(tipo):
+		_cenas[tipo] = load(arq) if ResourceLoader.exists(arq) else null
+	if _cenas[tipo] != null:
+		var n: Node3D = _cenas[tipo].instantiate()
+		n.name = "Arma_" + tipo
+		return n
+	return construir_caixas(tipo)
+
+# modelo antigo, feito de caixas (reserva quando não há modelo baixado)
+static func construir_caixas(tipo: String) -> Node3D:
 	var g := Node3D.new()
 	g.name = "Arma_" + tipo
 	var metal := _mat(Color("#2b2d32"), 0.3, 0.7)

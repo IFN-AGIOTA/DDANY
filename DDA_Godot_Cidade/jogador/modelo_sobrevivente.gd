@@ -10,13 +10,18 @@ extends Node3D
 # braço, antebraço, mão, quadril, coxa, canela, pé, olhos) e o shader pinta cada parte com uma cor.
 # vestir(inventario) lê o que está equipado (cabeça, camisa, colete, calça, mochila) e troca as cores:
 #   camisa -> tronco e braços (camiseta = manga curta) · calça -> quadril, coxas e canelas
-#   colete -> tronco (os braços continuam com a camisa) · cabeça -> topo da cabeça (capacete, gorro, boné)
-#   mochila -> peça 3D nas costas (presa ao osso do tronco)
+#   cabeça -> topo da cabeça (cabelo coberto) + o MODELO 3D do capacete/boné/gorro/lanterna
+#   colete -> "casca" feita do próprio tronco do corpo, um pouco maior (acompanha a animação), com bolsos
+#   mochila/pochete -> MODELO 3D nas costas/cintura (equipamentos/modelos_equip.gd)
+#   arma do OMBRO (fuzil, espingarda...) aparece pendurada nas costas e a do COLDRE na cintura, quando
+#   não estão na mão
 # Sem nada: regata clara, short escuro e botas. Para um item novo aparecer, coloque a cor dele nas tabelas.
-# As armas ficam presas ao peito (acompanham o tronco), apontando para a frente.
+# A arma da mão fica presa ao osso da MÃO DIREITA (acompanha as animações).
 # Mexa AQUI para: cores da pele/cabelo/roupas, tabelas de roupas e onde a arma fica.
 
 const Malhas := preload("res://mundo/malhas.gd")
+const Equip := preload("res://equipamentos/modelos_equip.gd")
+const ModelosArmas := preload("res://armas/modelos_armas.gd")
 const PASTA := "res://jogador/sobrevivente/"
 const NOMES_ANIM := {"parado": "parado", "andar": "andar", "correr": "correr", "pular": "pular", "cair": "cair",
 	"mirar": "mirar", "atirar": "atirar", "morrer": "morrer", "agachado": "agachado", "andar_agachado": "andar_agachado"}
@@ -32,9 +37,8 @@ const BOTAS := Color(0.16, 0.12, 0.09)
 const CAMISAS := {"camiseta": [Color(0.32, 0.36, 0.30), false], "moletom": [Color(0.30, 0.30, 0.33), true],
 	"jaqueta": [Color(0.27, 0.31, 0.23), true], "capa_chuva": [Color(0.74, 0.60, 0.14), true]}
 const CALCAS := {"calca": Color(0.31, 0.33, 0.25), "jeans": Color(0.20, 0.26, 0.40)}
-const COLETES := {"colete": Color(0.21, 0.23, 0.19), "colete_policia": Color(0.11, 0.12, 0.15)}
+const COLETES := {"colete": Color(0.27, 0.29, 0.22), "colete_policia": Color(0.11, 0.12, 0.15)}
 const CABECA := {"capacete": Color(0.25, 0.27, 0.22), "gorro": Color(0.14, 0.14, 0.17), "bone": Color(0.18, 0.24, 0.44)}
-const MOCHILA_COR := Color(0.24, 0.26, 0.20)
 
 const SHADER := """
 shader_type spatial;
@@ -58,7 +62,9 @@ var anim: AnimationPlayer
 var _mat: ShaderMaterial
 var _cores: Array = []
 var _ponto_arma: Node3D
-var _mochila: MeshInstance3D
+var _pecas := {}                       # chave ("cabeca", "mochila", "cinto", "ombro", "coldre") -> [id, nó]
+var _colete: MeshInstance3D
+var _colete_id := ""
 
 func _ready() -> void:
 	if _cena == null:
@@ -106,47 +112,181 @@ func vestir(inventario) -> void:
 	if it != null and CALCAS.has(it.id):
 		for reg in [QUADRIL, COXA, CANELA]:
 			_cores[reg] = CALCAS[it.id]
-	it = slots.get("colete")
-	if it != null and COLETES.has(it.id):
-		_cores[TRONCO] = COLETES[it.id]
 	it = slots.get("cabeca")
-	if it != null and CABECA.has(it.id):
-		_cores[CABELO] = CABECA[it.id]
+	if it != null and (CABECA.has(it.id) or it.id == "lanterna_cabeca"):
+		_cores[CABELO] = CABECA.get(it.id, CABELO_COR)
 	var cores := PackedColorArray()
 	for c in _cores:
 		cores.append(c)
 	_mat.set_shader_parameter("cores", cores)
-	_por_mochila(slots.get("mochila") != null)
+	# peças 3D
+	_peca("cabeca", slots.get("cabeca"))
+	_peca("mochila", slots.get("mochila"))
+	_peca("cinto", slots.get("cinto"))
+	var colete = slots.get("colete")
+	_vestir_colete(colete.id if colete != null and COLETES.has(colete.id) else "")
+	var na_mao = slots.get("maos")
+	var ombro = slots.get("ombro")
+	var coldre = slots.get("coldre")
+	_arma_no_corpo("ombro", ombro if ombro != null and ombro != na_mao and ombro.eh_arma() else null, slots.get("mochila") != null)
+	_arma_no_corpo("coldre", coldre if coldre != null and coldre != na_mao and coldre.eh_arma() else null, false)
 
 func cor_da_regiao(r: int) -> Color:
 	return _cores[r] if r < _cores.size() else Color.BLACK
 
-func _por_mochila(tem: bool) -> void:
-	if tem and _mochila == null:
-		var c := Malhas.Construtor.new()
-		c.caixa(Vector3(0, 0, 0), Vector3(0.3, 0.4, 0.16), MOCHILA_COR)
-		c.caixa(Vector3(0, -0.1, -0.1), Vector3(0.24, 0.16, 0.06), MOCHILA_COR * 0.85)     # bolso (para trás)
-		c.caixa(Vector3(0, 0.21, 0.0), Vector3(0.28, 0.05, 0.15), MOCHILA_COR * 0.75)     # tampa
-		for sx in [-0.09, 0.09]:
-			c.caixa(Vector3(sx, 0.05, 0.1), Vector3(0.04, 0.34, 0.03), MOCHILA_COR * 0.6) # alças
-		_mochila = MeshInstance3D.new()
-		_mochila.mesh = c.malha(Malhas.mat_cores())
-		var ba := _anexo("spine_03")
-		ba.add_child(_mochila)
-		# nas costas: no espaço do esqueleto a frente é +Z, então atrás = -Z
-		_mochila.transform = _no_osso("spine_03", Transform3D(Basis.IDENTITY, Vector3(0, -0.1, -0.17)))
-	if _mochila != null:
-		_mochila.visible = tem
+# ---------- peças 3D presas aos ossos ----------
+func _peca(chave: String, item) -> void:
+	var id: String = item.id if item != null else ""
+	var atual: Array = _pecas.get(chave, ["", null])
+	if atual[0] == id:
+		return
+	if atual[1] != null and is_instance_valid(atual[1]):
+		atual[1].queue_free()
+	_pecas[chave] = ["", null]
+	if id == "" or not Equip.tem(id):
+		return
+	var mi := Equip.instancia(id)
+	if mi == null:
+		return
+	var enc: Array = Equip.ENCAIXE[id]
+	_anexo(enc[0]).add_child(mi)
+	mi.transform = _no_osso(enc[0], Transform3D(Basis(Vector3.UP, deg_to_rad(enc[2])).scaled(Vector3.ONE * enc[3]), enc[1]))
+	_pecas[chave] = [id, mi]
+
+# arma pendurada: ombro = nas costas, na diagonal (por cima da mochila) · coldre = na cintura, cano para baixo
+func _arma_no_corpo(chave: String, item, com_mochila: bool) -> void:
+	var id: String = item.def().get("arma", "") if item != null else ""
+	var atual: Array = _pecas.get(chave, ["", null])
+	if atual[0] == id + str(com_mochila):
+		return
+	if atual[1] != null and is_instance_valid(atual[1]):
+		atual[1].queue_free()
+	_pecas[chave] = ["", null]
+	if id == "":
+		return
+	var n := ModelosArmas.construir(id)
+	for nome in ["Cano", "Acc_cano", "Acc_mira"]:
+		var x := n.get_node_or_null(nome)
+		if x != null:
+			x.visible = nome == "Cano"
+	var dir := 1.0 if esqueleto.get_bone_global_rest(esqueleto.find_bone("upperarm_r")).origin.x > 0.0 else -1.0
+	var osso := "spine_03" if chave == "ombro" else "pelvis"
+	var t: Transform3D
+	if chave == "ombro":
+		var z := Vector3(-0.45 * dir, 1.0, 0.0).normalized()        # cano para cima, na diagonal
+		var x := Vector3(0, 0, -1)                                  # o lado da arma virado para trás
+		t = Transform3D(Basis(x, z.cross(x), z), Vector3(0.0, -0.12, -0.3 if com_mochila else -0.16))
+	else:
+		var z := Vector3(0, -1, 0.1).normalized()                   # cano para baixo
+		var x := Vector3(dir, 0, 0)
+		t = Transform3D(Basis(x, z.cross(x), z), Vector3(dir * 0.19, 0.0, 0.03))
+	_anexo(osso).add_child(n)
+	n.transform = _no_osso(osso, t)
+	_pecas[chave] = [id + str(com_mochila), n]
+
+# COLETE: "casca" do tronco do próprio corpo, empurrada para fora, presa aos mesmos ossos (deforma junto)
+static var _cascas := {}
+func _vestir_colete(id: String) -> void:
+	if id == _colete_id:
+		return
+	_colete_id = id
+	if _colete != null:
+		_colete.queue_free()
+		_colete = null
+	if id == "":
+		return
+	if not _cascas.has(id):
+		_cascas[id] = _fazer_casca(id)
+	var corpo_mi: MeshInstance3D = corpo.find_children("*", "MeshInstance3D", true, false)[0]
+	_colete = MeshInstance3D.new()
+	_colete.name = "Colete"
+	_colete.mesh = _cascas[id]
+	_colete.skin = corpo_mi.skin
+	esqueleto.add_child(_colete)
+	_colete.skeleton = NodePath("..")
+
+func _fazer_casca(id: String) -> ArrayMesh:
+	var corpo_mi: MeshInstance3D = corpo.find_children("*", "MeshInstance3D", true, false)[0]
+	var a: Array = corpo_mi.mesh.surface_get_arrays(0)
+	var V: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+	var N: PackedVector3Array = a[Mesh.ARRAY_NORMAL]
+	var C: PackedColorArray = a[Mesh.ARRAY_COLOR]
+	var B: PackedInt32Array = a[Mesh.ARRAY_BONES]
+	var W: PackedFloat32Array = a[Mesh.ARRAY_WEIGHTS]
+	var I: PackedInt32Array = a[Mesh.ARRAY_INDEX]
+	var base: Color = COLETES[id]
+	var grosso := 0.03 if id == "colete_policia" else 0.026
+	var novo := {}
+	var V2 := PackedVector3Array()
+	var N2 := PackedVector3Array()
+	var C2 := PackedColorArray()
+	var B2 := PackedInt32Array()
+	var W2 := PackedFloat32Array()
+	var I2 := PackedInt32Array()
+	var regiao := func(i: int) -> int: return int(C[i].r * 15.0 + 0.5)
+	# altura do peito (para os bolsos do colete tático)
+	var y_min := 1e9
+	var y_max := -1e9
+	for i in V.size():
+		if regiao.call(i) == TRONCO:
+			y_min = minf(y_min, V[i].y)
+			y_max = maxf(y_max, V[i].y)
+	for t in range(0, I.size(), 3):
+		var ok := true
+		for j in 3:
+			var rg: int = regiao.call(I[t + j])
+			if rg != TRONCO and rg != QUADRIL:
+				ok = false
+		if not ok:
+			continue
+		# do quadril, só a parte de cima (cintura)
+		var cy := (V[I[t]].y + V[I[t + 1]].y + V[I[t + 2]].y) / 3.0
+		if cy < y_min + (y_max - y_min) * 0.05:
+			continue
+		for j in 3:
+			var vi: int = I[t + j]
+			if not novo.has(vi):
+				novo[vi] = V2.size()
+				var p: Vector3 = V[vi] + N[vi] * grosso
+				V2.append(p)
+				N2.append(N[vi])
+				var f := (p.y - y_min) / maxf(y_max - y_min, 0.001)
+				var c := base * (0.9 + 0.2 * C[vi].g)
+				if id == "colete" and p.z > 0.05 and f > 0.25 and f < 0.55 and absf(p.x) < 0.14:
+					c = base * 0.75                                    # fileira de bolsos na frente
+				C2.append(c)
+				for k in 4:
+					B2.append(B[vi * 4 + k])
+					W2.append(W[vi * 4 + k])
+			I2.append(novo[vi])
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = V2
+	arr[Mesh.ARRAY_NORMAL] = N2
+	arr[Mesh.ARRAY_COLOR] = C2
+	arr[Mesh.ARRAY_BONES] = B2
+	arr[Mesh.ARRAY_WEIGHTS] = W2
+	arr[Mesh.ARRAY_INDEX] = I2
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	m.surface_set_material(0, Malhas.mat_cores(0.8))
+	return m
 
 # ---------- armas (jogador/armas: armas.anexar chama segurar_arma) ----------
 func _criar_ponto_arma() -> void:
-	var ba := _anexo("spine_03")
+	# a arma fica NA MÃO DIREITA (acompanha as animações). O encaixe é medido na pose de MIRAR: nela o cano
+	# aponta para a frente do corpo (+Z do esqueleto) e a empunhadura fica na palma.
+	var ba := _anexo("hand_r")
 	_ponto_arma = Node3D.new()
 	_ponto_arma.name = "PontoArma"
 	ba.add_child(_ponto_arma)
-	# na frente do peito, um pouco para a direita, apontando para a frente (+Z do esqueleto = -Z da arma)
-	var dir := 1.0 if esqueleto.get_bone_global_rest(esqueleto.find_bone("upperarm_r")).origin.x > 0.0 else -1.0
-	_ponto_arma.transform = _no_osso("spine_03", Transform3D(Basis(Vector3.UP, PI), Vector3(dir * 0.13, -0.08, 0.32)))
+	var i := esqueleto.find_bone("hand_r")
+	anim.play("mirar")
+	anim.seek(0.4, true)
+	var gh := esqueleto.get_bone_global_pose(i)
+	var palma := gh.origin + gh.basis.y.normalized() * 0.07 - gh.basis.z.normalized() * 0.01
+	_ponto_arma.transform = gh.affine_inverse() * Transform3D(Basis.IDENTITY, palma)
+	anim.play("parado")
 
 func segurar_arma(_tipo: String, no: Node3D) -> void:
 	_ponto_arma.add_child(no)

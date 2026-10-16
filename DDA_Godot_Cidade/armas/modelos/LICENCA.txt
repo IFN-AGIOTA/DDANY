@@ -1,0 +1,8 @@
+Modelos 3D das armas (convertidos por ferramentas/preparar_equipamentos.gd: cores nos vértices, tamanho real,
+cano para a frente; o rifle de caça teve a luneta embutida removida):
+- pistola, m4, ak, espingarda, rifle_caca (+ silenciador, mira e luneta em equipamentos/modelos/):
+  Quaternius, "Ultimate Gun Pack" - CC0 1.0 - https://opengameart.org/content/low-poly-guns-pack
+- faca, machado: Quaternius, "Survival Pack" - CC0 1.0 - https://opengameart.org/content/lowpoly-survival-pack
+- taco: LonesomeDucky, "Old wooden baseball bat" - CC0 1.0 - https://opengameart.org/content/old-wooden-baseball-bat
+- lanca: Hernandack, "Low Poly Survival Toolkit (weapon)" - CC0 1.0 - https://opengameart.org/content/low-poly-survival-toolkit-weapon
+Cano e pé de cabra: feitos por código (armas/modelos_armas.gd).
