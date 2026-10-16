@@ -3,7 +3,7 @@
 #   ~76 bpm em ré menor · "relógio" agudo (ré + lá) a cada tempo do começo ao fim · baixo e cordas graves
 #   (si bemol, lá, dó, ré, fá, mi, sol) · chimbal crescendo · pausa e PANCADA nos clarões · subida (riser) antes
 #   do título · bateria grande no título · e, ao fundo, um RÁDIO (voz de noticiário + alerta de emergência)
-#   com chiado, falhas e filtro de radinho.
+#   com chiado, falhas e filtro de radinho, BAIXO, quase sem dar para entender (comunicado sobre a infecção).
 # As vozes do rádio vêm de arquivos .wav (texto em inglês, como uma rádio de Nova York), feitos com voz
 # sintética: noticiário = Piper TTS (voz LJSpeech, domínio público), alerta = eSpeak NG.
 # Uso: python3 compor_abertura.py <pasta_das_vozes> <saida.wav>
@@ -207,7 +207,7 @@ def ler_wav(caminho):
     return np.interp(np.linspace(0, len(x) - 1, n2), np.arange(len(x)), x)
 
 def radinho(x):
-    x = faixa(x, 350, 3200)
+    x = faixa(x, 450, 2400)
     x = np.tanh(x * 3.0) / np.tanh(3.0)                     # alto-falante saturado
     t = np.arange(len(x)) / SR
     x *= 0.85 + 0.15 * np.sin(2 * np.pi * 0.7 * t + RNG.random() * 6)   # sinal oscilando
@@ -233,8 +233,8 @@ sint = faixa(RNG.standard_normal(N), 900, 3500) * 0.02 * np.clip((t - 3.0) / 1.5
 sint *= 0.6 + 0.4 * np.sin(2 * np.pi * 0.23 * t)
 radio += sint
 radio *= np.clip((60.0 - t) / 4.0, 0, 1)                    # o rádio some antes do título
-por(radio, 0.0, 0.16, -0.15)
-por(radio, 0.0, 0.10, 0.25)
+por(radio, 0.0, 0.085, -0.15)   # bem baixo: quase não dá para entender (como no teaser)
+por(radio, 0.0, 0.05, 0.25)
 
 # ---------- reverb simples, volume e saída ----------
 def reverb(x):

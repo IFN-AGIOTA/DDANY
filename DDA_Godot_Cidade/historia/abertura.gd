@@ -389,6 +389,225 @@ func _montar_cenario() -> void:
 	_poeira.emitting = false
 	_cenario.add_child(_poeira)
 	_poeira.global_position = PREDIO_QUEDA + Vector3(0, 2, 6)
+	_montar_locais()
+
+# ---------- lugares novos para ficar com a cara do teaser ----------
+func _montar_locais() -> void:
+	var folha := _mat(Color(0.13, 0.2, 0.12), 0.95)
+	var tronco := _mat(Color(0.22, 0.17, 0.12), 0.95)
+	var poste := _mat(Color(0.18, 0.18, 0.2), 0.6, 0.4)
+	# AVENIDA (4-15 s): árvores e postes de luz laranja dos dois lados, globo luminoso num telhado
+	for i in 11:
+		var x := -1120.0 + i * 19.0
+		for lado in [-1.0, 1.0]:
+			var z: float = -493.0 + lado * 13.5
+			if main.mundo.dentro_de_predio(x, z, 1.5, true):
+				continue
+			_arvore(Vector3(x + lado * 4.0, 0.6, z), folha, tronco, 1.0 + 0.15 * sin(i * 2.3 + lado))
+			if i % 2 == 0:
+				_poste_luz(Vector3(x + 9.0, 0.6, z - lado * 1.5), -lado, poste)
+	# prédio de escritórios baixo com o globo no telhado (como o do teaser), à direita da avenida
+	var esc := MeshInstance3D.new()
+	var eb := BoxMesh.new()
+	eb.size = Vector3(40.0, 20.0, 20.0)
+	esc.mesh = eb
+	var me := StandardMaterial3D.new()
+	me.albedo_texture = _textura_janelas(0.45)
+	me.uv1_triplanar = true
+	me.uv1_scale = Vector3(1.0, 1.0, 1.0) / 22.0
+	me.emission_enabled = true
+	me.emission_texture = _textura_janelas(0.45, true)
+	me.albedo_color = Color(0.5, 0.5, 0.52)
+	me.emission = Color(0.9, 0.95, 0.7)
+	me.emission_energy_multiplier = 0.22
+	esc.material_override = me
+	_cenario.add_child(esc)
+	esc.global_position = Vector3(-1010.0, 10.6, -462.0)
+	_globo(Vector3(-1010.0, 20.6, -462.0), "NEW YORK GLOBE")
+	# CENTRO (15-26 s): prédio de colunas (como uma prefeitura) na praça, postes acesos
+	_colunata(Vector3(-1385.0, 0.6, -40.0), deg_to_rad(63.0))
+	for k in 6:
+		_poste_luz(Vector3(-1335.0 - k * 9.0, 0.6, -20.0 - k * 6.0), 1.0, poste)
+	# CHÃO (26-29 s): árvores na neblina
+	for k in 4:
+		_arvore(Vector3(-1500.0 - k * 22.0, 0.6, -41.0 + (k % 2) * 25.0), folha, tronco, 1.2)
+	# PÔR DO SOL (29-41 s): outdoor de emergência à esquerda
+	_outdoor(Vector3(-1528.0, 0.6, 4.0), PI * 0.5 + 0.35, "STAY INDOORS", "CITY EMERGENCY NOTICE")
+	# TORRES (41-47 s): escadas de incêndio na fachada e um letreiro vermelho lá no alto
+	for k in 12:
+		_escada_incendio(Vector3(-1566.0 + k * 0.0, 3.0 + k * 3.6, -123.2), poste)
+		_escada_incendio(Vector3(-1546.0, 3.0 + k * 3.6, -123.2), poste)
+	var neon := _mat(Color(1.0, 0.1, 0.08), 0.5)
+	neon.emission_enabled = true
+	neon.emission = Color(1.0, 0.08, 0.05)
+	neon.emission_energy_multiplier = 4.0
+	_caixa(Vector3(-1540.0, 72.0, -123.0), Vector3(9.0, 0.8, 0.3), neon)
+
+func _predio_perto(x: float, z: float) -> Array:
+	var P: PackedFloat32Array = main.cidade.predios
+	var melhor: Array = []
+	var dmin := 1e9
+	for idx in main.mundo.predios_perto(x, z, 60.0):
+		var d := Vector2(P[idx * 5] - x, P[idx * 5 + 1] - z).length()
+		if d < dmin:
+			dmin = d
+			melhor = [P[idx * 5], P[idx * 5 + 1], P[idx * 5 + 2], P[idx * 5 + 3], P[idx * 5 + 4]]
+	return melhor
+
+func _arvore(p: Vector3, folha: Material, tronco: Material, esc: float) -> void:
+	var t := MeshInstance3D.new()
+	var c := CylinderMesh.new()
+	c.top_radius = 0.18 * esc
+	c.bottom_radius = 0.26 * esc
+	c.height = 3.2 * esc
+	t.mesh = c
+	t.material_override = tronco
+	_cenario.add_child(t)
+	t.global_position = p + Vector3(0, 1.6 * esc, 0)
+	for k in 3:
+		var f := MeshInstance3D.new()
+		var sm := SphereMesh.new()
+		sm.radius = (2.2 - k * 0.4) * esc
+		sm.height = sm.radius * 1.6
+		sm.radial_segments = 8
+		sm.rings = 5
+		f.mesh = sm
+		f.material_override = folha
+		_cenario.add_child(f)
+		f.global_position = p + Vector3(sin(k * 2.1) * 0.8, (3.6 + k * 1.1) * esc, cos(k * 2.1) * 0.8)
+
+func _poste_luz(p: Vector3, lado: float, m: Material) -> void:
+	_caixa(p + Vector3(0, 4.0, 0), Vector3(0.18, 8.0, 0.18), m)
+	_caixa(p + Vector3(0, 7.9, lado * 1.0), Vector3(0.12, 0.12, 2.0), m)
+	var lamp := _mat(Color(1.0, 0.6, 0.25), 0.5)
+	lamp.emission_enabled = true
+	lamp.emission = Color(1.0, 0.55, 0.2)
+	lamp.emission_energy_multiplier = 5.0
+	_caixa(p + Vector3(0, 7.75, lado * 1.9), Vector3(0.45, 0.15, 0.7), lamp)
+	var l := OmniLight3D.new()
+	l.light_color = Color(1.0, 0.6, 0.3)
+	l.light_energy = 1.6
+	l.omni_range = 16.0
+	_cenario.add_child(l)
+	l.global_position = p + Vector3(0, 7.0, lado * 1.9)
+
+func _globo(topo: Vector3, texto: String) -> void:
+	var base := _mat(Color(0.25, 0.25, 0.27), 0.6, 0.5)
+	_caixa(topo + Vector3(0, 2.0, 0), Vector3(0.6, 4.0, 0.6), base)
+	var g := _mat(Color(0.35, 0.45, 0.6), 0.35, 0.6)
+	g.emission_enabled = true
+	g.emission = Color(0.25, 0.35, 0.55)
+	g.emission_energy_multiplier = 0.6
+	_esfera(topo + Vector3(0, 8.0, 0), 5.5, g)
+	var anel := MeshInstance3D.new()
+	var tm := TorusMesh.new()
+	tm.inner_radius = 5.7
+	tm.outer_radius = 6.2
+	anel.mesh = tm
+	anel.material_override = base
+	_cenario.add_child(anel)
+	anel.global_position = topo + Vector3(0, 8.0, 0)
+	var l := Label3D.new()
+	l.text = texto
+	l.font_size = 160
+	l.pixel_size = 0.02
+	l.modulate = Color(1.0, 0.25, 0.2)
+	l.outline_size = 0
+	l.shaded = false
+	l.billboard = BaseMaterial3D.BILLBOARD_DISABLED
+	_cenario.add_child(l)
+	l.global_position = topo + Vector3(-6.5, 8.0, 0)
+	l.rotation.y = -PI * 0.5                      # virado para quem vem pela avenida (de oeste)
+
+func _colunata(c: Vector3, giro: float) -> void:
+	var no := Node3D.new()
+	_cenario.add_child(no)
+	no.global_position = c
+	no.rotation.y = giro
+	no.scale = Vector3.ONE * 1.25
+	var pedra := _mat(Color(0.62, 0.6, 0.56), 0.9)
+	var parede := _mat(Color(0.48, 0.46, 0.43), 0.9)
+	var partes := [[Vector3(0, 0.6, 0), Vector3(56, 1.2, 18), pedra],         # escadaria/base
+		[Vector3(0, 9.0, -4), Vector3(52, 16, 9), parede],                     # corpo do prédio
+		[Vector3(0, 17.6, 1), Vector3(56, 1.4, 16), pedra],                    # cornija
+		[Vector3(0, 19.5, 1), Vector3(40, 2.4, 14), pedra]]                    # ático
+	for pt in partes:
+		var mi := MeshInstance3D.new()
+		var b := BoxMesh.new()
+		b.size = pt[1]
+		mi.mesh = b
+		mi.material_override = pt[2]
+		no.add_child(mi)
+		mi.position = pt[0]
+	for k in 14:
+		var col := MeshInstance3D.new()
+		var cm := CylinderMesh.new()
+		cm.top_radius = 0.7
+		cm.bottom_radius = 0.8
+		cm.height = 15.6
+		cm.radial_segments = 10
+		col.mesh = cm
+		col.material_override = pedra
+		no.add_child(col)
+		col.position = Vector3(-24.0 + k * 48.0 / 13.0, 9.0, 4.5)
+	var janela := _mat(Color(1.0, 0.75, 0.4), 0.6)
+	janela.emission_enabled = true
+	janela.emission = Color(1.0, 0.7, 0.35)
+	janela.emission_energy_multiplier = 1.5
+	for k in 5:
+		var mi := MeshInstance3D.new()
+		var b := BoxMesh.new()
+		b.size = Vector3(2.0, 3.0, 0.2)
+		mi.mesh = b
+		mi.material_override = janela
+		no.add_child(mi)
+		mi.position = Vector3(-18.0 + k * 9.0, 6.0, 0.6)
+
+func _outdoor(p: Vector3, giro: float, grande: String, pequeno: String) -> void:
+	var no := Node3D.new()
+	_cenario.add_child(no)
+	no.global_position = p
+	no.rotation.y = giro
+	var ferro := _mat(Color(0.2, 0.2, 0.22), 0.7, 0.4)
+	for x in [-3.0, 3.0]:
+		var mi := MeshInstance3D.new()
+		var b := BoxMesh.new()
+		b.size = Vector3(0.4, 9.0, 0.4)
+		mi.mesh = b
+		mi.material_override = ferro
+		no.add_child(mi)
+		mi.position = Vector3(x, 4.5, 0)
+	var painel := MeshInstance3D.new()
+	var pb := BoxMesh.new()
+	pb.size = Vector3(12.0, 5.0, 0.3)
+	painel.mesh = pb
+	painel.material_override = _mat(Color(0.86, 0.72, 0.22), 0.8)
+	no.add_child(painel)
+	painel.position = Vector3(0, 11.0, 0)
+	for par in [[grande, 150, 12.0], [pequeno, 60, 9.0]]:
+		var l := Label3D.new()
+		l.text = par[0]
+		l.font_size = par[1]
+		l.pixel_size = 0.02
+		l.modulate = Color(0.06, 0.06, 0.06)
+		l.outline_size = 0
+		l.shaded = true
+		no.add_child(l)
+		l.position = Vector3(0, float(par[2]), 0.17)
+
+func _escada_incendio(p: Vector3, m: Material) -> void:
+	_caixa(p + Vector3(0, 0, 0.7), Vector3(4.0, 0.1, 1.4), m)                  # plataforma
+	_caixa(p + Vector3(0, 0.55, 1.4), Vector3(4.0, 0.06, 0.06), m)             # grade
+	for x in [-2.0, 0.0, 2.0]:
+		_caixa(p + Vector3(x, 0.3, 1.4), Vector3(0.05, 0.6, 0.05), m)
+	var deg := MeshInstance3D.new()                                           # escada inclinada até o andar de cima
+	var b := BoxMesh.new()
+	b.size = Vector3(0.8, 0.08, 4.4)
+	deg.mesh = b
+	deg.material_override = m
+	_cenario.add_child(deg)
+	deg.global_position = p + Vector3(0.6, 1.8, 0.7)
+	deg.rotation = Vector3(0, PI * 0.5, deg_to_rad(-55.0))
 
 func _mat(cor: Color, rough: float, metal := 0.0) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
@@ -417,16 +636,16 @@ func _esfera(p: Vector3, r: float, m: Material) -> void:
 	mi.global_position = p
 
 # fachada: concreto com janelas escuras e algumas acesas
-func _textura_janelas() -> ImageTexture:
+func _textura_janelas(acesas := 0.28, so_luz := false) -> ImageTexture:
 	var im := Image.create(128, 128, false, Image.FORMAT_RGB8)
-	im.fill(Color(0.30, 0.30, 0.32))
+	im.fill(Color(0, 0, 0) if so_luz else Color(0.30, 0.30, 0.32))
 	var r := RandomNumberGenerator.new()
 	r.seed = 5
 	for jy in 8:
 		for jx in 8:
-			var c := Color(0.06, 0.07, 0.09)
-			if r.randf() < 0.28:
-				c = Color(0.9, 0.75, 0.45)
+			var c := Color(0, 0, 0) if so_luz else Color(0.06, 0.07, 0.09)
+			if r.randf() < acesas:
+				c = Color(0.9, 0.85, 0.55)
 			im.fill_rect(Rect2i(jx * 16 + 3, jy * 16 + 4, 10, 9), c)
 	return ImageTexture.create_from_image(im)
 
