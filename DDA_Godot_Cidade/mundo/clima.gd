@@ -142,6 +142,8 @@ void fragment() {
 var hora := HORA_INICIAL             # 0..24
 var dia := 1                         # quantos dias se passaram (conta ao passar da meia-noite)
 var parado := false                  # história pode congelar a hora (e a troca automática do tempo)
+var nevoa_extra := 1.0               # multiplica a neblina (a abertura da história usa mais neblina)
+var som_mudo := false                # silencia chuva/trovão (abertura da história, que tem a própria música)
 var chuva := 0.0                     # 0..1 (força da chuva agora)
 var nuvens := 0.0                    # 0..1 (céu coberto)
 var estado := "limpo"                # limpo · nublado · chuva · tempestade
@@ -620,7 +622,7 @@ func _atualizar_ceu() -> void:
 			_perto_agua = _medir_agua()
 		var manha := smoothstep(4.8, 6.2, hora) * (1.0 - smoothstep(7.8, 9.6, hora))
 		neblina_manha = manha * _nevoa_dia * (0.45 + 0.55 * _perto_agua)
-		_nevoa_posta = _nevoa_base * float(k["nd"]) * (1.0 + 0.6 * n + 2.6 * c) * (1.0 + 5.0 * neblina_manha)
+		_nevoa_posta = _nevoa_base * float(k["nd"]) * (1.0 + 0.6 * n + 2.6 * c) * (1.0 + 5.0 * neblina_manha) * nevoa_extra
 		env.fog_density = _nevoa_posta
 		# neblina da manhã é branco-acinzentada (não laranja como o horizonte do nascer do sol)
 		var lum := nev.r * 0.3 + nev.g * 0.55 + nev.b * 0.15
@@ -686,7 +688,7 @@ func _atualizar_chuva() -> void:
 		var vento := 1.0 + 2.5 * maxf(0.0, chuva - 0.6) / 0.4
 		_mat_chuva.set_shader_parameter("vento", Vector2(0.8, 0.45) * vento)
 	# som: abafado dentro de prédio
-	var vol := pow(chuva, 0.8) * (0.4 if _coberto else 1.0) * 0.85
+	var vol := pow(chuva, 0.8) * (0.4 if _coberto else 1.0) * 0.85 * (0.0 if som_mudo else 1.0)
 	if _som_chuva.stream != null:
 		if vol > 0.004:
 			_som_chuva.volume_db = linear_to_db(vol)

@@ -1,0 +1,8 @@
+audio/abertura.ogg — música da abertura da história (feita por ferramentas/compor_abertura.py).
+A música é sintetizada por código (sem amostras de terceiros). O "rádio" ao fundo usa vozes sintéticas:
+  - noticiário: Piper TTS (https://github.com/rhasspy/piper, licença MIT) com a voz en_US "ljspeech"
+    (dados LJ Speech Dataset, https://keithito.com/LJ-Speech-Dataset/, domínio público);
+  - alerta de emergência: eSpeak NG (https://github.com/espeak-ng/espeak-ng, GPL 3.0; o áudio gerado não
+    é coberto pela GPL).
+Textos do rádio escritos para o jogo (em inglês, como uma rádio de Nova York), seguindo a Bíblia da Lore
+("Evacuação imediata. Dirijam-se ao sul. Evacuação aérea restrita. Estabeleçam abrigo.").

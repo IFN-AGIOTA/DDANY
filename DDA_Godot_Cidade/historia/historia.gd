@@ -20,6 +20,7 @@ signal etapa_mudou(etapa: String)
 
 const CutsceneCls := preload("res://historia/cutscene.gd")
 const Cenas := preload("res://historia/cenas.gd")
+const AberturaCls := preload("res://historia/abertura.gd")
 
 const FALAS := {
 	"prologo": ["No começo, ninguém sabia o que estava acontecendo.",
@@ -119,6 +120,14 @@ func iniciar(m) -> void:
 		main.clima.definir_hora(20.6)
 		main.clima.forcar_tempo("limpo", true)
 		main.clima.parado = true
+	# na PRIMEIRA vez: a abertura (o teaser refeito no jogo, historia/abertura.gd)
+	if not Config.valor("abertura_vista"):
+		var ab: Node = AberturaCls.new()
+		ab.name = "Abertura"
+		main.jogo.add_child(ab)
+		await ab.tocar(main)
+		ab.queue_free()
+		Config.definir("abertura_vista", true)
 	_ir("prologo")
 
 func _ir(e: String) -> void:

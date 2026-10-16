@@ -14,6 +14,7 @@ const PADRAO := {
 	"cam": 0, "dist": "near", "pos": "left", "fov": 42,
 	"map": true, "op": 100, "sc": 100,
 	"fps": false, "som": true, "vol": 100, "awake": false, "mus": true, "mvol": 70,
+	"abertura_vista": false,              # a abertura (trailer) da história já passou uma vez
 }
 
 # shd/tex/models/detd/fx: 0..3 · shad: 0..2 · den: 0..2 · fog: 0 densa, 1 normal, 2 limpa · dist/res: 0..3

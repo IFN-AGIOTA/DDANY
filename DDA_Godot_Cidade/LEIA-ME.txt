@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.22 (APK código 18)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.23 (APK código 19)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -358,6 +358,16 @@ O VÍRUS: Projeto Harbinger (EUA + laboratórios internacionais), mutação do v
 adaptativa (Mavie).
 
 NO JOGO (Menu > HISTÓRIA · ATO 1)
+- ABERTURA (0.23, só na PRIMEIRA vez, dá para PULAR): o teaser "Apocalipse" refeito dentro do jogo, ~74 s.
+  Logo INFINITY STUDIO sobre os prédios na neblina -> avenida vazia na hora azul -> clarão -> centro visto do
+  alto -> câmera caída, torta, no chão -> pausa e pancada -> pôr do sol rosa com a câmera tombando -> clarão
+  girando -> olhando para cima entre as torres -> clarão -> na chuva, um prédio tomba sobre a avenida ->
+  topo de um arranha-céu com antenas, a câmera sobe e aparece "DIAS DE UM / APOCALIPSE / Nova York" com a
+  mancha de tinta -> clarão -> preto. Cores frias e dessaturadas, grão de filme, faixas de cinema.
+  Música própria (audio/abertura.ogg, ~76 bpm em ré menor, "relógio" agudo a cada tempo, cordas graves,
+  pancadas nos clarões, subida antes do título) com um RÁDIO ao fundo (noticiário em inglês sobre os ataques
+  em Tóquio, Paris e Nova York + o alerta "Immediate evacuation. Head south..."). Para ver de novo: apague
+  "abertura_vista" de user://opcoes.cfg (ou reinstale).
 - PRÓLOGO "Antes do Fim" (tela preta).
 - CAPÍTULO 1 · A ÚLTIMA CORRIDA: noite, cidade ainda inteira (sem carros largados, sem infectados). No livro é
   de carro; no jogo é A PÉ: 6 pontos de controle contra o relógio (+6 s por ponto) até "A MORTE DO MEDO".
@@ -494,6 +504,10 @@ HISTÓRIA (pasta historia/)
   atores, falas de cada cena) ......... historia/cenas.gd
 - sistema de cutscene (faixas, legenda,
   PULAR, atores, cenário do bar) ...... historia/cutscene.gd
+- ABERTURA (tomadas, câmera, cores,
+  clarões, título, antenas, prédio que
+  tomba) .............................. historia/abertura.gd (logo em historia/abertura/)
+- música da abertura (com o rádio) .... audio/abertura.ogg, refeita por ferramentas/compor_abertura.py
 
 MÚSICA (pasta audio/)
 - compositor (escalas, andamento, quando
