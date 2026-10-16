@@ -1,0 +1,5 @@
+Modelos e animações: "Ultimate Animated Character Pack" de Quaternius (https://quaternius.com)
+Licença: CC0 1.0 (domínio público) - https://creativecommons.org/publicdomain/zero/1.0/
+Baixado de https://opengameart.org/content/animated-characters-pack (enviado pelo próprio Quaternius).
+Convertidos para o jogo por ferramentas/preparar_infectados.gd (pele de infectado, roupa suja, sangue,
+1 malha por personagem, 4 ossos por vértice).

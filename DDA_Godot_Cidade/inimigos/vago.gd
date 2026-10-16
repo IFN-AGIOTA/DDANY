@@ -20,7 +20,7 @@ extends CharacterBody3D
 
 signal morreu(vago: Node, cabeca: bool)
 
-const ModeloCls := preload("res://inimigos/modelo_vago.gd")
+const ModeloCls := preload("res://inimigos/modelo_infectado.gd")   # modelos do Quaternius (o antigo, de caixas, ficou para as cutscenes)
 const ItemMundo := preload("res://inventario/item_mundo.gd")
 const ItemCls := preload("res://inventario/item.gd")
 
@@ -117,16 +117,16 @@ func _ready() -> void:
 	# forma 0 = corpo · forma 1 = cabeça (os tiros usam o índice da forma)
 	var cap := CapsuleShape3D.new()
 	cap.radius = 0.28
-	cap.height = 1.32
+	cap.height = 1.12
 	_forma_corpo = CollisionShape3D.new()
 	_forma_corpo.shape = cap
-	_forma_corpo.position = Vector3(0, 0.9, 0)          # de 0,24 m a 1,56 m do chão
+	_forma_corpo.position = Vector3(0, 0.8, 0)          # de 0,24 m a 1,36 m do chão (cabeça grande do modelo em cima)
 	add_child(_forma_corpo)
 	var esf := SphereShape3D.new()
-	esf.radius = 0.135
+	esf.radius = 0.2
 	_forma_cabeca = CollisionShape3D.new()
 	_forma_cabeca.shape = esf
-	_forma_cabeca.position = Vector3(0, 1.6, -0.1)
+	_forma_cabeca.position = Vector3(0, 1.55, 0.0)
 	add_child(_forma_cabeca)
 	modelo = ModeloCls.new()
 	modelo.name = "Modelo"
