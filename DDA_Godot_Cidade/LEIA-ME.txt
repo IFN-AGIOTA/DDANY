@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.16 (APK código 12)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.17 (APK código 13)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -213,11 +213,11 @@ INFECTADOS
   Roupas com proteção seguram parte das mordidas e gastam no lugar.
 - Vida 100 · tiro na cabeça x3 · golpes corpo a corpo empurram e atordoam. Mortos ficam no chão e às vezes
   deixam um item.
-- MODELOS 3D (0.15): personagens animados do QUATERNIUS ("Ultimate Animated Character Pack", CC0 = livre).
-  17 tipos: zumbis do pacote + civis infectados (casual, operário, soldado, policial, médico, terno,
-  cozinheiro...), com pele de infectado, roupa suja e manchas de sangue. Animações de andar, parado, soco e
-  levar golpe; correr = andar acelerado com tronco curvado e braços para a frente; ao morrer o corpo tomba
-  de costas ou de bruços. O estilo do pacote é cartunesco (cabeça grande): a cabeça (tiro x3) acompanha o osso.
+- MODELOS 3D (0.17): manequins LOW POLY de proporção humana da "Universal Animation Library" 1 e 2 do
+  QUATERNIUS (CC0 = livre). 12 tipos (8 homens, 4 mulheres) pintados como infectados: pele pálida, camisa de
+  manga curta ou comprida, calça ou bermuda, sapato, cabelo ou careca, olhos fundos, boca suja, roupa rasgada
+  e sangue. Animações de ZUMBI (andar arrastado, parado, arranhar) + correr, levar tiro e morrer caindo.
+  Correndo, esticam os braços para a frente. (Na 0.15 eram os bonecos "cabeçudos" do Character Pack.)
 - Com alguém te perseguindo, a música aperta.
 
 COMPANHEIROS: GREG E MAVIE (depois do encontro no Capítulo 3 da história)
@@ -417,7 +417,8 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 INFECTADOS (pasta inimigos/; o nome "vagos" nos arquivos veio do HTML)
 - comportamento, vida, velocidade ..... inimigos/vago.gd
 - aparência e animação ................ inimigos/modelo_infectado.gd (tipos e pesos em TIPOS)
-- modelos 3D e animações .............. inimigos/infectados/*.scn e animacoes.res (créditos em LICENCA.txt)
+- modelos 3D e animações .............. inimigos/infectados/homem_*.scn, mulher_*.scn e animacoes.res
+                                        (créditos em LICENCA.txt)
 - converter/adicionar modelos do pacote ferramentas/preparar_infectados.gd (instruções no topo)
 - modelo antigo (caixas), só nas
   cutscenes ........................... inimigos/modelo_vago.gd
@@ -505,8 +506,8 @@ MÚSICA (pasta audio/)
 - Sem 1ª pessoa (o HTML tinha); o mar é "caminhável"; a base militar ainda não tem os prédios/pistas do HTML.
 - Transformação em carro e jato do HTML foi descartada: o jogo é só a pé.
 - Os blocos de cima das torres escalonadas também mostram "térreo" (vitrines/placas) na base deles.
-- Infectados: o pacote do Quaternius não tem animação de correr nem de morrer caindo (feitas por código);
-  as cutscenes ainda usam o infectado antigo, de caixas.
+- Infectados: os rostos são simples (manequim, olhos pintados); as cutscenes ainda usam o infectado
+  antigo, de caixas.
 - Ideias para depois: loot por região, lugares
   especiais (postos do exército, quarentena, metrô), helicópteros caídos, elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,
   outros sobreviventes (NPCs), mais atos da história.
