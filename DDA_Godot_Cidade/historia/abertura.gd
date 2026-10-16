@@ -20,10 +20,12 @@ signal terminou
 const UI := preload("res://menu/ui.gd")
 const MUSICA := "res://audio/abertura.ogg"
 const LOGO := "res://historia/abertura/logo_infinity_studio.png"
+const FONTE_TITULO := "res://menu/fontes/anton-400-normal.woff2"            # Anton (OFL): letra grossa do teaser
+const FONTE_CURSIVA := "res://menu/fontes/great-vibes-400-normal.woff2"     # Great Vibes (OFL): "Nova York"
 const FIM := 73.5
 const CLAROES := [15.0, 29.0, 41.0, 47.0, 51.0, 65.0]
 const TELHADO := Vector3(-1460.0, 163.6, -138.0)        # topo da torre da ponta leste do centro (163 m, vista livre)
-const PREDIO_QUEDA := Vector3(-1180.0, 0.6, -196.0)      # onde o prédio que tomba fica (beira da avenida)
+const PREDIO_QUEDA := Vector3(-1245.0, 0.6, -198.0)      # onde o prédio que tomba fica (beira da avenida)
 
 # correção de cor de cada tomada: [saturação, tinta (multiplica), exposição, contraste]
 const GRADES := {
@@ -183,7 +185,7 @@ func _quadro(t: float) -> void:
 	if _predio_queda != null:
 		_predio_queda.visible = t > 46.5 and t < 52.2
 		var q := clampf((t - 47.0) / 5.0, 0.0, 1.0)
-		_predio_queda.rotation.x = deg_to_rad(16.0 + 30.0 * q * q)
+		_predio_queda.rotation.x = deg_to_rad(12.0 + 48.0 * q * q)
 		_poeira.emitting = _predio_queda.visible
 	# cor, clarões, preto, logo e título
 	var g: Array = GRADES[s["grade"]]
@@ -268,13 +270,13 @@ func _tomada(t: float) -> Dictionary:
 	if t < 52.0:         # na chuva, o prédio tomba sobre a avenida
 		var u := (t - 47.0) / 5.0
 		return {"nome": "queda", "pos": Vector3(-1330.0 + 10.0 * u, 2.2, -171.0),
-			"alvo": PREDIO_QUEDA + Vector3(-20.0, 45.0, 10.0), "fov": 50.0, "tremor": 0.08 * u, "hora": 20.4,
+			"alvo": PREDIO_QUEDA + Vector3(-10.0, 38.0, 14.0), "fov": 55.0, "tremor": 0.08 * u, "hora": 20.4,
 			"tempo": "chuva", "nevoa": 2.0, "grade": "azul"}
 	# topo do prédio mais alto: a câmera sobe entre as antenas e mostra a cidade
 	var u := clampf((t - 52.0) / 13.0, 0.0, 1.0)
 	var k := u * u * (3.0 - 2.0 * u)
-	return {"nome": "telhado", "pos": TELHADO + Vector3(6.5 - 1.5 * k, 1.6 + 7.0 * k, -0.5),
-		"alvo": TELHADO + Vector3(330.0, -32.0 + 8.0 * k, -50.0), "fov": 55.0, "hora": 19.05, "tempo": "nublado",
+	return {"nome": "telhado", "pos": TELHADO + Vector3(7.0 - 1.0 * k, 2.6 + 5.0 * k, -0.5),
+		"alvo": TELHADO + Vector3(330.0, -24.0 + 10.0 * k, -50.0), "fov": 55.0, "hora": 19.05, "tempo": "nublado",
 		"nevoa": 2.2, "grade": "cinza"}
 
 # ---------- cenário extra: antenas no telhado e o prédio que tomba ----------
@@ -298,7 +300,7 @@ func _montar_cenario() -> void:
 			_caixa(base + Vector3(0, y, 0), Vector3(1.4 - k * 0.35, 0.06, 0.06), metal)
 		_esfera(base + Vector3(0, h + 0.15, 0), 0.18, luz)
 	# pratos de satélite
-	for d in [[Vector3(10.5, 0, 2), -100.0], [Vector3(10, 0, -9), -60.0], [Vector3(11, 0, 10.5), -120.0]]:
+	for d in [[Vector3(10, 0, -9), -60.0], [Vector3(11, 0, 10.5), -120.0]]:
 		var p: Vector3 = TELHADO + d[0]
 		_caixa(p + Vector3(0, 0.6, 0), Vector3(0.15, 1.2, 0.15), metal)
 		var prato := MeshInstance3D.new()
@@ -727,8 +729,10 @@ func _montar_ui() -> void:
 	_mancha.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_titulo.add_child(_mancha)
 	_txt_apoc = UI.rotulo("APOCALIPSE", 40.0, Color(1, 1, 1), 900)
+	_txt_apoc.add_theme_font_override("font", load(FONTE_TITULO))
 	_txt_dias = UI.rotulo("D I A S   D E   U M", 12.0, Color(1, 1, 1, 0.92), 700)
-	_txt_ny = UI.rotulo("Nova York", 14.0, Color(1, 1, 1, 0.95), 400, 0.0, true)
+	_txt_ny = UI.rotulo("Nova York", 14.0, Color(1, 1, 1, 0.95), 400)
+	_txt_ny.add_theme_font_override("font", load(FONTE_CURSIVA))
 	for l in [_txt_apoc, _txt_dias, _txt_ny]:
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		l.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.55))
@@ -776,9 +780,11 @@ func _ajustar_ui() -> void:
 	_txt_dias.add_theme_font_size_override("font_size", int(3.2 * u))
 	_txt_dias.position = Vector2(0, vs.y * 0.43 - 15.5 * u)
 	_txt_dias.size = Vector2(vs.x, 5.0 * u)
-	_txt_ny.add_theme_font_size_override("font_size", int(5.2 * u))
-	_txt_ny.position = Vector2(0, vs.y * 0.43 + 8.0 * u)
-	_txt_ny.size = Vector2(vs.x, 8.0 * u)
+	_txt_ny.add_theme_font_size_override("font_size", int(8.5 * u))
+	_txt_ny.add_theme_constant_override("outline_size", int(0.8 * u))
+	_txt_ny.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
+	_txt_ny.position = Vector2(vs.x * 0.06, vs.y * 0.43 + 6.5 * u)
+	_txt_ny.size = Vector2(vs.x, 12.0 * u)
 	_pular.add_theme_font_size_override("font_size", int(2.6 * u))
 	_pular.position = Vector2(vs.x - 20.0 * u, hb + 1.5 * u)
 	_pular.size = Vector2(17.0 * u, 6.0 * u)
