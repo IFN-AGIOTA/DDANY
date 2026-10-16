@@ -1,7 +1,7 @@
 extends CanvasLayer
 # TELA DE INVENTÁRIO (estilo DayZ) · abre com o botão INV, Tab ou I · fecha com Tab, I, Esc ou FECHAR.
 #   ESQUERDA ... o que está PERTO no mundo: itens no chão (grade "CHÃO"), caixas/armários e mochilas jogadas
-#   MEIO ....... o personagem: encaixes do corpo (cabeça, camisa, colete, cinto, ombro, coldre, calça, mochila),
+#   MEIO ....... o personagem (3D em tempo real no modo livre: inventario/boneco_3d.gd): encaixes do corpo (cabeça, camisa, colete, cinto, ombro, coldre, calça, mochila),
 #                MÃOS, barra de atalhos 1..8 e informações do item selecionado (USAR / PEGAR / LARGAR / DIVIDIR)
 #   DIREITA .... o que você carrega: bolsos da camisa, calça, colete, cinto e a mochila
 # Arrastar e soltar entre qualquer lugar; durante o arraste, R / Espaço / botão direito / 2º dedo = girar.
@@ -12,6 +12,7 @@ const SlotUi := preload("res://inventario/slot_ui.gd")
 const GradeCls := preload("res://inventario/grade.gd")
 const Itens := preload("res://inventario/itens.gd")
 const Visual := preload("res://inventario/visual.gd")
+const Boneco3D := preload("res://inventario/boneco_3d.gd")
 
 const AMBAR := Color(1.0, 0.71, 0.0)
 const SLOTS_ESQ := ["cabeca", "camisa", "colete", "cinto"]
@@ -307,10 +308,17 @@ func _montar_meio() -> Control:
 		col[0].add_theme_constant_override("separation", 4)
 		for s in col[1]:
 			col[0].add_child(_encaixe(s, tam_slot))
-	var boneco := Control.new()
+	var boneco: Control
+	var jog = inv.jogador
+	if jog != null and jog.get_node_or_null("Modelo/Sobrevivente") != null:
+		# modo livre: o personagem 3D em tempo real, com o que está equipado (girar = arrastar)
+		boneco = Boneco3D.new(inv)
+		boneco.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	else:
+		boneco = Control.new()
+		boneco.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		boneco.draw.connect(_desenhar_boneco.bind(boneco))
 	boneco.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	boneco.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	boneco.draw.connect(_desenhar_boneco.bind(boneco))
 	corpo.add_child(ve)
 	corpo.add_child(boneco)
 	corpo.add_child(vd)

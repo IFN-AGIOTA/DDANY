@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.20 (APK código 16)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.21 (APK código 17)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -140,6 +140,10 @@ O SOBREVIVENTE (personagem do MODO LIVRE, 0.18)
   capacete, boné, gorro, lanterna de cabeça, mochilas, pochete, coletes, camisas e calças aparecem com a
   "foto" do modelo 3D (inventario/icones/*.png, gerados por ferramentas/gerar_icones.gd). Item girado na
   grade = foto girada. Os outros itens continuam com o desenho feito por código.
+- PERSONAGEM 3D NO INVENTÁRIO (0.21, modo livre): no meio da tela, entre os encaixes do corpo, aparece o
+  sobrevivente em 3D e em tempo real, com tudo o que está equipado (roupas, colete, chapéu, mochila, armas
+  nas costas/coldre e o item das MÃOS na mão). ARRASTE em cima dele para girar; SOLTE um item em cima dele
+  para vestir (ou pôr na mão). No modo história continua a silhueta.
 
 DIA, NOITE E TEMPO
 - 1 dia de jogo = 48 min reais. O jogo livre começa às 8h. Sol nasce ~6h e se põe ~19h30.
@@ -407,6 +411,7 @@ INVENTÁRIO / ITENS (pasta inventario/)
   atalhos, pentes, acessórios, usar) .. inventario/inventario.gd
 - tela de 3 colunas ................... inventario/tela_inventario.gd
 - grade com arrastar · encaixes ....... inventario/grade_ui.gd · inventario/slot_ui.gd · inventario/grade.gd
+- personagem 3D da tela do inventário . inventario/boneco_3d.gd (câmera, luz, girar, soltar para vestir)
 - ícones dos itens .................... inventario/visual.gd (desenho) e inventario/icones/<id>.png (fotos
                                         3D; refazer com ferramentas/gerar_icones.gd, instruções no topo)
 - item no chão · caixa/armário ........ inventario/item_mundo.gd · inventario/caixa_mundo.gd
