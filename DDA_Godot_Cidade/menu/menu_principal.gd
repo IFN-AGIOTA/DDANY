@@ -1,6 +1,6 @@
 extends CanvasLayer
 # MENU PRINCIPAL (igual ao do HTML): "DIAS DE UM / APOCALIPSE / NOVA YORK", versão, botões
-# História · Ato 1 · Jogar (mundo livre) · Opções, e o ícone de tela cheia no canto. Fica por cima da cena_menu.gd.
+# História · Ato 1 · Jogar (mundo livre) · Opções · Créditos (menu/creditos.gd), e o ícone de tela cheia no canto. Fica por cima da cena_menu.gd.
 # Mexa AQUI para: textos e botões do menu principal. (A cena 3D de fundo é menu/cena_menu.gd.)
 
 signal jogar
@@ -10,6 +10,7 @@ signal opcoes
 
 const UI := preload("res://menu/ui.gd")
 const Salvamento := preload("res://menu/salvamento.gd")
+const CreditosCls := preload("res://menu/creditos.gd")
 
 var _raiz: Control
 var _aviso: Label
@@ -104,7 +105,9 @@ func _montar() -> void:
 	b2.apertado.connect(func(): jogar.emit())
 	var b3 := UI.BotaoMenu.new("Opções", "", false, 3.8)
 	b3.apertado.connect(func(): opcoes.emit())
-	var botoes: Array = [b1, b2, b3]
+	var b4 := UI.BotaoMenu.new("Créditos", "", false, 3.0, 26.0)
+	b4.apertado.connect(_abrir_creditos)
+	var botoes: Array = [b1, b2, b3, b4]
 	if salvo != "":
 		var b0 := UI.BotaoMenu.new("Continuar", salvo, true, 3.8)
 		b0.apertado.connect(func(): continuar.emit())
@@ -135,6 +138,13 @@ func _montar() -> void:
 	_carregando.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_carregando.visible = false
 	_raiz.add_child(_carregando)
+
+func _abrir_creditos() -> void:
+	if get_node_or_null("Creditos") != null:
+		return
+	var c := CreditosCls.new()
+	c.name = "Creditos"
+	add_child(c)
 
 # APOCALIPSE: degradê + sombra (a sombra é um filho desenhado atrás, sem o degradê)
 func _titulo_grande(txt: String, tam: float, v: float) -> Control:

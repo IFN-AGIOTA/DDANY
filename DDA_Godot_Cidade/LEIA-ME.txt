@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.15 (APK código 11)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.16 (APK código 12)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -38,7 +38,10 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 MENU PRINCIPAL (igual ao do HTML)
 - Cena 3D do pôr do sol com a skyline e o soldado no terraço; título "DIAS DE UM / APOCALIPSE / NOVA YORK".
 - CONTINUAR (aparece quando existe jogo salvo: dia, hora e minutos jogados) · HISTÓRIA · ATO 1 ·
-  JOGAR / NOVO JOGO (mundo livre) · OPÇÕES · botão de tela cheia.
+  JOGAR / NOVO JOGO (mundo livre) · OPÇÕES · CRÉDITOS · botão de tela cheia.
+- CRÉDITOS: autores da história (Willian Ulguim e Gabriel Solla), o jogo e TODOS os recursos baixados de
+  fora com autor, licença e endereço (modelos do Quaternius, fonte Roboto Condensed, Godot) + o texto
+  completo da licença da Godot. Regra: qualquer coisa baixada entra na lista RECURSOS de menu/creditos.gd.
 - MÚSICA PROCEDURAL DE TERROR em tudo (veja abaixo).
 
 OPÇÕES (iguais às do HTML; salvas no aparelho em user://opcoes.cfg)
@@ -339,6 +342,8 @@ QUERO MEXER EM...                         ARQUIVO
 
 MENUS E OPÇÕES (pasta menu/)
 - menu principal (título e botões) .... menu/menu_principal.gd
+- tela de créditos (autores, recursos
+  baixados e licenças) ................ menu/creditos.gd (lista RECURSOS)
 - cena 3D do menu (pôr do sol,
   skyline, soldado no terraço) ........ menu/cena_menu.gd
 - tela de Opções (6 abas) ............. menu/opcoes.gd
