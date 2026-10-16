@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.26 (APK código 22)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.27 (APK código 23)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,11 +35,20 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
-ATUALIZAÇÃO 0.26 · DOMINIC EM 3D E ANIMAÇÕES NOVAS (resumo do que mudou)
-- DOMINIC VAIDER em 3D (personagens/dominic/dominic.scn), no estilo low poly facetado da referência do autor:
-  jaqueta de couro aberta, camiseta branca, calça e botas pretas, óculos escuros, tranças BRANCAS e pele bem clara
-  (Bíblia da Lore), tatuagem geométrica no pescoço. É o personagem do MODO HISTÓRIA, aparece no MENU e nas
-  CUTSCENES (npc/ator_rigado.gd). Usa o mesmo esqueleto do sobrevivente, então todas as animações servem nele.
+ATUALIZAÇÃO 0.27 · PERSONAGEM NOVO E ANIMAÇÕES REFINADAS (resumo do que mudou)
+- O DOMINIC 3D foi CANCELADO (a pasta personagens/ e npc/ator_rigado.gd saíram; as cutscenes voltaram como
+  eram). As ferramentas de modelagem continuam em ferramentas/dominic/ só como referência.
+- PERSONAGEM NOVO do jogador (modo livre, modo história e menu): um homem "normal" de verdade, com pele,
+  olhos, sobrancelhas, cabelo e barba (Quaternius "Universal Base Characters", CC0), no lugar do manequim.
+  Montado por ferramentas/preparar_personagem.gd -> jogador/sobrevivente/corpo.scn (+ texturas/).
+- ROUPAS no corpo novo: cada peça é uma "casca" que acompanha o corpo (regata, camiseta, manga longa, jaqueta,
+  short, calça, botas) com a cor do item; a pele embaixo some. Capacete, gorro e boné escondem o cabelo.
+  Colete, mochilas, capacete etc. continuam encaixando nos ossos (equipamentos/modelos_equip.gd).
+- As 88 animações foram CONVERTIDAS para o esqueleto novo (quadril na altura dele, braços fechados nas
+  animações KayKit). FUZIL: a mão esquerda agora segura o guarda-mão com a palma por baixo (jogador/ik_fuzil.gd).
+- Ícones das roupas refeitos a partir do corpo novo.
+
+ATUALIZAÇÃO 0.26 · ANIMAÇÕES NOVAS (resumo do que mudou)
 - 70 ANIMAÇÕES NOVAS (88 no total, jogador/sobrevivente/animacoes.res; KayKit e Quaternius, CC0):
   · mirando/atirando: anda e corre de FRENTE, de COSTAS e de LADO (as pernas seguem a direção, o corpo a mira);
   · fuzil: correr com fuzil, mirar com fuzil, RECARREGAR fuzil; pistola: RECARREGAR pistola;
@@ -183,7 +192,7 @@ O SOBREVIVENTE (personagem do MODO LIVRE, 0.18)
   com as DUAS MÃOS (0.20): direita na empunhadura, esquerda embaixo do guarda-mão (IK de braço e antebraço).
   Arma baixa = atravessada na frente da barriga, cano para baixo; mirando = coronha no ombro, rosto encostado
   na coronha, cano para a frente. Vale parado, andando, correndo e agachado.
-- O MODO HISTÓRIA continua com o soldado antigo (até termos o modelo do Dominic).
+- O MODO HISTÓRIA também usa o sobrevivente (0.27).
 - EQUIPAMENTOS 3D (0.19): modelos LOW POLY baixados (licença livre, créditos no menu Créditos):
   · armas: pistola, M4, AKM, espingarda, rifle de caça (Quaternius); faca e machado (Quaternius);
     taco (LonesomeDucky); lança (Hernandack); silenciador, mira 4x e luneta encaixam de verdade na arma.
@@ -544,8 +553,8 @@ SOBREVIVENTE (jogador no modo livre)
                                         COLETES, CABECA no topo: item novo = cor nova ali)
 - fuzil nas duas mãos (posição do fuzil
   baixo/mirando e das mãos, IK) ....... jogador/ik_fuzil.gd
-- malha e animações ................... jogador/sobrevivente/corpo.scn e animacoes.res
-- converter de novo ................... ferramentas/preparar_jogador.gd
+- malha e animações ................... jogador/sobrevivente/corpo.scn, animacoes.res e texturas/
+- converter de novo ................... ferramentas/preparar_jogador.gd -> retarget_kaykit.gd -> preparar_personagem.gd
 - equipamentos 3D no corpo (onde cada
   um encaixa: ENCAIXE) e peças feitas
   por código (gorro, lanterna, pochete) equipamentos/modelos_equip.gd
@@ -554,11 +563,13 @@ SOBREVIVENTE (jogador no modo livre)
 - converter armas e itens realistas ... ferramentas/preparar_itens_realistas.py (roda no Blender 4.2;
                                         instruções no topo) e depois ferramentas/gerar_icones.gd
 - converter equipamentos low poly ..... ferramentas/preparar_equipamentos.gd
-- DOMINIC 3D: modelar ............... ferramentas/dominic/ (medir_referencia.py -> modelar_dominic.py no Blender
-                                        com o MPFB -> exportar_dominic.py) e ferramentas/preparar_dominic.gd (rig)
+- personagem novo (corpo, cabelos e
+  animações no esqueleto dele) ........ ferramentas/preparar_personagem.gd (instruções no topo)
+- roupas no corpo (cascas) ............ jogador/modelo_sobrevivente.gd (ROUPAS, TIPO_CAMISA, CABELOS)
+- ação só na parte de cima do corpo ... jogador/camada_acao.gd
+- (cancelado) Dominic 3D .............. ferramentas/dominic/ e ferramentas/preparar_dominic.gd (só referência)
 - animações novas (KayKit -> jogo) .. ferramentas/retarget_kaykit.gd (tabelas CONVERTER e DIRETAS)
 - quais animações cada ação usa ....... jogador/animador_modelo.gd (8 direções, acao()), armas/armas.gd (GOLPES)
-- Dominic nas cutscenes ............... npc/ator_rigado.gd (POSES: pose da cena -> animação)
 - quando usa (modo livre) ............. main.gd (_jogar) e jogador/jogador.gd (usar_sobrevivente)
 - quantos aparecem e onde ............. inimigos/vagos.gd
 
@@ -648,7 +659,7 @@ MÚSICA (pasta audio/)
 -----------------------------------------------------------------------------------------------------
 10. LIMITAÇÕES CONHECIDAS E PRÓXIMOS PASSOS
 -----------------------------------------------------------------------------------------------------
-- O jogador é o soldado do HTML; o Dominic do livro é civil (jaqueta de couro, cabelo branco): falta o modelo dele.
+- O jogador é um sobrevivente genérico (Universal Base Characters); o Dominic do livro (jaqueta de couro, cabelo branco) não tem modelo próprio (o 3D dele foi cancelado na 0.27).
 - A gangue VAGOS (Edy, V), Alyce, Nick, Mônica e Carlos ainda não aparecem no jogo (são do Ato 2 em diante).
 - Companheiros ainda não recebem ordens (esperar/seguir) nem usam armas de fogo ou itens que você der.
 - Só abrem até o 3º andar; o telhado só nos prédios de até 3 andares (nos mais altos, o resto fica fechado).

@@ -129,7 +129,7 @@ func _arma(tipo: String, acess: Array) -> Node3D:
 func _roupa(id: String) -> MeshInstance3D:
 	if _corpo_arrays.is_empty():
 		var c: Node3D = load("res://jogador/sobrevivente/corpo.scn").instantiate()
-		var mi0: MeshInstance3D = c.find_children("*", "MeshInstance3D", true, false)[0]
+		var mi0: MeshInstance3D = c.find_child("Corpo", true, false)
 		_corpo_arrays = mi0.mesh.surface_get_arrays(0)
 		c.free()
 	var V: PackedVector3Array = _corpo_arrays[Mesh.ARRAY_VERTEX]

@@ -193,7 +193,7 @@ func globais(sk: Skeleton3D, locais: Array) -> Array:
 	return g
 
 func converter(sk_k: Skeleton3D, a: Animation, nome_base: String, laco: bool) -> Animation:
-	var fechar_bracos := 0.0 if nome_base == "parado_arma" else 18.0
+	var fechar_bracos := 0.0 if nome_base == "parado_arma" else 32.0
 	var faixas := {}
 	for i in a.get_track_count():
 		var cam := String(a.track_get_path(i))

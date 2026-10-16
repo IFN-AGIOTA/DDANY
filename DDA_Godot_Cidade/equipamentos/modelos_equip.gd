@@ -18,9 +18,9 @@ const ENCAIXE := {
 	"bone": ["Head", Vector3(0, 0.165, 0.015), Vector3(-6, 90, 0), 1.3],           # o modelo vem com a aba para o lado
 	"gorro": ["Head", Vector3(0, 0.13, -0.005), Vector3.ZERO, 0.9],
 	"lanterna_cabeca": ["Head", Vector3(0, 0.14, 0.0), Vector3.ZERO, 0.9],
-	"mochila_trilha": ["spine_03", Vector3(0, -0.38, -0.14), Vector3.ZERO, 0.72],
-	"mochila_combate": ["spine_03", Vector3(0, -0.36, -0.14), Vector3.ZERO, 0.75],
-	"mochila_escolar": ["spine_03", Vector3(0, -0.32, -0.13), Vector3.ZERO, 0.9],
+	"mochila_trilha": ["spine_03", Vector3(0, -0.24, -0.17), Vector3.ZERO, 0.74],
+	"mochila_combate": ["spine_03", Vector3(0, -0.22, -0.17), Vector3.ZERO, 0.77],
+	"mochila_escolar": ["spine_03", Vector3(0, -0.2, -0.16), Vector3.ZERO, 0.9],
 	"pochete": ["pelvis", Vector3(0, 0.02, 0.0), Vector3.ZERO, 1.0],
 }
 

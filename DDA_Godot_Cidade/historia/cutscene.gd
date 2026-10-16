@@ -2,7 +2,7 @@ extends Node3D
 # SISTEMA DE CUTSCENES (cenas de cinema da história), feito no próprio mundo do jogo:
 #   - faixas pretas em cima e embaixo, legenda com o nome de quem fala, botão PULAR (e toque = próxima fala)
 #   - câmera própria que desliza de um ponto a outro olhando para um alvo (camera(...)), ou corta (cortar(...))
-#   - ATORES: pessoas (Dominic: modelo 3D em npc/ator_rigado.gd; Greg, Mavie...: npc/modelo_humano.gd), infectados (inimigos/modelo_vago.gd) e carros,
+#   - ATORES: pessoas (npc/modelo_humano.gd: Dominic, Greg, Mavie...), infectados (inimigos/modelo_vago.gd) e carros,
 #     que andam/correm até um ponto (andar), fazem poses (pose) e golpes; carros com gente dentro
 #   - CENÁRIOS montados na hora (o bar do Capítulo 2) e escurecer/clarear a tela
 # Enquanto a cena roda: a HUD some, o jogador fica parado e escondido, os infectados de verdade ficam congelados.
@@ -10,7 +10,6 @@ extends Node3D
 # Mexa AQUI para: tamanho das faixas, legenda, velocidade da câmera, botão PULAR.
 
 const HumanoCls := preload("res://npc/modelo_humano.gd")
-const AtorRigadoCls := preload("res://npc/ator_rigado.gd")
 const ModeloVagoCls := preload("res://inimigos/modelo_vago.gd")
 const Abandono := preload("res://mundo/abandono.gd")
 const Malhas := preload("res://mundo/malhas.gd")
@@ -117,8 +116,7 @@ static func _mostrar_filhos(n: Node, v: bool) -> void:
 
 # ---------- atores ----------
 func pessoa(id: String, quem: String, arma: String, pos: Vector3, yaw: float) -> Node3D:
-	# quem já tem modelo 3D de verdade (Dominic) usa npc/ator_rigado.gd; os outros, o boneco de caixas
-	var m = AtorRigadoCls.new() if AtorRigadoCls.tem_modelo(quem) else HumanoCls.new()
+	var m = HumanoCls.new()
 	add_child(m)
 	m.montar(quem, arma)
 	m.global_position = pos

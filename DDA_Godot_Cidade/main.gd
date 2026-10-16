@@ -144,8 +144,7 @@ func _jogar(carregar_salvo := false, modo_historia := false) -> void:
 				_renascer()
 	elif modo_historia:
 		historia.iniciar(self)
-	# modo livre: o sobrevivente · modo história: o Dominic Vaider (personagens/dominic/)
-	jogador.usar_sobrevivente("dominic" if historia.ativa else "")
+	jogador.usar_sobrevivente()             # o personagem do jogador (livre e história): jogador/modelo_sobrevivente.gd
 
 func salvar_jogo() -> void:
 	if jogo != null and jogador != null:

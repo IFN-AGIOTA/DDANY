@@ -313,15 +313,17 @@ func _poeira_no_ar() -> void:
 	add_child(_poeira)
 
 # ---------- soldado ----------
-# o DOMINIC VAIDER (jogador/modelo_sobrevivente.gd com personagem "dominic"): jaqueta de couro, tranças brancas
-# e a M4 baixa nas duas mãos, olhando a cidade de costas para a câmera
+# o SOBREVIVENTE do jogo (jogador/modelo_sobrevivente.gd), equipado: capacete, colete, jaqueta, mochila e a M4
+# baixa nas duas mãos, olhando a cidade de costas para a câmera
 func _soldado() -> void:
 	soldado = SobreviventeCls.new()
-	soldado.name = "DominicMenu"
-	soldado.personagem = "dominic"
+	soldado.name = "SobreviventeMenu"
 	add_child(soldado)
 	soldado.rotation.y = PI + 0.32                  # o manequim olha para +Z; a cidade fica em -Z
-	soldado.vestir(_Equip.new({}))
+	var equip := {"slots": {}}
+	for par in [["camisa", "jaqueta"], ["calca", "calca"], ["colete", "colete"], ["cabeca", "capacete"], ["mochila", "mochila_combate"]]:
+		equip["slots"][par[0]] = ItemCls.novo(par[1])
+	soldado.vestir(_Equip.new(equip["slots"]))
 	var m4 := ModelosArmas.construir("m4")
 	soldado.segurar_arma("m4", m4)
 

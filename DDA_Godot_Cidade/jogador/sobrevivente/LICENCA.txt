@@ -1,8 +1,14 @@
-Corpo (manequim masculino) e animações do sobrevivente: Quaternius (https://quaternius.com)
-  - "Universal Animation Library 2" (manequim) e "Universal Animation Library" (animações, versão Unreal)
+Personagem do jogador (corpo.scn + texturas/): Quaternius, "Universal Base Characters" [Standard]
+  (homem "Superhero", pele, olhos, sobrancelhas, cabelos "Simple Parted"/"Buzzed" e barba)
+  https://quaternius.itch.io/universal-base-characters
+Licença: CC0 1.0 (domínio público). Montado por ferramentas/preparar_personagem.gd (texturas reduzidas para 1024).
+
+Animações base: Quaternius (https://quaternius.com)
+  - "Universal Animation Library 2" e "Universal Animation Library" (versão Unreal)
     https://opengameart.org/content/universal-animation-library-2
     https://opengameart.org/content/universal-animation-library
-Licença: CC0 1.0 (domínio público). Convertido por ferramentas/preparar_jogador.gd.
+Licença: CC0 1.0 (domínio público). Convertidas por ferramentas/preparar_jogador.gd e, para o esqueleto do
+personagem, por ferramentas/preparar_personagem.gd.
 
 Animações extras (0.26), em animacoes.res, convertidas para este esqueleto por ferramentas/retarget_kaykit.gd:
 - correr_esq, correr_dir, andar_tras, correr_fuzil, andar_furtivo, esquivas, rastejar, mirar_fuzil, atirar_fuzil,

@@ -19,11 +19,22 @@ var mao_dir := Transform3D.IDENTITY    # punho direito no espaço da arma
 var dir_lado := -1.0                   # x do lado direito do corpo (-1 ou 1)
 
 var _i := {}
+var _mao_esq_local := Basis.IDENTITY     # eixos (palma, dedos, lado) da mão esquerda no espaço do osso dela
 
 func preparar(sk: Skeleton3D, anim: AnimationPlayer) -> void:
 	for n in ["spine_03", "neck_01", "Head", "upperarm_r", "lowerarm_r", "hand_r", "upperarm_l", "lowerarm_l", "hand_l"]:
 		_i[n] = sk.find_bone(n)
 	dir_lado = signf(sk.get_bone_global_rest(_i["upperarm_r"]).origin.x)
+	# eixos reais da mão esquerda (cada personagem tem o osso da mão orientado de um jeito): na pose T a palma
+	# olha para baixo e os dedos apontam do punho para o dedo médio
+	var gm := sk.get_bone_global_rest(_i["hand_l"])
+	var med := sk.find_bone("middle_01_l")
+	var dedos_g := (sk.get_bone_global_rest(med).origin - gm.origin).normalized() if med >= 0 else Vector3(-dir_lado, 0, 0)
+	var palma_g := (Vector3.DOWN - dedos_g * Vector3.DOWN.dot(dedos_g)).normalized()
+	var inv := gm.basis.orthonormalized().inverse()
+	var dl := (inv * dedos_g).normalized()
+	var pl := (inv * palma_g).normalized()
+	_mao_esq_local = Basis(pl, dl, pl.cross(dl))
 	# a mão direita segura o fuzil como segura a pistola na animação de mirar (cano para +Z, empunhadura na palma)
 	anim.play("mirar")
 	anim.seek(0.4, true)
@@ -47,8 +58,8 @@ func _mao_esq() -> Transform3D:
 	var palma := Vector3(d * 0.35, 1.0, 0.0)
 	palma = (palma - dedos * palma.dot(dedos)).normalized()
 	# na mão esquerda o eixo X local aponta para o lado da palma (espelho da direita)
-	var b := Basis(palma, dedos, palma.cross(dedos))
-	var contato := Vector3(0, -0.005, mao_esq_z)
+	var b := Basis(palma, dedos, palma.cross(dedos)) * _mao_esq_local.inverse()
+	var contato := Vector3(0, -0.05, mao_esq_z)
 	return Transform3D(b, contato - dedos * 0.075 - palma * 0.035)
 
 func _process_modification() -> void:
