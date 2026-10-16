@@ -407,6 +407,8 @@ func _process(dt: float) -> void:
 		salvar_jogo()
 	if jogador.vel_horizontal > 5.0:
 		Musica.adicionar_tensao(dt * 0.045)            # correndo: a música aperta
+	if is_instance_valid(clima):
+		Musica.noite = clima.hora < 5.5 or clima.hora > 20.0   # de noite toca a "Noite sem Luz"
 	if voo.ativo:
 		return
 	var p := jogador.global_position

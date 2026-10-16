@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.21 (APK código 17)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.22 (APK código 18)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -228,10 +228,20 @@ SALVAR
 - Arquivo: user://save.json. Morto não salva (só depois de renascer).
 
 MÚSICA PROCEDURAL DE TERROR (nunca repete igual)
-- 13 instrumentos gerados por código: drone grave, vento, cordas, violinos em tremolo, caixinha de música,
+- 18 instrumentos gerados por código: drone grave, vento, cordas, violinos em tremolo, caixinha de música,
   piano desafinado, sino, coração, tambor, baixo pulsante, coro, prato ao contrário e grito de violinos, com reverb.
 - A TENSÃO sobe com tiros, acertos, corrida e morte e desce sozinha: calma -> suspense -> tensão.
   De vez em quando vem um SUSTO (prato subindo -> grito + tambor -> silêncio). Menu = versão calma.
+- 5 MÚSICAS COMPOSTAS (0.22), com começo, meio e fim (~2 min cada), tocadas pelos mesmos instrumentos
+  + violão dedilhado, teclado (pad), metais, caixa e chimbal:
+  1. NOVA YORK SILENCIOSA · piano e teclado, lenta e triste (lá menor)
+  2. DIAS DE CHUVA ....... violão dedilhado e caixinha de música (ré menor)
+  3. NOITE SEM LUZ ....... coro, piano grave, sino e coração (sol frígio, bem escura)
+  4. CORRERIA ............ baixo rápido, bateria e metais (mi menor harmônica, 132 bpm)
+  5. ÚLTIMO ABRIGO ....... violão, cordas e coro, triste com esperança (dó maior)
+  Quando tocam: no MENU as calmas se revezam; no JOGO, de 1 a 2,5 min de música procedural e entra uma
+  faixa: de dia Nova York / Chuva / Abrigo, de noite (20h-5h30) Noite sem Luz; com a tensão alta
+  (perseguição, tiroteio) a CORRERIA entra na hora.
 
 INFECTADOS
 - Na LORE, "Vagos" é a GANGUE de Edy e V (Los Angeles). Os mortos-vivos são os INFECTADOS (Projeto Harbinger).
@@ -489,6 +499,8 @@ MÚSICA (pasta audio/)
 - compositor (escalas, andamento, quando
   cada instrumento toca, sustos) ...... audio/musica_procedural.gd (autoload "Musica")
 - timbre dos instrumentos ............. audio/instrumentos.gd (sintetizados por código, sem arquivos de áudio)
+- as 5 músicas compostas (notas,
+  acordes, arranjo) e quando tocam .... audio/faixas.gd (e _escolher_faixa em audio/musica_procedural.gd)
 
 -----------------------------------------------------------------------------------------------------
 8. COMO FUNCIONA POR DENTRO

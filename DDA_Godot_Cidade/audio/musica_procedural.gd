@@ -7,14 +7,20 @@ extends Node
 #   susto ................ prato ao contrário subindo -> grito de violinos + tambor -> silêncio
 # A tensão sobe com tiros e corrida (ligado em main.gd) e desce sozinha. Outros sistemas podem chamar:
 #   Musica.adicionar_tensao(0.3) · Musica.susto() · Musica.definir_modo("menu"/"jogo")
+# MÚSICAS COMPOSTAS (audio/faixas.gd): de tempos em tempos uma das 5 faixas toca inteira por cima (a parte
+# procedural dá lugar a ela e volta quando acaba). Qual toca depende do momento:
+#   menu = as calmas em sequência · jogo calmo de dia = Nova York Silenciosa, Dias de Chuva, Último Abrigo ·
+#   de noite = Noite sem Luz · tensão alta (perseguição, tiros) = Correria (entra na hora).
+#   Musica.tocar_faixa("chuva") toca uma na hora · Musica.noite é ligado pelo main.gd (relógio do clima).
 # Os instrumentos são gerados em audio/instrumentos.gd numa thread (a música começa ~1 s depois de abrir).
 # Tudo passa pelo barramento de áudio "Musica" (com reverb de salão), com volume em Opções › Vídeo e som.
 # Mexa AQUI para: escalas, andamento, probabilidade de cada instrumento e o volume de cada um (VOL).
 
 const Instrumentos := preload("res://audio/instrumentos.gd")
+const Faixas := preload("res://audio/faixas.gd")
 
 const BUS := "Musica"
-const N_VOZES := 28
+const N_VOZES := 64
 const LA := 55.0                                  # nota central base (Lá grave)
 
 # escalas sombrias (semitons a partir da nota central)
@@ -32,7 +38,9 @@ const MUDANCAS := [0, -1, 1, 6, -3, 3, -5]
 const VOL := {
 	"drone": -12.0, "vento": -22.0, "cordas": -13.0, "tremolo": -17.0, "caixinha": -15.0, "piano": -13.0,
 	"sino": -14.0, "coracao": -6.0, "tambor": -8.0, "baixo": -12.0, "coro": -16.0, "reverso": -14.0, "grito": -13.0,
+	"violao": -11.0, "pad": -17.0, "metal": -14.0, "caixa": -13.0, "chimbal": -25.0,
 }
+const ESPERA_FAIXA := Vector2(60.0, 150.0)       # segundos de música procedural entre uma faixa e outra (jogo)
 
 var tensao := 0.0                  # tensão atual (segue o alvo devagar)
 var base_tensao := 0.15            # piso da tensão (menu = mais calmo)
@@ -57,6 +65,15 @@ var _melodia := 7                  # grau atual da caixinha (passeio aleatório)
 var _silencio := 0.0               # depois de um susto, quase tudo para por um tempo
 var _susto_t := -1.0               # contagem do prato ao contrário até o grito
 var _proximo_susto := 90.0
+# músicas compostas
+var noite := false                 # ligado pelo main.gd
+var faixa := ""                    # faixa tocando agora ("" = só a procedural)
+var _eventos: Array = []
+var _ev_i := 0
+var _faixa_t := 0.0
+var _espera_faixa := 4.0           # tempo até a próxima faixa
+var _ultima_faixa := ""
+var _fila_menu: Array = []
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -123,7 +140,59 @@ func definir_modo(m: String) -> void:
 	modo = m
 	base_tensao = 0.12 if m == "menu" else 0.22
 	_alvo_extra = 0.0
+	parar_faixa()
+	_espera_faixa = 3.0 if m == "menu" else _rng.randf_range(25.0, 50.0)
 	_nova_secao()
+
+# toca uma música composta inteira (ids em audio/faixas.gd)
+func tocar_faixa(id: String) -> void:
+	if not Faixas.FAIXAS.has(id):
+		return
+	faixa = id
+	_ultima_faixa = id
+	_eventos = Faixas.eventos(id)
+	_ev_i = 0
+	_faixa_t = 0.0
+	if pronto:
+		var tw := create_tween()                     # o zumbido procedural sai (está em outro tom)
+		tw.tween_property(_drone[_drone_ativo], "volume_db", -40.0, 3.0)
+
+func parar_faixa() -> void:
+	if faixa == "":
+		return
+	faixa = ""
+	_eventos.clear()
+	_espera_faixa = _rng.randf_range(20.0, 40.0) if modo == "menu" else _rng.randf_range(ESPERA_FAIXA.x, ESPERA_FAIXA.y)
+	if pronto:
+		var tw := create_tween()
+		tw.tween_property(_drone[_drone_ativo], "volume_db", VOL["drone"], 5.0)
+
+func _escolher_faixa() -> String:
+	if modo == "menu":
+		if _fila_menu.is_empty():
+			_fila_menu = ["nova_york", "chuva", "abrigo", "noite"]
+			if _ultima_faixa != "":
+				_fila_menu.erase(_ultima_faixa)
+				_fila_menu.shuffle()
+				_fila_menu.append(_ultima_faixa)
+		return _fila_menu.pop_front()
+	if tensao > 0.6:
+		return "correria"
+	if noite:
+		return "noite"
+	var op: Array = ["nova_york", "chuva", "abrigo"]
+	op.erase(_ultima_faixa)
+	return op[_rng.randi() % op.size()]
+
+func _tocar_eventos(dt: float) -> void:
+	_faixa_t += dt
+	while _ev_i < _eventos.size() and _eventos[_ev_i][0] <= _faixa_t:
+		var e: Array = _eventos[_ev_i]
+		_ev_i += 1
+		if e[1] == "fim":
+			parar_faixa()
+			return
+		_tocar(e[1], e[2], e[3])
 
 func adicionar_tensao(x: float) -> void:
 	_alvo_extra = clampf(_alvo_extra + x, 0.0, 1.0)
@@ -170,7 +239,7 @@ func _tocar(nome: String, semitons: float, extra_db: float, desliza := 0.0) -> v
 	p.stream = _amostras[nome]
 	var base: float = Instrumentos.BASE[nome]
 	var f := LA * pow(2.0, semitons / 12.0)
-	p.pitch_scale = clampf(f / base, 0.25, 4.0) if base > 1.0 else 1.0
+	p.pitch_scale = clampf(f / base, 0.125, 8.0) if base > 1.0 else 1.0
 	p.volume_db = VOL[nome] + extra_db
 	p.play()
 	if desliza != 0.0:
@@ -204,6 +273,19 @@ func _process(dt: float) -> void:
 		if _proximo_susto <= 0.0:
 			_proximo_susto = _rng.randf_range(70.0, 160.0)
 			susto()
+	# músicas compostas: na hora certa entra uma; a Correria entra assim que a tensão sobe
+	if faixa != "":
+		_tocar_eventos(dt)
+		if faixa != "correria" and modo == "jogo" and tensao > 0.7:
+			parar_faixa()
+			tocar_faixa("correria")
+		return
+	_espera_faixa -= dt
+	if modo == "jogo" and tensao > 0.7 and _ultima_faixa != "correria":
+		_espera_faixa = 0.0
+	if _espera_faixa <= 0.0 and _susto_t < 0.0:
+		tocar_faixa(_escolher_faixa())
+		return
 	# relógio: colcheias, andamento sobe com a tensão (48 a 96 bpm)
 	var bpm := lerpf(48.0, 96.0, tensao)
 	_batida -= dt

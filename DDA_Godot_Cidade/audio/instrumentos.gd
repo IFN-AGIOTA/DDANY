@@ -15,6 +15,12 @@ extends RefCounted
 #   coro ......... coro "aah" sombrio (formantes)
 #   reverso ...... prato ao contrário (sobe antes do susto)
 #   grito ........ cluster de violinos subindo (susto/stinger)
+#   (usados nas MÚSICAS COMPOSTAS, audio/faixas.gd)
+#   violao ....... violão de nylon dedilhado (corda pinçada, Karplus-Strong)
+#   pad .......... teclado/sintetizador macio e longo (fundo dos acordes)
+#   metal ........ metais curtos (trompa/trombone) para as frases de ação
+#   caixa ........ caixa de bateria (estalo + esteira)
+#   chimbal ...... chimbal fechado (ruído agudo bem curto)
 # Mexa AQUI para: o timbre dos instrumentos (harmônicos, envelopes, duração) ou para criar um instrumento novo
 # (escreva uma função que devolva amostras e acrescente em TODOS / gerar_todos).
 
@@ -25,6 +31,7 @@ const N_TAB := 2048
 const BASE := {
 	"drone": 55.0, "cordas": 220.0, "tremolo": 440.0, "caixinha": 880.0, "piano": 220.0, "sino": 220.0,
 	"coro": 220.0, "baixo": 55.0, "grito": 440.0, "vento": 1.0, "coracao": 1.0, "tambor": 1.0, "reverso": 1.0,
+	"violao": 220.0, "pad": 220.0, "metal": 220.0, "caixa": 1.0, "chimbal": 1.0,
 }
 const LOOP := ["drone", "vento"]
 
@@ -45,6 +52,11 @@ static func gerar_todos() -> Dictionary:
 	r["coro"] = _wav(_coro(coro))
 	r["reverso"] = _wav(_reverso())
 	r["grito"] = _wav(_grito(serra))
+	r["violao"] = _wav(_violao())
+	r["pad"] = _wav(_pad(serra))
+	r["metal"] = _wav(_metal(serra))
+	r["caixa"] = _wav(_caixa())
+	r["chimbal"] = _wav(_chimbal())
 	return r
 
 # ---------- utilidades ----------
@@ -341,4 +353,111 @@ static func _grito(tab: PackedFloat32Array) -> PackedFloat32Array:
 			fases[v] = fmod(fases[v] + f / TAXA, 1.0)
 			s += _ler(tab, fases[v])
 		a[i] = s * trem * _env(t, 0.15, dur, 0.6)
+	return a
+
+# ---------- instrumentos das músicas compostas ----------
+static func _violao() -> PackedFloat32Array:
+	# Karplus-Strong: um "fio" de ruído que se repete e vai sendo filtrado = corda pinçada
+	var dur := 2.6
+	var n := int(TAXA * dur)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	var tam := int(round(TAXA / 220.0 - 0.5))                 # o filtro de média soma meia amostra ao período
+	var buf := PackedFloat32Array()
+	buf.resize(tam)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 21
+	var lp := 0.0
+	for i in tam:
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.3        # dedo (não palheta): ataque mais macio
+		buf[i] = lp
+	var pos := 0
+	for i in n:
+		var j := (pos + 1) % tam
+		var s := buf[pos]
+		buf[pos] = 0.497 * (s + buf[j])
+		a[i] = s
+		pos = j
+	var lp1 := 0.0                                           # nylon: som mais escuro, que escurece com o tempo
+	var lp2 := 0.0
+	for i in n:
+		var t := float(i) / TAXA
+		var corte := 0.12 + 0.25 * exp(-t * 6.0)
+		lp1 += (a[i] - lp1) * corte
+		lp2 += (lp1 - lp2) * corte
+		a[i] = lp2 * minf(1.0, float(n - i) / (TAXA * 0.15))
+	return a
+
+static func _pad(tab: PackedFloat32Array) -> PackedFloat32Array:
+	var dur := 4.5
+	var n := int(TAXA * dur)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	var fases := [0.0, 0.31, 0.62, 0.17]
+	var det := [1.0, 1.003, 0.997, 0.5]
+	var g := [1.0, 0.9, 0.9, 0.5]
+	var lp := 0.0
+	var lp2 := 0.0
+	for i in n:
+		var t := float(i) / TAXA
+		var s := 0.0
+		for v in 4:
+			fases[v] = fmod(fases[v] + 220.0 * det[v] / TAXA, 1.0)
+			s += _ler(tab, fases[v]) * g[v]
+		var corte := 0.05 + 0.03 * sin(TAU * 0.3 * t)        # filtro "respirando"
+		lp += (s - lp) * corte
+		lp2 += (lp - lp2) * corte
+		a[i] = lp2 * _env(t, 1.1, dur, 1.6)
+	return a
+
+static func _metal(tab: PackedFloat32Array) -> PackedFloat32Array:
+	var dur := 0.9
+	var n := int(TAXA * dur)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	var f1 := 0.0
+	var f2 := 0.5
+	var lp := 0.0
+	for i in n:
+		var t := float(i) / TAXA
+		f1 = fmod(f1 + 220.0 / TAXA, 1.0)
+		f2 = fmod(f2 + 220.0 * 1.005 / TAXA, 1.0)
+		var corte := 0.06 + 0.35 * exp(-t * 9.0) * minf(1.0, t * 60.0)   # "bwah": abre e fecha
+		lp += (_ler(tab, f1) + _ler(tab, f2) - lp) * corte
+		a[i] = lp * _env(t, 0.02, dur, 0.45)
+	return a
+
+static func _caixa() -> PackedFloat32Array:
+	var dur := 0.45
+	var n := int(TAXA * dur)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 5
+	var hp := 0.0
+	var ant := 0.0
+	for i in n:
+		var t := float(i) / TAXA
+		var r := rng.randf_range(-1.0, 1.0)
+		hp = 0.7 * (hp + r - ant)
+		ant = r
+		var tom := sin(TAU * (190.0 * t + 40.0 * (1.0 - exp(-t * 40.0)) / 40.0)) * exp(-t * 22.0)
+		a[i] = (tom * 0.8 + hp * exp(-t * 11.0)) * minf(1.0, t * 800.0)
+	return a
+
+static func _chimbal() -> PackedFloat32Array:
+	var dur := 0.12
+	var n := int(TAXA * dur)
+	var a := PackedFloat32Array()
+	a.resize(n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 8
+	var hp := 0.0
+	var ant := 0.0
+	for i in n:
+		var t := float(i) / TAXA
+		var r := rng.randf_range(-1.0, 1.0)
+		hp = 0.5 * (hp + r - ant)
+		ant = r
+		a[i] = hp * exp(-t * 45.0)
 	return a
