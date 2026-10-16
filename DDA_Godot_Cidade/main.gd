@@ -372,6 +372,7 @@ func _morreu(causa: String) -> void:
 	tela_morte.causa = causa
 	tela_morte.tempo_vivo = jogador.sobrevivencia.tempo_vivo
 	tela_morte.abates = abates
+	tela_morte.suprimentos = missoes.encontrados if missoes != null else 0
 	add_child(tela_morte)
 	controles.set_bloqueado(true)
 	tela_morte.renascer.connect(_renascer)

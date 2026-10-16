@@ -458,11 +458,33 @@ func perto_do_fogo() -> bool:
 	return false
 
 # de onde dá para pegar água aqui: "limpa" (pia/torneira dos prédios), "suja" (lago), "salgada" (mar) ou ""
+# torneiras: só ~30% ainda têm água (sorteado por prédio/móvel), e cada uma dá poucas garrafas
+const CHANCE_TORNEIRA := 0.3
+const ENCHIDAS_TORNEIRA := 3
+var _torneiras := {}                  # chave do móvel -> garrafas que ainda dá para encher
+var _torneira_atual := ""
+
+func _torneira(c) -> String:
+	var chave: String = String(c.get("id_loot")) if String(c.get("id_loot")) != "" else str(Vector3i((c as Node3D).global_position.round()))
+	if not _torneiras.has(chave):
+		var sem := 0
+		var cena = get_tree().current_scene
+		if cena != null and cena.get("loot_mundo") != null:
+			sem = int(cena.loot_mundo.semente)
+		var r := RandomNumberGenerator.new()
+		r.seed = hash(chave) ^ sem
+		_torneiras[chave] = ENCHIDAS_TORNEIRA if r.randf() < CHANCE_TORNEIRA else 0
+	return chave
+
 func fonte_de_agua() -> String:
+	var seca := false
 	for c in conteineres_perto():
 		var n: String = String(c.nome)
 		if "COZINHA" in n or "BANHEIRO" in n or "PIA" in n:
-			return "limpa"
+			if int(_torneiras.get(_torneira(c), 0)) > 0:
+				_torneira_atual = _torneira(c)
+				return "limpa"
+			seca = true
 	var mundo = jogador.get("mundo")
 	if mundo == null:
 		return ""
@@ -476,13 +498,16 @@ func fonte_de_agua() -> String:
 			return "suja"
 		if h < -0.3:
 			tipo = "salgada"
-	return tipo
+	return tipo if tipo != "" or not seca else "seca"
 
 func encher_garrafa(g) -> void:
 	match fonte_de_agua():
 		"limpa":
 			g.id = "agua"
-			aviso.emit("ENCHEU COM ÁGUA DA TORNEIRA")
+			_torneiras[_torneira_atual] = int(_torneiras.get(_torneira_atual, 1)) - 1
+			aviso.emit("ENCHEU COM ÁGUA DA TORNEIRA" if int(_torneiras[_torneira_atual]) > 0 else "ENCHEU · A TORNEIRA SECOU")
+		"seca":
+			aviso.emit("A TORNEIRA ESTÁ SECA")
 		"suja":
 			g.id = "agua_suja"
 			aviso.emit("ENCHEU COM ÁGUA DO LAGO (SUJA)")

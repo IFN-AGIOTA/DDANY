@@ -42,6 +42,7 @@ var _t_scan := 0.0
 var _cel_montada := -1.0
 var _aviso := ""
 var _aviso_t := 0.0
+var _t_vida := 0.0
 
 func _ready() -> void:
 	layer = 20
@@ -146,12 +147,20 @@ func _process(dt: float) -> void:
 	if _t_scan <= 0.0:
 		_t_scan = 0.25
 		if controles != null:
-			controles.ocultos["PEGAR"] = aberto or inv.item_mais_proximo() == null
+			var perto = inv.item_mais_proximo()
+			controles.ocultos["PEGAR"] = aberto or perto == null
+			# o botão diz O QUE vai pegar (nome curto do item)
+			if perto != null and perto.get("item") != null:
+				controles.textos["PEGAR"] = "PEGAR\n" + String(perto.item.def().get("sigla", perto.item.nome()))
 		if aberto:
 			var s: String = inv.assinatura_perto()
 			if s != _assinatura:
 				_assinatura = s
 				_refazer = true
+			_t_vida -= 0.25
+			if _t_vida <= 0.0 and _peso != null:      # vida/sangue no cabeçalho: atualiza 1 vez por segundo
+				_t_vida = 1.0
+				_atualizar_meio()
 	if not aberto:
 		return
 	if _aviso_t > 0.0:
@@ -432,6 +441,12 @@ func _atualizar_meio() -> void:
 	if not _existe(selecionado):
 		selecionado = null
 	_peso.text = "PESO %.1f kg" % inv.peso_total()
+	# com o inventário aberto o jogo NÃO pausa: vida, sangue e sangramento ficam à vista aqui
+	var sv = inv.jogador.get("sobrevivencia") if inv.jogador != null else null
+	if sv != null:
+		_peso.text += "   ·   VIDA %d   SANGUE %d%%" % [int(sv.vida), int(sv.sangue / 50.0)]
+		if int(sv.sangramentos) > 0:
+			_peso.text += "   ·   SANGRANDO"
 	if _aviso_t > 0.0:
 		_peso.text += "   ·   " + _aviso
 	var it = selecionado

@@ -18,6 +18,10 @@ var _di := 0
 var _fum: Array = []     # {no, vida, total, cresce, sobe}
 var _fi := 0
 var _clarao: MeshInstance3D
+var _luz_tiro: OmniLight3D
+const N_SANGUE := 14
+var _sangue: Array[MeshInstance3D] = []
+var _bi := 0
 var _clarao_t := 0.0
 var _clarao_cano: Node3D = null
 var _clarao_tam := 1.0
@@ -89,6 +93,24 @@ func _ready() -> void:
 	for i in N_FAISCAS:
 		_fais.append({"no": _quad(_mat_brilho(tf), 1.0), "vida": 0.0})
 	_clarao = _quad(_mat_brilho(_tex_radial(Color(1.0, 0.92, 0.67, 1.0), Color(1.0, 0.51, 0.12, 0.0))), 1.0)
+	# luz do clarão: ilumina paredes, chão e infectados por um instante (à noite faz muita diferença)
+	_luz_tiro = OmniLight3D.new()
+	_luz_tiro.light_color = Color(1.0, 0.75, 0.4)
+	_luz_tiro.omni_range = 7.0
+	_luz_tiro.light_energy = 0.0
+	_luz_tiro.shadow_enabled = false
+	_luz_tiro.visible = false
+	add_child(_luz_tiro)
+	# manchas de sangue no chão (pool próprio, somem devagar)
+	var sm := StandardMaterial3D.new()
+	sm.albedo_texture = _tex_radial(Color(0.32, 0.02, 0.02, 0.9), Color(0.25, 0.0, 0.0, 0.0))
+	sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	sm.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+	sm.roughness = 0.35
+	sm.render_priority = 1
+	for i in N_SANGUE:
+		var mi := _quad(sm, 1.0)
+		_sangue.append(mi)
 	# marcas de bala (ficam coladas na superfície)
 	var dm := StandardMaterial3D.new()
 	dm.albedo_texture = _tex_radial(Color(0.06, 0.06, 0.06, 0.9), Color(0.06, 0.06, 0.06, 0.0))
@@ -147,7 +169,10 @@ func clarao(cano: Node3D, tamanho: float) -> void:
 
 func impacto(p: Vector3, n: Vector3, k: int) -> void:
 	if k == 4:
-		fumaca(p, Color(0.54, 0.06, 0.06), 0.35, 0.5)          # sangue
+		# sangue: borrifo escuro + gotas + mancha no chão embaixo
+		fumaca(p, Color(0.42, 0.03, 0.03), 0.3, 0.45)
+		fumaca(p + Vector3(randf_range(-0.15, 0.15), -0.1, randf_range(-0.15, 0.15)), Color(0.3, 0.02, 0.02), 0.18, 0.6)
+		_mancha_sangue(p)
 		return
 	if k == 2:
 		var c := Color(0.81, 0.9, 1.0)
@@ -171,7 +196,31 @@ func impacto(p: Vector3, n: Vector3, k: int) -> void:
 	m.global_transform = Transform3D(Basis(x, y, z).rotated(z, randf() * TAU), p + z * 0.03)
 	m.visible = true
 
+func _mancha_sangue(p: Vector3) -> void:
+	if not is_inside_tree():
+		return
+	var q := PhysicsRayQueryParameters3D.create(p, p + Vector3(0, -3.0, 0), 1)
+	var r := get_world_3d().direct_space_state.intersect_ray(q)
+	if r.is_empty():
+		return
+	_bi = (_bi + 1) % _sangue.size()
+	var mi := _sangue[_bi]
+	var n: Vector3 = r["normal"]
+	var pos: Vector3 = r["position"] + n * 0.02 + Vector3(randf_range(-0.25, 0.25), 0, randf_range(-0.25, 0.25))
+	var z := n.normalized()
+	var x := (Vector3.UP if absf(z.y) < 0.95 else Vector3.FORWARD).cross(z).normalized()
+	var y := z.cross(x)
+	var tam := randf_range(0.35, 0.7)
+	var b := Basis(x, y, z).rotated(z, randf() * TAU)
+	mi.global_transform = Transform3D(Basis(b.x * tam, b.y * tam, b.z), pos)
+	mi.visible = true
+
 func fumaca(p: Vector3, cor: Color, tam: float, vida: float) -> void:
+	# de noite a fumaça/poeira não pode "brilhar" (ela não recebe luz): escurece junto com a cena
+	var cl = get_tree().current_scene.get("clima") if get_tree() != null and get_tree().current_scene != null else null
+	if cl != null and is_instance_valid(cl):
+		var esc := clampf(float(cl.escuridao()), 0.0, 1.0)
+		cor = Color(cor.r * (1.0 - 0.75 * esc), cor.g * (1.0 - 0.75 * esc), cor.b * (1.0 - 0.75 * esc))
 	_fi = (_fi + 1) % _fum.size()
 	var f: Dictionary = _fum[_fi]
 	f["vida"] = vida
@@ -238,6 +287,11 @@ func _process(dt: float) -> void:
 		_clarao.global_position = _clarao_cano.global_position
 		_clarao.scale = Vector3.ONE * _clarao_tam * (0.6 + maxf(0.0, _clarao_t) / 0.055 * 0.6)
 		_clarao.visible = true
+		_luz_tiro.global_position = _clarao_cano.global_position
+		_luz_tiro.light_energy = 2.2 * clampf(_clarao_t / 0.055, 0.0, 1.0) * _clarao_tam
+		_luz_tiro.visible = true
 	else:
 		_clarao.visible = false
 		_clarao_t = 0.0
+		if _luz_tiro.visible:
+			_luz_tiro.visible = false

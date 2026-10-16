@@ -176,7 +176,7 @@ class Seletor extends Control:
 		valor = v
 		tam = tamanho
 		altura = alt
-		mouse_filter = Control.MOUSE_FILTER_STOP
+		mouse_filter = Control.MOUSE_FILTER_PASS
 		size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	func _ready() -> void:
 		get_viewport().size_changed.connect(_medir)
@@ -187,8 +187,19 @@ class Seletor extends Control:
 	func definir(v) -> void:
 		valor = v
 		queue_redraw()
+	# escolhe ao SOLTAR o dedo (se ele quase não andou): rolar a lista por cima não muda a opção
+	var _p0 := Vector2.ZERO
+	var _apertou := false
 	func _gui_input(e: InputEvent) -> void:
-		if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and e.pressed and opcoes.size() > 0:
+		if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and opcoes.size() > 0:
+			if e.pressed:
+				_p0 = e.position
+				_apertou = true
+				return
+			if not _apertou or e.position.distance_to(_p0) > 1.5 * UI.vh(self):
+				_apertou = false
+				return
+			_apertou = false
 			var i := clampi(int(e.position.x / (size.x / opcoes.size())), 0, opcoes.size() - 1)
 			accept_event()
 			if opcoes[i][0] != valor:
@@ -239,7 +250,7 @@ class Deslizante extends Control:
 		maximo = mx
 		passo = ps
 		valor = v
-		mouse_filter = Control.MOUSE_FILTER_STOP
+		mouse_filter = Control.MOUSE_FILTER_PASS
 		size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	func _ready() -> void:
 		get_viewport().size_changed.connect(_medir)
@@ -258,15 +269,29 @@ class Deslizante extends Control:
 			valor = nv
 			queue_redraw()
 			mudou.emit(valor)
+	# só começa a mexer com um arraste para o LADO (ou um toque parado); arrastar para cima/baixo rola a lista
+	var _p0 := Vector2.ZERO
+	var _apertado := false
 	func _gui_input(e: InputEvent) -> void:
+		var lim := 1.2 * UI.vh(self)
 		if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT:
-			_arrastando = e.pressed
 			if e.pressed:
+				_p0 = e.position
+				_apertado = true
+				_arrastando = false
+			else:
+				if _apertado and not _arrastando and e.position.distance_to(_p0) < lim:
+					_x_para_valor(e.position.x)          # toque: pula para o ponto
+					accept_event()
+				_apertado = false
+				_arrastando = false
+		elif e is InputEventMouseMotion and _apertado:
+			var d: Vector2 = e.position - _p0
+			if not _arrastando and absf(d.x) > lim and absf(d.x) > absf(d.y) * 1.3:
+				_arrastando = true
+			if _arrastando:
 				_x_para_valor(e.position.x)
-			accept_event()
-		elif e is InputEventMouseMotion and _arrastando:
-			_x_para_valor(e.position.x)
-			accept_event()
+				accept_event()
 	func _draw() -> void:
 		var v := UI.vh(self)
 		var m := 1.8 * v
@@ -286,7 +311,7 @@ class Passo extends Control:
 	func _init(ops: Array = [], v = null) -> void:
 		opcoes = ops
 		valor = v
-		mouse_filter = Control.MOUSE_FILTER_STOP
+		mouse_filter = Control.MOUSE_FILTER_PASS
 		size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	func _ready() -> void:
 		get_viewport().size_changed.connect(_medir)
@@ -302,8 +327,17 @@ class Passo extends Control:
 			if opcoes[i][0] == valor:
 				return i
 		return 0
+	var _p0 := Vector2.ZERO
+	var _apertou := false
 	func _gui_input(e: InputEvent) -> void:
 		if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and e.pressed:
+			_p0 = e.position
+			_apertou = true
+			return
+		if e is InputEventMouseButton and e.button_index == MOUSE_BUTTON_LEFT and not e.pressed and _apertou:
+			_apertou = false
+			if e.position.distance_to(_p0) > 1.5 * UI.vh(self):
+				return
 			accept_event()
 			var lado := size.y * 1.1
 			var d := 0

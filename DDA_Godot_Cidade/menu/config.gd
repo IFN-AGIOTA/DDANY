@@ -16,7 +16,8 @@ const PADRAO := {
 	"fps": false, "som": true, "vol": 100, "awake": false, "mus": true, "mvol": 70,
 	"svol": 100,                          # volume dos efeitos (tiros, passos, infectados, chuva)
 	"dif": 1,                             # dificuldade do modo livre: 0 fácil, 1 normal, 2 difícil
-	"abertura_vista": false,              # a abertura (trailer) da história já passou uma vez
+	"abertura_vista": false,
+	"rec_tempo": 0.0, "rec_abates": 0,    # recordes (tela de morte)              # a abertura (trailer) da história já passou uma vez
 }
 
 # shd/tex/models/detd/fx: 0..3 · shad: 0..2 · den: 0..2 · fog: 0 densa, 1 normal, 2 limpa · dist/res: 0..3

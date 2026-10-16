@@ -319,9 +319,20 @@ func _desenhar() -> void:
 		_visual.draw_circle(c, r, Color(cor.r, cor.g, cor.b, 0.62 if aceso else 0.22))
 		_visual.draw_arc(c, r, 0.0, TAU, 40, Color(cor.r, cor.g, cor.b, 0.95), 4.0)
 		var txt: String = textos.get(b["id"], b["txt"])
-		var tam := 20 if r >= 55 else (15 if txt.length() > 7 else 17)
-		var w := _fonte.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam).x
-		_visual.draw_string(_fonte, c + Vector2(-w * 0.5, tam * 0.35), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, Color(1, 1, 1, 0.95))
+		# texto em até 2 linhas, diminuindo até caber dentro do círculo (ex.: "RECARREGAR", "PEGAR\nM4A1")
+		var linhas := txt.split("\n")
+		var tam := 20 if r >= 55 else 17
+		var larg := 0.0
+		for l in linhas:
+			larg = maxf(larg, _fonte.get_string_size(l, HORIZONTAL_ALIGNMENT_LEFT, -1, tam).x)
+		if larg > r * 1.7:
+			tam = maxi(9, int(tam * r * 1.7 / larg))
+		var y0 := c.y + tam * 0.35 - (linhas.size() - 1) * tam * 0.55
+		for k in linhas.size():
+			var l: String = linhas[k]
+			var tk := tam if k == 0 else int(tam * 0.8)
+			var w := _fonte.get_string_size(l, HORIZONTAL_ALIGNMENT_LEFT, -1, tk).x
+			_visual.draw_string(_fonte, Vector2(c.x - w * 0.5, y0 + k * tam * 1.05), l, HORIZONTAL_ALIGNMENT_LEFT, -1, tk, Color(1, 1, 1, 0.95))
 	if _toque_mover != -1:
 		var d := (_atual - _origem).limit_length(RAIO_STICK)
 		_visual.draw_circle(_origem, RAIO_STICK, Color(1, 1, 1, 0.10))

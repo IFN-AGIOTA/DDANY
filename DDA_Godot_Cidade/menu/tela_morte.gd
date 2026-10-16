@@ -12,6 +12,8 @@ const UI := preload("res://menu/ui.gd")
 var causa := ""
 var tempo_vivo := 0.0
 var abates := 0
+var suprimentos := 0
+var _botoes: Array = []
 var _raiz: Control
 var _a := 0.0
 
@@ -49,6 +51,24 @@ func _montar() -> void:
 	var l := UI.rotulo(linha, 3.0 * v, Color(1, 1, 1, 0.85), 700)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(l)
+	# RECORDES (guardados nas opções): maior tempo vivo e mais abates numa vida só
+	var rec_t := float(Config.valor("rec_tempo"))
+	var rec_a := int(Config.valor("rec_abates"))
+	var novo := ""
+	if tempo_vivo > rec_t:
+		Config.definir("rec_tempo", tempo_vivo)
+		novo = "NOVO RECORDE de tempo vivo!"
+		rec_t = tempo_vivo
+	if abates > rec_a:
+		Config.definir("rec_abates", abates)
+		novo = "NOVO RECORDE de abates!" if novo == "" else "NOVO RECORDE de tempo e de abates!"
+		rec_a = abates
+	var rt := int(rec_t)
+	var rec := UI.rotulo("%s   Recorde: %d min %02d s · %d abates%s" % [novo, rt / 60, rt % 60, rec_a,
+		("   ·   suprimentos achados: %d" % suprimentos) if suprimentos > 0 else ""], 2.6 * v,
+		Color(1.0, 0.75, 0.3, 0.9) if novo != "" else Color(1, 1, 1, 0.6), 700)
+	rec.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(rec)
 	var dica := UI.rotulo("Suas coisas ficaram no chão, onde você caiu.", 2.4 * v, Color(1, 1, 1, 0.55), 400)
 	dica.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(dica)
@@ -56,7 +76,9 @@ func _montar() -> void:
 		var b := UI.BotaoMenu.new(par[0], "", par[1], 3.5, 30.0)
 		b.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		var sinal: Signal = par[2]
-		b.apertado.connect(func(): sinal.emit())
+		b.apertado.connect(func():
+			if _a >= 0.85:                      # só depois de a tela aparecer (evita toque acidental de quem atirava)
+				sinal.emit())
 		col.add_child(b)
 
 func _process(dt: float) -> void:
