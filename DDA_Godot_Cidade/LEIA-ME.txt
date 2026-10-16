@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.23 (APK código 19)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.24 (APK código 20)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,8 +35,39 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+GRANDE ATUALIZAÇÃO 0.24 (resumo do que mudou)
+- LOOT: os móveis só sorteiam o que CABE neles (antes a M4/espingarda nunca cabiam no armário de armas e
+  muitos móveis vinham vazios sem querer). AKM, pente de AK, 7.62, mira 4x e luneta agora aparecem.
+  Armário de armas 8x5, caixas do depósito 8x4. Cada JOGO NOVO tem o loot em lugares diferentes.
+- COMEÇO mais difícil: só pistola, faca, lanterna, roupas e um RÁDIO (fuzis você acha na cidade).
+- MISSÕES DO RÁDIO (mundo/missoes.gd): com um rádio no inventário, de tempos em tempos vem o aviso de um
+  SUPRIMENTO MILITAR lançado a 0,7-1,6 km (direção e distância). Vira o OBJETIVO no mapa/bússola. Lá tem uma
+  caixa com coisas boas e um sinalizador vermelho piscando; chegando perto, uma HORDA aparece. Some em 20 min.
+- INFECTADOS: tipos novos (CORREDOR rápido e frágil · PESADO que aguenta muito e bate forte · GRITADOR que
+  chama os outros); a cidade fica mais perigosa a cada dia sobrevivido (+8%/dia, até +60%) e de noite vagam
+  mais em bandos; às vezes há 1-2 PRESOS DENTRO dos prédios; a LANTERNA acesa à noite denuncia você de longe
+  (30 m); golpe corpo a corpo atordoa conforme a força, com 1 s de imunidade (não dá para travar um só batendo).
+- DIFICULDADE nas Opções (Vídeo e som): Fácil / Normal / Difícil (quantidade de infectados e força da mordida).
+  A densidade gráfica não muda mais a quantidade de infectados.
+- MORTE vale: morrer e sair para o menu não desfaz (o save marca a morte; "Continuar" já renasce longe).
+  O chão dos prédios abertos também é salvo. RECORDES (tempo vivo e abates) na tela de morte.
+- SONS GRAVADOS de licença livre (audio/sons/, créditos no menu): tiros de verdade, gemidos/ataques/gritos/
+  morte dos infectados, PASSOS (seus e de quem vem correndo), DOR e morte do jogador, impacto dos golpes.
+  Ambiente: SIRENE e TIROS distantes de vez em quando. Barramento de EFEITOS com eco de cidade e VOLUME DOS
+  EFEITOS nas Opções; o vento continua mesmo com a música desligada.
+- HUD: arco VERMELHO mostra de que lado veio cada golpe; avisos em fila (até 3, ficam mais tempo); botão PEGAR
+  diz o que vai pegar; textos dos botões cabem no círculo; vida/sangue/sangramento no topo do inventário.
+- VISUAL: o clarão do tiro ILUMINA em volta (à noite!), sangue escuro com MANCHA no chão, fumaça/poeira não
+  brilham mais no escuro. Menu principal com o SOBREVIVENTE equipado (capacete, colete, mochila, M4).
+- ÁGUA: só ~30% das torneiras ainda funcionam e cada uma dá 3 garrafas (pastilha e fogueira voltam a importar).
+- CELULAR: botão VOLTAR do Android fecha a tela de cima / pausa (não sai mais do jogo sem querer); "Novo jogo"
+  e "História" pedem um 2º toque quando já existe jogo salvo; rolar as Opções não muda mais opções sem querer.
+- OTIMIZAÇÃO: shaders do chão e dos prédios só calculam rachaduras, folhas, lojas, letreiros e hera de perto;
+  infectados longe pensam 4x menos e não animam se não aparecem; sobrevivência sem raio por quadro; reflexo
+  do céu menor e refeito no máximo a cada 15 s; no celular, resolução 3D até 80% e no máximo 60 FPS.
+
 MENU PRINCIPAL (igual ao do HTML)
-- Cena 3D do pôr do sol com a skyline e o soldado no terraço; título "DIAS DE UM / APOCALIPSE / NOVA YORK".
+- Cena 3D do pôr do sol com a skyline e o SOBREVIVENTE equipado no terraço; título "DIAS DE UM / APOCALIPSE / NOVA YORK".
 - CONTINUAR (aparece quando existe jogo salvo: dia, hora e minutos jogados) · HISTÓRIA · ATO 1 ·
   JOGAR / NOVO JOGO (mundo livre) · OPÇÕES · CRÉDITOS · botão de tela cheia.
 - CRÉDITOS: autores da história (Willian Ulguim e Gabriel Solla), o jogo e TODOS os recursos baixados de
@@ -259,6 +290,8 @@ INFECTADOS
   manga curta ou comprida, calça ou bermuda, sapato, cabelo ou careca, olhos fundos, boca suja, roupa rasgada
   e sangue. Animações de ZUMBI (andar arrastado, parado, arranhar) + correr, levar tiro e morrer caindo.
   Correndo, esticam os braços para a frente. (Na 0.15 eram os bonecos "cabeçudos" do Character Pack.)
+- TIPOS (0.24): comum · CORREDOR (vida 70, 22% mais rápido) · PESADO (vida 220, mais lento, mordida x1,45,
+  maior) · GRITADOR (quando te vê, grita e atrai os outros num raio de 55 m). Sons gravados (audio/sons).
 - Com alguém te perseguindo, a música aperta.
 
 COMPANHEIROS: GREG E MAVIE (depois do encontro no Capítulo 3 da história)
@@ -511,7 +544,14 @@ HISTÓRIA (pasta historia/)
 
 MÚSICA (pasta audio/)
 - compositor (escalas, andamento, quando
-  cada instrumento toca, sustos) ...... audio/musica_procedural.gd (autoload "Musica")
+  cada instrumento toca, sustos) ...... audio/musica_procedural.gd (autoload "Musica"; cria também o
+                                        barramento "SFX" dos efeitos)
+- sons gravados (tiros, infectados,
+  passos, dor, impactos, sirene) ...... audio/sons/ (LICENCA.txt) + audio/sons_baixados.gd (quais grupos)
+- passos e dor sintetizados (reserva) . audio/sons_corpo.gd
+- sirene e tiros distantes ............ audio/ambiente.gd
+- missões do rádio (suprimento
+  militar, horda, objetivo) ........... mundo/missoes.gd
 - timbre dos instrumentos ............. audio/instrumentos.gd (sintetizados por código, sem arquivos de áudio)
 - as 5 músicas compostas (notas,
   acordes, arranjo) e quando tocam .... audio/faixas.gd (e _escolher_faixa em audio/musica_procedural.gd)

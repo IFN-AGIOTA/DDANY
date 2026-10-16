@@ -172,6 +172,7 @@ func tocar_faixa(id: String) -> void:
 
 # a abertura da história toca a própria música (audio/abertura.ogg): a procedural fica em silêncio
 var suspensa := false
+var _lp: AudioEffectLowPassFilter = null
 func suspender(sim: bool) -> void:
 	suspensa = sim
 	if not pronto:
@@ -281,9 +282,12 @@ func _process(dt: float) -> void:
 	_alvo_extra = maxf(0.0, _alvo_extra - dt * 0.035)
 	var alvo := clampf(base_tensao + _alvo_extra, 0.0, 1.0)
 	tensao += (alvo - tensao) * minf(1.0, dt * (0.5 if alvo > tensao else 0.15))
-	var lp := AudioServer.get_bus_effect(AudioServer.get_bus_index(BUS), 1) as AudioEffectLowPassFilter
-	if lp != null:
-		lp.cutoff_hz = lerpf(1800.0, 9000.0, tensao)
+	if _lp == null:
+		_lp = AudioServer.get_bus_effect(AudioServer.get_bus_index(BUS), 1) as AudioEffectLowPassFilter
+	if _lp != null:
+		var corte := lerpf(1800.0, 9000.0, tensao)
+		if absf(corte - _lp.cutoff_hz) > 40.0:          # mexe no filtro só quando muda de verdade
+			_lp.cutoff_hz = corte
 	_vento.volume_db = VOL["vento"] + lerpf(0.0, -6.0, tensao)
 	if _silencio > 0.0:
 		_silencio -= dt

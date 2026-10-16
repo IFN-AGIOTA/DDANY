@@ -56,6 +56,7 @@ var pausa: CanvasLayer
 var aplicador: Node
 var loot_mundo                              # mundo/loot_mundo.gd (o que tem em cada móvel/carro, guardado)
 var interiores: Node                        # mundo/interiores.gd (prédios por dentro perto do jogador)
+var _t_info := 0.0
 var missoes: Node = null                    # mundo/missoes.gd (suprimentos militares avisados pelo rádio)
 var hud_status: CanvasLayer                 # hud/hud_status.gd (vida, sangue, fome, sede, temperatura)
 var tela_morte: CanvasLayer
@@ -241,7 +242,13 @@ func _continuar() -> void:
 func _estatisticas() -> Array:
 	var s := int(_tempo_jogo)
 	var r := [["tempo de jogo", "%d:%02d" % [s / 60, s % 60]], ["infectados abatidos", str(abates)]]
-	if estande != null:
+	if clima != null:
+		r.append(["dia de sobrevivência", str(int(clima.dia))])
+	if missoes != null:
+		r.append(["suprimentos achados", str(missoes.encontrados)])
+	var rt := int(float(Config.valor("rec_tempo")))
+	r.append(["recorde vivo", "%d:%02d" % [rt / 60, rt % 60]])
+	if estande != null and int(estande.get("acertos")) > 0:
 		r.append(["acertos no estande", str(estande.get("acertos"))])
 		r.append(["tiros na cabeça", str(estande.get("cabecas"))])
 		r.append(["alvos derrubados", str(estande.get("abates"))])
@@ -451,5 +458,8 @@ func _process(dt: float) -> void:
 		Musica.noite = clima.hora < 5.5 or clima.hora > 20.0   # de noite toca a "Noite sem Luz"
 	if voo.ativo:
 		return
-	var p := jogador.global_position
-	controles.info.text = "FPS %d · x %d z %d · %d km/h" % [Engine.get_frames_per_second(), int(p.x), int(p.z), int(jogador.vel_horizontal * 3.6)]
+	_t_info -= dt
+	if _t_info <= 0.0 and controles.info.visible:     # trocar o texto refaz a fonte: 2 vezes por segundo basta
+		_t_info = 0.5
+		var p := jogador.global_position
+		controles.info.text = "FPS %d · x %d z %d · %d km/h" % [Engine.get_frames_per_second(), int(p.x), int(p.z), int(jogador.vel_horizontal * 3.6)]

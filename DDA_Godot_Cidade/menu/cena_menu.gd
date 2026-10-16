@@ -6,7 +6,8 @@ extends Node3D
 # Mexa AQUI para: cores do céu, posição do sol, densidade da skyline, pose/posição do soldado e da câmera.
 # (Coordenadas do HTML giradas 180° no eixo Y: x -> -x, z -> -z, porque a frente na Godot é -Z.)
 
-const SoldadoCls := preload("res://jogador/soldado.gd")
+const SobreviventeCls := preload("res://jogador/modelo_sobrevivente.gd")
+const ItemCls := preload("res://inventario/item.gd")
 const ModelosArmas := preload("res://armas/modelos_armas.gd")
 
 const NEVOA := Color("#f0a05a")
@@ -312,13 +313,25 @@ func _poeira_no_ar() -> void:
 	add_child(_poeira)
 
 # ---------- soldado ----------
+# o SOBREVIVENTE do jogo (jogador/modelo_sobrevivente.gd), equipado: capacete, colete, jaqueta, mochila e a M4
+# baixa nas duas mãos, olhando a cidade de costas para a câmera
 func _soldado() -> void:
-	soldado = SoldadoCls.new()
-	soldado.name = "SoldadoMenu"
+	soldado = SobreviventeCls.new()
+	soldado.name = "SobreviventeMenu"
 	add_child(soldado)
-	soldado.rotation.y = 0.32
+	soldado.rotation.y = PI + 0.32                  # o manequim olha para +Z; a cidade fica em -Z
+	var equip := {"slots": {}}
+	for par in [["camisa", "jaqueta"], ["calca", "calca"], ["colete", "colete"], ["cabeca", "capacete"], ["mochila", "mochila_combate"]]:
+		equip["slots"][par[0]] = ItemCls.novo(par[1])
+	soldado.vestir(_Equip.new(equip["slots"]))
 	var m4 := ModelosArmas.construir("m4")
 	soldado.segurar_arma("m4", m4)
+
+# o vestir() do sobrevivente só lê "slots" do inventário
+class _Equip extends RefCounted:
+	var slots := {}
+	func _init(s: Dictionary) -> void:
+		slots = s
 
 # ---------- animação ----------
 func _process(dt: float) -> void:
