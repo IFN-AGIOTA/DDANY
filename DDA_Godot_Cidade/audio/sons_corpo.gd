@@ -50,14 +50,14 @@ static func _dor(v: int) -> PackedFloat32Array:
 	var n := int(TAXA * dur)
 	var a := PackedFloat32Array()
 	a.resize(n)
-	var f0 := [150.0, 128.0, 170.0][v]
-	var formantes := [[700.0, 1150.0], [450.0, 900.0], [620.0, 1250.0]][v]
+	var f0: float = [150.0, 128.0, 170.0][v]
+	var formantes: Array = [[700.0, 1150.0], [450.0, 900.0], [620.0, 1250.0]][v]
 	var fase := 0.0
 	var r := RandomNumberGenerator.new()
 	r.seed = 77 + v
 	for i in n:
 		var t := float(i) / TAXA
-		var f := f0 * (1.15 - 0.35 * t / dur) * (1.0 + 0.02 * sin(TAU * 7.0 * t))
+		var f: float = f0 * (1.15 - 0.35 * t / dur) * (1.0 + 0.02 * sin(TAU * 7.0 * t))
 		fase += f / TAXA
 		var s := 0.0
 		for h in range(1, 14):

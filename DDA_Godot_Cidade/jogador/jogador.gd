@@ -26,6 +26,7 @@ const ALTURA_EM_PE := 1.8
 const ALTURA_AGACHADO := 1.3
 const EXTENSOES_MODELO := ["tscn", "scn", "glb", "gltf", "fbx"]
 const SonsCorpo := preload("res://audio/sons_corpo.gd")
+const SonsBaixados := preload("res://audio/sons_baixados.gd")
 const InventarioCls := preload("res://inventario/inventario.gd")
 const SobrevivenciaCls := preload("res://jogador/sobrevivencia.gd")
 
@@ -108,6 +109,13 @@ func _ready() -> void:
 	_som_voz.bus = bus
 	add_child(_som_voz)
 	sobrevivencia.ferido.connect(_doeu)
+	sobrevivencia.morreu.connect(func(_c):
+		var m := SonsBaixados.sortear("jogador/morte")
+		if m != null and _som_voz != null:
+			_som_voz.stream = m
+			_som_voz.pitch_scale = 1.0
+			_som_voz.volume_db = 0.0
+			_som_voz.play())
 
 func ligar_controles(c) -> void:
 	controles = c
@@ -187,7 +195,8 @@ func _passos(delta: float) -> void:
 	_n_passo += 1
 	var cl = get_tree().current_scene.get("clima") if get_tree().current_scene != null else null
 	var molhado: bool = cl != null and is_instance_valid(cl) and float(cl.molhado) > 0.4
-	_som_passo.stream = SonsCorpo.passo(_n_passo, molhado)
+	var gravado := SonsBaixados.sortear("jogador/passo")
+	_som_passo.stream = gravado if gravado != null and not molhado else SonsCorpo.passo(_n_passo, molhado)
 	_som_passo.pitch_scale = randf_range(0.9, 1.1)
 	_som_passo.volume_db = (-14.0 if agachado else (-3.0 if vel_horizontal > 5.0 else -8.0))
 	_som_passo.play()
@@ -196,7 +205,8 @@ func _doeu(dano: float) -> void:
 	if dano < 2.0 or _t_dor > 0.0 or _som_voz == null:
 		return
 	_t_dor = 0.7
-	_som_voz.stream = SonsCorpo.dor(randi())
+	var gravada := SonsBaixados.sortear("jogador/dor")
+	_som_voz.stream = gravada if gravada != null else SonsCorpo.dor(randi())
 	_som_voz.pitch_scale = randf_range(0.93, 1.07)
 	_som_voz.volume_db = -4.0
 	_som_voz.play()

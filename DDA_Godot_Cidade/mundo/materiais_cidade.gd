@@ -387,44 +387,51 @@ void fragment() {
 		float laje = corpo * step(0.92, fv) * (1.0 - longe) * detalhe;
 		parede *= 1.0 - laje * 0.18;
 		vec3 c = mix(parede, vidro, janela);
-		float terreo = step(v, 4.6) * detalhe;
-		float vitrine = terreo * step(0.6, v) * step(v, 3.4) * step(0.12, fract(u / 6.0)) * step(fract(u / 6.0), 0.88);
-		// cada loja (trecho de 6 m): toldo, PLACA com letreiro ou nada (caiu)
-		float seg = floor(u / 6.0);
-		float fs = fract(u / 6.0);
-		float hs = hash(vec2(seg, sem * 3.3));
-		float faixa_alta = terreo * step(3.4, v) * step(v, 4.2);
-		float toldo = faixa_alta * step(hs, 0.38) * step(v, 4.0);
-		float placa = faixa_alta * step(0.38, hs) * step(hs, 0.8) * step(0.1, fs) * step(fs, 0.9) * step(3.5, v) * step(v, 4.15);
-		if (hash(vec2(seg, sem + 8.0)) < 0.2) placa *= step(fs, 0.5 + 0.3 * hs);                   // placa quebrada
-		float hp = hash(vec2(seg, sem * 7.7));
-		vec3 cor_placa = hp < 0.25 ? vec3(0.45, 0.08, 0.06) : (hp < 0.5 ? vec3(0.06, 0.18, 0.12) : (hp < 0.7 ? vec3(0.05, 0.08, 0.22) : (hp < 0.85 ? vec3(0.05) : vec3(0.78, 0.76, 0.7))));
-		vec3 cor_letra = hp < 0.85 ? (hash(vec2(seg, 2.2)) < 0.5 ? vec3(0.9, 0.88, 0.8) : vec3(0.9, 0.75, 0.2)) : vec3(0.5, 0.06, 0.05);
-		float lu = (fs - 0.1) / 0.8 * 4.8;
-		float lv = (v - 3.5) / 0.65;
-		float lc = floor(lu / 0.42);
-		vec2 pix = floor(vec2(fract(lu / 0.42) * 4.0, lv * 7.0));
-		float letra = step(1.0, pix.y) * step(pix.y, 5.0) * step(pix.x, 2.0) * step(0.42, hash(vec2(lc * 7.0 + pix.x, pix.y) + seg * 3.1 + sem));
-		letra *= step(0.15, hash(vec2(lc, seg + sem)));                                            // espaços
-		cor_placa = mix(cor_placa, cor_letra, letra) * (0.6 + 0.4 * ruido(vec2(u * 3.0, v * 9.0)));   // desbotada
-		float ht = hash(vec2(floor(u / 6.0), sem));
-		vec3 cor_toldo = ht < 0.33 ? vec3(0.32, 0.12, 0.10) : (ht < 0.66 ? vec3(0.12, 0.22, 0.16) : vec3(0.14, 0.15, 0.22));
-		vec3 cor_vitrine = vec3(0.07, 0.07, 0.08);
-		if (hash(vec2(floor(u / 6.0), sem * 13.0)) < 0.45) {
-			// vitrine tapada com tábuas
-			float tab = fract(v / 0.32);
-			cor_vitrine = vec3(0.36, 0.26, 0.17) * (0.75 + 0.35 * hash(vec2(floor(v / 0.32), floor(u / 6.0)))) * (0.8 + 0.2 * step(0.08, tab));
+		float hera = 0.0;
+		if (dist < 450.0 && detalhe > 0.0) {     // lojas, letreiros, grafite e hera só de perto (economiza GPU)
+			vec3 c_antes = c;
+			float terreo = step(v, 4.6) * detalhe;
+			float vitrine = terreo * step(0.6, v) * step(v, 3.4) * step(0.12, fract(u / 6.0)) * step(fract(u / 6.0), 0.88);
+			// cada loja (trecho de 6 m): toldo, PLACA com letreiro ou nada (caiu)
+			float seg = floor(u / 6.0);
+			float fs = fract(u / 6.0);
+			float hs = hash(vec2(seg, sem * 3.3));
+			float faixa_alta = terreo * step(3.4, v) * step(v, 4.2);
+			float toldo = faixa_alta * step(hs, 0.38) * step(v, 4.0);
+			float placa = faixa_alta * step(0.38, hs) * step(hs, 0.8) * step(0.1, fs) * step(fs, 0.9) * step(3.5, v) * step(v, 4.15);
+			if (hash(vec2(seg, sem + 8.0)) < 0.2) placa *= step(fs, 0.5 + 0.3 * hs);                   // placa quebrada
+			float hp = hash(vec2(seg, sem * 7.7));
+			vec3 cor_placa = hp < 0.25 ? vec3(0.45, 0.08, 0.06) : (hp < 0.5 ? vec3(0.06, 0.18, 0.12) : (hp < 0.7 ? vec3(0.05, 0.08, 0.22) : (hp < 0.85 ? vec3(0.05) : vec3(0.78, 0.76, 0.7))));
+			vec3 cor_letra = hp < 0.85 ? (hash(vec2(seg, 2.2)) < 0.5 ? vec3(0.9, 0.88, 0.8) : vec3(0.9, 0.75, 0.2)) : vec3(0.5, 0.06, 0.05);
+			float lu = (fs - 0.1) / 0.8 * 4.8;
+			float lv = (v - 3.5) / 0.65;
+			float lc = floor(lu / 0.42);
+			vec2 pix = floor(vec2(fract(lu / 0.42) * 4.0, lv * 7.0));
+			float letra = step(1.0, pix.y) * step(pix.y, 5.0) * step(pix.x, 2.0) * step(0.42, hash(vec2(lc * 7.0 + pix.x, pix.y) + seg * 3.1 + sem));
+			letra *= step(0.15, hash(vec2(lc, seg + sem)));                                            // espaços
+			cor_placa = mix(cor_placa, cor_letra, letra) * (0.6 + 0.4 * ruido(vec2(u * 3.0, v * 9.0)));   // desbotada
+			float ht = hash(vec2(floor(u / 6.0), sem));
+			vec3 cor_toldo = ht < 0.33 ? vec3(0.32, 0.12, 0.10) : (ht < 0.66 ? vec3(0.12, 0.22, 0.16) : vec3(0.14, 0.15, 0.22));
+			vec3 cor_vitrine = vec3(0.07, 0.07, 0.08);
+			if (hash(vec2(floor(u / 6.0), sem * 13.0)) < 0.45) {
+				// vitrine tapada com tábuas
+				float tab = fract(v / 0.32);
+				cor_vitrine = vec3(0.36, 0.26, 0.17) * (0.75 + 0.35 * hash(vec2(floor(v / 0.32), floor(u / 6.0)))) * (0.8 + 0.2 * step(0.08, tab));
+			}
+			c = mix(c, cor_vitrine, vitrine * (1.0 - longe));
+			c = mix(c, cor_toldo, toldo * (1.0 - longe));
+			c = mix(c, cor_placa, placa * (1.0 - longe));
+			c = grafite(c, u, v, sem, (1.0 - smoothstep(50.0, 110.0, dist)) * detalhe * step(tipo, 3.5));
+			// HERA subindo pelas paredes (~40% dos prédios), de 2 a 12 m, em manchas
+			float tem_hera = step(hash(vec2(sem * 37.0, 5.1)), 0.4) * (1.0 - longe) * detalhe;
+			float alt_hera = 2.0 + 10.0 * ruido(vec2(u * 0.16, sem * 31.0));
+			hera = (1.0 - smoothstep(alt_hera - 2.0, alt_hera, v)) * smoothstep(0.42, 0.6, ruido(vec2(u, v) * 1.6 + sem * 9.0) + 0.3 * (1.0 - v / alt_hera));
+			hera *= tem_hera * smoothstep(0.3, 0.6, ruido(vec2(u * 0.09, sem * 3.0)));
+			c = mix(c, mix(vec3(0.07, 0.13, 0.04), vec3(0.20, 0.28, 0.09), ruido(vec2(u, v) * 5.0)), hera);
+			float some = smoothstep(330.0, 450.0, dist);             // some aos poucos (sem "pulo" na distância)
+			c = mix(c, c_antes, some);
+			hera *= 1.0 - some;
 		}
-		c = mix(c, cor_vitrine, vitrine * (1.0 - longe));
-		c = mix(c, cor_toldo, toldo * (1.0 - longe));
-		c = mix(c, cor_placa, placa * (1.0 - longe));
-		c = grafite(c, u, v, sem, (1.0 - smoothstep(50.0, 110.0, dist)) * detalhe * step(tipo, 3.5));
-		// HERA subindo pelas paredes (~40% dos prédios), de 2 a 12 m, em manchas
-		float tem_hera = step(hash(vec2(sem * 37.0, 5.1)), 0.4) * (1.0 - longe) * detalhe;
-		float alt_hera = 2.0 + 10.0 * ruido(vec2(u * 0.16, sem * 31.0));
-		float hera = (1.0 - smoothstep(alt_hera - 2.0, alt_hera, v)) * smoothstep(0.42, 0.6, ruido(vec2(u, v) * 1.6 + sem * 9.0) + 0.3 * (1.0 - v / alt_hera));
-		hera *= tem_hera * smoothstep(0.3, 0.6, ruido(vec2(u * 0.09, sem * 3.0)));
-		c = mix(c, mix(vec3(0.07, 0.13, 0.04), vec3(0.20, 0.28, 0.09), ruido(vec2(u, v) * 5.0)), hera);
 		// sombra no pé da parede (forte nos primeiros 2 m) + o resto do térreo
 		c *= (0.6 + 0.4 * smoothstep(0.0, 2.2, v)) * (0.85 + 0.15 * smoothstep(0.0, 7.0, v));
 		c *= mix(1.0, 0.7 + 0.12 * ruido(vec2(u * 0.5, v * 0.05)), molhado);       // chuva: parede molhada, escorrida

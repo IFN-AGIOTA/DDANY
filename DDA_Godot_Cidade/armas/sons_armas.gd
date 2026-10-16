@@ -10,6 +10,9 @@ var sons := {}
 var _canais: Array[AudioStreamPlayer] = []
 var _ci := 0
 var volume_db := 0.0
+var _gravado := {}                    # quais tiros são gravações (variam um pouco o tom a cada tiro)
+const SonsBaixados := preload("res://audio/sons_baixados.gd")
+const TOM := {"tiro_ak": 0.9, "tiro_m4": 1.04}
 
 func _ready() -> void:
 	sons["tiro_pistola"] = _tiro(4200.0, 0.42, 0.22, 130.0, 1717)
@@ -25,6 +28,14 @@ func _ready() -> void:
 	sons["clique_300"] = _clique(300.0, 0.1)
 	sons["clique_900"] = _clique(900.0, 0.06)
 	sons["clique_520"] = _clique(520.0, 0.07)
+	# tiros GRAVADOS (audio/sons/armas, licença livre) no lugar dos sintetizados, quando existem
+	var gravados := {"tiro_pistola": "armas/tiro_pistola", "tiro_m4": "armas/tiro_fuzil", "tiro_ak": "armas/tiro_fuzil2",
+		"tiro_espingarda": "armas/tiro_espingarda", "tiro_rifle_caca": "armas/tiro_rifle"}
+	for k in gravados:
+		var st := SonsBaixados.som(gravados[k])
+		if st != null:
+			sons[k] = st
+			_gravado[k] = true
 	for i in N_CANAIS:
 		var p := AudioStreamPlayer.new()
 		p.bus = "SFX" if AudioServer.get_bus_index("SFX") >= 0 else "Master"   # com eco de cidade
@@ -38,6 +49,12 @@ func tocar(nome: String, vol_db := 0.0) -> void:
 	var p := _canais[_ci]
 	p.stream = sons[nome]
 	p.volume_db = volume_db + vol_db
+	p.pitch_scale = float(TOM.get(nome, 1.0)) * (randf_range(0.95, 1.05) if _gravado.has(nome) else 1.0)
+	if nome == "impacto":                 # golpe corpo a corpo acertando: um dos sons gravados de impacto
+		var b := SonsBaixados.sortear("impactos/soco")
+		if b != null:
+			p.stream = b
+			p.pitch_scale = randf_range(0.85, 1.15)
 	p.play()
 
 func _wav(amostras: PackedFloat32Array) -> AudioStreamWAV:

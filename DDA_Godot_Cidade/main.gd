@@ -21,6 +21,7 @@ const MapaCls := preload("res://hud/mapa.gd")
 const ClimaCls := preload("res://mundo/clima.gd")
 const Salvamento := preload("res://menu/salvamento.gd")
 const MissoesCls := preload("res://mundo/missoes.gd")
+const AmbienteCls := preload("res://audio/ambiente.gd")
 const HistoriaCls := preload("res://historia/historia.gd")
 const VagosCls := preload("res://inimigos/vagos.gd")
 const CompanheirosCls := preload("res://npc/companheiros.gd")
@@ -337,6 +338,10 @@ func _criar_jogo() -> void:
 	missoes.name = "Missoes"
 	jogo.add_child(missoes)
 	missoes.ligar(self)
+	var amb := AmbienteCls.new()
+	amb.name = "AmbienteCidade"
+	jogo.add_child(amb)
+	amb.ligar(self)
 	voo = CameraVooCls.new()
 	voo.name = "CameraVoo"
 	jogo.add_child(voo)

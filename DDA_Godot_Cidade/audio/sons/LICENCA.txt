@@ -1,0 +1,17 @@
+SONS GRAVADOS baixados (todos de licença livre), convertidos para .ogg (cortados, sem chiado, volume igualado)
+e usados por audio/sons_baixados.gd. Créditos também no menu Créditos.
+
+armas/tiro_*.ogg ........ "Gunshot Sounds" — Tabasco / Vincent Sevedge (CZ-52, SKS, Mosin Nagant, espingarda)
+                          https://opengameart.org/content/gunshot-sounds
+                          Página: CC0. O arquivo do pacote cita Creative Commons Attribution 3.0 (CC-BY 3.0):
+                          por isso o crédito ao autor fica no jogo.
+infectados/gemido_*, grito_* ... "Zombies Sound Pack" — artisticdude — CC0
+                          https://opengameart.org/content/zombies-sound-pack
+infectados/ataque_*, morte_* e jogador/dor_*, morte_* ... "Zombie / Skeleton / Monster Voice Effects" — ArcadeParty — CC0
+                          https://opengameart.org/content/zombie-skeleton-monster-voice-effects
+jogador/passo_*.ogg ..... "Footsteps" — GboxMikeFozzy — CC0
+                          https://opengameart.org/content/footsteps-0
+infectados/passo_*, impactos/* ... "Impact Sounds" — Kenney (www.kenney.nl) — CC0
+                          https://kenney.nl/assets/impact-sounds
+ambiente/sirene.ogg ..... "Sirens and Alarm Noise" — aquinn — CC0
+                          https://opengameart.org/content/sirens-and-alarm-noise

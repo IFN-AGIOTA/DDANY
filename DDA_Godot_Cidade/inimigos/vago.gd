@@ -29,6 +29,7 @@ const ModeloCls := preload("res://inimigos/modelo_infectado.gd")   # manequins d
 const ItemMundo := preload("res://inventario/item_mundo.gd")
 const ItemCls := preload("res://inventario/item.gd")
 const SonsCorpo := preload("res://audio/sons_corpo.gd")
+const SonsBaixados := preload("res://audio/sons_baixados.gd")
 
 # ----- números do Vago -----
 const VIDA := 100.0
@@ -391,7 +392,8 @@ func _physics_process(dt: float) -> void:
 			_t_passo = clampf(1.5 / _vel_h, 0.24, 0.5)
 			if not som2.playing:
 				_n_passo += 1
-				som2.stream = SonsCorpo.passo(_n_passo)
+				var pg := SonsBaixados.sortear("infectados/passo")
+				som2.stream = pg if pg != null else SonsCorpo.passo(_n_passo)
 				som2.pitch_scale = randf_range(0.8, 0.95) * (0.85 if tipo == "pesado" else 1.0)
 				som2.volume_db = -4.0
 				som2.play()
@@ -721,6 +723,16 @@ func _tocar(nome: String, tom: float, vol_db: float, canal2 := false) -> void:
 	s3.stream = sons[nome]
 	s3.pitch_scale = tom * (0.85 if tipo == "pesado" else 1.0)
 	s3.volume_db = vol_db
+	# vozes GRAVADAS (audio/sons/infectados) no lugar das sintetizadas, quando existem
+	var grav: AudioStream = null
+	if nome.begins_with("gemido"):
+		grav = SonsBaixados.sortear("infectados/morte" if estado == MORTO else "infectados/gemido")
+	elif nome == "rosnado":
+		grav = SonsBaixados.sortear("infectados/grito" if tom > 1.3 else "infectados/ataque")
+	if grav != null:
+		s3.stream = grav
+		s3.pitch_scale = randf_range(0.9, 1.08) * (0.82 if tipo == "pesado" else (1.08 if tipo == "corredor" else 1.0))
+		s3.volume_db = vol_db - 2.0
 	s3.play()
 
 static func definir_sons(r: Dictionary) -> void:
