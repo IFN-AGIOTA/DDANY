@@ -1,12 +1,18 @@
 extends Node
-# REDE (autoload "Rede") · base do MULTIJOGADOR do MODO LIVRE, na mesma rede Wi-Fi (LAN) ou por IP.
+# REDE (autoload "Rede") · base do MULTIJOGADOR do MODO LIVRE: mesmo Wi-Fi, IP, CÓDIGO/CONVITE ou pela INTERNET.
 # Um aparelho CRIA a partida (é o "host": manda na hora, no clima e na semente do loot) e os outros ENTRAM.
 # Usa o multijogador de alto nível da Godot (ENet + RPC). O host repassa as mensagens entre os clientes.
 #
 #   Rede.criar_partida("Nome")          -> abre a partida (porta PORTA) e anuncia na rede local
 #   Rede.procurar(true)                 -> escuta os anúncios; sinal partida_achada(ip, nome, jogadores)
-#   Rede.entrar("192.168.0.10", "Nome") -> conecta; quando o host aceita: sinal pronto
+#   Rede.entrar("192.168.0.10", "Nome") -> conecta; quando o host aceita: sinal pronto. Aceita também
+#                                          "IP:porta", "endereco.com:porta" (túnel, ex.: playit.gg),
+#                                          o CÓDIGO ("K7G2Q-0M4XA") ou a mensagem de convite colada inteira
 #   Rede.sair()                         -> fecha tudo (volta ao jogo sozinho)
+# DE LONGE (internet): ao criar a partida o host pede ao roteador para abrir a porta (UPnP) e descobre o IP
+# da internet -> sinal internet(ok, ip, motivo). Os CÓDIGOS (codigos()) e o CONVITE (convite()) juntam
+# IP + porta em 10 letras para mandar no WhatsApp. Se o roteador não deixar (ou internet do celular/4G, que
+# quase nunca deixa), use uma VPN gratuita nos dois aparelhos (Tailscale ou ZeroTier): o código "VPN" funciona.
 #
 # O que passa pela rede está em rede/sessao_rede.gd (estado dos jogadores, tiros, ações, roupa, clima).
 # Mexa AQUI para: porta, limite de jogadores, versão do protocolo, anúncio na rede local.
@@ -17,6 +23,7 @@ signal caiu(motivo: String)                    # a partida acabou (host saiu, co
 signal jogador_entrou(id: int, nome: String)
 signal jogador_saiu(id: int)
 signal partida_achada(ip: String, nome: String, jogadores: int)
+signal internet(ok: bool, ip: String, motivo: String)    # resultado do UPnP (só no host)
 signal estado_recebido(id: int, d: Array)      # posição/animação de um jogador (sessao_rede.gd)
 signal evento_recebido(id: int, tipo: String, d: Dictionary)   # tiro, ação, roupa, mundo... (sessao_rede.gd)
 
@@ -35,6 +42,11 @@ var _anuncio: PacketPeerUDP = null             # host: manda o anúncio
 var _escuta: PacketPeerUDP = null              # menu: escuta anúncios
 var _t_anuncio := 0.0
 var _host_nome := ""
+var ip_internet := ""                          # host: IP da internet com a porta aberta pelo UPnP ("" = não)
+var internet_motivo := ""                      # host: por que não abriu (ou "abrindo…")
+var _upnp: UPNP = null
+var _thread: Thread = null
+const ALFABETO := "0123456789ABCDEFGHJKMNPQRSTVWXYZ"   # base 32 sem I, L, O, U (não confunde ao digitar)
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS    # a rede continua com o jogo pausado
@@ -73,19 +85,20 @@ func criar_partida(meu_nome: String, semente_loot: int) -> void:
 	_anuncio = PacketPeerUDP.new()
 	_anuncio.set_broadcast_enabled(true)
 	_anuncio.set_dest_address("255.255.255.255", PORTA_ANUNCIO)
+	_abrir_porta_internet()
 	pronto.emit()
 
-func entrar(ip: String, meu_nome: String) -> void:
+func entrar(endereco: String, meu_nome: String) -> void:
 	sair()
 	nome = _limpar_nome(meu_nome)
-	ip = ip.strip_edges()
-	if not ip.is_valid_ip_address():
-		_falhar("IP inválido: \"%s\"." % ip)
+	var alvo := resolver_endereco(endereco)
+	if alvo.is_empty():
+		_falhar("Não entendi \"%s\": use o código (ex.: K7G2Q-0M4XA), um IP ou endereço:porta." % endereco.strip_edges().left(40))
 		return
 	var p := ENetMultiplayerPeer.new()
-	var e := p.create_client(ip, PORTA)
+	var e := p.create_client(alvo[0], int(alvo[1]))
 	if e != OK:
-		_falhar("Não deu para conectar em %s." % ip)
+		_falhar("Não deu para conectar em %s:%d." % [alvo[0], alvo[1]])
 		return
 	multiplayer.multiplayer_peer = p           # "ligado" só quando o host aceitar (_aceito)
 
@@ -99,6 +112,7 @@ func sair() -> void:
 	if _anuncio != null:
 		_anuncio.close()
 		_anuncio = null
+	_fechar_porta_internet()
 
 # endereços IPv4 deste aparelho na rede local (para o host dizer aos amigos)
 func meus_ips() -> PackedStringArray:
@@ -107,6 +121,158 @@ func meus_ips() -> PackedStringArray:
 		if a.count(".") == 3 and not a.begins_with("127.") and not a.begins_with("169.254."):
 			r.append(a)
 	return r
+
+# ---------- internet: abrir a porta no roteador (UPnP), numa thread (a busca demora ~2 s) ----------
+func _abrir_porta_internet() -> void:
+	ip_internet = ""
+	internet_motivo = "abrindo a porta no roteador…"
+	_esperar_thread()
+	_thread = Thread.new()
+	_thread.start(_upnp_abrir)
+
+func _upnp_abrir() -> void:
+	var u := UPNP.new()
+	var r := u.discover(2000, 2, "InternetGatewayDevice")
+	var ok := false
+	var ip := ""
+	var motivo := ""
+	if r != UPNP.UPNP_RESULT_SUCCESS or u.get_gateway() == null or not u.get_gateway().is_valid_gateway():
+		motivo = "o roteador não respondeu (UPnP desligado, ou internet do celular/4G)"
+	elif u.add_port_mapping(PORTA, PORTA, "Dias de um Apocalipse", "UDP", 0) != UPNP.UPNP_RESULT_SUCCESS:
+		motivo = "o roteador recusou abrir a porta %d" % PORTA
+	else:
+		ip = u.query_external_address()
+		if ip == "" or not ip.is_valid_ip_address():
+			motivo = "porta aberta, mas o roteador não disse o IP da internet"
+		elif _ip_interno(ip):
+			motivo = "a operadora divide o IP (CGNAT: %s): de fora não chega" % ip
+			u.delete_port_mapping(PORTA, "UDP")
+			ip = ""
+		else:
+			ok = true
+	_upnp_fim.call_deferred(ok, ip, motivo, u if ok else null)
+
+func _upnp_fim(ok: bool, ip: String, motivo: String, u: UPNP) -> void:
+	_esperar_thread()
+	if not eh_host():                          # saiu enquanto abria: fecha de novo
+		if u != null:
+			_upnp = u
+			_fechar_porta_internet()
+		return
+	_upnp = u
+	ip_internet = ip
+	internet_motivo = motivo
+	internet.emit(ok, ip, motivo)
+
+func _fechar_porta_internet() -> void:
+	ip_internet = ""
+	if _upnp == null:
+		return
+	var u := _upnp
+	_upnp = null
+	_esperar_thread()
+	_thread = Thread.new()
+	_thread.start(func(): u.delete_port_mapping(PORTA, "UDP"))
+
+func _esperar_thread() -> void:
+	if _thread != null and _thread.is_started():
+		_thread.wait_to_finish()
+	_thread = null
+
+func _exit_tree() -> void:
+	sair()
+	_esperar_thread()
+
+# ---------- códigos e convite ----------
+# código = IPv4 (4 bytes) + porta (2 bytes) em base 32 -> "XXXXX-XXXXX"
+static func codificar(ip: String, porta := PORTA) -> String:
+	var p := ip.split(".")
+	if p.size() != 4:
+		return ""
+	var n := 0
+	for b in p:
+		n = (n << 8) | (int(b) & 255)
+	n = (n << 16) | (porta & 65535)
+	var t := ""
+	for i in 10:
+		t = ALFABETO[n & 31] + t
+		n >>= 5
+	return t.left(5) + "-" + t.right(5)
+
+static func decodificar(cod: String) -> Array:
+	var t := cod.to_upper().replace("-", "").replace(" ", "").replace("O", "0").replace("I", "1").replace("L", "1")
+	if t.length() != 10:
+		return []
+	var n := 0
+	for ch in t:
+		var k := ALFABETO.find(ch)
+		if k < 0:
+			return []
+		n = (n << 5) | k
+	var porta := n & 65535
+	n >>= 16
+	return ["%d.%d.%d.%d" % [(n >> 24) & 255, (n >> 16) & 255, (n >> 8) & 255, n & 255], porta]
+
+# entende código, convite colado, "ip", "ip:porta", "endereco:porta" -> [ip, porta] ([] = não entendeu)
+func resolver_endereco(txt: String) -> Array:
+	txt = txt.strip_edges()
+	var re := RegEx.create_from_string("\\b([0-9A-Za-z]{5})-([0-9A-Za-z]{5})\\b")
+	var m := re.search(txt)
+	if m != null:
+		var d := decodificar(m.get_string(1) + m.get_string(2))
+		if not d.is_empty():
+			return d
+	if txt.length() == 10 and not "." in txt:   # código digitado sem o tracinho
+		var d2 := decodificar(txt)
+		if not d2.is_empty():
+			return d2
+	var host := txt
+	var porta := PORTA
+	var re2 := RegEx.create_from_string("^([A-Za-z0-9.\\-]+)(?::(\\d{1,5}))?$")
+	var m2 := re2.search(txt)
+	if m2 == null:
+		return []
+	host = m2.get_string(1)
+	if m2.get_string(2) != "":
+		porta = int(m2.get_string(2))
+	if host.is_valid_ip_address():
+		return [host, porta]
+	if host.count(".") == 0 and host != "localhost":
+		return []
+	var ip := IP.resolve_hostname(host, IP.TYPE_IPV4)
+	return [ip, porta] if ip != "" else []
+
+# códigos desta partida, do que funciona de mais longe para o mais perto: [[tipo, código, ip], ...]
+func codigos() -> Array:
+	var r := []
+	if ip_internet != "":
+		r.append(["Internet", codificar(ip_internet), ip_internet])
+	for ip in meus_ips():
+		var tipo := "VPN (Tailscale/ZeroTier)" if _faixa(ip, "100.64.0.0", 10) or ip.begins_with("10.147.") or ip.begins_with("10.244.") else "Mesmo Wi-Fi"
+		r.append([tipo, codificar(ip), ip])
+	return r
+
+func convite() -> String:
+	var t := "Bora sobreviver em Nova York! Entre na minha partida de Dias de um Apocalipse (versão %s):\n" % Config.VERSAO
+	for c in codigos():
+		t += "%s: %s\n" % [c[0], c[1]]
+	t += "No jogo: Multijogador > Entrar > cole esta mensagem ou digite o código."
+	return t
+
+static func _faixa(ip: String, base: String, bits: int) -> bool:
+	var a := _num(ip)
+	var b := _num(base)
+	var m := (0xFFFFFFFF << (32 - bits)) & 0xFFFFFFFF
+	return a >= 0 and (a & m) == (b & m)
+
+static func _num(ip: String) -> int:
+	var p := ip.split(".")
+	if p.size() != 4:
+		return -1
+	return (int(p[0]) << 24) | (int(p[1]) << 16) | (int(p[2]) << 8) | int(p[3])
+
+static func _ip_interno(ip: String) -> bool:
+	return _faixa(ip, "10.0.0.0", 8) or _faixa(ip, "172.16.0.0", 12) or _faixa(ip, "192.168.0.0", 16) or _faixa(ip, "100.64.0.0", 10)
 
 # ---------- procurar partidas na rede local ----------
 func procurar(ligar: bool) -> void:

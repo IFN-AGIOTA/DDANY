@@ -77,6 +77,15 @@ func _montar() -> void:
 		var sinal: Signal = par[2]
 		b.apertado.connect(func(): sinal.emit())
 		col.add_child(b)
+	if Rede.eh_host():                    # multijogador: o host manda o convite de novo a qualquer hora
+		var cods: Array = Rede.codigos()
+		var bc := UI.BotaoMenu.new("Copiar convite", ("código " + cods[0][1]) if not cods.is_empty() else "", false, 3.0, 32.0)
+		bc.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		bc.apertado.connect(func():
+			DisplayServer.clipboard_set(Rede.convite())
+			bc.sub = "copiado! cole no WhatsApp"
+			bc._medir())
+		col.add_child(bc)
 	lin.add_child(col)
 	var est := VBoxContainer.new()
 	est.alignment = BoxContainer.ALIGNMENT_CENTER

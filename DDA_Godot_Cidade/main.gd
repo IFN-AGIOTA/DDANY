@@ -300,8 +300,7 @@ func _estatisticas() -> Array:
 	if missoes != null:
 		r.append(["suprimentos achados", str(missoes.encontrados)])
 	if Rede.ligado:
-		var ips := Rede.meus_ips()
-		r.append(["partida em rede", "%d jogador(es)%s" % [Rede.jogadores.size(), (" · seu IP " + ", ".join(ips)) if Rede.eh_host() and not ips.is_empty() else ""]])
+		r.append(["jogadores na partida" + (" (você é o host)" if Rede.eh_host() else ""), str(Rede.jogadores.size())])
 	var rt := int(float(Config.valor("rec_tempo")))
 	r.append(["recorde vivo", "%d:%02d" % [rt / 60, rt % 60]])
 	if estande != null and int(estande.get("acertos")) > 0:

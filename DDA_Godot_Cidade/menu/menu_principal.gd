@@ -119,7 +119,7 @@ func _montar() -> void:
 			b2.queue_redraw()
 			return
 		jogar.emit())
-	var bm := UI.BotaoMenu.new("Multijogador", "Mundo livre com amigos · mesma rede Wi-Fi", false, 3.8)
+	var bm := UI.BotaoMenu.new("Multijogador", "Mundo livre com amigos · Wi-Fi ou internet", false, 3.8)
 	bm.apertado.connect(func(): multijogador.emit())
 	var b3 := UI.BotaoMenu.new("Opções", "", false, 3.8)
 	b3.apertado.connect(func(): opcoes.emit())

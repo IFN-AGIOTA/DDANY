@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.28 (APK código 24)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.29 (APK código 25)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,19 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.29 · MULTIJOGADOR DE LONGE (internet, código e convite)
+- CRIAR PARTIDA abre a SALA: aparecem os CÓDIGOS da partida (10 letras, ex.: K7G2Q-0M4XA = IP + porta):
+  · "Internet": o jogo pede ao roteador para abrir a porta sozinho (UPnP). Funciona de qualquer lugar.
+  · "VPN (Tailscale/ZeroTier)": se os dois aparelhos usam uma dessas VPNs grátis (funciona até no 4G).
+  · "Mesmo Wi-Fi": de perto (a partida também aparece sozinha na lista).
+  COPIAR CONVITE copia uma mensagem pronta com os códigos para colar no WhatsApp. Quem já entrou aparece na
+  sala; o host toca COMEÇAR A JOGAR quando quiser (dá para entrar depois também). No jogo, a PAUSA do host
+  tem COPIAR CONVITE de novo.
+- ENTRAR aceita: o código (com ou sem tracinho), a MENSAGEM DE CONVITE INTEIRA (botão COLAR), IP, IP:porta ou
+  endereço:porta (túnel tipo playit.gg).
+- Se o roteador não abrir (aviso amarelo na sala) ou o host estiver no 4G/5G (a operadora não deixa: CGNAT),
+  use o Tailscale (ou ZeroTier) nos dois aparelhos e o código "VPN".
+
 ATUALIZAÇÃO 0.28 · BASE DO MULTIJOGADOR (modo livre)
 - Botão MULTIJOGADOR no menu (menu/tela_multijogador.gd): seu nome, CRIAR PARTIDA (você vira o host),
   PARTIDAS NA REDE (achadas sozinhas no mesmo Wi-Fi) e ENTRAR POR IP. Até 8 jogadores. Porta UDP 24560
@@ -587,12 +600,13 @@ SOBREVIVENTE (jogador no modo livre)
 MULTIJOGADOR (pasta rede/ · modo livre)
 - conexão (criar/entrar/sair, porta,
   limite de jogadores, versão, anúncio
-  no Wi-Fi) ........................... rede/rede.gd (autoload "Rede")
+  no Wi-Fi, UPnP, códigos e convite) .. rede/rede.gd (autoload "Rede")
 - o que vai pela rede no jogo (estado
   15x/s, roupa, ações, tiros, clima) .. rede/sessao_rede.gd
 - o boneco do outro jogador (suavizado,
   nome em cima, roupa, arma) .......... rede/jogador_remoto.gd
-- tela do menu ........................ menu/tela_multijogador.gd
+- tela do menu e sala do host ......... menu/tela_multijogador.gd
+- "Copiar convite" na pausa ........... menu/pausa.gd
 - liga ao jogo (semente do loot, nascer
   perto, pausa, sem salvar em rede) ... main.gd (_ligar_rede, _rede_caiu)
 
@@ -679,6 +693,11 @@ MÚSICA (pasta audio/)
     ordered, 15/s: [posição, giro, velocidade, bits agachado/mirando/morto/no ar, arma, mira, tempo do tiro]);
     o jogador_remoto.gd mostra 0,12 s no passado, interpolando entre dois estados (não treme com a rede).
   · EVENTOS (canal 2, reliable): cheguei, roupa, acao, tiro, mundo (só aceito do host).
+  · DE LONGE (0.29): o host abre a porta UDP 24560 no roteador por UPnP (classe UPNP da Godot, numa thread) e
+    pega o IP da internet; ao sair da partida a porta é fechada. IP de operadora compartilhado (100.64.x.x
+    ou privado) = CGNAT, não adianta. CÓDIGO = IPv4 (32 bits) + porta (16 bits) em base 32 (0-9 e letras sem
+    I/L/O/U), 10 caracteres "XXXXX-XXXXX" (Rede.codificar/decodificar; resolver_endereco também acha o código
+    dentro de um texto colado e resolve nomes de domínio).
   · A cidade já sai igual em todos sem passar pela rede: é gerada com sementes fixas (mundo/cidade.gd).
   · Para o próximo passo (infectados e itens iguais para todos) o caminho é o HOST mandar neles: ele simula os
     infectados e manda posição/estado; os clientes pedem "peguei o item X" / "acertei o infectado Y" e o host
@@ -710,7 +729,8 @@ MÚSICA (pasta audio/)
 - MULTIJOGADOR (base da 0.28), falta: infectados iguais para todos (hoje cada aparelho tem os seus, que só
   caçam o próprio jogador), itens pegos/largados e caixas sincronizados (hoje dá para os dois pegarem o mesmo
   item), dano entre jogadores, jogadores sem colisão entre si, salvar a partida em rede (em rede não salva),
-  outros jogadores no mapa/minimapa, chat, jogar pela internet (hoje só Wi-Fi/IP direto).
+  outros jogadores no mapa/minimapa, chat. Internet sem roteador/VPN (servidor próprio de "ponte"/relay, que
+  precisa de um servidor ligado 24h) e abrir o jogo direto por um link (precisa de plugin Android).
 - Ideias para depois: loot por região, lugares
   especiais (postos do exército, quarentena, metrô), helicópteros caídos, elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,
   outros sobreviventes (NPCs), mais atos da história.
