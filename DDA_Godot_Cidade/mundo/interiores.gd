@@ -23,6 +23,9 @@ var mundo = null
 var jogador: Node3D = null
 var loot = null
 var abertos := {}                     # índice do prédio -> Node3D do interior
+var vagos = null                      # inimigos/vagos.gd: às vezes há infectados presos dentro do prédio
+const CHANCE_INFESTADO := 0.33
+var _infestados := {}                 # prédios já sorteados nesta partida
 var ativo := true
 var _hash := {}                       # Vector2i -> PackedInt32Array (prédios com entrada)
 var _hash_carros := {}                # Vector2i -> PackedInt32Array (carros)
@@ -162,7 +165,28 @@ func _terminar(i: int, prep) -> void:
 	mundo.set("_ult_pred", Vector2(1.0e9, 1.0e9))      # refaz a colisão dos prédios perto (sem o bloco deste)
 	if loot != null and no.has_meta("pontos_chao"):
 		loot.espalhar_chao("p%d" % i, String(inf.get("uso", "")), no.get_meta("pontos_chao"), no)
+	_infestar(i, no)
 	ms_ultimo = (Time.get_ticks_usec() - t0) / 1000.0
+
+# um ou dois infectados presos lá dentro (saquear não é sempre seguro)
+func _infestar(i: int, no: Node3D) -> void:
+	if vagos == null or _infestados.has(i) or not no.has_meta("pontos_chao") or not bool(vagos.get("ativo")):
+		return
+	_infestados[i] = true
+	var r := RandomNumberGenerator.new()
+	r.seed = i * 7349 + (loot.semente if loot != null else 0)
+	if r.randf() >= CHANCE_INFESTADO:
+		return
+	var pontos: Array = no.get_meta("pontos_chao")
+	var n := 1 if r.randf() < 0.65 else 2
+	for k in n:
+		if pontos.is_empty():
+			break
+		var lp: Vector3 = pontos[r.randi() % pontos.size()][0]
+		var gp: Vector3 = no.global_transform * lp
+		if jogador != null and gp.distance_to(jogador.global_position) < 7.0:
+			continue
+		vagos._criar(gp + Vector3(0, 0.05, 0), Vector3.INF)
 
 func fechar(i: int) -> void:
 	if not abertos.has(i):

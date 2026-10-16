@@ -41,8 +41,11 @@ func aplicar() -> void:
 	if bm != -1:
 		AudioServer.set_bus_mute(bm, not bool(o.get("mus", true)))
 		AudioServer.set_bus_volume_db(bm, linear_to_db(maxf(0.0001, float(o.get("mvol", 70)) / 100.0)))
+	var bs := AudioServer.get_bus_index("SFX")             # efeitos (criado em audio/musica_procedural.gd)
+	if bs != -1:
+		AudioServer.set_bus_volume_db(bs, linear_to_db(maxf(0.0001, float(o.get("svol", 100)) / 100.0)))
 	DisplayServer.screen_set_keep_on(bool(o["awake"]))
-	Engine.max_fps = int(g["cap"])
+	Engine.max_fps = int(g["cap"]) if int(g["cap"]) > 0 else (60 if OS.has_feature("mobile") else 0)   # celular: no máximo 60 (esquenta menos)
 	var vp := get_viewport()
 	vp.msaa_3d = MSAA[clampi(int(g["aa"]), 0, 3)]
 	_aplicar_resolucao()
@@ -88,6 +91,9 @@ func aplicar() -> void:
 func _aplicar_resolucao() -> void:
 	var g: Dictionary = Config.g
 	var base: float = float(g["rp"]) / 100.0 if int(g["rp"]) > 35 else RESOLUCAO[clampi(int(g["res"]), 0, 3)]
+	# celular: a tela já tem muitos pixels; no máximo 80% da resolução nativa (bem mais leve, quase igual de nítido)
+	if OS.has_feature("mobile") and int(g["rp"]) <= 35:
+		base = minf(base, 0.8)
 	var f := _dinamica if bool(g["dyn"]) else 1.0
 	var vp := get_viewport()
 	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR

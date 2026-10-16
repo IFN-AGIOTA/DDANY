@@ -20,7 +20,7 @@ const TABELAS := {
 		["barra", 3, 1, 2], ["salgadinho", 3, 1, 1], ["refrigerante", 3, 1, 1], ["isqueiro", 2, 1, 1], ["lanterna", 2, 1, 1],
 		["mun_9mm", 1, 4, 12], ["taco", 1, 1, 1]],
 	"casa_quarto": [["camiseta", 5, 1, 1], ["moletom", 4, 1, 1], ["jeans", 4, 1, 1], ["gorro", 3, 1, 1], ["bone", 2, 1, 1],
-		["jaqueta", 2, 1, 1], ["capa_chuva", 1, 1, 1], ["mochila_escolar", 2, 1, 1], ["pochete", 2, 1, 1], ["trapos", 3, 1, 3],
+		["jaqueta", 2, 1, 1], ["capa_chuva", 1, 1, 1], ["mochila_escolar", 2, 1, 1], ["mochila_trilha", 1, 1, 1], ["pochete", 2, 1, 1], ["trapos", 3, 1, 3],
 		["kit_costura", 2, 1, 1], ["pistola", 1, 1, 1], ["pente_pistola", 1, 1, 1], ["mun_9mm", 2, 5, 15], ["dinheiro", 2, 2, 10],
 		["revista", 2, 1, 1], ["ursinho", 2, 1, 1], ["lanterna_cabeca", 1, 1, 1], ["taco", 1, 1, 1]],
 	"casa_cozinha": [["feijao", 5, 1, 1], ["atum", 4, 1, 1], ["sardinha", 4, 1, 1], ["pessego", 3, 1, 1], ["biscoito", 4, 1, 1],
@@ -39,7 +39,7 @@ const TABELAS := {
 		["radio", 2, 1, 1], ["kit_costura", 2, 1, 1], ["pochete", 2, 1, 1], ["mochila_escolar", 2, 1, 1], ["mochila_trilha", 1, 1, 1],
 		["pe_de_cabra", 1, 1, 1], ["machado", 1, 1, 1], ["celular", 2, 1, 1], ["barra", 2, 1, 2], ["refrigerante", 2, 1, 1]],
 	"loja_roupas": [["camiseta", 5, 1, 1], ["moletom", 5, 1, 1], ["jeans", 5, 1, 1], ["calca", 3, 1, 1], ["jaqueta", 3, 1, 1],
-		["capa_chuva", 3, 1, 1], ["gorro", 4, 1, 1], ["bone", 4, 1, 1], ["mochila_escolar", 2, 1, 1], ["mochila_trilha", 1, 1, 1],
+		["capa_chuva", 3, 1, 1], ["gorro", 4, 1, 1], ["bone", 4, 1, 1], ["mochila_escolar", 2, 1, 1], ["mochila_trilha", 2, 1, 1],
 		["pochete", 2, 1, 1]],
 	"balcao": [["dinheiro", 5, 2, 20], ["revista", 2, 1, 1], ["celular", 2, 1, 1], ["barra", 3, 1, 2], ["refrigerante", 2, 1, 1],
 		["isqueiro", 2, 1, 1], ["pistola", 1, 1, 1], ["mun_9mm", 2, 4, 12], ["fita", 1, 1, 1]],
@@ -47,14 +47,22 @@ const TABELAS := {
 		["lanterna", 2, 1, 1], ["radio", 1, 1, 1], ["analgesico", 1, 1, 1], ["refrigerante", 2, 1, 1]],
 	"armas_policia": [["pistola", 4, 1, 1], ["pente_pistola", 5, 1, 1], ["mun_9mm", 6, 10, 40], ["espingarda", 2, 1, 1],
 		["mun_12", 4, 4, 16], ["m4", 1, 1, 1], ["pente_stanag", 2, 1, 1], ["mun_556", 2, 10, 40], ["colete_policia", 2, 1, 1],
-		["capacete", 1, 1, 1], ["lanterna", 2, 1, 1], ["kit_armas", 2, 1, 1], ["bandagem", 2, 1, 2], ["silenciador", 1, 1, 1]],
+		["capacete", 1, 1, 1], ["lanterna", 2, 1, 1], ["kit_armas", 2, 1, 1], ["bandagem", 2, 1, 2], ["silenciador", 1, 1, 1],
+		["ak", 1, 1, 1], ["pente_ak", 1, 1, 1], ["mun_762", 1, 8, 30], ["mira_acog", 1, 1, 1]],
 	"deposito": [["corda", 3, 1, 1], ["fita", 3, 1, 1], ["cano", 3, 1, 1], ["pe_de_cabra", 2, 1, 1], ["machado", 2, 1, 1],
 		["lanterna", 2, 1, 1], ["trapos", 3, 1, 4], ["agua", 2, 1, 1], ["feijao", 2, 1, 1], ["kit_armas", 1, 1, 1],
-		["mochila_trilha", 1, 1, 1], ["mun_308", 1, 3, 10], ["rifle_caca", 1, 1, 1], ["galho", 3, 1, 4], ["isqueiro", 1, 1, 1]],
+		["mochila_trilha", 1, 1, 1], ["mun_308", 1, 3, 10], ["rifle_caca", 1, 1, 1], ["galho", 3, 1, 4], ["isqueiro", 1, 1, 1],
+		["luneta", 1, 1, 1], ["mun_762", 1, 5, 15]],
 	"carro": [["agua", 3, 1, 1], ["refrigerante", 2, 1, 1], ["biscoito", 2, 1, 1], ["barra", 2, 1, 2], ["lanterna", 2, 1, 1],
 		["fita", 2, 1, 1], ["corda", 2, 1, 1], ["pe_de_cabra", 2, 1, 1], ["kit_medico", 1, 1, 1], ["bandagem", 2, 1, 2],
 		["mochila_escolar", 2, 1, 1], ["jaqueta", 1, 1, 1], ["capa_chuva", 1, 1, 1], ["taco", 1, 1, 1], ["espingarda", 1, 1, 1],
-		["mun_12", 1, 4, 10], ["rifle_caca", 1, 1, 1], ["mun_308", 1, 3, 8], ["kit_armas", 1, 1, 1], ["dinheiro", 1, 2, 10]],
+		["mun_12", 1, 4, 10], ["rifle_caca", 1, 1, 1], ["mun_308", 1, 3, 8], ["kit_armas", 1, 1, 1], ["dinheiro", 1, 2, 10],
+		["ak", 1, 1, 1], ["pente_ak", 1, 1, 1], ["mun_762", 1, 5, 20], ["mochila_trilha", 1, 1, 1]],
+	# caixa de SUPRIMENTO MILITAR (missões do rádio no modo livre)
+	"militar": [["m4", 3, 1, 1], ["ak", 3, 1, 1], ["pente_stanag", 4, 1, 1], ["pente_ak", 4, 1, 1], ["mun_556", 5, 20, 60],
+		["mun_762", 5, 20, 50], ["colete", 3, 1, 1], ["colete_policia", 2, 1, 1], ["capacete", 3, 1, 1], ["mochila_combate", 2, 1, 1],
+		["kit_medico", 4, 1, 1], ["soro", 2, 1, 1], ["antibiotico", 3, 1, 1], ["mira_acog", 2, 1, 1], ["silenciador", 2, 1, 1],
+		["luneta", 1, 1, 1], ["rifle_caca", 1, 1, 1], ["mun_308", 2, 5, 15], ["kit_armas", 3, 1, 1], ["agua", 3, 1, 1], ["feijao", 3, 1, 1]],
 	# itens soltos no chão dos prédios, por uso do prédio
 	"chao_residencial": [["galho", 2, 1, 3], ["garrafa_vazia", 2, 1, 1], ["revista", 3, 1, 1], ["trapos", 3, 1, 2], ["barra", 2, 1, 1], ["refrigerante", 2, 1, 1], ["agua", 1, 1, 1],
 		["cano", 1, 1, 1], ["faca", 1, 1, 1], ["mun_9mm", 1, 3, 8], ["celular", 2, 1, 1], ["ursinho", 1, 1, 1]],
@@ -84,12 +92,15 @@ func grade(id: String, tabela: String, nome: String, tam: Vector2i):
 	if r.randf() >= CHANCE_VAZIO:
 		var n := r.randi_range(1, clampi(tam.x * tam.y / 5, 1, 4))
 		for k in n:
-			var it = _sortear(tabela, r)
-			if it == null:
-				continue
-			var v: Vector3i = g.achar_vaga(it)
-			if v.x >= 0:
-				g.colocar(it, v.x, v.y, v.z == 1)
+			# só sorteia o que cabe no móvel; se a grade já estiver cheia, tenta outro item (até 3 vezes)
+			for tentativa in 3:
+				var it = _sortear(tabela, r, tam)
+				if it == null:
+					break
+				var v: Vector3i = g.achar_vaga(it)
+				if v.x >= 0:
+					g.colocar(it, v.x, v.y, v.z == 1)
+					break
 	_grades[id] = g
 	return g
 
@@ -125,8 +136,14 @@ func guardar_chao(id: String, pai: Node3D) -> void:
 			lista.append([it, pai.global_transform.affine_inverse() * n.global_position])
 	_chao[id] = lista
 
-func _sortear(tabela: String, r: RandomNumberGenerator):
-	var t: Array = TABELAS.get(tabela, [])
+func _sortear(tabela: String, r: RandomNumberGenerator, tam := Vector2i(99, 99)):
+	var t: Array = []
+	for e in TABELAS.get(tabela, []):            # só o que cabe no móvel (deitado ou em pé)
+		var d := Itens.def(e[0])
+		var w := int(d.get("w", 1))
+		var h := int(d.get("h", 1))
+		if (w <= tam.x and h <= tam.y) or (h <= tam.x and w <= tam.y):
+			t.append(e)
 	var total := 0.0
 	for e in t:
 		total += float(e[1])
@@ -160,7 +177,9 @@ func _estado_inicial(it, r: RandomNumberGenerator) -> void:
 		it.municao = r.randi_range(0, it.capacidade())
 
 # ---------- salvar ----------
-func salvar() -> Dictionary:
+# abertos = interiores.abertos (índice -> nó): o que está no chão dos prédios abertos AGORA também é salvo
+# (sem mexer nos itens, que continuam no mundo)
+func salvar(abertos := {}) -> Dictionary:
 	var g := {}
 	for id in _grades:
 		var lista := []
@@ -174,6 +193,16 @@ func salvar() -> Dictionary:
 			var p: Vector3 = par[1]
 			lista.append([par[0].para_dict(), p.x, p.y, p.z])
 		c[id] = lista
+	for i in abertos:
+		var no: Node3D = abertos[i]
+		if not is_instance_valid(no):
+			continue
+		var lista := []
+		for n in no.get_children():
+			if n.is_in_group("itens_chao") and not n.is_queued_for_deletion() and n.item != null:
+				var p: Vector3 = no.global_transform.affine_inverse() * n.global_position
+				lista.append([n.item.para_dict(), p.x, p.y, p.z])
+		c["p%d" % i] = lista
 	return {"semente": semente, "grades": g, "chao": c}
 
 func carregar(d: Dictionary) -> void:

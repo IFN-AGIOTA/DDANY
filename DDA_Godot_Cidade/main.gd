@@ -20,6 +20,7 @@ const HudStatusCls := preload("res://hud/hud_status.gd")
 const MapaCls := preload("res://hud/mapa.gd")
 const ClimaCls := preload("res://mundo/clima.gd")
 const Salvamento := preload("res://menu/salvamento.gd")
+const MissoesCls := preload("res://mundo/missoes.gd")
 const HistoriaCls := preload("res://historia/historia.gd")
 const VagosCls := preload("res://inimigos/vagos.gd")
 const CompanheirosCls := preload("res://npc/companheiros.gd")
@@ -54,6 +55,7 @@ var pausa: CanvasLayer
 var aplicador: Node
 var loot_mundo                              # mundo/loot_mundo.gd (o que tem em cada móvel/carro, guardado)
 var interiores: Node                        # mundo/interiores.gd (prédios por dentro perto do jogador)
+var missoes: Node = null                    # mundo/missoes.gd (suprimentos militares avisados pelo rádio)
 var hud_status: CanvasLayer                 # hud/hud_status.gd (vida, sangue, fome, sede, temperatura)
 var tela_morte: CanvasLayer
 var mapa: CanvasLayer                       # hud/mapa.gd (minimapa, mapa grande e bússola)
@@ -87,6 +89,7 @@ func _ready() -> void:
 	if Engine.is_editor_hint():
 		return
 	process_mode = Node.PROCESS_MODE_ALWAYS          # main cuida das telas; o jogo em si pausa (nó "Jogo")
+	get_tree().set_quit_on_go_back(false)             # Android: o botão VOLTAR fecha telas/pausa, não sai do jogo
 	aplicador = AplicarOpcoesCls.new()
 	aplicador.name = "AplicarOpcoes"
 	aplicador.main = self
@@ -134,6 +137,9 @@ func _jogar(carregar_salvo := false, modo_historia := false) -> void:
 		var d := Salvamento.ler()
 		if not d.is_empty():
 			Salvamento.carregar(self, d)
+			if d.get("morto", false):                # morreu e saiu: volta já renascido, longe das coisas
+				jogador.morto = true
+				_renascer()
 	elif modo_historia:
 		historia.iniciar(self)
 	if not historia.ativa:
@@ -145,9 +151,29 @@ func salvar_jogo() -> void:
 		Salvamento.salvar(self)
 
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_GO_BACK_REQUEST:
+		_voltar()
+		return
 	if what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
 		if not Engine.is_editor_hint():
 			salvar_jogo()
+
+# botão VOLTAR do Android (e Esc): fecha a tela de cima; no jogo, pausa; no menu, sai
+func _voltar() -> void:
+	if opcoes != null:
+		_fechar_opcoes()
+	elif pausa != null:
+		_continuar()
+	elif tela_morte != null:
+		return
+	elif mapa != null and bool(mapa.aberto):
+		mapa.fechar_mapa()
+	elif tela_inventario != null and tela_inventario.aberto:
+		tela_inventario.fechar()
+	elif jogo != null:
+		_pausar()
+	elif menu != null:
+		get_tree().quit()
 
 func _abrir_opcoes() -> void:
 	if opcoes != null:
@@ -301,10 +327,16 @@ func _criar_jogo() -> void:
 	tela_inventario.ligar(jogador.inventario, controles)
 	LootCls.espalhar(jogo, mundo, SPAWN)
 	loot_mundo = LootMundoCls.new()
+	loot_mundo.semente = randi()                      # cada jogo novo tem o loot em lugares diferentes
 	interiores = InterioresCls.new()
 	interiores.name = "Interiores"
 	jogo.add_child(interiores)
 	interiores.ligar(cidade, mundo, jogador, loot_mundo)
+	interiores.vagos = vagos
+	missoes = MissoesCls.new()
+	missoes.name = "Missoes"
+	jogo.add_child(missoes)
+	missoes.ligar(self)
 	voo = CameraVooCls.new()
 	voo.name = "CameraVoo"
 	jogo.add_child(voo)
@@ -326,6 +358,7 @@ func _morreu(causa: String) -> void:
 		var a := randf() * TAU
 		var r := randf_range(0.3, 1.1)
 		ItemMundoCls.soltar(jogo, it, p + Vector3(cos(a) * r, 0.02, sin(a) * r))
+	Salvamento.salvar(self, true)                     # a morte vale: sair agora não desfaz
 	Musica.adicionar_tensao(1.0)
 	await get_tree().create_timer(2.5).timeout
 	if jogador == null or not jogador.morto or tela_morte != null:
@@ -396,6 +429,7 @@ func _fechar_jogo() -> void:
 	clima = null
 	historia = null
 	vagos = null
+	missoes = null
 	companheiros = null
 
 func _process(dt: float) -> void:

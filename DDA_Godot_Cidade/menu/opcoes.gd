@@ -273,6 +273,9 @@ func _pagina_video(v: float) -> Control:
 	_deslizante("vol", 0, 100, 5, "%", g, "Volume")
 	_secao(g, "Música", _seg("mus", [[true, "Ligada"], [false, "Desligada"]]))
 	_deslizante("mvol", 0, 100, 5, "%", g, "Volume da música")
+	_deslizante("svol", 0, 100, 5, "%", g, "Volume dos efeitos")
+	_secao(g, "Dificuldade", _seg("dif", [[0, "Fácil"], [1, "Normal"], [2, "Difícil"]],
+		{0: "Menos infectados e mordidas mais fracas.", 1: "Equilíbrio do jogo.", 2: "Mais infectados, mordidas mais fortes."}))
 	_secao(g, "Manter tela ligada", _seg("awake", [[false, "Não"], [true, "Sim"]]))
 	var tc := UI.BotaoMenu.new("Alternar tela cheia", "", false, 3.2, 0.0)
 	tc.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -396,7 +399,7 @@ func _pagina_graficos(v: float) -> Control:
 	_gfx_seg(lista, "fx", "Detalhes dos efeitos", "fumaça, poeira, nuvens, brilho do sol e marcas de bala" + EM_BREVE, NIVEIS, v)
 	_gfx_seg(lista, "shad", "Sombras", "Simples: mancha sob o personagem · Alta: sombra em tempo real (usa mais GPU)",
 		[[0, "DESLIGADAS"], [1, "SIMPLES"], [2, "ALTA"]], v)
-	_gfx_seg(lista, "den", "Densidade do cenário abandonado", "carros, barricadas e barris nas ruas" + EM_BREVE, [[0, "BAIXA"], [1, "MÉDIA"], [2, "ALTA"]], v)
+	_gfx_seg(lista, "den", "Densidade do cenário abandonado", "quantidade de carros largados, entulho e capim", [[0, "BAIXA"], [1, "MÉDIA"], [2, "ALTA"]], v)
 	_gfx_seg(lista, "wtr", "Água", "ondas, espuma na praia e brilho do sol", [[false, "SIMPLES"], [true, "COMPLETA"]], v)
 	_gfx_seg(lista, "wire", "Fios de poste", EM_BREVE.strip_edges(), [[false, "DESLIGADOS"], [true, "LIGADOS"]], v)
 	_gfx_seg(lista, "halo", "Halos de luz", "semáforos e luzes dos postes à noite" + EM_BREVE, [[false, "DESLIGADOS"], [true, "LIGADOS"]], v)

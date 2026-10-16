@@ -27,7 +27,8 @@ signal atacou_jogador(dano: float)      # um Vago acertou o jogador (útil para 
 const VagoCls := preload("res://inimigos/vago.gd")
 
 const MAX_ATIVOS_PADRAO := 14
-const ESCALA_DENSIDADE := [0.7, 1.0, 1.25]   # Opções › Gráficos › Densidade (den 0, 1, 2)
+const ESCALA_DIFICULDADE := [0.7, 1.0, 1.35]   # Opções › Dificuldade (fácil, normal, difícil)
+const DANO_DIFICULDADE := [0.7, 1.0, 1.3]
 const DIST_MIN := 55.0
 const DIST_MAX := 120.0
 const DIST_SUMIR := 160.0
@@ -44,6 +45,7 @@ const RUIDO_ANDANDO := 4.0
 const RUIDO_AGACHADO := 1.5
 
 var max_ativos := MAX_ATIVOS_PADRAO
+var mult_dano := 1.0                    # dificuldade: força das mordidas
 var ativo := true:
 	set(v):
 		ativo = v
@@ -77,8 +79,10 @@ func ligar(c, m, j, a) -> void:
 	var cfg := get_node_or_null("/root/Config")
 	if cfg != null:
 		var g: Dictionary = cfg.get("g")
-		if g.has("den"):
-			max_ativos = int(round(MAX_ATIVOS_PADRAO * float(ESCALA_DENSIDADE[clampi(int(g["den"]), 0, 2)])))
+		# quantos infectados: DIFICULDADE (Opções), não mais a densidade gráfica
+		var dif := clampi(int(cfg.call("valor", "dif")), 0, 2)
+		max_ativos = int(round(MAX_ATIVOS_PADRAO * float(ESCALA_DIFICULDADE[dif])))
+		mult_dano = float(DANO_DIFICULDADE[dif])
 	_musica = get_node_or_null("/root/Musica")
 	if VagoCls.sons.is_empty() and _thread == null:
 		_thread = Thread.new()
@@ -207,7 +211,10 @@ func alvo_ativos() -> int:
 	var pj := jogador.global_position
 	var dc: Vector2 = Vector2(pj.x, pj.z) - cidade.DOWNTOWN
 	var perto := clampf(1.0 - dc.length() / RAIO_CENTRO, 0.0, 1.0)
-	return int(round(max_ativos * lerpf(FRACAO_LONGE, 1.0, perto)))
+	# a cada dia sobrevivido a cidade fica mais perigosa (+8% por dia, até +60%)
+	var dia: int = int(clima.dia) if clima != null else 1
+	var mais := 1.0 + minf(0.08 * float(dia - 1), 0.6)
+	return int(round(max_ativos * lerpf(FRACAO_LONGE, 1.0, perto) * mais))
 
 func _ruido_jogador() -> void:
 	if bool(jogador.get("morto")):
@@ -286,7 +293,8 @@ func _planejar(pj: Vector3) -> void:
 	var p := _ponto(pj)
 	if p == Vector3.INF:
 		return
-	if randf() < CHANCE_HORDA:
+	var chance := CHANCE_HORDA * (1.8 if escuridao() > 0.6 else 1.0)   # de noite vagam em bandos
+	if randf() < chance:
 		var n := randi_range(HORDA_MIN, HORDA_MAX)
 		n = mini(n, alvo_ativos() + 4 - vivos.size())
 		var a := randf() * TAU

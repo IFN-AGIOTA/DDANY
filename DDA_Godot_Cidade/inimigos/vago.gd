@@ -15,14 +15,20 @@ extends CharacterBody3D
 # Colisão: camada 3 (valor 4) · máscara 1. Forma 0 = corpo (cápsula) · forma 1 = cabeça (esfera).
 # Sons sintetizados por código uma vez só (gemidos, rosnado do ataque, baque) e divididos entre todos.
 #
+# TIPOS (sorteados ao nascer, TIPOS abaixo): comum · CORREDOR (rápido e frágil) · PESADO (aguenta muito e bate
+# forte) · GRITADOR (quando vê você, grita e chama os outros num raio grande).
+# À noite, a LANTERNA acesa faz o jogador ser visto de longe (mínimo 30 m).
+# Golpe corpo a corpo atordoa conforme a força, e depois de atordoado ele fica ~1 s sem poder ser atordoado
+# de novo (não dá para travar um infectado só batendo).
 # Mexa AQUI para: velocidade, vida, dano, alcance da visão/ataque, tempo para desistir, chance de loot,
-# quanto tempo o corpo fica no chão (constantes logo abaixo).
+# quanto tempo o corpo fica no chão (constantes logo abaixo) e os TIPOS.
 
 signal morreu(vago: Node, cabeca: bool)
 
 const ModeloCls := preload("res://inimigos/modelo_infectado.gd")   # manequins do Quaternius (o antigo, de caixas, ficou para as cutscenes)
 const ItemMundo := preload("res://inventario/item_mundo.gd")
 const ItemCls := preload("res://inventario/item.gd")
+const SonsCorpo := preload("res://audio/sons_corpo.gd")
 
 # ----- números do Vago -----
 const VIDA := 100.0
@@ -45,6 +51,16 @@ const TEMPO_ESQUECER := 8.0           # segundos sem ver o jogador até desistir
 const DIST_FISICA := 20.0             # física de verdade só a menos disso do jogador e perto de interior aberto
 const CHANCE_LOOT := 0.25
 const LOOT := ["bandagem", "feijao", "agua", "mun_9mm"]
+const VISAO_LANTERNA := 30.0          # de noite, com a lanterna acesa, é visto pelo menos daqui
+const IMUNE_ATORDOAR := 1.0           # depois de atordoado por golpe, fica esse tempo sem atordoar de novo
+const RAIO_GRITO := 55.0
+# tipo: [chance, vida, velocidade (x), dano (x), escala do corpo]
+const TIPOS := {
+	"comum": [0.65, 100.0, 1.0, 1.0, 1.0],
+	"corredor": [0.15, 70.0, 1.22, 0.85, 0.95],
+	"pesado": [0.12, 220.0, 0.72, 1.45, 1.12],
+	"gritador": [0.08, 90.0, 1.0, 1.0, 1.0],
+}
 const TEMPO_CORPO := 90.0             # o corpo fica no chão esse tempo e depois afunda
 const ALCANCE_SOM := 40.0
 
@@ -67,6 +83,15 @@ var som: AudioStreamPlayer3D
 var separacao := Vector3.ZERO         # empurrão para não se amontoar (o gerente calcula)
 var morto_ha := 0.0
 var dist_jogador := 999.0
+var tipo := "comum"
+var _mult_dano := 1.0
+var _imune := 0.0
+var _gritou := false
+var som2: AudioStreamPlayer3D          # segundo canal: o baque do tiro não corta o gemido
+var _t_passo := 0.0
+var _dt_longe := 0.0
+var _q_longe := 0
+var _n_passo := 0
 
 var _forma_corpo: CollisionShape3D
 var _forma_cabeca: CollisionShape3D
@@ -132,15 +157,34 @@ func _ready() -> void:
 	modelo.name = "Modelo"
 	add_child(modelo)
 	modelo.montar(randi())
+	# tipo de infectado
+	var x := randf()
+	for t in TIPOS:
+		x -= float(TIPOS[t][0])
+		if x <= 0.0:
+			tipo = t
+			break
+	var td: Array = TIPOS[tipo]
+	vida = float(td[1])
+	_mult_dano = float(td[3])
+	modelo.scale *= float(td[4])
 	som = AudioStreamPlayer3D.new()
 	som.max_distance = ALCANCE_SOM
 	som.unit_size = 5.0
 	som.position.y = 1.6
+	som.bus = "SFX" if AudioServer.get_bus_index("SFX") >= 0 else "Master"
 	add_child(som)
+	som2 = AudioStreamPlayer3D.new()
+	som2.max_distance = ALCANCE_SOM
+	som2.unit_size = 5.0
+	som2.position.y = 1.2
+	som2.bus = som.bus
+	add_child(som2)
 	_consulta = PhysicsRayQueryParameters3D.new()
 	_consulta.collision_mask = 1
 	_vel_vagar = randf_range(VEL_VAGAR_MIN, VEL_VAGAR_MAX)
-	_vel_correr = VEL_CORRER * randf_range(0.88, 1.04)
+	_vel_correr = VEL_CORRER * randf_range(0.88, 1.04) * float(TIPOS[tipo][2])
+	_vel_vagar *= float(TIPOS[tipo][2])
 	_t_grunhido = randf_range(1.0, 10.0)
 	_t_sentidos = randf() * 0.25
 	_lado = 1.0 if randf() < 0.5 else -1.0
@@ -182,7 +226,12 @@ func perseguir() -> void:
 		return
 	estado = PERSEGUINDO
 	_suspeita = 1.0
-	if randf() < 0.7:
+	if tipo == "gritador" and not _gritou:
+		_gritou = true                                  # grita uma vez: os outros num raio grande vêm ver
+		_tocar("rosnado", 1.45, 6.0)
+		if gerente != null:
+			gerente.barulho(global_position, RAIO_GRITO, false)
+	elif randf() < 0.7:
 		_tocar("rosnado", randf_range(0.85, 1.1), 2.0)
 	_t_grunhido = randf_range(2.0, 4.0)
 
@@ -205,7 +254,7 @@ func receber_tiro(dano: float, _ponto: Vector3, direcao: Vector3, forma: int, at
 	vida -= dano * (CABECA_X if cabeca else 1.0)
 	var lado := signf(global_basis.x.dot(direcao))
 	modelo.levar_golpe(0.9 if cabeca else 0.6, lado)
-	_tocar("baque", randf_range(0.9, 1.15), -2.0)
+	_tocar("baque", randf_range(0.9, 1.15), -2.0, true)
 	if vida <= 0.0:
 		_morrer(cabeca, direcao)
 		return {"cabeca": cabeca, "morto": true}
@@ -222,12 +271,15 @@ func receber_golpe(dano: float, direcao: Vector3, atacante: Node) -> Dictionary:
 	if d.length_squared() > 0.0001:
 		_empurrao = d.normalized() * 3.2
 	modelo.levar_golpe(1.0, signf(global_basis.x.dot(direcao)))
-	_tocar("baque", randf_range(0.75, 0.95), 0.0)
+	_tocar("baque", randf_range(0.75, 0.95), 0.0, true)
 	if vida <= 0.0:
 		_morrer(false, direcao)
 		return {"cabeca": false, "morto": true}
-	_atordoado = maxf(_atordoado, 0.6)
-	_cancelar_ataque()
+	if _imune <= 0.0:
+		_atordoado = maxf(_atordoado, (0.2 + dano / 200.0) * (0.6 if tipo == "pesado" else 1.0))
+		_imune = IMUNE_ATORDOAR
+		if not (estado == ATACANDO and _t_ataque > 0.25):  # já no meio da mordida: não para
+			_cancelar_ataque()
 	_alertar(atacante)
 	return {"cabeca": false, "morto": false}
 
@@ -292,6 +344,14 @@ func _physics_process(dt: float) -> void:
 	var p := global_position
 	var pj := j.global_position
 	dist_jogador = Vector2(pj.x - p.x, pj.z - p.z).length()
+	# longe e sem caçar: a lógica roda 1 a cada 4 quadros (com o tempo acumulado) — bem mais leve no celular
+	if dist_jogador > 60.0 and estado != PERSEGUINDO and estado != ATACANDO:
+		_dt_longe += dt
+		_q_longe += 1
+		if _q_longe % 4 != 0:
+			return
+		dt = _dt_longe
+	_dt_longe = 0.0
 	# física só onde existe chão de física (perto do jogador)
 	_t_modo -= dt
 	if _t_modo <= 0.0:
@@ -312,6 +372,7 @@ func _physics_process(dt: float) -> void:
 				j = novo
 		_olhar(j)
 	_atordoado = maxf(0.0, _atordoado - dt)
+	_imune = maxf(0.0, _imune - dt)
 	_recarga = maxf(0.0, _recarga - dt)
 	_decidir(dt, j)
 	_mover(dt)
@@ -319,10 +380,21 @@ func _physics_process(dt: float) -> void:
 	_quadro += 1
 	_dt_anim += dt
 	var a_cada := 1 if dist_jogador < 40.0 else (2 if dist_jogador < 80.0 else 4)
-	if _quadro % a_cada == 0:
+	if _quadro % a_cada == 0 and dist_jogador < 145.0:      # depois de ~140 m o modelo nem aparece
 		modelo.atualizar(_dt_anim, _vel_h)
 		_dt_anim = 0.0
 		_forma_cabeca.position = to_local(modelo.pos_cabeca())
+	# passos de quem vem correndo (dá para ouvir chegando por trás)
+	if _vel_h > 2.0 and dist_jogador < 25.0 and som2 != null:
+		_t_passo -= dt
+		if _t_passo <= 0.0:
+			_t_passo = clampf(1.5 / _vel_h, 0.24, 0.5)
+			if not som2.playing:
+				_n_passo += 1
+				som2.stream = SonsCorpo.passo(_n_passo)
+				som2.pitch_scale = randf_range(0.8, 0.95) * (0.85 if tipo == "pesado" else 1.0)
+				som2.volume_db = -4.0
+				som2.play()
 	# gemidos
 	_t_grunhido -= dt
 	if _t_grunhido <= 0.0:
@@ -346,6 +418,8 @@ func _olhar(j: Node3D) -> void:
 		alcance *= FATOR_AGACHADO
 		if j == gerente.jogador and gerente.mato != null and gerente.mato.no_capim:
 			alcance *= 0.5                              # escondido no capim alto dos parques
+	if j == gerente.jogador and gerente.clima != null and gerente.clima.lanterna_acesa and gerente.escuridao() > 0.5:
+		alcance = maxf(alcance, VISAO_LANTERNA)         # a luz da lanterna denuncia de longe
 	if cacando:
 		alcance *= 1.35                                 # já está de olho nele
 	var visto := false
@@ -437,7 +511,7 @@ func _decidir(dt: float, j: Node3D) -> void:
 				estado = PERSEGUINDO
 
 func _acertar(j: Node3D) -> void:
-	var dano := randf_range(DANO_MIN, DANO_MAX)
+	var dano := randf_range(DANO_MIN, DANO_MAX) * _mult_dano * (float(gerente.mult_dano) if gerente != null else 1.0)
 	if j.has_method("receber_ataque"):
 		j.receber_ataque(dano, CHANCE_SANGRAR, global_position)
 	_tocar("baque", randf_range(0.7, 0.85), 2.0)
@@ -523,8 +597,8 @@ func _mover(dt: float) -> void:
 	if _atordoado <= 0.0 and estado != MORTO:
 		quer += separacao * 1.6
 	# colado no jogador (atacando/perseguindo): dá meio passo para trás em vez de entrar nele
-	if esta_cacando() and dist_jogador < 0.75 and dist_jogador > 0.01:
-		var pj: Vector3 = gerente.jogador.global_position
+	if esta_cacando() and dist_jogador < 0.75 and dist_jogador > 0.01 and _alvo != null:
+		var pj: Vector3 = _alvo.global_position
 		quer = Vector3(p.x - pj.x, 0.0, p.z - pj.z).normalized() * 0.8
 	var acel := 3.5
 	if _vel_alvo > 2.0:
@@ -581,8 +655,8 @@ func _mover(dt: float) -> void:
 		_checar_preso(dt, quer)
 	# virar para onde anda (ou para o jogador quando ataca / está muito perto)
 	var olha := Vector3.ZERO
-	if estado == ATACANDO or (estado == PERSEGUINDO and dist_jogador < 2.5):
-		var pj: Vector3 = gerente.jogador.global_position
+	if (estado == ATACANDO or (estado == PERSEGUINDO and dist_jogador < 2.5)) and _alvo != null:
+		var pj: Vector3 = _alvo.global_position
 		olha = Vector3(pj.x - p.x, 0.0, pj.z - p.z)
 	elif _vel_h > 0.15:
 		olha = _vel_xz
@@ -638,15 +712,16 @@ func _corpo(dt: float) -> void:
 			queue_free()
 
 # ---------- sons ----------
-func _tocar(nome: String, tom: float, vol_db: float) -> void:
+func _tocar(nome: String, tom: float, vol_db: float, canal2 := false) -> void:
 	if sons.is_empty() or not sons.has(nome) or som == null:
 		return
 	if dist_jogador > ALCANCE_SOM + 5.0:
 		return
-	som.stream = sons[nome]
-	som.pitch_scale = tom
-	som.volume_db = vol_db
-	som.play()
+	var s3: AudioStreamPlayer3D = som2 if canal2 and som2 != null else som
+	s3.stream = sons[nome]
+	s3.pitch_scale = tom * (0.85 if tipo == "pesado" else 1.0)
+	s3.volume_db = vol_db
+	s3.play()
 
 static func definir_sons(r: Dictionary) -> void:
 	sons = r

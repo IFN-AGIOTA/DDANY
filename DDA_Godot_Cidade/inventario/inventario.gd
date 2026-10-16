@@ -48,17 +48,16 @@ func equipamento_inicial() -> void:
 	_por(calca.conteudo, ItemCls.novo("mun_9mm", 36))
 	_por(calca.conteudo, ItemCls.novo("pente_pistola"))
 	_por(calca.conteudo, ItemCls.novo("faca"))
-	_por(colete.conteudo, ItemCls.novo("pente_stanag"))
-	_por(colete.conteudo, ItemCls.novo("mun_556", 60))
+	_por(colete.conteudo, ItemCls.novo("bandagem", 2))
+	_por(colete.conteudo, ItemCls.novo("radio"))
 	_por(pochete.conteudo, ItemCls.novo("agua"))
+	# começa só com a pistola: fuzis, munição de fuzil e equipamento melhor são achados na cidade
+	# (armários da polícia, depósitos, carros e as caixas de SUPRIMENTO MILITAR que o rádio anuncia)
 	var pistola = ItemCls.novo("pistola")
-	var m4 = ItemCls.novo("m4")
 	slots["maos"] = pistola
 	pistola.slot = "maos"
-	slots["ombro"] = m4
-	m4.slot = "ombro"
 	atalhos[0] = pistola
-	atalhos[1] = m4
+	atalhos[1] = null
 	atalhos[2] = jaq.conteudo.itens[0]      # ataduras
 	mudou.emit()
 

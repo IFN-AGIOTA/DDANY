@@ -9,14 +9,14 @@ const ItemCls := preload("res://inventario/item.gd")
 
 # itens soltos: [id, quantidade, posição]
 const CHAO_BASE := [
-	["mochila_combate", 1, Vector2(1.4, 1.6)], ["ursinho", 1, Vector2(1.0, 2.1)], ["feijao", 1, Vector2(1.8, 2.2)],
-	["agua", 1, Vector2(1.2, 2.5)], ["mun_556", 60, Vector2(1.9, 1.3)], ["corda", 1, Vector2(0.8, 1.4)],
+	["mochila_escolar", 1, Vector2(1.4, 1.6)], ["ursinho", 1, Vector2(1.0, 2.1)], ["feijao", 1, Vector2(1.8, 2.2)],
+	["agua", 1, Vector2(1.2, 2.5)], ["mun_9mm", 24, Vector2(1.9, 1.3)], ["corda", 1, Vector2(0.8, 1.4)],
 ]
 
 # caixas: nome, tamanho da grade, posição e conteúdo [id, quantidade]
 const CAIXAS_BASE := [
 	{"nome": "CAIXA MILITAR", "tamanho": Vector2i(8, 6), "pos": Vector2(-1.2, 2.0),
-		"itens": [["capacete", 1], ["mochila_escolar", 1], ["bandagem", 4], ["mun_9mm", 50], ["pistola", 1], ["radio", 1], ["vitaminas", 1]]},
+		"itens": [["bone", 1], ["bandagem", 3], ["mun_9mm", 30], ["pente_pistola", 1], ["vitaminas", 1], ["isqueiro", 1], ["feijao", 1]]},
 ]
 
 # loot de teste ao lado de onde o jogador nasce (base militar)

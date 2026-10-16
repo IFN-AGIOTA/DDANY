@@ -91,7 +91,7 @@ func _ready() -> void:
 		add_child(d)
 		_drone.append(d)
 	_vento = AudioStreamPlayer.new()
-	_vento.bus = BUS
+	_vento.bus = "SFX"                         # o vento é som da cidade: continua mesmo com a música desligada
 	add_child(_vento)
 	_thread = Thread.new()
 	_thread.start(_gerar)
@@ -118,6 +118,19 @@ func _exit_tree() -> void:
 		_thread.wait_to_finish()
 
 func _criar_barramento() -> void:
+	# barramento dos EFEITOS (tiros, passos, infectados, chuva, vento): eco curto de cidade, volume próprio nas Opções
+	if AudioServer.get_bus_index("SFX") == -1:
+		AudioServer.add_bus()
+		var si := AudioServer.bus_count - 1
+		AudioServer.set_bus_name(si, "SFX")
+		AudioServer.set_bus_send(si, "Master")
+		var eco := AudioEffectReverb.new()
+		eco.room_size = 0.5
+		eco.damping = 0.55
+		eco.spread = 0.7
+		eco.wet = 0.14
+		eco.dry = 1.0
+		AudioServer.add_bus_effect(si, eco)
 	if AudioServer.get_bus_index(BUS) != -1:
 		return
 	AudioServer.add_bus()

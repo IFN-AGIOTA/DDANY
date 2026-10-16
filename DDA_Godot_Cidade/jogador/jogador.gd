@@ -25,6 +25,7 @@ const FORCA_PULO := 5.2
 const ALTURA_EM_PE := 1.8
 const ALTURA_AGACHADO := 1.3
 const EXTENSOES_MODELO := ["tscn", "scn", "glb", "gltf", "fbx"]
+const SonsCorpo := preload("res://audio/sons_corpo.gd")
 const InventarioCls := preload("res://inventario/inventario.gd")
 const SobrevivenciaCls := preload("res://jogador/sobrevivencia.gd")
 
@@ -52,6 +53,11 @@ var inventario: Node = null         # inventario/inventario.gd
 var sobrevivencia: Node = null      # jogador/sobrevivencia.gd (vida, sangue, fome, sede, temperatura)
 var mundo = null                    # colisao_mundo.gd (altura do chão e raio dos tiros)
 var ativo := true
+var _som_passo: AudioStreamPlayer
+var _som_voz: AudioStreamPlayer
+var _dist_passo := 0.0
+var _n_passo := 0
+var _t_dor := 0.0
 var morto := false
 var agachado := false
 var mirando := false                # mira (aproxima a câmera); ligada pelo botão MIRAR ou botão direito do mouse
@@ -93,6 +99,15 @@ func _ready() -> void:
 	add_child(sobrevivencia)
 	armas.ligar_inventario(inventario)
 	_carregar_modelo_do_projeto()
+	# sons do corpo: passos e dor (audio/sons_corpo.gd)
+	var bus := "SFX" if AudioServer.get_bus_index("SFX") >= 0 else "Master"
+	_som_passo = AudioStreamPlayer.new()
+	_som_passo.bus = bus
+	add_child(_som_passo)
+	_som_voz = AudioStreamPlayer.new()
+	_som_voz.bus = bus
+	add_child(_som_voz)
+	sobrevivencia.ferido.connect(_doeu)
 
 func ligar_controles(c) -> void:
 	controles = c
@@ -157,6 +172,34 @@ func _vestir() -> void:
 func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3) -> void:
 	if sobrevivencia != null:
 		sobrevivencia.receber_ataque(dano, chance_sangrar, origem)
+
+# PASSOS: um a cada passada (mais longa correndo), mais baixo agachado, "chapinhando" com o chão molhado
+func _passos(delta: float) -> void:
+	_t_dor = maxf(0.0, _t_dor - delta)
+	if morto or not is_on_floor() or vel_horizontal < 0.5 or _som_passo == null:
+		_dist_passo = minf(_dist_passo, 0.5)
+		return
+	_dist_passo += vel_horizontal * delta
+	var passada := 0.6 + 0.22 * vel_horizontal
+	if _dist_passo < passada:
+		return
+	_dist_passo = 0.0
+	_n_passo += 1
+	var cl = get_tree().current_scene.get("clima") if get_tree().current_scene != null else null
+	var molhado: bool = cl != null and is_instance_valid(cl) and float(cl.molhado) > 0.4
+	_som_passo.stream = SonsCorpo.passo(_n_passo, molhado)
+	_som_passo.pitch_scale = randf_range(0.9, 1.1)
+	_som_passo.volume_db = (-14.0 if agachado else (-3.0 if vel_horizontal > 5.0 else -8.0))
+	_som_passo.play()
+
+func _doeu(dano: float) -> void:
+	if dano < 2.0 or _t_dor > 0.0 or _som_voz == null:
+		return
+	_t_dor = 0.7
+	_som_voz.stream = SonsCorpo.dor(randi())
+	_som_voz.pitch_scale = randf_range(0.93, 1.07)
+	_som_voz.volume_db = -4.0
+	_som_voz.play()
 
 func teleportar(pos: Vector3, yaw_camera: float) -> void:
 	global_position = pos
@@ -271,6 +314,7 @@ func _physics_process(delta: float) -> void:
 	if no_ar and is_on_floor() and sobrevivencia != null:
 		sobrevivencia.queda(vy_antes)    # dano de queda / perna quebrada
 	vel_horizontal = Vector2(velocity.x, velocity.z).length()
+	_passos(delta)
 	atirando = armas.since < 1.6 or armas.aim > 0.5
 	if not morto:
 		if mirando or atirando:

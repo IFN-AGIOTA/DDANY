@@ -4,7 +4,7 @@ extends Node
 # Para trocar por sons gravados: substitua os streams em "sons" (ex.: sons["tiro_m4"] = load("res://sons/m4.wav")).
 
 const TAXA := 22050
-const N_CANAIS := 6
+const N_CANAIS := 10
 
 var sons := {}
 var _canais: Array[AudioStreamPlayer] = []
@@ -27,6 +27,7 @@ func _ready() -> void:
 	sons["clique_520"] = _clique(520.0, 0.07)
 	for i in N_CANAIS:
 		var p := AudioStreamPlayer.new()
+		p.bus = "SFX" if AudioServer.get_bus_index("SFX") >= 0 else "Master"   # com eco de cidade
 		add_child(p)
 		_canais.append(p)
 

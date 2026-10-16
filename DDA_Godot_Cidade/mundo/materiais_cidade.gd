@@ -152,11 +152,13 @@ void fragment() {
 	cor *= 1.0 - 0.25 * step(0.86, hash(floor(wp.xz * 9.0))) * perto * barro;                           // cascalho
 	cor = mix(cor, cor * vec3(0.78, 0.95, 0.62), smoothstep(0.55, 0.8, fbm(wp.xz * 0.004)) * 0.8);    // mato baixo
 	cor = mix(cor, vec3(0.20, 0.27, 0.12), smoothstep(0.6, 0.75, fbm(wp.xz * 0.09 + 2.0)) * 0.55 * perto);   // tufos de musgo
-	float r = rachas(wp.xz * 0.3, 0.03) * perto * (1.0 - barro) * smoothstep(0.5, 0.68, fbm(wp.xz * 0.05));
-	cor *= 1.0 - r * 0.3;
 	float praia = 1.0 - smoothstep(0.80, 0.96, terra);
-	vec4 fo = folhas(wp.xz, 0.04 + 0.2 * smoothstep(0.5, 0.8, fbm(wp.xz * 0.03))) * perto * (1.0 - praia);
-	cor = mix(cor, fo.rgb, fo.a);
+	if (perto > 0.001) {                // rachaduras e folhas só perto (longe nem dá para ver: economiza GPU)
+		float r = rachas(wp.xz * 0.3, 0.03) * perto * (1.0 - barro) * smoothstep(0.5, 0.68, fbm(wp.xz * 0.05));
+		cor *= 1.0 - r * 0.3;
+		vec4 fo = folhas(wp.xz, 0.04 + 0.2 * smoothstep(0.5, 0.8, fbm(wp.xz * 0.03))) * perto * (1.0 - praia);
+		cor = mix(cor, fo.rgb, fo.a);
+	}
 	float rough = 0.95;
 	float spec = 0.3;
 	molhar(cor, rough, spec, pocas(wp.xz) * (1.0 - praia));
@@ -180,8 +182,10 @@ void fragment() {
 	cor = mix(cor, vec3(0.42, 0.40, 0.18), smoothstep(0.55, 0.85, m) * 0.7);     // grama seca (sem ninguém cuidar)
 	cor = mix(cor, vec3(0.33, 0.27, 0.18), smoothstep(0.62, 0.72, fbm(wp.xz * 0.04 + 9.0)) * 0.8);   // terra pisada
 	cor *= 0.88 + 0.22 * ruido(wp.xz * 1.7);
-	vec4 fo = folhas(wp.xz, 0.05 + 0.25 * smoothstep(0.45, 0.8, fbm(wp.xz * 0.02 + 3.0))) * perto;
-	cor = mix(cor, fo.rgb, fo.a);
+	if (perto > 0.001) {
+		vec4 fo = folhas(wp.xz, 0.05 + 0.25 * smoothstep(0.45, 0.8, fbm(wp.xz * 0.02 + 3.0))) * perto;
+		cor = mix(cor, fo.rgb, fo.a);
+	}
 	float rough = 1.0;
 	float spec = 0.25;
 	molhar(cor, rough, spec, pocas(wp.xz * 0.8) * 0.8);
@@ -222,12 +226,14 @@ void fragment() {
 	c = mix(c, c * 1.5, borda * 0.6);
 	c = mix(c, vec3(0.06, 0.055, 0.05), buraco);
 	// rachaduras (rede fina) só onde o asfalto está mais gasto
-	float gasto = smoothstep(0.4, 0.7, fbm(wp.xz * 0.03 + 1.7));
-	float r = rachas(wp.xz * 0.32, 0.03) * gasto * perto;
-	r = max(r, smoothstep(0.97, 1.0, 1.0 - abs(ruido(wp.xz * 0.08) - 0.5) * 2.0) * (1.0 - smoothstep(80.0, 250.0, dist)));
+	float r = smoothstep(0.97, 1.0, 1.0 - abs(ruido(wp.xz * 0.08) - 0.5) * 2.0) * (1.0 - smoothstep(80.0, 250.0, dist));
+	if (perto > 0.001) {
+		float gasto = smoothstep(0.4, 0.7, fbm(wp.xz * 0.03 + 1.7));
+		r = max(r, rachas(wp.xz * 0.32, 0.03) * gasto * perto);
+		vec4 fo = folhas(wp.xz, 0.04 + 0.12 * gasto) * perto;
+		c = mix(c, fo.rgb * 0.8, fo.a);
+	}
 	c *= 1.0 - r * 0.45;
-	vec4 fo = folhas(wp.xz, 0.04 + 0.12 * gasto) * perto;
-	c = mix(c, fo.rgb * 0.8, fo.a);
 	float rough = 0.92;
 	float spec = 0.35;
 	molhar(c, rough, spec, max(pocas(wp.xz) * 0.9, buraco));
@@ -252,12 +258,14 @@ void fragment() {
 	c *= 0.9 + 0.16 * hash(placa + 0.5) * perto;                                       // cada placa num tom
 	c = mix(c, c * 0.8, step(hash(placa + 4.4), 0.08) * perto);                         // placas soltas/sujas
 	c = mix(c * (1.0 - junta * 0.25), vec3(0.22, 0.28, 0.13), junta * 0.7 * smoothstep(0.35, 0.65, fbm(wp.xz * 0.08)));   // musgo nas juntas
-	float r = rachas(wp.xz * 0.55, 0.03) * perto * smoothstep(0.5, 0.7, fbm(wp.xz * 0.04 + 5.0));
-	c *= 1.0 - r * 0.3;
-	c *= 1.0 - 0.3 * smoothstep(0.62, 0.8, fbm(wp.xz * 0.25 + 2.0)) * perto;           // manchas
 	float ao = sombra_predios(wp.xz, dist);
-	vec4 fo = folhas(wp.xz, 0.05 + 0.3 * (1.0 - ao)) * perto;                           // o vento junta folhas nas paredes
-	c = mix(c, fo.rgb, fo.a);
+	if (perto > 0.001) {
+		float r = rachas(wp.xz * 0.55, 0.03) * perto * smoothstep(0.5, 0.7, fbm(wp.xz * 0.04 + 5.0));
+		c *= 1.0 - r * 0.3;
+		c *= 1.0 - 0.3 * smoothstep(0.62, 0.8, fbm(wp.xz * 0.25 + 2.0)) * perto;           // manchas
+		vec4 fo = folhas(wp.xz, 0.05 + 0.3 * (1.0 - ao)) * perto;                           // o vento junta folhas nas paredes
+		c = mix(c, fo.rgb, fo.a);
+	}
 	float rough = 0.9;
 	float spec = 0.3;
 	molhar(c, rough, spec, pocas(wp.xz * 1.3) * 0.7);

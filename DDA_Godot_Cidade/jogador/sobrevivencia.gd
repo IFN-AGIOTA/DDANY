@@ -19,6 +19,7 @@ extends Node
 
 signal morreu(causa: String)
 signal ferido(dano: float)           # tela pisca em vermelho
+signal atingido(origem: Vector3)     # de onde veio o golpe (a HUD mostra um arco vermelho naquele lado)
 signal tossiu(pos: Vector3)          # main avisa os infectados (barulho)
 signal aviso(texto: String)          # mensagens curtas ("VOCÊ VOMITOU", "PERNA QUEBRADA"...)
 
@@ -34,6 +35,8 @@ var sede := 85.0
 var temperatura := 36.6
 var molhado := 0.0
 var sangramentos := 0
+var _t_lento := 0.0
+var _chuva_aqui := 0.0
 var infeccao := 0.0                  # 0 = saudável · >0 = infectado (sobe com o tempo)
 var tempo_vivo := 0.0
 var causa := ""
@@ -92,8 +95,15 @@ func _process(dt: float) -> void:
 	var p := jogador.global_position
 	var chuva := 0.0
 	var ar := 18.0
+	# teto/fogueira mudam devagar: confere 3 vezes por segundo (antes era um raio por quadro)
+	_t_lento -= dt
+	var conferir := _t_lento <= 0.0
+	if conferir:
+		_t_lento = 0.33
 	if clima != null:
-		chuva = clima.molhando(p) if clima.has_method("molhando") else 0.0
+		if conferir:
+			_chuva_aqui = clima.molhando(p) if clima.has_method("molhando") else 0.0
+		chuva = _chuva_aqui
 		ar = clima.temperatura_ar() if clima.has_method("temperatura_ar") else 18.0
 	var imperm := clampf(_soma_roupas("imperm"), 0.0, 0.95)
 	if chuva > 0.0:
@@ -101,11 +111,12 @@ func _process(dt: float) -> void:
 	else:
 		molhado = maxf(0.0, molhado - dt / (240.0 if ar < 12.0 else 150.0))
 	# fogueira perto: esquenta e seca
-	perto_fogo = false
-	for f in get_tree().get_nodes_in_group("fogueiras"):
-		if is_instance_valid(f) and f.acesa and (f as Node3D).global_position.distance_to(p) < 4.5:
-			perto_fogo = true
-			break
+	if conferir:
+		perto_fogo = false
+		for f in get_tree().get_nodes_in_group("fogueiras"):
+			if is_instance_valid(f) and f.acesa and (f as Node3D).global_position.distance_to(p) < 4.5:
+				perto_fogo = true
+				break
 	if perto_fogo:
 		molhado = maxf(0.0, molhado - dt / 40.0)
 	var calor := _soma_roupas("calor")
@@ -167,9 +178,10 @@ func _morrer(por: String) -> void:
 	morreu.emit(por)
 
 # ---------- ataques (infectados) ----------
-func receber_ataque(dano: float, chance_sangrar: float, _origem: Vector3) -> void:
+func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3) -> void:
 	if jogador.morto:
 		return
+	atingido.emit(origem)
 	var prot := protecao()
 	var d := dano * (1.0 - prot * 0.6)
 	_dano(d, "infectados")

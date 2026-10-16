@@ -67,11 +67,15 @@ func _ready() -> void:
 	_tela.draw.connect(_desenhar)
 	add_child(_tela)
 
+var _origens: Array = []               # [posição de onde veio o golpe, tempo restante]
+var _t_desenho := 0.0
+
 func ligar(j: Node) -> void:
 	jogador = j
 	sv = j.get("sobrevivencia")
 	if sv != null:
 		sv.ferido.connect(func(d): _golpe = clampf(_golpe + 0.35 + d * 0.03, 0.0, 1.0))
+		sv.atingido.connect(func(o: Vector3): _origens.append([o, 1.4]))
 
 func aplicar_estilo(esc: float, opacidade: float) -> void:
 	escala = esc
@@ -81,6 +85,10 @@ func _process(dt: float) -> void:
 	if sv == null:
 		return
 	_t += dt
+	for o in _origens:
+		o[1] -= dt
+	while not _origens.is_empty() and _origens[0][1] <= 0.0:
+		_origens.pop_front()
 	_golpe = maxf(0.0, _golpe - dt * 1.6)
 	var fraco := clampf((40.0 - sv.vida) / 40.0, 0.0, 1.0)
 	fraco = maxf(fraco, clampf((3000.0 - sv.sangue) / 2500.0, 0.0, 1.0))
@@ -94,7 +102,11 @@ func _process(dt: float) -> void:
 	_mat.set_shader_parameter("frio", frio)
 	var c = jogador.get("controles")
 	_tela.visible = bool(jogador.ativo) and not (c != null and bool(c.bloqueado)) and not jogador.morto
-	_tela.queue_redraw()
+	# redesenha ~10 vezes por segundo (os ícones mudam devagar); todo quadro só com aviso piscando ou golpe
+	_t_desenho -= dt
+	if _t_desenho <= 0.0 or not _origens.is_empty() or sv.sangramentos > 0 or _golpe > 0.0:
+		_t_desenho = 0.1
+		_tela.queue_redraw()
 
 func _cor(valor: float, a: float, b: float, c: float) -> Color:
 	# valor alto = bom; a > b > c são os limites amarelo/laranja/vermelho
@@ -106,8 +118,30 @@ func _cor(valor: float, a: float, b: float, c: float) -> Color:
 		return LARANJA
 	return VERMELHO
 
+# arcos vermelhos na borda de um círculo em volta do centro: de que lado veio cada golpe
+func _desenhar_origens(vs: Vector2) -> void:
+	if _origens.is_empty() or jogador == null:
+		return
+	var yaw: float = float(jogador.get("cam_yaw"))
+	var f := Vector2(-sin(yaw), -cos(yaw))              # frente da câmera (no chão)
+	var r := Vector2(cos(yaw), -sin(yaw))               # direita da câmera
+	var p: Vector3 = jogador.global_position
+	var c := vs * 0.5
+	var raio := vs.y * 0.33
+	for e in _origens:
+		var o: Vector3 = e[0]
+		var d := Vector2(o.x - p.x, o.z - p.z)
+		if d.length_squared() < 0.0001:
+			continue
+		var ang := atan2(d.dot(r), d.dot(f))            # 0 = à frente, positivo = à direita
+		var a := -PI * 0.5 + ang
+		var alfa := clampf(float(e[1]), 0.0, 1.0)
+		_tela.draw_arc(c, raio, a - 0.38, a + 0.38, 24, Color(0.9, 0.08, 0.05, 0.75 * alfa), vs.y * 0.018, true)
+		_tela.draw_arc(c, raio + vs.y * 0.022, a - 0.22, a + 0.22, 16, Color(0.9, 0.08, 0.05, 0.4 * alfa), vs.y * 0.01, true)
+
 func _desenhar() -> void:
 	var vs := _tela.get_viewport_rect().size
+	_desenhar_origens(vs)
 	var u := vs.y / 100.0 * escala
 	var lado := 5.2 * u
 	var x := 2.0 * u

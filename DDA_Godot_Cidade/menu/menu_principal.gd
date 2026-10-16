@@ -99,10 +99,25 @@ func _montar() -> void:
 	nav.add_theme_constant_override("separation", int(1.4 * v))
 	nav.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var b1 := UI.BotaoMenu.new("História · Ato 1", "Parte 1 · A Última Corrida", true, 3.8)
-	b1.apertado.connect(func(): historia.emit())
 	var salvo: String = Salvamento.resumo()
+	b1.apertado.connect(func():
+		if salvo != "" and not _confirmou_hist:
+			_confirmou_hist = true
+			b1.sub = "Toque de novo: o jogo salvo será apagado"
+			b1._medir()
+			b1.queue_redraw()
+			return
+		historia.emit())
 	var b2 := UI.BotaoMenu.new("Novo jogo" if salvo != "" else "Jogar", "Mundo livre", false, 3.8)
-	b2.apertado.connect(func(): jogar.emit())
+	b2.apertado.connect(func():
+		# já existe jogo salvo: o 1º toque só avisa (o novo jogo grava por cima do salvo)
+		if salvo != "" and not _confirmou_novo:
+			_confirmou_novo = true
+			b2.sub = "Toque de novo: o jogo salvo será apagado"
+			b2._medir()
+			b2.queue_redraw()
+			return
+		jogar.emit())
 	var b3 := UI.BotaoMenu.new("Opções", "", false, 3.8)
 	b3.apertado.connect(func(): opcoes.emit())
 	var b4 := UI.BotaoMenu.new("Créditos", "", false, 3.0, 26.0)
@@ -158,6 +173,9 @@ func _titulo_grande(txt: String, tam: float, v: float) -> Control:
 	m.add_theme_constant_override("margin_bottom", int(-0.1 * tam))
 	m.add_child(frente)
 	return m
+
+var _confirmou_novo := false
+var _confirmou_hist := false
 
 func avisar(t: String) -> void:
 	_aviso.text = t

@@ -130,6 +130,7 @@ func _env() -> void:
 	sm.sun_curve = 0.08
 	var sky := Sky.new()
 	sky.sky_material = sm
+	sky.radiance_size = Sky.RADIANCE_SIZE_64          # reflexo do céu pequeno: refazer custa bem menos no celular
 	var env := Environment.new()
 	env.background_mode = Environment.BG_SKY
 	env.sky = sky

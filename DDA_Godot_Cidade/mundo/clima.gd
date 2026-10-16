@@ -24,7 +24,8 @@ const HORA_INICIAL := 8.0
 const TICK_CEU := 0.5                # de quanto em quanto tempo céu/sol/neblina são atualizados (s)
 const TICK_LANTERNA := 0.2           # de quanto em quanto tempo olha o inventário (s)
 const TICK_ABRIGO := 0.25            # de quanto em quanto tempo vê se tem teto em cima da câmera (s)
-const REFLEXO_LIMIAR := 0.012        # quanto céu/sol precisam mudar para refazer o reflexo do céu
+const REFLEXO_LIMIAR := 0.03         # quanto céu/sol precisam mudar para refazer o reflexo do céu
+const REFLEXO_MIN_S := 15.0          # e no mínimo esse tempo entre um e outro (cada refação trava alguns ms)
 
 # sol: nasce às 6h e se põe às 19h30; altura máxima (graus) ao meio-dia
 const NASCER := 6.0
@@ -170,6 +171,7 @@ var _nevoa_posta := -1.0
 var _rng := RandomNumberGenerator.new()
 var _assinatura_reflexo: Array = []
 var refletiu := 0                    # quantas vezes o reflexo do céu foi refeito (para testes)
+var _ult_reflexo := -100000          # quando foi a última vez (ms)
 
 var _ceu: ProceduralSkyMaterial
 var _malha_chuva: MeshInstance3D
@@ -650,8 +652,9 @@ func _refletir_ceu(assinatura: Array, forcar := false) -> void:
 		var dif := 0.0
 		for i in assinatura.size():
 			dif = maxf(dif, absf(float(assinatura[i]) - float(_assinatura_reflexo[i])))
-		if dif < REFLEXO_LIMIAR:
+		if dif < REFLEXO_LIMIAR or Time.get_ticks_msec() - _ult_reflexo < int(REFLEXO_MIN_S * 1000.0):
 			return
+	_ult_reflexo = Time.get_ticks_msec()
 	_assinatura_reflexo = assinatura
 	var sky: Sky = cidade.ambiente.sky
 	sky.process_mode = Sky.PROCESS_MODE_QUALITY if sky.process_mode == Sky.PROCESS_MODE_AUTOMATIC else Sky.PROCESS_MODE_AUTOMATIC

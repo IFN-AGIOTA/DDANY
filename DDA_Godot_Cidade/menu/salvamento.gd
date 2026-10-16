@@ -40,9 +40,10 @@ static func apagar() -> void:
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(ARQUIVO))
 
 # main = main.gd com o jogo rodando
-static func salvar(main) -> bool:
+# morto = true: grava a morte (os itens ficaram no chão) para "Continuar" não desfazer a morte
+static func salvar(main, morto := false) -> bool:
 	var j = main.jogador
-	if j == null or not is_instance_valid(j) or j.morto:
+	if j == null or not is_instance_valid(j) or (j.morto and not morto):
 		return false
 	var p: Vector3 = j.global_position
 	var d := {
@@ -52,10 +53,12 @@ static func salvar(main) -> bool:
 		"jogador": {"x": p.x, "y": p.y, "z": p.z, "yaw": j.cam_yaw},
 		"sobrevivencia": j.sobrevivencia.salvar(),
 		"inventario": j.inventario.salvar(),
-		"loot": main.loot_mundo.salvar() if main.loot_mundo != null else {},
+		"morto": morto,
+		"loot": main.loot_mundo.salvar(main.interiores.abertos if main.interiores != null else {}) if main.loot_mundo != null else {},
 		"clima": main.clima.salvar() if main.clima != null and main.clima.has_method("salvar") else {},
 		"historia": main.historia.salvar() if main.get("historia") != null and main.historia.has_method("salvar") else {},
 		"companheiros": main.companheiros.salvar() if main.get("companheiros") != null else {},
+		"missoes": main.missoes.salvar() if main.get("missoes") != null else {},
 		"chao": _chao(main, p),
 	}
 	var f := FileAccess.open(ARQUIVO, FileAccess.WRITE)
@@ -107,5 +110,7 @@ static func carregar(main, d: Dictionary) -> void:
 		if main.interiores != null:
 			main.interiores.abrir_agora(Vector2(pos.x, pos.z))     # se salvou dentro de um prédio
 		j.teleportar(pos + Vector3(0, 0.05, 0), float(jd.get("yaw", 0.0)))
+	if main.get("missoes") != null and d.has("missoes"):
+		main.missoes.carregar(d["missoes"])
 	if main.get("companheiros") != null and d.has("companheiros"):
 		main.companheiros.carregar(d["companheiros"])

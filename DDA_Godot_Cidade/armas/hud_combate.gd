@@ -16,8 +16,8 @@ var _tela: Control
 var _gap := 1.2
 var _hit := 0.0
 var _hit_cor := Color.WHITE
-var _aviso := ""
-var _aviso_t := 0.0
+var _avisos: Array = []               # fila de avisos [texto, tempo restante] (até 3 na tela)
+const DUR_AVISO := 1.8
 var _fonte: Font
 
 func _ready() -> void:
@@ -43,9 +43,14 @@ func ligar(a: Node, j: Node) -> void:
 	if inv != null:
 		inv.aviso.connect(mostrar_aviso)
 
-func mostrar_aviso(t: String) -> void:
-	_aviso = t
-	_aviso_t = 0.9
+func mostrar_aviso(t: String, dur := DUR_AVISO) -> void:
+	for a in _avisos:                   # o mesmo aviso de novo só renova o tempo
+		if a[0] == t:
+			a[1] = dur
+			return
+	_avisos.append([t, dur])
+	if _avisos.size() > 3:
+		_avisos.pop_front()
 
 func _acertou(cabeca: bool, matou: bool) -> void:
 	_hit = 1.0
@@ -53,7 +58,10 @@ func _acertou(cabeca: bool, matou: bool) -> void:
 
 func _process(dt: float) -> void:
 	_hit = maxf(0.0, _hit - dt * 4.0)
-	_aviso_t = maxf(0.0, _aviso_t - dt)
+	for a in _avisos:
+		a[1] -= dt
+	while not _avisos.is_empty() and _avisos[0][1] <= 0.0:
+		_avisos.pop_front()
 	if armas != null:
 		# mesma fórmula do HTML: g = 0,7 + dispersão·140 + coice·0,9 (em vh)
 		var alvo: float = 0.7 + armas.dispersao() * 140.0 + armas.rec * 0.9
@@ -96,8 +104,9 @@ func _desenhar() -> void:
 		_tela.draw_line(c + Vector2(-s, s), c + Vector2(-s * 0.4, s * 0.4), cor, esp * 1.3)
 		_tela.draw_line(c + Vector2(s, s), c + Vector2(s * 0.4, s * 0.4), cor, esp * 1.3)
 	# ----- aviso -----
-	if _aviso_t > 0.0:
-		_texto(_aviso, c.x, vs.y * 0.3, int(4.0 * vh), Color(1, 1, 1, minf(1.0, _aviso_t * 3.0)))
+	for k in _avisos.size():
+		var a: Array = _avisos[k]
+		_texto(a[0], c.x, vs.y * 0.3 + k * 5.0 * vh, int(4.0 * vh), Color(1, 1, 1, minf(1.0, float(a[1]) * 3.0)))
 	# ----- painel de munição (só com arma nas mãos) -----
 	if armas.atual == "" or armas.eh_corpo():
 		return

@@ -216,7 +216,7 @@ static func desenhar(nome: String, c, p: Vector3, b: Basis, r: RandomNumberGener
 			_b(c, p, b, Vector3(0, 1.0, 0), Vector3(1.2, 2.0, 0.5), Color(0.25, 0.3, 0.27))
 			_b(c, p, b, Vector3(0, 1.0, 0.26), Vector3(1.1, 1.85, 0.02), Color(0.2, 0.24, 0.22))
 			_col(col, p, b, Vector3(0, 1.0, 0), Vector3(1.2, 2.0, 0.5))
-			_cont(cont, p, b, 0.25, "armas_policia", "ARMÁRIO DE ARMAS", Vector2i(6, 5))
+			_cont(cont, p, b, 0.25, "armas_policia", "ARMÁRIO DE ARMAS", Vector2i(8, 5))
 		"maca":
 			_b(c, p, b, Vector3(0, 0.62, 0), Vector3(0.85, 0.12, 1.95), BRANCO)
 			_b(c, p, b, Vector3(0, 0.7, 0.1), Vector3(0.8, 0.06, 1.7), Color(0.55, 0.65, 0.68))
@@ -249,7 +249,7 @@ static func desenhar(nome: String, c, p: Vector3, b: Basis, r: RandomNumberGener
 				var s := Vector3(r.randf_range(0.4, 0.7), r.randf_range(0.3, 0.55), r.randf_range(0.35, 0.6))
 				_b(c, p, b, Vector3(r.randf_range(-0.35, 0.35), s.y * 0.5 + (0.0 if i < 3 else 0.5), r.randf_range(-0.3, 0.3)), s, Color(0.55, 0.42, 0.28) * r.randf_range(0.8, 1.1), Basis(Vector3.UP, r.randf_range(-0.4, 0.4)))
 			_col(col, p, b, Vector3(0, 0.4, 0), Vector3(1.2, 0.8, 1.0))
-			_cont(cont, p, b, 0.4, "deposito", "CAIXAS", Vector2i(4, 3))
+			_cont(cont, p, b, 0.4, "deposito", "CAIXAS", Vector2i(8, 4))
 		"entulho":
 			for i in 9:
 				var s := Vector3(r.randf_range(0.2, 0.7), r.randf_range(0.1, 0.4), r.randf_range(0.2, 0.6))
