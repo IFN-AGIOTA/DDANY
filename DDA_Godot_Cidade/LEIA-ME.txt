@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.25 (APK código 21)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.26 (APK código 22)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,20 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.26 · DOMINIC EM 3D E ANIMAÇÕES NOVAS (resumo do que mudou)
+- DOMINIC VAIDER em 3D (personagens/dominic/dominic.scn), no estilo low poly facetado da referência do autor:
+  jaqueta de couro aberta, camiseta branca, calça e botas pretas, óculos escuros, tranças BRANCAS e pele bem clara
+  (Bíblia da Lore), tatuagem geométrica no pescoço. É o personagem do MODO HISTÓRIA, aparece no MENU e nas
+  CUTSCENES (npc/ator_rigado.gd). Usa o mesmo esqueleto do sobrevivente, então todas as animações servem nele.
+- 70 ANIMAÇÕES NOVAS (88 no total, jogador/sobrevivente/animacoes.res; KayKit e Quaternius, CC0):
+  · mirando/atirando: anda e corre de FRENTE, de COSTAS e de LADO (as pernas seguem a direção, o corpo a mira);
+  · fuzil: correr com fuzil, mirar com fuzil, RECARREGAR fuzil; pistola: RECARREGAR pistola;
+  · GOLPES por arma: faca (facada), machado/taco (golpe com as duas mãos), facão/cano/pé de cabra (golpe com
+    uma mão), punhos (soco, cruzado, gancho);
+  · PEGAR do chão, pegar da caixa, COMER/BEBER, usar remédio, LEVAR GOLPE, 3 tipos de MORTE;
+  · para as cenas: sentar, dirigir, acenar, lanterna, conversar, braços cruzados, rádio...
+  · andando, recarregar/golpear/comer anima só a parte de CIMA do corpo (jogador/camada_acao.gd).
+
 ATUALIZAÇÃO 0.25 · ITENS REALISTAS (resumo do que mudou)
 - As ARMAS e os ITENS QUE O JOGADOR PEGA deixaram o estilo low poly: modelos 3D realistas, com texturas de
   verdade, baixados com licença CC0 (Poly Haven e OpenGameArt; créditos no menu Créditos e nos LICENCA.txt):
@@ -540,6 +554,11 @@ SOBREVIVENTE (jogador no modo livre)
 - converter armas e itens realistas ... ferramentas/preparar_itens_realistas.py (roda no Blender 4.2;
                                         instruções no topo) e depois ferramentas/gerar_icones.gd
 - converter equipamentos low poly ..... ferramentas/preparar_equipamentos.gd
+- DOMINIC 3D: modelar ............... ferramentas/dominic/ (medir_referencia.py -> modelar_dominic.py no Blender
+                                        com o MPFB -> exportar_dominic.py) e ferramentas/preparar_dominic.gd (rig)
+- animações novas (KayKit -> jogo) .. ferramentas/retarget_kaykit.gd (tabelas CONVERTER e DIRETAS)
+- quais animações cada ação usa ....... jogador/animador_modelo.gd (8 direções, acao()), armas/armas.gd (GOLPES)
+- Dominic nas cutscenes ............... npc/ator_rigado.gd (POSES: pose da cena -> animação)
 - quando usa (modo livre) ............. main.gd (_jogar) e jogador/jogador.gd (usar_sobrevivente)
 - quantos aparecem e onde ............. inimigos/vagos.gd
 

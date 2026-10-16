@@ -296,7 +296,7 @@ def cor_cabeca(f):
 		return RASPADO * (0.96 + 0.04 * random.random())    # laterais raspadas
 	if c.y > OLHOS[0].y + 0.11 and c.z > QUEIXO + 0.02:
 		return RASPADO * (0.96 + 0.04 * random.random())    # nuca raspada
-	if frente and abs(c.x) < 0.026 and abs(c.z - BOCA.z) < 0.008:
+	if frente and abs(c.x) < 0.024 and abs(c.z - (QUEIXO + 0.036)) < 0.006:
 		return np.array([0.66, 0.5, 0.48])                  # lábios
 	for o in OLHOS:
 		if frente and abs(c.x - o.x) < 0.024 and 0.01 < c.z - o.z < 0.022:

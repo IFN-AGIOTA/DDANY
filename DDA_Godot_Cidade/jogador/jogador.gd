@@ -164,11 +164,12 @@ func trocar_modelo(no: Node3D, importado := true) -> void:
 	animador.configurar(no)
 	armas.anexar(no, animador.ponto_arma())
 
-# MODO LIVRE: troca o soldado pelo sobrevivente (jogador/modelo_sobrevivente.gd), que mostra no corpo a roupa
-# equipada no inventário
-func usar_sobrevivente() -> void:
+# troca o soldado pelo sobrevivente (jogador/modelo_sobrevivente.gd), que mostra no corpo a roupa equipada no
+# inventário. MODO HISTÓRIA: usar_sobrevivente("dominic") = o Dominic Vaider (corpo próprio, mesmas animações)
+func usar_sobrevivente(personagem := "") -> void:
 	var m = load("res://jogador/modelo_sobrevivente.gd").new()
 	m.name = "Sobrevivente"
+	m.personagem = personagem
 	trocar_modelo(m, true)
 	animador.nomes_exatos = m.NOMES_ANIM
 	animador.atualizar_mapa()

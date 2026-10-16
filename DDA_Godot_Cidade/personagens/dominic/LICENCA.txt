@@ -1,0 +1,8 @@
+Dominic Vaider (personagens/dominic/dominic.scn), modelado para o jogo no Blender a partir da referência do autor
+(ferramentas/dominic/referencia_dominic.jpg), com as ferramentas de ferramentas/dominic/ e ferramentas/preparar_dominic.gd.
+- Cabeça e mãos: geradas com o MakeHuman (base mesh e "targets"), via MPFB 2 para o Blender, e reduzidas para low poly.
+  Os modelos gerados pelo MakeHuman são CC0 1.0 (domínio público) - http://www.makehumancommunity.org
+  (o MPFB em si é GPL 3.0, usado só como ferramenta, não vai no jogo).
+- Esqueleto e animações: Quaternius, Universal Animation Library 1 e 2 (CC0) e Kay Lousberg, KayKit Character
+  Animations (CC0) - veja jogador/sobrevivente/LICENCA.txt.
+- Roupa, óculos, tranças, tatuagem: feitos para o jogo (sem arquivos de terceiros).

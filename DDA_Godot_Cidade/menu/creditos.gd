@@ -22,6 +22,8 @@ const EQUIPE := [
 const RECURSOS := [
 	["Modelos 3D (manequins) e animações dos infectados e do sobrevivente", "Quaternius · \"Universal Animation Library\" 1 e 2",
 		"CC0 1.0 (domínio público)", "quaternius.com · opengameart.org/content/universal-animation-library-2"],
+	["Cabeça e mãos do Dominic (modelo 3D low poly)", "MakeHuman (gerado com o MPFB 2 no Blender e reduzido para low poly)",
+		"CC0 1.0 (domínio público)", "makehumancommunity.org"],
 	["Animações de andar de lado e de costas, fuzil (mirar, atirar, recarregar), golpes com arma, pegar do chão, levar golpe, mortes e sentar",
 		"Kay Lousberg · \"KayKit Character Animations\" (convertidas para o esqueleto do jogo)",
 		"CC0 1.0 (domínio público)", "kaylousberg.itch.io/kaykit-character-animations · kaylousberg.com"],

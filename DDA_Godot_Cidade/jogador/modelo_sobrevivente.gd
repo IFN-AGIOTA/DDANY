@@ -1,5 +1,8 @@
 extends Node3D
-# SOBREVIVENTE: o personagem do jogador no MODO LIVRE (o modo história continua com o soldado antigo).
+# SOBREVIVENTE: o personagem do jogador no MODO LIVRE. Com personagem = "dominic" vira o DOMINIC VAIDER (modo
+# história e menu): mesmo esqueleto e animações, mas o corpo é o modelo próprio dele (personagens/dominic/dominic.scn,
+# feito no Blender por ferramentas/criar_dominic.py), com a roupa da lore fixa (as cores das roupas do inventário
+# e o colete não mudam o corpo dele; mochila, chapéus e armas aparecem normalmente).
 # Corpo: manequim masculino de proporção humana da "Universal Animation Library 2" do Quaternius (CC0), SEM
 # equipamento acoplado, convertido por ferramentas/preparar_jogador.gd para jogador/sobrevivente/corpo.scn.
 # Animações (jogador/sobrevivente/animacoes.res, mesmo esqueleto): parado, andar, correr, pular, cair, mirar,
@@ -54,6 +57,11 @@ void fragment() {
 }
 """
 
+# personagens com corpo próprio (mesmo esqueleto do manequim)
+const PERSONAGENS := {"dominic": "res://personagens/dominic/dominic.scn"}
+var personagem := ""                   # "" = sobrevivente do modo livre
+static var _cenas_personagem := {}
+
 static var _cena: PackedScene = null
 static var _anims: AnimationLibrary = null
 static var _shader: Shader = null
@@ -81,13 +89,22 @@ func _ready() -> void:
 		_anims = load(PASTA + "animacoes.res")
 		_shader = Shader.new()
 		_shader.code = SHADER
-	corpo = _cena.instantiate()
-	add_child(corpo)
-	esqueleto = corpo.find_child("Skeleton3D", true, false)
 	_mat = ShaderMaterial.new()
 	_mat.shader = _shader
+	if personagem != "" and PERSONAGENS.has(personagem) and ResourceLoader.exists(PERSONAGENS[personagem]):
+		if not _cenas_personagem.has(personagem):
+			_cenas_personagem[personagem] = load(PERSONAGENS[personagem])
+		corpo = _cenas_personagem[personagem].instantiate()
+		add_child(corpo)
+	else:
+		personagem = ""
+		corpo = _cena.instantiate()
+		add_child(corpo)
+		for mi in corpo.find_children("*", "MeshInstance3D", true, false):
+			mi.material_override = _mat
+	esqueleto = corpo.find_child("Skeleton3D", true, false)
 	for mi in corpo.find_children("*", "MeshInstance3D", true, false):
-		mi.material_override = _mat
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	anim = AnimationPlayer.new()
 	anim.name = "AnimationPlayer"
 	corpo.add_child(anim)
@@ -133,7 +150,7 @@ func vestir(inventario) -> void:
 	_peca("mochila", slots.get("mochila"))
 	_peca("cinto", slots.get("cinto"))
 	var colete = slots.get("colete")
-	_vestir_colete(colete.id if colete != null and COLETES.has(colete.id) else "")
+	_vestir_colete(colete.id if colete != null and COLETES.has(colete.id) and personagem == "" else "")
 	var na_mao = slots.get("maos")
 	var ombro = slots.get("ombro")
 	var coldre = slots.get("coldre")
