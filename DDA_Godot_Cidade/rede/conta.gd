@@ -21,6 +21,7 @@ signal convites_mudaram(lista: Array)          # [{"uid", "nome", "codigos", "n"
 
 const CONFIG := "res://rede/firebase_config.cfg"
 const SALVO := "user://conta.cfg"
+const SEGREDO := "res://rede/firebase_segredo.cfg"
 const PUBLICAR_A_CADA := 45.0                  # segundos
 const VALIDADE_CONVITE := 150.0                # convite mais velho que isso = partida fechada
 const ALFABETO := "23456789ABCDEFGHJKMNPQRSTVWXYZ"
@@ -59,6 +60,9 @@ func _ready() -> void:
 		_db_url = str(cf.get_value("firebase", "database_url", "")).strip_edges().trim_suffix("/")
 		_client_id = str(cf.get_value("google", "client_id", "")).strip_edges()
 		_client_secret = str(cf.get_value("google", "client_secret", "")).strip_edges()
+		var seg := ConfigFile.new()              # a chave secreta mora num arquivo fora do git (rede/firebase_segredo.cfg)
+		if _client_secret == "" and seg.load(SEGREDO) == OK:
+			_client_secret = str(seg.get_value("google", "client_secret", "")).strip_edges()
 		for par in [["oauth", "_url_oauth"], ["identidade", "_url_ident"], ["token", "_url_token"]]:
 			var v := str(cf.get_value("servidores", par[0], "")).strip_edges().trim_suffix("/")
 			if v != "":
