@@ -26,7 +26,11 @@ signal pegar_pedido
 signal pausa_pedida
 signal selecionou(id: String)      # modo de edição da HUD: botão tocado
 
+const UI := preload("res://menu/ui.gd")
 const RAIO_STICK := 90.0
+
+# OTIMIZAÇÃO: botões = disco e anel em TEXTURA (menu/ui.gd circulo/aro): todos os discos = 1 chamada de desenho,
+# todos os anéis = 1, textos = 1 (draw_circle/draw_arc eram 2 chamadas por botão).
 
 var mover := Vector2.ZERO          # x = direita, y = frente
 var modo_voo := false
@@ -313,6 +317,9 @@ func _process(_dt: float) -> void:
 func _desenhar() -> void:
 	if bloqueado and not editando:
 		return
+	# OTIMIZAÇÃO: primeiro TODAS as formas, depois TODOS os textos. Intercalar círculo/texto/círculo/texto troca de
+	# textura (a fonte) a cada botão e quebra o "lote" do desenho 2D: virava ~2 chamadas de desenho por botão.
+	var textos_b := []
 	for b in botoes:
 		if not _visivel(b):
 			continue
@@ -320,11 +327,26 @@ func _desenhar() -> void:
 		var r: float = b["r"]
 		var cor: Color = b["cor"]
 		var aceso := int(b["toque"]) != -1 or bool(indicadores.get(b["id"], false))
-		if editando:
-			var sel: bool = b["id"] == selecionado
-			_visual.draw_arc(c, r + 6.0, 0.0, TAU, 48, Color(1.0, 0.71, 0.0) if sel else Color(1, 1, 1, 0.75), 5.0 if sel else 2.0)
-		_visual.draw_circle(c, r, Color(cor.r, cor.g, cor.b, 0.62 if aceso else 0.22))
-		_visual.draw_arc(c, r, 0.0, TAU, 40, Color(cor.r, cor.g, cor.b, 0.95), 4.0)
+		UI.circulo(_visual, c, r, Color(cor.r, cor.g, cor.b, 0.62 if aceso else 0.22))
+		textos_b.append([b, c, r])
+	# depois todos os contornos (mesma textura seguida = um lote só)
+	for e in textos_b:
+		var b: Dictionary = e[0]
+		var cor: Color = b["cor"]
+		UI.aro_prop(_visual, e[1], e[2] + 2.0, 4.0 / 57.0, Color(cor.r, cor.g, cor.b, 0.95))   # ~4 px, meio para fora (como antes)
+	if editando:                                         # só na edição da HUD (raro): pode ser o desenho comum
+		for e in textos_b:
+			var sel: bool = e[0]["id"] == selecionado
+			_visual.draw_arc(e[1], e[2] + 6.0, 0.0, TAU, 48, Color(1.0, 0.71, 0.0) if sel else Color(1, 1, 1, 0.75), 5.0 if sel else 2.0)
+	if _toque_mover != -1:
+		var d := (_atual - _origem).limit_length(RAIO_STICK)
+		_visual.draw_circle(_origem, RAIO_STICK, Color(1, 1, 1, 0.10))
+		_visual.draw_arc(_origem, RAIO_STICK, 0.0, TAU, 48, Color(1, 1, 1, 0.45), 3.0)
+		_visual.draw_circle(_origem + d, 36.0, Color(1, 1, 1, 0.35))
+	for e in textos_b:
+		var b: Dictionary = e[0]
+		var c: Vector2 = e[1]
+		var r: float = e[2]
 		var txt: String = textos.get(b["id"], b["txt"])
 		# texto em até 2 linhas, diminuindo até caber dentro do círculo (ex.: "RECARREGAR", "PEGAR\nM4A1")
 		var linhas := txt.split("\n")
@@ -340,11 +362,6 @@ func _desenhar() -> void:
 			var tk := tam if k == 0 else int(tam * 0.8)
 			var w := _fonte.get_string_size(l, HORIZONTAL_ALIGNMENT_LEFT, -1, tk).x
 			_visual.draw_string(_fonte, Vector2(c.x - w * 0.5, y0 + k * tam * 1.05), l, HORIZONTAL_ALIGNMENT_LEFT, -1, tk, Color(1, 1, 1, 0.95))
-	if _toque_mover != -1:
-		var d := (_atual - _origem).limit_length(RAIO_STICK)
-		_visual.draw_circle(_origem, RAIO_STICK, Color(1, 1, 1, 0.10))
-		_visual.draw_arc(_origem, RAIO_STICK, 0.0, TAU, 48, Color(1, 1, 1, 0.45), 3.0)
-		_visual.draw_circle(_origem + d, 36.0, Color(1, 1, 1, 0.35))
 
 # ---------- leitura (o jogador consulta todo quadro) ----------
 func vetor_mover() -> Vector2:

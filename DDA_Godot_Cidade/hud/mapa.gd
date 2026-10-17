@@ -589,6 +589,10 @@ func _apertar(id: String) -> void:
 			_limitar()
 
 # ---------- desenho: texto e símbolos ----------
+# OTIMIZAÇÃO: os textos vão para uma FILA e são desenhados todos juntos no fim (_soltar_textos). Texto no meio de
+# linhas/círculos troca de textura (a fonte) e quebra o lote do desenho 2D: a bússola fazia ~25 chamadas de desenho.
+var _fila_txt: Array = []
+
 func _texto(ci: CanvasItem, txt: String, centro: Vector2, tam: int, cor: Color, alinhar := 0) -> void:
 	var w := _fonte.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam).x
 	var x := centro.x - w * 0.5
@@ -596,9 +600,16 @@ func _texto(ci: CanvasItem, txt: String, centro: Vector2, tam: int, cor: Color, 
 		x = centro.x
 	elif alinhar > 0:
 		x = centro.x - w
-	var p := Vector2(x, centro.y + tam * 0.36)
-	ci.draw_string_outline(_fonte, p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, maxi(3, tam / 5), Color(0, 0, 0, 0.75 * cor.a))
-	ci.draw_string(_fonte, p, txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, cor)
+	_fila_txt.append([ci, Vector2(x, centro.y + tam * 0.36), txt, tam, cor])
+
+# contornos de todos primeiro, depois o preenchimento (mesma textura: um lote só)
+func _soltar_textos() -> void:
+	for e in _fila_txt:
+		var cor: Color = e[4]
+		(e[0] as CanvasItem).draw_string_outline(_fonte, e[1], e[2], HORIZONTAL_ALIGNMENT_LEFT, -1, e[3], maxi(3, int(e[3]) / 5), Color(0, 0, 0, 0.75 * cor.a))
+	for e in _fila_txt:
+		(e[0] as CanvasItem).draw_string(_fonte, e[1], e[2], HORIZONTAL_ALIGNMENT_LEFT, -1, e[3], e[4])
+	_fila_txt.clear()
 
 func _largura(txt: String, tam: int) -> float:
 	return _fonte.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam).x
@@ -627,16 +638,19 @@ func _losango(ci: CanvasItem, c: Vector2, tam: float, cor: Color) -> void:
 func _desenhar_hud() -> void:
 	var vs := _sobre.get_viewport_rect().size
 	var vh := vs.y / 100.0 * escala
+	_fila_txt.clear()
 	if _mostrar_mini:
 		_desenhar_minimapa(vh)
 	_desenhar_bussola(vs, vh)
+	_soltar_textos()
 
 func _desenhar_minimapa(vh: float) -> void:
 	var c := _mini_c
 	var r := _mini_r
 	var ci := _sobre
-	ci.draw_arc(c, r + 0.45 * vh, 0.0, TAU, 72, COR_FUNDO, 0.9 * vh, true)
-	ci.draw_arc(c, r, 0.0, TAU, 72, Color(1, 1, 1, 0.28), maxf(1.5, 0.2 * vh), true)
+	UI.aro(ci, c, r + 0.9 * vh, 0.9 * vh, COR_FUNDO)                       # (texturas: entram num lote só)
+	var gf := maxf(1.5, 0.2 * vh)
+	UI.aro(ci, c, r + gf * 0.5, gf, Color(1, 1, 1, 0.28))
 	var esc := r / RAIO_MINI
 	var frente := Vector2(sin(_rumo), -cos(_rumo))
 	var direita := Vector2(cos(_rumo), sin(_rumo))
@@ -659,8 +673,9 @@ func _desenhar_minimapa(vh: float) -> void:
 	# "N" na borda, onde fica o norte
 	var n := Vector2(-sin(_rumo), -cos(_rumo))
 	var pn := c + n * r
-	ci.draw_circle(pn, 1.55 * vh, Color(0.03, 0.05, 0.08, 0.92))
-	ci.draw_arc(pn, 1.55 * vh, 0.0, TAU, 24, Color(1.0, 0.42, 0.2, 0.95), maxf(1.5, 0.22 * vh), true)
+	UI.circulo(ci, pn, 1.55 * vh, Color(0.03, 0.05, 0.08, 0.92))
+	var gn := maxf(1.5, 0.22 * vh)
+	UI.aro(ci, pn, 1.55 * vh + gn * 0.5, gn, Color(1.0, 0.42, 0.2, 0.95))
 	_texto(ci, "N", pn, int(2.0 * vh), Color(1.0, 0.55, 0.3))
 	# distância do objetivo embaixo do minimapa
 	if _obj:
@@ -691,6 +706,18 @@ func _largura_label(l: Label) -> float:
 	var t := l.get_theme_font_size("font_size")
 	return f.get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, t).x if f != null else l.size.x
 
+var _tr_pts: Array = [PackedVector2Array(), PackedVector2Array(), PackedVector2Array()]
+var _tr_cor: Array = [PackedColorArray(), PackedColorArray(), PackedColorArray()]
+
+func _tracos(k: int, a: Vector2, b: Vector2, cor: Color) -> void:
+	var p: PackedVector2Array = _tr_pts[k]
+	p.append(a)
+	p.append(b)
+	_tr_pts[k] = p
+	var c: PackedColorArray = _tr_cor[k]
+	c.append(cor)
+	_tr_cor[k] = c
+
 func _desenhar_bussola(vs: Vector2, vh: float) -> void:
 	var ci := _sobre
 	var lim := _limites_bussola(vs)
@@ -718,12 +745,20 @@ func _desenhar_bussola(vs: Vector2, vh: float) -> void:
 			var norte := gm == 0
 			var cor := Color(1.0, 0.55, 0.3, a) if norte else Color(1, 1, 1, a * (1.0 if gm % 90 == 0 else 0.78))
 			_texto(ci, rotulo, Vector2(x, y0 + alt * 0.4), int((2.6 if gm % 90 == 0 else 2.1) * vh), cor)
-			ci.draw_line(Vector2(x, y0 + alt * 0.72), Vector2(x, y0 + alt * 0.95), Color(1, 1, 1, a * 0.9), maxf(1.5, 0.22 * vh))
+			_tracos(0, Vector2(x, y0 + alt * 0.72), Vector2(x, y0 + alt * 0.95), Color(1, 1, 1, a * 0.9))
 		elif gm % 15 == 0:
-			ci.draw_line(Vector2(x, y0 + alt * 0.66), Vector2(x, y0 + alt * 0.95), Color(1, 1, 1, a * 0.65), maxf(1.0, 0.16 * vh))
+			_tracos(1, Vector2(x, y0 + alt * 0.66), Vector2(x, y0 + alt * 0.95), Color(1, 1, 1, a * 0.65))
 		else:
-			ci.draw_line(Vector2(x, y0 + alt * 0.82), Vector2(x, y0 + alt * 0.95), Color(1, 1, 1, a * 0.4), maxf(1.0, 0.14 * vh))
+			_tracos(2, Vector2(x, y0 + alt * 0.82), Vector2(x, y0 + alt * 0.95), Color(1, 1, 1, a * 0.4))
 		g += 5
+	# os tracinhos como RETÂNGULOS (retângulos seguidos entram num lote só; draw_line era 1 chamada cada)
+	for k in 3:
+		var w: float = [maxf(1.5, 0.22 * vh), maxf(1.0, 0.16 * vh), maxf(1.0, 0.14 * vh)][k]
+		var pts: PackedVector2Array = _tr_pts[k]
+		for i in range(0, pts.size(), 2):
+			ci.draw_rect(Rect2(pts[i].x - w * 0.5, pts[i].y, w, pts[i + 1].y - pts[i].y), _tr_cor[k][i / 2])
+		_tr_pts[k] = PackedVector2Array()
+		_tr_cor[k] = PackedColorArray()
 	# objetivo na bússola
 	var caixa_txt := Rect2()
 	var txt_rumo := "%d°" % (int(round(graus)) % 360)
@@ -783,6 +818,7 @@ func _desenhar_mapa() -> void:
 	var ci := _ui
 	var vs := ci.get_viewport_rect().size
 	var vh := vs.y / 100.0
+	_fila_txt.clear()
 	if _tex == null:
 		_texto(ci, "PREPARANDO O MAPA...", vs * 0.5, int(3.0 * vh), UI.TEXTO)
 	# objetivo
@@ -832,6 +868,7 @@ func _desenhar_mapa() -> void:
 	_texto(ci, "arraste para mover · pinça, rodinha ou + − para zoom · ⌖ volta para você", Vector2(vs.x * 0.5, vs.y - 3.0 * vh), int(1.9 * vh), Color(1, 1, 1, 0.6))
 	for b in _botoes():
 		_desenhar_botao(ci, b[0], b[1], b[2], vh)
+	_soltar_textos()
 
 func _escala_grafica(ci: CanvasItem, vs: Vector2, vh: float) -> void:
 	var m := 50.0

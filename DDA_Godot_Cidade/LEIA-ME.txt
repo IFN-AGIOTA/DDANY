@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.45 (APK código 41)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.46 (APK código 42)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,19 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.46 · GRÁFICOS: MENOS CHAMADAS DE DESENHO (o que mais pesa no processador do celular)
+  · Medido em 32 vistas de rua: 367 -> 252 chamadas de desenho por quadro (-31%), mesma imagem.
+  · HUD (82 -> 49): no renderizador do celular cada draw_circle/draw_arc/draw_line é uma chamada própria; só
+    retângulos com a MESMA textura entram num lote. Agora:
+      - botões (jogador/controles.gd, 30 -> 8): disco e anel em TEXTURA (menu/ui.gd circulo/aro/aro_prop, feitos
+        1 vez, 128 px), primeiro todos os discos, depois todos os anéis, depois todos os textos;
+      - minimapa e bússola (hud/mapa.gd, 32 -> 21): anéis e o "N" em textura, tracinhos da bússola como retângulos,
+        textos numa fila desenhada toda junta no fim (_soltar_textos).
+  · CHÃO (mundo/cidade.gd): terra, parques, lagos, calçadas, asfalto e lotes em pedaços de 1 km (PEDACO_CHAO, antes
+    500 m): chão tem poucos triângulos e custava muitas chamadas. Faixas continuam em 500 m (PEDACO_FAIXAS).
+  · Chunks (mundo/chunks.gd): um nó pode encostar em até 16 chunks antes de ficar "sempre na cena" (os pedaços de
+    1 km encostam em mais chunks): 47 nós sempre na cena.
+
 ATUALIZAÇÃO 0.45 · PAUSA FORA DOS CHUNKS (mundo/chunks.gd)
   · A cidade fora dos chunks já saía da cena (0.42). Agora o que SE MEXE no mundo e está fora dos chunks ativos fica
     PAUSADO (não pensa, não anima, não toca som): infectados e corpos (inimigos/vago.gd), fogueiras

@@ -85,6 +85,49 @@ static func degrade_h(ci: CanvasItem, pts: PackedVector2Array, a: Color, b: Colo
 # OTIMIZAÇÃO: o StyleBox de cada combinação (cor, raio, cheio, largura) é criado uma vez e reaproveitado
 static var _caixas := {}
 
+# ---------- círculos e anéis em TEXTURA (HUD) ----------
+# No renderizador do celular cada draw_circle/draw_arc é uma chamada de desenho própria; retângulos com a mesma
+# textura entram num lote só. disco()/anel() são feitos 1 vez (128 px, borda suave, mipmaps) e desenhados com
+# circulo()/aro() (= draw_texture_rect colorido). anel(fracao) = grossura / raio.
+static var _tex_disco: ImageTexture
+static var _tex_aneis := {}
+const TAM_TEX_CIRCULO := 128
+
+static func disco() -> ImageTexture:
+	if _tex_disco == null:
+		_tex_disco = _fazer_circulo(-1.0)
+	return _tex_disco
+
+static func anel(fracao: float) -> ImageTexture:
+	var k := snappedf(fracao, 0.005)
+	if not _tex_aneis.has(k):
+		_tex_aneis[k] = _fazer_circulo(k)
+	return _tex_aneis[k]
+
+static func _fazer_circulo(fracao: float) -> ImageTexture:
+	var im := Image.create(TAM_TEX_CIRCULO, TAM_TEX_CIRCULO, false, Image.FORMAT_LA8)
+	var c := (TAM_TEX_CIRCULO - 1) * 0.5
+	var raio := c - 1.0
+	var gr := maxf(1.0, raio * fracao)
+	for y in TAM_TEX_CIRCULO:
+		for x in TAM_TEX_CIRCULO:
+			var d := Vector2(x - c, y - c).length()
+			var a := clampf(raio - d + 0.5, 0.0, 1.0) if fracao < 0.0 else clampf(0.5 - (absf(d - (raio - gr * 0.5)) - gr * 0.5), 0.0, 1.0)
+			im.set_pixel(x, y, Color(1, 1, 1, a))
+	im.generate_mipmaps()
+	return ImageTexture.create_from_image(im)
+
+# círculo cheio de raio r em c · aro de raio EXTERNO r e grossura g
+static func circulo(ci: CanvasItem, c: Vector2, r: float, cor: Color) -> void:
+	ci.draw_texture_rect(disco(), Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0), false, cor)
+
+static func aro(ci: CanvasItem, c: Vector2, r: float, g: float, cor: Color) -> void:
+	ci.draw_texture_rect(anel(g / maxf(r, 1.0)), Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0), false, cor)
+
+# aro com grossura PROPORCIONAL ao raio (a mesma textura para todos os tamanhos: vários botões = 1 lote)
+static func aro_prop(ci: CanvasItem, c: Vector2, r: float, fracao: float, cor: Color) -> void:
+	ci.draw_texture_rect(anel(fracao), Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0), false, cor)
+
 static func caixa_arredondada(ci: CanvasItem, r: Rect2, cor: Color, raio: float, cheio := true, largura := 1.0) -> void:
 	var k := [cor, int(raio), cheio, int(maxf(1.0, largura))]
 	var sb: StyleBoxFlat = _caixas.get(k)

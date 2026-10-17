@@ -22,7 +22,7 @@ extends Node
 const TAM_CHUNK := 500.0
 const FOLGA := 1                       # descarrega só em RAIO + FOLGA
 const OPS_POR_QUADRO := 90
-const MAX_CHUNKS_POR_NO := 9           # nó que encosta em mais chunks que isso fica sempre na cena
+const MAX_CHUNKS_POR_NO := 16          # nó que encosta em mais chunks que isso fica sempre na cena
 const RAIO_AUTO := [2, 4, 7, 10]       # AUTO: por "Distância de visão" (900, 1800, 3200, 5000 m)
 
 const GRUPO_PAUSA := "pausa_por_chunk"

@@ -189,10 +189,11 @@ func _tri(v: PackedVector3Array, a: Vector3, b: Vector3, c: Vector3) -> void:
 # OTIMIZAÇÃO: o chão (terra, parques, lagos, calçadas, asfalto, faixas) era UMA malha para a cidade inteira, que a
 # placa de vídeo processava toda em todo quadro. Agora cada malha é cortada em PEDAÇOS de PEDACO_CHAO metros
 # (cada triângulo vai para o pedaço do seu centro): só os pedaços que aparecem na câmera são desenhados.
-const PEDACO_CHAO := 500.0                  # = mundo/chunks.gd TAM_CHUNK (cada pedaço cabe num chunk)
+const PEDACO_CHAO := 1000.0                 # 2 x 2 chunks (mundo/chunks.gd): chão é barato em triângulos, caro em chamadas de desenho
+const PEDACO_FAIXAS := 500.0                # faixas somem a LONGE_FAIXAS do centro do pedaço: pedaço pequeno
 const LONGE_FAIXAS := 700.0                  # faixas pintadas somem de longe (nem dá para ver)
 
-func _malha(verts: PackedVector3Array, mat: Material, cores := PackedColorArray(), nome := "") -> void:
+func _malha(verts: PackedVector3Array, mat: Material, cores := PackedColorArray(), nome := "", pedaco := PEDACO_CHAO) -> void:
 	if verts.is_empty():
 		return
 	var com_cor := not cores.is_empty()
@@ -202,7 +203,7 @@ func _malha(verts: PackedVector3Array, mat: Material, cores := PackedColorArray(
 		var a := verts[t]
 		var b := verts[t + 1]
 		var c := verts[t + 2]
-		var k := Vector2i(floori((a.x + b.x + c.x) / (3.0 * PEDACO_CHAO)), floori((a.z + b.z + c.z) / (3.0 * PEDACO_CHAO)))
+		var k := Vector2i(floori((a.x + b.x + c.x) / (3.0 * pedaco)), floori((a.z + b.z + c.z) / (3.0 * pedaco)))
 		if not pv.has(k):
 			pv[k] = PackedVector3Array()
 			if com_cor:
@@ -475,7 +476,7 @@ func _roads(data) -> void:
 	_malha(calc, m_calc, PackedColorArray(), "Calcadas")
 	_malha(asf, m_asf, PackedColorArray(), "Asfalto")
 	mats_chao.append_array([m_calc, m_asf])
-	_malha(mv, Mat.material(Mat.FAIXA, {"camada": CAMADA["faixa"]}), mc, "Faixas")
+	_malha(mv, Mat.material(Mat.FAIXA, {"camada": CAMADA["faixa"]}), mc, "Faixas", PEDACO_FAIXAS)
 
 # faixas de um trecho: linha central (amarela dupla nas avenidas, tracejada branca nas ruas), divisórias de
 # pista tracejadas, bordas, e faixa de pedestre + linha de parada perto dos cruzamentos
