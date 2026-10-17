@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.40 (APK código 36)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.41 (APK código 37)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,18 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.41 · TEXTURAS DE VERDADE NO CHÃO (Poly Haven, CC0)
+  · mundo/texturas/ (NOVO): concreto velho, terra com pedrinhas, grama seca, areia e lama (512 x 512, com mipmaps e
+    compressão de vídeo; fonte e autores em mundo/texturas/LICENCA.txt e na tela de Créditos).
+  · Shader TERRA (mundo/materiais_cidade.gd): a mistura da 0.40 (splatmap + vertex paint + inclinação/altura) agora
+    usa as texturas no lugar das cores lisas. O RELEVO do height blending sai do brilho da própria textura (pedrinha
+    clara = alta, junta escura = baixa). Cada textura tem tamanho e giro diferentes e a cor varia em manchas grandes,
+    para não aparecer a repetição. Areia e lama só são buscadas onde aparecem.
+  · LOD das texturas: além de ~250 m o chão usa a cor média de cada textura (não busca a textura: mais leve).
+  · Sem filtro anisotrópico (mais leve no celular). Custo medido na rua: ~+5% no quadro (teste por software).
+  · Para trocar uma textura: substitua o .jpg em mundo/texturas/ (mesmo nome) e ajuste a média/desvio em
+    relevo(...) no shader TERRA se a nova for bem mais clara ou escura.
+
 ATUALIZAÇÃO 0.40 · PRÉDIOS NO CHÃO, PORTAS SEM DEGRAU E CHÃO SEM QUADRICULADO
   · O PROBLEMA: os prédios e o piso dos interiores ficavam em 0,6 m (altura da rua), em cima da terra em 0,0 m.
     Pareciam flutuar e a porta virava um degrau de 60 cm (era preciso pular para entrar).
@@ -687,6 +699,7 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - escadas de incêndio e ar-condicionado
   nas fachadas ........................ mundo/fachadas.gd
 - oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd
+- texturas do chão (concreto, terra, grama...) ... mundo/texturas/ + shader TERRA (mundo/materiais_cidade.gd)
 - placas, pichações, cortinas e luzes
   nas janelas (shader PREDIO/GRAFITE) . mundo/materiais_cidade.gd
 - juntar caixas numa malha só ......... mundo/malhas.gd

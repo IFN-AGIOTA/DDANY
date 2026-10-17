@@ -151,7 +151,17 @@ uniform vec3 cor_grama : source_color = vec3(0.24, 0.40, 0.17);
 uniform vec3 cor_pedra : source_color = vec3(0.40, 0.38, 0.36);
 uniform vec3 cor_areia : source_color = vec3(0.80, 0.70, 0.52);
 uniform vec3 cor_lama : source_color = vec3(0.20, 0.16, 0.11);
+// texturas de verdade (Poly Haven, CC0: mundo/texturas/LICENCA.txt) · cada uma com um tamanho e um giro diferentes
+// (a repetição não "alinha" entre elas) e a cor variando em manchas grandes (não se vê o ladrilho de longe)
+uniform sampler2D tex_concreto : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_terra : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_grama : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_areia : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_lama : source_color, filter_linear_mipmap, repeat_enable;
 """ + COMUM + CHAO + VERTICE_CAMADA + """
+vec2 giro(vec2 p, float a) { return vec2(p.x * cos(a) - p.y * sin(a), p.x * sin(a) + p.y * cos(a)); }
+// relevo pela própria textura: mais claro que a média = mais alto (pedrinhas, placas), mais escuro = mais baixo (juntas)
+float relevo(vec3 c, float media, float desvio) { return clamp(0.5 + (dot(c, vec3(0.3, 0.59, 0.11)) - media) / (desvio * 3.0), 0.0, 1.0); }
 void fragment() {
 	float dist = length(wp - CAMERA_POSITION_WORLD);
 	float perto = (1.0 - smoothstep(35.0, 90.0, dist)) * detalhe;
@@ -182,16 +192,28 @@ void fragment() {
 	float baixo = 1.0 - smoothstep(-0.05, 0.35, wp.y);                // chão baixo (pé das rampas, terrenos)
 	float beira = textureLod(mascara, (wp.xz + mundo) / (2.0 * mundo), 1.0).r;
 	float areia = (1.0 - smoothstep(0.80, 0.96, beira)) * 2.0;
-	// ---- relevo de cada material (0..1) para o height blending
+	// ---- texturas (só busca areia/lama onde podem aparecer) e relevo de cada material para o height blending
 	float n1 = ruido(wp.xz * 0.9);
 	float n2 = ruido(wp.xz * 2.7 + 5.0);
+	// LOD: de longe (além de ~250 m) a textura vira a cor MÉDIA dela (nem busca: mais leve e sem "chiado")
+	vec3 t_conc = vec3(0.464, 0.421, 0.349);
+	vec3 t_terr = vec3(0.417, 0.352, 0.265);
+	vec3 t_gram = vec3(0.431, 0.377, 0.243);
+	vec3 t_arei = vec3(0.51, 0.448, 0.358);
+	float com_tex = 1.0 - smoothstep(170.0, 250.0, dist);
+	if (com_tex > 0.0) {
+		t_conc = mix(t_conc, texture(tex_concreto, giro(wp.xz, 0.37) / 4.5).rgb, com_tex);
+		t_terr = mix(t_terr, texture(tex_terra, giro(wp.xz, 2.3) / 3.2).rgb, com_tex);
+		t_gram = mix(t_gram, texture(tex_grama, giro(wp.xz, 1.1) / 3.6).rgb, com_tex);
+		if (areia > 0.01) t_arei = mix(t_arei, texture(tex_areia, giro(wp.xz, 0.7) / 5.0).rgb, com_tex);
+	}
 	float rach = 0.0;
 	if (perto > 0.001) rach = rachas(wp.xz * 0.22, 0.025) * perto * smoothstep(0.52, 0.7, fbm(wp.xz * 0.045 + 5.0));   // rachaduras tortas, só em partes
-	float h_conc = 0.55 + 0.25 * n1 - rach * 0.4;
-	float h_gram = 0.25 + 0.65 * smoothstep(0.3, 0.8, n2);            // tufos
-	float h_terr = 0.35 + 0.3 * n1;
+	float h_conc = relevo(t_conc, 0.426, 0.086) - rach * 0.4;
+	float h_gram = mix(relevo(t_gram, 0.378, 0.031), smoothstep(0.3, 0.8, n2), 0.4);   // tufos
+	float h_terr = relevo(t_terr, 0.362, 0.067);
 	float h_pedr = 0.3 + 0.6 * smoothstep(0.45, 0.7, ruido(wp.xz * 4.0));   // pedras furando a terra
-	float h_arei = 0.45 + 0.1 * sin(wp.x * 1.3 + n1 * 4.0);
+	float h_arei = relevo(t_arei, 0.456, 0.053);
 	float a0 = concreto + h_conc * 0.6;
 	float a1 = grama + h_gram * 0.6;
 	float a2 = terra + h_terr * 0.6;
@@ -201,18 +223,19 @@ void fragment() {
 	vec4 w = max(vec4(a0, a1, a2, a3) - topo, vec4(0.0));
 	float w4 = max(a4 - topo, 0.0);
 	float soma = w.x + w.y + w.z + w.w + w4 + 1e-4;
-	// ---- cor de cada material
-	vec3 c_conc = cor_concreto * (0.85 + 0.25 * ruido(wp.xz * 0.05)) * (1.0 - rach * 0.22);
-	vec3 c_gram = cor_grama * (0.7 + 0.5 * n2);
-	c_gram = mix(c_gram, vec3(0.42, 0.40, 0.18), smoothstep(0.5, 0.8, m2) * 0.7);   // seca
-	vec3 c_terr = cor_terra * (0.8 + 0.4 * mix(0.5, ruido(wp.xz * 0.5), perto + 0.3));
-	c_terr *= 1.0 - 0.22 * step(0.86, hash(floor(wp.xz * 9.0))) * perto;                             // cascalho
-	vec3 c_pedr = cor_pedra * (0.75 + 0.45 * n2);
-	vec3 c_arei = cor_areia * (0.9 + 0.15 * n1);
+	// ---- cor de cada material: textura x variação grande (manchas de dezenas de metros)
+	vec3 c_conc = t_conc * (0.85 + 0.3 * ruido(wp.xz * 0.05)) * (1.0 - rach * 0.22);
+	vec3 c_gram = t_gram * vec3(0.72, 1.0, 0.72) * (0.85 + 0.3 * n2);              // puxa para o verde dos parques
+	c_gram = mix(c_gram, t_gram * 1.05, smoothstep(0.5, 0.8, m2) * 0.8);           // seca
+	vec3 c_terr = t_terr * (0.85 + 0.3 * m1);
+	vec3 c_pedr = t_terr * vec3(0.95, 0.97, 1.05) * (0.75 + 0.45 * n2);              // pedra: terra mais cinza e com pedras
+	vec3 c_arei = t_arei * 1.3;
 	vec3 cor = (c_conc * w.x + c_gram * w.y + c_terr * w.z + c_pedr * w.w + c_arei * w4) / soma;
 	// lama: chão baixo e úmido (pé das rampas, perto da água, poças com chuva)
 	float lama = clamp(baixo * 0.35 + (1.0 - beira) * 0.4, 0.0, 1.0) * (1.0 - w4 / soma) * smoothstep(0.35, 0.7, ruido(wp.xz * 0.05 + 1.0));
-	cor = mix(cor, cor_lama, lama * (0.5 + 0.5 * molhado));
+	vec3 c_lama = cor_lama;
+	if (lama > 0.01 && com_tex > 0.0) c_lama = mix(c_lama, texture(tex_lama, giro(wp.xz, 1.9) / 3.5).rgb * 0.75, com_tex);
+	cor = mix(cor, c_lama, lama * (0.5 + 0.5 * molhado));
 	if (perto > 0.001) {
 		vec4 fo = folhas(wp.xz + vec2(n1, n2) * 0.6, 0.02 + 0.06 * w.x / soma) * perto * (1.0 - w4 / soma);
 		cor = mix(cor, fo.rgb, fo.a);
@@ -601,6 +624,13 @@ static func shader(codigo: String) -> Shader:
 	s.code = codigo
 	_shaders[codigo] = s
 	return s
+
+# texturas do chão (shader TERRA): mundo/texturas/ (Poly Haven, CC0)
+static func texturas_chao() -> Dictionary:
+	var d := {}
+	for k in ["concreto", "terra", "grama", "areia", "lama"]:
+		d["tex_" + k] = load("res://mundo/texturas/chao_%s.jpg" % k)
+	return d
 
 static func material(codigo: String, params := {}) -> ShaderMaterial:
 	var m := ShaderMaterial.new()

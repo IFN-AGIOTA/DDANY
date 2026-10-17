@@ -348,7 +348,9 @@ func _ground(data) -> void:
 	_adopt(sea)
 	var v := PackedVector3Array()
 	_poly(v, lands_out, Y_TERRA)
-	var mt := Mat.material(Mat.TERRA, {"mascara": _mascara, "mundo": WORLD, "camada": CAMADA["terra"]})
+	var p_terra := {"mascara": _mascara, "mundo": WORLD, "camada": CAMADA["terra"]}
+	p_terra.merge(Mat.texturas_chao())
+	var mt := Mat.material(Mat.TERRA, p_terra)
 	_malha(v, mt, PackedColorArray(), "Terra")
 	v = PackedVector3Array()
 	_poly(v, lakes, Y_LAGO)
@@ -813,7 +815,9 @@ func _lotes() -> void:
 			var pz := (r + (1 if d.y > 0 else 0)) * CELL - WORLD.y
 			_quad_cor(v, cs, Vector3(px, y1, pz), Vector3(px + R * d.x, y0, pz), Vector3(px + R * d.x, y0, pz + R * d.y), Vector3(px, y0, pz + R * d.y), PINTA_TOPO, PINTA_PE, PINTA_PE, PINTA_PE)
 	_splatmap()
-	mat_lote = Mat.material(Mat.TERRA, {"mascara": _mascara, "splat": splat, "mundo": WORLD, "camada": CAMADA["lote"], "pintura": 1.0})
+	var p_lote := {"mascara": _mascara, "splat": splat, "mundo": WORLD, "camada": CAMADA["lote"], "pintura": 1.0}
+	p_lote.merge(Mat.texturas_chao())
+	mat_lote = Mat.material(Mat.TERRA, p_lote)
 	mats_chao.append(mat_lote)
 	(mats_chao[0] as ShaderMaterial).set_shader_parameter("splat", splat)
 	_malha(v, mat_lote, cs, "Lotes")
