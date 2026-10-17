@@ -1,0 +1,39 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+uid="uid://5hjuves8kfbd"
+path.s3tc="res://.godot/imported/lata_feijao_long_life_food_arm_1k.jpg-c48c865f1d4599085d0b10ed23931be6.s3tc.ctex"
+path.etc2="res://.godot/imported/lata_feijao_long_life_food_arm_1k.jpg-c48c865f1d4599085d0b10ed23931be6.etc2.ctex"
+metadata={
+"imported_formats": ["s3tc_bptc", "etc2_astc"],
+"vram_texture": true
+}
+generator_parameters={
+"md5": "ae8006e16b265e98a57a59005e417e7a"
+}
+
+[deps]
+
+source_file="res://inventario/modelos/lata_feijao_long_life_food_arm_1k.jpg"
+dest_files=["res://.godot/imported/lata_feijao_long_life_food_arm_1k.jpg-c48c865f1d4599085d0b10ed23931be6.s3tc.ctex", "res://.godot/imported/lata_feijao_long_life_food_arm_1k.jpg-c48c865f1d4599085d0b10ed23931be6.etc2.ctex"]
+
+[params]
+
+compress/mode=2
+compress/high_quality=false
+compress/lossy_quality=0.7
+compress/hdr_compression=1
+compress/normal_map=0
+compress/channel_pack=0
+mipmaps/generate=true
+mipmaps/limit=-1
+roughness/mode=0
+roughness/src_normal=""
+process/fix_alpha_border=true
+process/premult_alpha=false
+process/normal_map_invert_y=false
+process/hdr_as_srgb=false
+process/hdr_clamp_exposure=false
+process/size_limit=0
+detect_3d/compress_to=1

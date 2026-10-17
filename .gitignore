@@ -1,0 +1,9 @@
+*.idsig
+atualizacao_*.zip
+DDA_Godot_Cidade/rede/firebase_segredo.cfg
+# chaves de assinatura: NUNCA no GitHub
+chaves_privadas/
+*.keystore
+*.jks
+*.pem
+chaves_*.zip

@@ -1,0 +1,8 @@
+Modelos (manequins) e animações dos infectados: Quaternius (https://quaternius.com)
+  - "Universal Animation Library 2" (manequim masculino, manequim feminino, animações de zumbi)
+    https://opengameart.org/content/universal-animation-library-2
+  - "Universal Animation Library" (versão Unreal: correr, morrer, levar tiro)
+    https://opengameart.org/content/universal-animation-library
+Licença: CC0 1.0 (domínio público) - https://creativecommons.org/publicdomain/zero/1.0/
+Convertidos para o jogo por ferramentas/preparar_infectados.gd (pintura de pele/roupa/cabelo/sangue,
+malha simplificada, 4 ossos por vértice).

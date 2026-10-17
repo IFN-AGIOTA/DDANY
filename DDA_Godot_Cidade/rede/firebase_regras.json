@@ -1,0 +1,17 @@
+{
+  "rules": {
+    "usuarios": { "$uid": { ".read": "auth != null", ".write": "auth != null && auth.uid === $uid" } },
+    "codigos": { "$codigo": { ".read": "auth != null", ".write": "auth != null && !data.exists() && newData.val() === auth.uid" } },
+    "amigos": { "$uid": { ".read": "auth != null && auth.uid === $uid", ".write": "auth != null && auth.uid === $uid",
+      "$outro": { ".read": "auth != null && auth.uid === $outro" } } },
+    "pedidos": { "$dest": { ".read": "auth != null && auth.uid === $dest", ".write": "auth != null && auth.uid === $dest",
+      "$de": { ".write": "auth != null && auth.uid === $de" } } },
+    "convites": { "$dest": { ".read": "auth != null && auth.uid === $dest",
+      "$host": { ".write": "auth != null && auth.uid === $host && (!newData.exists() || root.child('amigos').child($dest).child($host).exists())" } } },
+    "respostas": { "$host": { ".read": "auth != null && auth.uid === $host", ".write": "auth != null && auth.uid === $host",
+      "$cli": { ".write": "auth != null && auth.uid === $cli && root.child('amigos').child($cli).child($host).exists()" } } },
+    "sinal": { "$host": { ".read": "auth != null && auth.uid === $host", ".write": "auth != null && auth.uid === $host",
+      "$cli": { ".read": "auth != null && auth.uid === $cli",
+        "c": { ".write": "auth != null && auth.uid === $cli && root.child('amigos').child($host).child($cli).exists()" } } } }
+  }
+}

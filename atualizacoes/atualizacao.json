@@ -1,0 +1,10 @@
+{
+  "apk": {
+    "codigo": 44,
+    "notas": "Mais segurança: chave nova e atualizações assinadas. Instala por cima, o jogo salvo continua.",
+    "url": "https://raw.githubusercontent.com/IFN-AGIOTA/DDANY/refs/heads/claude/dayz-inventory-system-pckjpx/DiasDeUmApocalipse.apk",
+    "versao": "0.48"
+  },
+  "assinatura": "iea9Ij/sf3LPHBt/OY7yaYGcGMuhqv4Pbcmyk5EOkKm0ntsmHeKFh5nPrP5GZnPCtj/jhGn+aS6wcdZWk05AX/0eXY0j1B/Bn+xSFGNYuZjKmLesjNW7gO6e1S9IyFUqxo/PaA3exzbiT64OOT/Zm7i4XY77ratmrTnPNL771IjSe8DKX1n4RwPQ99rK3Yk/WX2OAKdWnzFacO44ShBAbu3Eptvcjd4nPtvdmIUurPg0P1qM9vDm7LW2nG53uuRxnJ8uT7m7F8TSmaxd6hlFmSVmk4e0N9U5EvgTZbw4BvFjc++YKvQWgGdLrziG+CcxVWLsIiH0LELIyL/t+ahz5jt/cz3bpPmPM8OFSKbVPoIrdJUTeMdtirSeILn39DxeBWT+ZhaL8ywMnP9JIp9E7sXzfHe8FMdUzrQEv1LL+g1jcU12K+O2brhKFXl/QLB/Mn7dl97KZTbV9CTrsTZSf9vtl+G536TzBwjh6lc5Zkjym7Rk/uvIZUym3/W3UUJ3",
+  "dados": "{\n  \"apk\": {\n    \"codigo\": 44,\n    \"notas\": \"Mais segurança: chave nova e atualizações assinadas. Instala por cima, o jogo salvo continua.\",\n    \"url\": \"https://raw.githubusercontent.com/IFN-AGIOTA/DDANY/refs/heads/claude/dayz-inventory-system-pckjpx/DiasDeUmApocalipse.apk\",\n    \"versao\": \"0.48\"\n  },\n  \"pacote\": null\n}"
+}
