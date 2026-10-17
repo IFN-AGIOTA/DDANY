@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.42 (APK código 38)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.43 (APK código 39)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,18 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.43 · PRÉDIOS FORA DO LUGAR REMOVIDOS (água e rua)
+  · Análise (mundo/cidade.gd _predio_ruim): a grade de 20 m que escolhia onde pôr prédio é grossa; um prédio de até
+    34 m (+3 m sorteados) podia ficar com o pé na água. Agora a conta é EXATA, com a planta de cada prédio:
+      - ÁGUA: a planta alargada 4 m (MARGEM_AGUA) tem de estar toda em terra (polígonos da cidade) e fora dos lagos;
+      - RUA: a planta não pode chegar a menos de meia rua + calçada (5 m) + 0,5 m (MARGEM_RUA) do eixo de nenhuma rua.
+    Resultado: 537 prédios removidos na/perto da água (18.647 -> 18.110). Em cima de rua/calçada: 0 (a máscara de
+    ruas já afastava os prédios; conferido também pela colisão, ponto a ponto dentro de cada planta).
+  · Os sorteios continuam iguais: os prédios que ficaram são exatamente os mesmos (tipo, cor, uso, loot).
+  · SAVES ANTIGOS: o loot dos prédios é salvo por número ("p12", "p12_3") e a numeração mudou. O save agora leva
+    "mapa_predios": 2; um save de antes é convertido sozinho (menu/salvamento.gd _remapear_loot, com
+    cidade.remapa_predios: número antigo -> novo). O loot de prédio removido some.
+
 ATUALIZAÇÃO 0.42 · CHUNKS DE 500 m COM RAIO CONFIGURÁVEL (mundo/chunks.gd, NOVO)
   · O mundo é dividido em CHUNKS de 500 x 500 m. Só ficam na cena os chunks em volta da CÂMERA ativa (jogador, voo
     ou cutscene): RAIO chunks para cada lado. "Alimentar" = um chunk entrou no raio: os nós dele voltam para a cena.

@@ -585,6 +585,10 @@ func _buildings() -> void:
 	_mm_predios.clear()
 	var n := 0
 	var n_entra := 0
+	_preparar_filtro(dados_cidade)
+	remapa_predios = PackedInt32Array()
+	removidos = {"agua": 0, "rua": 0}
+	pos_removidos = PackedVector2Array()
 	for lr in range(0, H - 1, 2):
 		for lc in range(0, W - 1, 2):
 			var n_land := 0
@@ -609,17 +613,25 @@ func _buildings() -> void:
 			var sz := rng.randf_range(20.0, 34.0)
 			var bx := x + rng.randf_range(-3.0, 3.0)
 			var bz := z + rng.randf_range(-3.0, 3.0)
+			# em cima/perto da água ou da rua/calçada? (os sorteios continuam iguais para os outros prédios não mudarem)
+			var fora := _predio_ruim(bx, bz, sx, sz)
+			remapa_predios.append(-1 if fora != "" else predio_info.size())
+			if fora != "":
+				removidos[fora] += 1
+				pos_removidos.append(Vector2(bx, bz))
 			# tipo: torres altas quase sempre de vidro; o resto concreto, tijolo ou pedra
 			var tipo: int = 3 if (h > 75.0 and extra.randf() < 0.7) else [0, 1, 1, 2][extra.randi() % 4]
 			var cor: Color = CORES_TIPO[tipo] * extra.randf_range(0.82, 1.12)
 			cor.a = 1.0
 			var sem := extra.randf() * 0.98
-			for o in [0, 1, W, W + 1]:
-				lote[lr * W + lc + o] = 1
-				_lote_idx.append(lr * W + lc + o)
+			if fora == "":
+				for o in [0, 1, W, W + 1]:
+					lote[lr * W + lc + o] = 1
+					_lote_idx.append(lr * W + lc + o)
 			var chave := Vector2i(floori(bx / BLOCO_PREDIO), floori(bz / BLOCO_PREDIO))
-			if not blocos.has(chave):
+			if fora == "" and not blocos.has(chave):
 				blocos[chave] = []
+			var lista_bloco: Array = blocos[chave] if fora == "" else []    # removido: monta "de mentira" e joga fora
 			var ruina := sorte.randf() < CHANCE_RUINA
 			var info := {"x": bx, "z": bz, "sx": sx, "sz": sz, "tipo": tipo, "cor": cor, "sem": sem, "bloco": chave,
 				"uso": _sortear_uso(sorte, h), "entra": false, "idx": -1, "ruina": ruina}
@@ -631,39 +643,42 @@ func _buildings() -> void:
 				cz.a = 1.0
 				var pb := Vector2(bx + sx * 0.25, bz) if sx > sz else Vector2(bx, bz + sz * 0.25)
 				if sx > sz:
-					blocos[chave].append([Transform3D(Basis.from_scale(Vector3(sx * 0.5, h, sz)), Vector3(bx - sx * 0.25, Y_RUA + h * 0.5, bz)), cz, Color(sx * 0.5, h, sz, 4 + sem)])
-					blocos[chave].append([Transform3D(Basis.from_scale(Vector3(sx * 0.5, h_b, sz * 0.85)), Vector3(bx + sx * 0.25, Y_RUA + h_b * 0.5, bz)), cz, Color(sx * 0.5, h_b, sz * 0.85, 4 + sem)])
+					lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * 0.5, h, sz)), Vector3(bx - sx * 0.25, Y_RUA + h * 0.5, bz)), cz, Color(sx * 0.5, h, sz, 4 + sem)])
+					lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * 0.5, h_b, sz * 0.85)), Vector3(bx + sx * 0.25, Y_RUA + h_b * 0.5, bz)), cz, Color(sx * 0.5, h_b, sz * 0.85, 4 + sem)])
 				else:
-					blocos[chave].append([Transform3D(Basis.from_scale(Vector3(sx, h, sz * 0.5)), Vector3(bx, Y_RUA + h * 0.5, bz - sz * 0.25)), cz, Color(sx, h, sz * 0.5, 4 + sem)])
-					blocos[chave].append([Transform3D(Basis.from_scale(Vector3(sx * 0.85, h_b, sz * 0.5)), Vector3(bx, Y_RUA + h_b * 0.5, bz + sz * 0.25)), cz, Color(sx * 0.85, h_b, sz * 0.5, 4 + sem)])
-				ruinas.append([bx, bz, sx, sz, h, pb.x, pb.y, h_b])
+					lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx, h, sz * 0.5)), Vector3(bx, Y_RUA + h * 0.5, bz - sz * 0.25)), cz, Color(sx, h, sz * 0.5, 4 + sem)])
+					lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * 0.85, h_b, sz * 0.5)), Vector3(bx, Y_RUA + h_b * 0.5, bz + sz * 0.25)), cz, Color(sx * 0.85, h_b, sz * 0.5, 4 + sem)])
 				info["h"] = h
-				predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h]))
-				predio_info.append(info)
+				if fora == "":
+					ruinas.append([bx, bz, sx, sz, h, pb.x, pb.y, h_b])
+					predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h]))
+					predio_info.append(info)
 				continue
-			predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h]))   # guardado para a colisão
+			if fora == "":
+				predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h]))   # guardado para a colisão
 			var h1 := h
 			if h > 60.0 and extra.randf() < 0.55:
 				# torre escalonada: corpo + topo mais estreito
 				h1 = h * extra.randf_range(0.6, 0.75)
 				var k2 := extra.randf_range(0.55, 0.75)
 				var h2 := h - h1 + extra.randf_range(4.0, 16.0)
-				blocos[chave].append([Transform3D(Basis.from_scale(Vector3(sx * k2, h2, sz * k2)), Vector3(bx, Y_RUA + h1 + h2 * 0.5, bz)), cor, Color(sx * k2, h2, sz * k2, tipo + sem)])
+				lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * k2, h2, sz * k2)), Vector3(bx, Y_RUA + h1 + h2 * 0.5, bz)), cor, Color(sx * k2, h2, sz * k2, tipo + sem)])
 			elif h < 70.0 and extra.randf() < 0.18:
 				# caixa d'água de madeira no telhado (marca registrada de Nova York)
 				if not caixas.has(chave):
 					caixas[chave] = []
 				var off := Vector3(extra.randf_range(-0.25, 0.25) * sx, 0.0, extra.randf_range(-0.25, 0.25) * sz)
-				caixas[chave].append(Transform3D(Basis.from_scale(Vector3.ONE * extra.randf_range(0.8, 1.2)), Vector3(bx, Y_RUA + h1, bz) + off))
+				(caixas[chave] if fora == "" else []).append(Transform3D(Basis.from_scale(Vector3.ONE * extra.randf_range(0.8, 1.2)), Vector3(bx, Y_RUA + h1, bz) + off))
 			var t := Transform3D(Basis.from_scale(Vector3(sx, h1, sz)), Vector3(bx, Y_RUA + h1 * 0.5, bz))
 			info["h"] = h1
 			info["t"] = t
-			info["idx"] = blocos[chave].size()
+			info["idx"] = lista_bloco.size()
 			info["entra"] = sorte.randf() < CHANCE_ENTRA
-			if info["entra"]:
-				n_entra += 1
-			blocos[chave].append([t, cor, Color(sx, h1, sz, tipo + sem)])
-			predio_info.append(info)
+			lista_bloco.append([t, cor, Color(sx, h1, sz, tipo + sem)])
+			if fora == "":
+				if info["entra"]:
+					n_entra += 1
+				predio_info.append(info)
 	mat_predio = Mat.material(Mat.PREDIO, {"detalhe": 1.0})
 	var caixa := BoxMesh.new()
 	caixa.material = mat_predio
@@ -688,6 +703,8 @@ func _buildings() -> void:
 	var malha_caixa := _malha_caixa_dagua()
 	for chave in caixas:
 		var lista: Array = caixas[chave]
+		if lista.is_empty():
+			continue
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.mesh = malha_caixa
@@ -701,7 +718,108 @@ func _buildings() -> void:
 		mi.visibility_range_end = 1500.0
 		_adopt(mi)
 		detalhes.append(mi)
-	print("Prédios: ", predios.size() / 5, " (", n, " blocos de malha) · com entrada: ", n_entra, " · em ruína: ", ruinas.size())
+	print("Prédios: ", predios.size() / 5, " (", n, " blocos de malha) · com entrada: ", n_entra, " · em ruína: ", ruinas.size(),
+		" · removidos: ", removidos["agua"], " na/perto da água, ", removidos["rua"], " em cima da rua/calçada")
+
+# ---------- prédios fora do lugar: água e rua ----------
+# A grade de 20 m (máscaras land/road) é grossa: um prédio de até 34 m (+3 m sorteados) podia invadir a calçada,
+# a rua ou ficar com o pé na água. Aqui a conta é EXATA, com a planta do prédio:
+#   água: a planta + MARGEM_AGUA tem de estar toda em terra (polígonos da cidade) e fora dos lagos
+#   rua: a planta não pode chegar a menos de (meia rua + calçada + MARGEM_RUA) do eixo de nenhuma rua
+const MARGEM_AGUA := 4.0
+const MARGEM_RUA := 0.5
+const CEL_FILTRO := 64.0
+var remapa_predios := PackedInt32Array()   # índice antigo do prédio (antes da 0.43) -> novo (-1 = removido): saves antigos
+var removidos := {}
+var pos_removidos := PackedVector2Array()   # onde ficavam (para conferir/testes)
+var _f_ruas := {}                          # Vector2i -> PackedFloat32Array (ax, az, bx, bz, alcance)
+var _f_terra: Array = []                   # [Rect2, PackedVector2Array] (terra, sem lagos)
+var _f_lagos: Array = []
+
+func _preparar_filtro(data) -> void:
+	_f_ruas.clear()
+	_f_terra.clear()
+	_f_lagos.clear()
+	for l in data["lands"]:
+		var p := _pts(l[1])
+		var cx := Rect2(p[0], Vector2.ZERO)
+		for q in p:
+			cx = cx.expand(q)
+		(_f_lagos if int(l[0]) == 1 else _f_terra).append([cx, p])
+	var tmp := {}
+	for rd in data["roads"]:
+		var alc: float = float(rd[0]) * 0.5 + CALCADA + MARGEM_RUA
+		var f: Array = rd[1]
+		for k in range(0, f.size() - 3, 2):
+			var a := Vector2(f[k], f[k + 1])
+			var b := Vector2(f[k + 2], f[k + 3])
+			var c0 := Vector2i(floori((minf(a.x, b.x) - alc) / CEL_FILTRO), floori((minf(a.y, b.y) - alc) / CEL_FILTRO))
+			var c1 := Vector2i(floori((maxf(a.x, b.x) + alc) / CEL_FILTRO), floori((maxf(a.y, b.y) + alc) / CEL_FILTRO))
+			for gx in range(c0.x, c1.x + 1):
+				for gz in range(c0.y, c1.y + 1):
+					var key := Vector2i(gx, gz)
+					if not tmp.has(key):
+						tmp[key] = PackedFloat32Array()
+					var s: PackedFloat32Array = tmp[key]
+					s.append_array(PackedFloat32Array([a.x, a.y, b.x, b.y, alc]))
+					tmp[key] = s
+	_f_ruas = tmp
+
+# "" = pode ficar · "agua" · "rua"
+func _predio_ruim(x: float, z: float, sx: float, sz: float) -> String:
+	var hx := sx * 0.5
+	var hz := sz * 0.5
+	# rua/calçada: distância do eixo de cada trecho até o retângulo do prédio
+	var ret := Rect2(x - hx, z - hz, sx, sz)
+	var c0 := Vector2i(floori(ret.position.x / CEL_FILTRO), floori(ret.position.y / CEL_FILTRO))
+	var c1 := Vector2i(floori(ret.end.x / CEL_FILTRO), floori(ret.end.y / CEL_FILTRO))
+	for gx in range(c0.x, c1.x + 1):
+		for gz in range(c0.y, c1.y + 1):
+			var s: PackedFloat32Array = _f_ruas.get(Vector2i(gx, gz), PackedFloat32Array())
+			for i in range(0, s.size(), 5):
+				if _dist_seg_ret(Vector2(s[i], s[i + 1]), Vector2(s[i + 2], s[i + 3]), ret) < s[i + 4]:
+					return "rua"
+	# água: 9 pontos da planta alargada (cantos, meio das bordas e centro)
+	var m := MARGEM_AGUA
+	for p in [Vector2(x, z), Vector2(x - hx - m, z - hz - m), Vector2(x + hx + m, z - hz - m), Vector2(x + hx + m, z + hz + m),
+			Vector2(x - hx - m, z + hz + m), Vector2(x, z - hz - m), Vector2(x, z + hz + m), Vector2(x - hx - m, z), Vector2(x + hx + m, z)]:
+		if not _em_terra(p):
+			return "agua"
+	return ""
+
+func _em_terra(p: Vector2) -> bool:
+	for l in _f_lagos:
+		if (l[0] as Rect2).has_point(p) and Geometry2D.is_point_in_polygon(p, l[1]):
+			return false
+	# longe da costa (as 3 x 3 células de 20 m em volta são terra): não precisa da conta exata (bem mais rápido)
+	var cc := int((p.x + WORLD.x) / CELL)
+	var rr := int((p.y + WORLD.y) / CELL)
+	if cc >= 1 and rr >= 1 and cc < W - 1 and rr < H - 1:
+		var todas := true
+		for dr in range(-1, 2):
+			for dc in range(-1, 2):
+				if land[(rr + dr) * W + cc + dc] == 0:
+					todas = false
+		if todas:
+			return true
+	for l in _f_terra:
+		if (l[0] as Rect2).has_point(p) and Geometry2D.is_point_in_polygon(p, l[1]):
+			return true
+	return false
+
+static func _dist_seg_ret(a: Vector2, b: Vector2, r: Rect2) -> float:
+	if r.has_point(a) or r.has_point(b):
+		return 0.0
+	var cs := [r.position, Vector2(r.end.x, r.position.y), r.end, Vector2(r.position.x, r.end.y)]
+	for i in 4:
+		if Geometry2D.segment_intersects_segment(a, b, cs[i], cs[(i + 1) % 4]) != null:
+			return 0.0
+	var d := INF
+	for c in cs:
+		d = minf(d, c.distance_to(Geometry2D.get_closest_point_to_segment(c, a, b)))
+	for q in [a, b]:
+		d = minf(d, q.distance_to(Vector2(clampf(q.x, r.position.x, r.end.x), clampf(q.y, r.position.y, r.end.y))))
+	return d
 
 # esconde/mostra o bloco de um prédio (quando o interior dele está montado perto do jogador)
 func esconder_predio(i: int, esconder: bool) -> void:

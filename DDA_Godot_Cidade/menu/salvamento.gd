@@ -60,12 +60,37 @@ static func salvar(main, morto := false) -> bool:
 		"companheiros": main.companheiros.salvar() if main.get("companheiros") != null else {},
 		"missoes": main.missoes.salvar() if main.get("missoes") != null else {},
 		"chao": _chao(main, p),
+		"mapa_predios": MAPA_PREDIOS,
 	}
 	var f := FileAccess.open(ARQUIVO, FileAccess.WRITE)
 	if f == null:
 		return false
 	f.store_string(JSON.stringify(d))
 	return true
+
+# NUMERAÇÃO DOS PRÉDIOS: a 0.43 tirou os prédios em cima da água/rua (mundo/cidade.gd _predio_ruim) e os
+# números mudaram. O loot dos prédios é salvo por número ("p12" = chão do prédio 12, "p12_3" = móvel 3 dele):
+# save de antes (sem "mapa_predios") é convertido com cidade.remapa_predios (número antigo -> novo; -1 = sumiu).
+const MAPA_PREDIOS := 2
+
+static func _remapear_loot(loot: Dictionary, remapa: PackedInt32Array) -> Dictionary:
+	var o := loot.duplicate(true)
+	for parte in ["grades", "chao"]:
+		var velho: Dictionary = loot.get(parte, {})
+		var novo := {}
+		for id in velho:
+			var s := String(id)
+			if not s.begins_with("p") or not s.substr(1, 1).is_valid_int():
+				novo[id] = velho[id]                  # carros e outros: não dependem do número do prédio
+				continue
+			var resto := s.substr(1)
+			var num := resto.get_slice("_", 0)
+			var i := int(num)
+			if i < 0 or i >= remapa.size() or remapa[i] < 0:
+				continue                              # prédio removido: o loot dele some
+			novo["p%d%s" % [remapa[i], resto.substr(num.length())]] = velho[id]
+		o[parte] = novo
+	return o
 
 # itens largados pelo jogador (filhos do nó Jogo; os dos prédios ficam no loot_mundo)
 static func _chao(main, p: Vector3) -> Array:
@@ -86,7 +111,10 @@ static func carregar(main, d: Dictionary) -> void:
 	main._tempo_jogo = float(d.get("tempo_jogo", 0.0))
 	main.abates = int(d.get("abates", 0))
 	if main.loot_mundo != null:
-		main.loot_mundo.carregar(d.get("loot", {}))
+		var loot: Dictionary = d.get("loot", {})
+		if int(d.get("mapa_predios", 1)) < MAPA_PREDIOS:
+			loot = _remapear_loot(loot, main.cidade.remapa_predios)
+		main.loot_mundo.carregar(loot)
 	j.inventario.carregar(d.get("inventario", {}))
 	j.sobrevivencia.carregar(d.get("sobrevivencia", {}))
 	if main.clima != null and main.clima.has_method("carregar") and d.has("clima"):
