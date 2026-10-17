@@ -67,7 +67,20 @@ func _process(dt: float) -> void:
 		var alvo: float = 0.7 + armas.dispersao() * 140.0 + armas.rec * 0.9
 		_gap += (alvo - _gap) * minf(1.0, dt * 18.0)
 	_tela.visible = jogador == null or (bool(jogador.ativo) and not _inventario_aberto())
-	_tela.queue_redraw()
+	# OTIMIZAÇÃO: redesenha só quando algo na tela mudou (antes: todo quadro)
+	var anima: bool = _hit > 0.0 or not _avisos.is_empty() or (armas != null and armas.rel > 0.0)
+	var a := 0
+	if armas != null:
+		var A: Dictionary = armas.estado() if armas.atual != "" and not armas.eh_corpo() else {"mag": 0, "res": 0}
+		a = hash([armas.atual, A["mag"], A["res"], armas.travada, armas.item_arma.pente_id if armas.item_arma != null else "",
+			roundi(_gap * 40.0), _tela.visible, _tela.get_viewport_rect().size])
+	if anima or a != _assinatura or _anima_antes:
+		_assinatura = a
+		_tela.queue_redraw()
+	_anima_antes = anima                    # mais um quadro depois que a animação acaba (some o marcador)
+
+var _assinatura := 0
+var _anima_antes := false
 
 func _inventario_aberto() -> bool:
 	var c = jogador.get("controles")

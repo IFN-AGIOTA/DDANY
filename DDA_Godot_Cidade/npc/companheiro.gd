@@ -276,7 +276,8 @@ func _mover(destino: Vector3, vel: float, dt: float) -> void:
 	if dir != Vector3.ZERO and vel > 0.5:
 		_consulta.from = p + Vector3(0, 0.5, 0)
 		_consulta.to = p + Vector3(0, 0.5, 0) + dir * 1.1
-		_consulta.exclude = [get_rid()]
+		if _consulta.exclude.is_empty():
+			_consulta.exclude = [get_rid()]      # uma vez só (antes criava a lista a cada quadro)
 		var hit := get_world_3d().direct_space_state.intersect_ray(_consulta)
 		if not hit.is_empty():
 			if _t_desvio <= 0.0:

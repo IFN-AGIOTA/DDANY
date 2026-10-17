@@ -135,6 +135,7 @@ func _ready() -> void:
 
 # dispara uma traçante do cano até o ponto final. k = tipo do impacto (0 nada · 1 terra · 2 água · 3 concreto · 4 alvo)
 func tracante(origem: Vector3, fim: Vector3, vel: float, comp: float, k: int, normal: Vector3) -> void:
+	_ocioso = false
 	var d := fim - origem
 	var L := d.length()
 	if L < 0.01:
@@ -163,11 +164,13 @@ func tracante(origem: Vector3, fim: Vector3, vel: float, comp: float, k: int, no
 	(q["no"] as Node3D).visible = true
 
 func clarao(cano: Node3D, tamanho: float) -> void:
+	_ocioso = false
 	_clarao_cano = cano
 	_clarao_tam = tamanho
 	_clarao_t = 0.055
 
 func impacto(p: Vector3, n: Vector3, k: int) -> void:
+	_ocioso = false
 	if k == 4:
 		# sangue: borrifo escuro + gotas + mancha no chão embaixo
 		fumaca(p, Color(0.42, 0.03, 0.03), 0.3, 0.45)
@@ -216,6 +219,7 @@ func _mancha_sangue(p: Vector3) -> void:
 	mi.visible = true
 
 func fumaca(p: Vector3, cor: Color, tam: float, vida: float) -> void:
+	_ocioso = false
 	# de noite a fumaça/poeira não pode "brilhar" (ela não recebe luz): escurece junto com a cena
 	var cl = get_tree().current_scene.get("clima") if get_tree() != null and get_tree().current_scene != null else null
 	if cl != null and is_instance_valid(cl):
@@ -233,11 +237,18 @@ func fumaca(p: Vector3, cor: Color, tam: float, vida: float) -> void:
 	_mat_fum[_fi].albedo_color = Color(cor.r, cor.g, cor.b, 1.0)
 	no.visible = true
 
+# OTIMIZAÇÃO: sem nenhum efeito na tela, não percorre as listas (antes: todo quadro, sempre)
+var _ocioso := false
+
 func _process(dt: float) -> void:
+	if _ocioso:
+		return
+	var algum := false
 	var cp := camera.global_position if camera != null else Vector3.ZERO
 	for q in _trac:
 		if not q["on"]:
 			continue
+		algum = true
 		q["h"] += q["v"] * dt
 		if not q["fx"] and q["h"] >= q["len"]:
 			q["fx"] = true
@@ -263,6 +274,7 @@ func _process(dt: float) -> void:
 		var no: MeshInstance3D = s["no"]
 		if not no.visible:
 			continue
+		algum = true
 		s["vida"] -= dt
 		if s["vida"] <= 0.0:
 			no.visible = false
@@ -274,6 +286,7 @@ func _process(dt: float) -> void:
 		var no: MeshInstance3D = f["no"]
 		if not no.visible:
 			continue
+		algum = true
 		f["vida"] -= dt
 		if f["vida"] <= 0.0:
 			no.visible = false
@@ -290,8 +303,10 @@ func _process(dt: float) -> void:
 		_luz_tiro.global_position = _clarao_cano.global_position
 		_luz_tiro.light_energy = 2.2 * clampf(_clarao_t / 0.055, 0.0, 1.0) * _clarao_tam
 		_luz_tiro.visible = true
+		algum = true
 	else:
 		_clarao.visible = false
 		_clarao_t = 0.0
 		if _luz_tiro.visible:
 			_luz_tiro.visible = false
+	_ocioso = not algum

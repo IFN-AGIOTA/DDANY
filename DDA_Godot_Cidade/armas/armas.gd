@@ -120,6 +120,9 @@ func reiniciar() -> void:
 func ligar_inventario(inv) -> void:
 	inventario = inv
 	inv.mudou.connect(_sincronizar)
+	inv.mudou.connect(_invalidar_estado)
+	if not mudou.is_connected(_invalidar_estado):
+		mudou.connect(_invalidar_estado)     # tiro, recarga, troca de pente
 	_sincronizar()
 
 # a arma das mãos mudou? (trocou no inventário, atalho 1..8, botão ARMA, largou no chão...)
@@ -150,9 +153,18 @@ func _sincronizar() -> void:
 	mudou.emit()
 
 # balas no pente e no inventário da arma das mãos
+# OTIMIZAÇÃO: o resultado fica guardado até o inventário ou a arma mudarem (antes contava a munição do
+# inventário inteiro 2 vezes por quadro: aqui na física e na HUD)
+var _estado_cache = null
+
+func _invalidar_estado() -> void:
+	_estado_cache = null
+
 func estado() -> Dictionary:
 	if item_arma == null or eh_corpo():
 		return {"mag": 0, "res": 0}
+	if _estado_cache != null and _estado_cache["item"] == item_arma and _estado_cache["mag"] == item_arma.municao:
+		return _estado_cache
 	var r := 0
 	if inventario != null:
 		r = inventario.contar(item_arma.def().get("municao", ""))
@@ -162,7 +174,8 @@ func estado() -> Dictionary:
 				for o in g.itens:
 					if o.id == tipo:
 						r += o.municao
-	return {"mag": item_arma.municao, "res": r}
+	_estado_cache = {"mag": item_arma.municao, "res": r, "item": item_arma}
+	return _estado_cache
 
 # silenciador/mira aparecem no modelo da arma quando estão encaixados
 func _mostrar_acessorios() -> void:

@@ -58,6 +58,7 @@ var _ult_pred := Vector2(1.0e9, 1.0e9)
 # obstáculos (carros, barreiras, caçambas, entulho): x, z, giro, tam_x, tam_y, tam_z, y_centro
 var _obst := PackedFloat32Array()
 var _obst_hash := {}
+var _obst_cs := PackedFloat32Array()        # por obstáculo: cos, sin, raio
 var _pool_obst: Array[StaticBody3D] = []
 var _pool_obst_forma: Array[BoxShape3D] = []
 var _obst_uso := 0
@@ -95,6 +96,14 @@ func _ready() -> void:
 # pode ser chamada de novo (a história tira os carros largados antes do colapso e põe de volta depois)
 func configurar_obstaculos(lista: PackedFloat32Array) -> void:
 	_obst = lista
+	# OTIMIZAÇÃO: cos/sin do giro e o raio de cada obstáculo calculados uma vez (antes: a cada consulta)
+	var n := lista.size() / 7
+	_obst_cs.resize(n * 3)
+	for i in n:
+		var o := i * 7
+		_obst_cs[i * 3] = cos(lista[o + 2])
+		_obst_cs[i * 3 + 1] = sin(lista[o + 2])
+		_obst_cs[i * 3 + 2] = 0.5 * sqrt(lista[o + 3] * lista[o + 3] + lista[o + 5] * lista[o + 5])
 	_obst_hash.clear()
 	_ult_obst = Vector2(1.0e9, 1.0e9)
 	var tmp := {}
@@ -465,8 +474,11 @@ func dentro_de_obstaculo(x: float, z: float, margem := 0.0) -> bool:
 				var o := idx * 7
 				var ox := x - _obst[o]
 				var oz := z - _obst[o + 1]
-				var co := cos(_obst[o + 2])
-				var se := sin(_obst[o + 2])
+				var rr := _obst_cs[idx * 3 + 2] + margem
+				if ox * ox + oz * oz > rr * rr:
+					continue                    # longe do círculo que cobre o obstáculo: nem testa o retângulo
+				var co := _obst_cs[idx * 3]
+				var se := _obst_cs[idx * 3 + 1]
 				var lx := ox * co - oz * se
 				var lz := ox * se + oz * co
 				if absf(lx) < _obst[o + 3] * 0.5 + margem and absf(lz) < _obst[o + 5] * 0.5 + margem:

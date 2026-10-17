@@ -41,6 +41,7 @@ func ligar(m: Node) -> void:
 	# "cheguei": os outros respondem com a roupa deles (e o host com o mundo). Antes disso este aparelho ainda
 	# estava montando a cidade e não tinha sessão para receber nada.
 	Rede.enviar_evento("cheguei", {})
+	_roupa_enviada = {}
 	_mandar_roupa()
 
 func _exit_tree() -> void:
@@ -102,7 +103,15 @@ func _mandar_roupa(para := 0) -> void:
 	for s in SLOTS_ROUPA:
 		var it = inv.slots.get(s)
 		d[s] = it.id if it != null and it != na_mao else ""     # arma que está na mão não aparece no corpo
+	# OTIMIZAÇÃO: o inventário muda o tempo todo (balas, comida...); só manda quando a ROUPA mudou
+	# (ou quando é para alguém específico, que acabou de chegar)
+	if para == 0 and d == _roupa_enviada:
+		return
+	if para == 0:
+		_roupa_enviada = d
 	Rede.enviar_evento("roupa", d, para)
+
+var _roupa_enviada := {}
 
 func _mandar_tiro(arma: String) -> void:
 	var cam: Camera3D = jogador.camera

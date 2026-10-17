@@ -66,7 +66,38 @@ func inventario():
 	return jogador.get("inventario")
 
 # ---------- roupas ----------
+# OTIMIZAÇÃO: somas das roupas e o peso ficam guardados; recalcula quando o inventário muda e a cada 2 s
+# (o estado das roupas gasta devagar). Antes percorria o inventário todo várias vezes por quadro.
+var _cache := {}
+var _t_cache := 0.0
+var _inv_ligado = null
+
+func _cache_ok() -> void:
+	var inv = inventario()
+	if inv != _inv_ligado and inv != null:
+		_inv_ligado = inv
+		inv.mudou.connect(func(): _cache.clear())
+	var agora := Time.get_ticks_msec() / 1000.0
+	if agora - _t_cache > 2.0:
+		_t_cache = agora
+		_cache.clear()
+
 func _soma_roupas(campo: String) -> float:
+	_cache_ok()
+	if _cache.has(campo):
+		return _cache[campo]
+	var t := _soma_roupas_real(campo)
+	_cache[campo] = t
+	return t
+
+func _peso() -> float:
+	_cache_ok()
+	if not _cache.has("@peso"):
+		var inv = inventario()
+		_cache["@peso"] = inv.peso_total() if inv != null else 0.0
+	return _cache["@peso"]
+
+func _soma_roupas_real(campo: String) -> float:
 	var inv = inventario()
 	if inv == null:
 		return 0.0
@@ -258,8 +289,7 @@ func aplicar(efeito: Dictionary, _id: String, estado := 1.0) -> String:
 
 # ---------- estamina, perna, desmaio e doenças ----------
 func _condicoes(dt: float, v: float, p: Vector3) -> void:
-	var inv = inventario()
-	var peso: float = inv.peso_total() if inv != null else 0.0
+	var peso: float = _peso()
 	estamina_max = clampf(100.0 - maxf(0.0, peso - 18.0) * 2.5, 35.0, 100.0)
 	if v > 5.0:
 		estamina -= dt * (13.0 + peso * 0.15)

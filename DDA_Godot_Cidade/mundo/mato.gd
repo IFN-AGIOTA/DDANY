@@ -147,27 +147,42 @@ func _arrays(v: PackedVector3Array, n: PackedVector3Array, c: PackedColorArray) 
 	return m
 
 # ---------- a cada quadro ----------
+var _pos_global := Vector3(INF, INF, INF)
+var _raio_mats := -1.0
+var _pos_pedacos := Vector2(INF, INF)
+var _faltava := true
+
 func _process(dt: float) -> void:
 	if jogador == null or not is_instance_valid(jogador) or mundo == null:
 		return
 	var p := jogador.global_position
-	RenderingServer.global_shader_parameter_set("pos_jogador", p)
+	# OTIMIZAÇÃO: só manda/recalcula o que mudou (antes: tudo em todo quadro)
+	if p.distance_squared_to(_pos_global) > 0.0004:
+		_pos_global = p
+		RenderingServer.global_shader_parameter_set("pos_jogador", p)
 	var g: Dictionary = Config.g
-	raio = RAIOS[clampi(int(g.get("detd", 2)), 0, 3)]
+	var novo_raio: float = RAIOS[clampi(int(g.get("detd", 2)), 0, 3)]
 	_dens = DENSIDADES[clampi(int(g.get("den", 1)), 0, 2)]
-	for m in _mats:
-		m.set_shader_parameter("alcance", raio)
+	if novo_raio != _raio_mats:
+		_raio_mats = novo_raio
+		for m in _mats:
+			m.set_shader_parameter("alcance", novo_raio)
+	raio = novo_raio
 	var p2 := Vector2(p.x, p.z)
-	# apaga os pedaços longe
-	for k in _pedacos.keys():
-		if _dist_pedaco(k, p2) > raio + TAM:
-			_pedacos[k].queue_free()
-			_pedacos.erase(k)
-	# cria os que faltam (o mais perto primeiro); muitos de uma vez só quando o jogador acabou de chegar/teleportar
-	var faltam := _faltando(p2)
-	var limite := 1 if _pedacos.size() > 4 else 64
-	for i in mini(limite, faltam.size()):
-		_pedacos[faltam[i]] = _criar(faltam[i])
+	# pedaços: só quando andou 2 m ou ainda falta criar algum
+	if _faltava or p2.distance_squared_to(_pos_pedacos) > 4.0:
+		_pos_pedacos = p2
+		# apaga os pedaços longe
+		for k in _pedacos.keys():
+			if _dist_pedaco(k, p2) > raio + TAM:
+				_pedacos[k].queue_free()
+				_pedacos.erase(k)
+		# cria os que faltam (o mais perto primeiro); muitos de uma vez só quando o jogador acabou de chegar/teleportar
+		var faltam := _faltando(p2)
+		var limite := 1 if _pedacos.size() > 4 else 64
+		for i in mini(limite, faltam.size()):
+			_pedacos[faltam[i]] = _criar(faltam[i])
+		_faltava = faltam.size() > limite
 	# sombra dos prédios no chão
 	if p2.distance_to(_ultimo_ao) > 6.0:
 		_ultimo_ao = p2

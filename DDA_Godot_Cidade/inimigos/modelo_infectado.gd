@@ -114,6 +114,8 @@ func pos_cabeca() -> Vector3:
 	var i: int = _osso.get("Head", -1)
 	if i < 0:
 		return global_position + Vector3(0, 1.6, 0)
+	if _cabeca_ok:                                      # já calculada na postura (sem recalcular o esqueleto)
+		return esqueleto.global_transform * _cabeca_g.origin + (esqueleto.global_transform.basis * _cabeca_g.basis.y).normalized() * 0.1
 	# o osso "Head" fica na base do crânio; o centro fica ~0,1 m acima (na direção do osso)
 	var g := esqueleto.global_transform * esqueleto.get_bone_global_pose(i)
 	return g.origin + g.basis.y.normalized() * 0.1
@@ -171,23 +173,40 @@ func atualizar(dt: float, vel: float) -> void:
 		"andar": anim.speed_scale = clampf(vel / VEL_ANDAR_ANIM, 0.6, 1.8)
 		"correr": anim.speed_scale = clampf(vel / VEL_CORRER_ANIM, 0.75, 1.3)
 		_: anim.speed_scale = 1.0
+	_cabeca_ok = false
 	anim.advance(dt)
 	_postura()
 
-# jeito de infectado por cima da animação: cabeça torta e, correndo, braços esticados para a frente
-func _postura() -> void:
-	_girar("Head", Vector3(0, 0, 1), _cab_incl)
-	if _corr > 0.05 and _at < 0.0:
-		_girar("upperarm_l", Vector3.RIGHT, -1.0 * _corr)
-		_girar("upperarm_r", Vector3.RIGHT, -0.9 * _corr)
+# jeito de infectado por cima da animação: cabeça torta e, correndo, braços esticados para a frente.
+# OTIMIZADO: lê primeiro as poses globais dos PAIS (o esqueleto é recalculado uma vez só) e depois grava as
+# rotações locais (cabeça e braços não são pais uns dos outros, então a ordem não muda o resultado).
+# A pose global da cabeça fica guardada para pos_cabeca() (antes recalculava o esqueleto de novo).
+var _cabeca_ok := false
+var _cabeca_g := Transform3D.IDENTITY
 
-# gira um osso em volta de um eixo do espaço do esqueleto (y = cima, +z = frente do manequim)
-func _girar(nome: String, eixo: Vector3, ang: float) -> void:
-	var i: int = _osso.get(nome, -1)
-	if i < 0 or absf(ang) < 0.001:
-		return
-	var pai := esqueleto.get_bone_parent(i)
-	var g := esqueleto.get_bone_global_pose(i)
-	var ng := Transform3D(Basis(eixo, ang) * g.basis, g.origin)
-	var local := ng if pai < 0 else esqueleto.get_bone_global_pose(pai).affine_inverse() * ng
-	esqueleto.set_bone_pose_rotation(i, local.basis.get_rotation_quaternion())
+func _postura() -> void:
+	var lista := [["Head", Vector3(0, 0, 1), _cab_incl]]
+	if _corr > 0.05 and _at < 0.0:
+		lista.append(["upperarm_l", Vector3.RIGHT, -1.0 * _corr])
+		lista.append(["upperarm_r", Vector3.RIGHT, -0.9 * _corr])
+	var feitos := []
+	for x in lista:                                     # 1) só leituras
+		var i: int = _osso.get(x[0], -1)
+		if i < 0:
+			continue
+		var pai := esqueleto.get_bone_parent(i)
+		var gp := esqueleto.get_bone_global_pose(pai) if pai >= 0 else Transform3D.IDENTITY
+		feitos.append([i, gp, x[1], x[2]])
+	for f in feitos:                                    # 2) só escritas
+		var i: int = f[0]
+		var gp: Transform3D = f[1]
+		var ang: float = f[3]
+		var local := Transform3D(Basis(esqueleto.get_bone_pose_rotation(i)), esqueleto.get_bone_pose_position(i))
+		if absf(ang) >= 0.001:
+			# girar em volta de um eixo do espaço do esqueleto = girar em volta do mesmo eixo visto pelo pai
+			var eixo_pai: Vector3 = (gp.basis.orthonormalized().inverse() * (f[2] as Vector3)).normalized()
+			local.basis = Basis(eixo_pai, ang) * local.basis
+			esqueleto.set_bone_pose_rotation(i, local.basis.get_rotation_quaternion())
+		if i == int(_osso.get("Head", -1)):
+			_cabeca_g = gp * local
+			_cabeca_ok = true

@@ -198,13 +198,17 @@ func _passos(delta: float) -> void:
 		return
 	_dist_passo = 0.0
 	_n_passo += 1
-	var cl = get_tree().current_scene.get("clima") if get_tree().current_scene != null else null
+	if _clima == null or not is_instance_valid(_clima):
+		_clima = get_tree().current_scene.get("clima") if get_tree().current_scene != null else null
+	var cl = _clima
 	var molhado: bool = cl != null and is_instance_valid(cl) and float(cl.molhado) > 0.4
 	var gravado := SonsBaixados.sortear("jogador/passo")
 	_som_passo.stream = gravado if gravado != null and not molhado else SonsCorpo.passo(_n_passo, molhado)
 	_som_passo.pitch_scale = randf_range(0.9, 1.1)
 	_som_passo.volume_db = (-14.0 if agachado else (-3.0 if vel_horizontal > 5.0 else -8.0))
 	_som_passo.play()
+
+var _clima = null                   # mundo/clima.gd (guardado: antes procurava a cada passo)
 
 func _doeu(dano: float) -> void:
 	if dano < 2.0 or _t_dor > 0.0 or _som_voz == null:

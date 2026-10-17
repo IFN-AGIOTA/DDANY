@@ -32,6 +32,26 @@ void fragment() {
 }
 """
 
+# OTIMIZAÇÃO: frio e golpe sozinhos não precisam ler a tela (que no celular copia a imagem inteira):
+# só pintam a borda por cima, com a mesma cor final. O filtro que lê a tela fica só para "fraco" (sem cor).
+const SHADER_BORDA := """
+shader_type canvas_item;
+uniform float golpe = 0.0;
+uniform float frio = 0.0;
+void fragment() {
+	vec2 d = SCREEN_UV - 0.5;
+	float v = smoothstep(0.25, 0.75, length(d * vec2(1.4, 1.0)));
+	float a1 = v * golpe * 0.75;
+	float a2 = v * frio * 0.3;
+	float a = 1.0 - (1.0 - a1) * (1.0 - a2);
+	vec3 cor = (vec3(0.6, 0.0, 0.0) * a1 * (1.0 - a2) + vec3(0.6, 0.8, 1.0) * a2) / max(a, 0.0001);
+	COLOR = vec4(cor, a);
+}
+"""
+var _borda: ColorRect
+var _mat_borda: ShaderMaterial
+var _ult := Vector3(-1, -1, -1)       # últimos (golpe, fraco, frio) mandados para os shaders
+
 var sv = null                        # jogador/sobrevivencia.gd
 var jogador: Node = null
 var escala := 1.0
@@ -56,6 +76,16 @@ func _ready() -> void:
 	_filtro.material = _mat
 	_filtro.visible = false
 	add_child(_filtro)
+	_borda = ColorRect.new()
+	_borda.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_borda.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_mat_borda = ShaderMaterial.new()
+	var sb := Shader.new()
+	sb.code = SHADER_BORDA
+	_mat_borda.shader = sb
+	_borda.material = _mat_borda
+	_borda.visible = false
+	add_child(_borda)
 	_apagao = ColorRect.new()
 	_apagao.color = Color(0, 0, 0, 0)
 	_apagao.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -96,10 +126,16 @@ func _process(dt: float) -> void:
 		fraco = 1.0
 	var frio := clampf((35.6 - sv.temperatura) / 1.5, 0.0, 1.0)
 	_apagao.color.a = move_toward(_apagao.color.a, 1.0 if sv.desmaiado > 0.0 else 0.0, dt * 2.0)
-	_filtro.visible = _golpe > 0.01 or fraco > 0.01 or frio > 0.01
-	_mat.set_shader_parameter("golpe", _golpe)
-	_mat.set_shader_parameter("fraco", fraco)
-	_mat.set_shader_parameter("frio", frio)
+	_filtro.visible = fraco > 0.01
+	_borda.visible = not _filtro.visible and (_golpe > 0.01 or frio > 0.01)
+	var agora := Vector3(snappedf(_golpe, 0.01), snappedf(fraco, 0.01), snappedf(frio, 0.01))
+	if agora != _ult:                       # só manda para o shader quando mudou
+		_ult = agora
+		var m: ShaderMaterial = _mat if _filtro.visible else _mat_borda
+		m.set_shader_parameter("golpe", _golpe)
+		m.set_shader_parameter("frio", frio)
+		if _filtro.visible:
+			m.set_shader_parameter("fraco", fraco)
 	var c = jogador.get("controles")
 	_tela.visible = bool(jogador.ativo) and not (c != null and bool(c.bloqueado)) and not jogador.morto
 	# redesenha ~10 vezes por segundo (os ícones mudam devagar); todo quadro só com aviso piscando ou golpe

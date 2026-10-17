@@ -372,6 +372,11 @@ func _montar_grades() -> void:
 					_grade_ruas[ch].append_array(PackedFloat32Array([a.x, a.y, b.x, b.y, hw, 1.0 if i == pts.size() - 2 else 0.0]))
 
 # ---------- quadro a quadro ----------
+var _t_sobre := 0.0
+var _pos_desenho := Vector2(INF, INF)
+var _rumo_desenho := 0.0
+var _c_desenho := Vector2.ZERO
+
 func _process(_dt: float) -> void:
 	if _tarefa >= 0 and WorkerThreadPool.is_task_completed(_tarefa):
 		_terminar_textura()
@@ -400,6 +405,16 @@ func _process(_dt: float) -> void:
 	_mini_r = TAM_MINI * vh * 0.5
 	_mini_c = Vector2(16.0 + _mini_r, topo + _mini_r)
 	_mini.visible = _mostrar_mini
+	# OTIMIZAÇÃO: minimapa e bússola só são refeitos quando o jogador anda/gira ou a cada 0,25 s (marcadores)
+	_t_sobre -= _dt
+	var mexeu := _pos.distance_squared_to(_pos_desenho) > 0.25 or absf(angle_difference(_rumo, _rumo_desenho)) > 0.006 \
+		or _mini_c != _c_desenho
+	if not mexeu and _t_sobre > 0.0:
+		return
+	_t_sobre = 0.25
+	_pos_desenho = _pos
+	_rumo_desenho = _rumo
+	_c_desenho = _mini_c
 	if _mostrar_mini:
 		_mini.position = _mini_c - Vector2(_mini_r, _mini_r)
 		_mini.size = Vector2(_mini_r, _mini_r) * 2.0

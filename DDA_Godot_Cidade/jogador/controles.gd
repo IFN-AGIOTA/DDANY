@@ -300,8 +300,15 @@ func _tocou(id: String) -> void:
 		"PAUSA": pausa_pedida.emit()
 		"PEGAR": pegar_pedido.emit()
 
+# OTIMIZAÇÃO: redesenha só quando algo que aparece mudou (botão aceso, texto, botão escondido, bloqueio).
+# Os toques já pedem redesenho na hora (_input). Antes redesenhava todos os botões em todo quadro.
+var _assinatura := 0
+
 func _process(_dt: float) -> void:
-	_visual.queue_redraw()
+	var a := indicadores.hash() ^ (textos.hash() * 31) ^ (ocultos.hash() * 17) ^ (1 if bloqueado else 0) ^ (2 if editando else 0)
+	if a != _assinatura:
+		_assinatura = a
+		_visual.queue_redraw()
 
 func _desenhar() -> void:
 	if bloqueado and not editando:

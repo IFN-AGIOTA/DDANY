@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.36 (APK código 32)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.37 (APK código 33)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,21 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.37 · REVISÃO E OTIMIZAÇÃO DO CÓDIGO (mesmo jogo, mais leve; medido no centro de Nova York)
+  · CPU por quadro: 1,27 ms -> 0,87 ms (-31%) · GPU (teste de desenho): 85 ms -> 49 ms (-43%), triângulos 481k -> 106k.
+  · Chão/calçadas/ruas (mundo/cidade.gd): a malha gigante virou pedaços de 800 m (PEDACO_CHAO), então a placa de
+    vídeo só desenha os pedaços que a câmera vê; faixas das ruas somem depois de 700 m (LONGE_FAIXAS).
+  · Infectados (inimigos/vago.gd + modelo_infectado.gd): a animação saiu da física e anima menos vezes quando estão
+    longe (todo quadro até 25 m, 1 em 2 até 50 m, 1 em 4 depois, 1 em 8 fora da câmera; nada além de 145 m).
+    A postura agora lê antes e escreve depois (sem recalcular o esqueleto várias vezes) e guarda a posição da cabeça.
+  · HUD e telas (controles.gd, hud_combate.gd, mapa.gd, hud_status.gd): só redesenham quando algo mudou (antes era
+    todo quadro). O minimapa/bússola redesenha ao andar 0,5 m, girar ou a cada 0,25 s. O efeito de borda (golpe/frio)
+    usa um shader que não copia a tela; o filtro que copia a tela só liga quando está fraco.
+  · Caches: estado da arma (armas.gd), peso e roupas (sobrevivencia.gd), caixas arredondadas da interface (ui.gd),
+    parâmetros globais do clima (clima.gd: só manda se mudou), mato (mato.gd: só refaz pedaços ao andar 2 m),
+    obstáculos girados pré-calculados (colisao_mundo.gd), efeitos de tiro param quando não há nada (efeitos_tiro.gd).
+  · Rede (sessao_rede.gd): a roupa só é mandada quando a ROUPA muda (antes ia a cada bala gasta).
+
 ATUALIZAÇÃO 0.36 · sem o botão de tela cheia no menu (no canto agora fica só o PERFIL; ainda dá para alternar
 em Opções > Vídeo e som > "Alternar tela cheia").
 

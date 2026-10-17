@@ -331,6 +331,31 @@ func _soltar_loot() -> void:
 		p.y = gerente.mundo.altura(p.x, p.z)
 	ItemMundo.soltar(pai, it, p)
 
+# ---------- animação (só nos quadros desenhados; com nível de detalhe pela distância e pela câmera) ----------
+# perto: todo quadro · 25-50 m: a cada 2 · mais longe: a cada 4 · fora da câmera: a cada 8 · > 145 m: nada.
+# A esfera da cabeça (tiro na cabeça x3) só acompanha a animação até 70 m (de mais longe ninguém acerta mesmo).
+var _cam: Camera3D = null
+
+func _process(dt: float) -> void:
+	if estado == MORTO or gerente == null:
+		return
+	_dt_anim += dt
+	_quadro += 1
+	if dist_jogador > 145.0:                 # depois de ~140 m o modelo nem aparece
+		return
+	var a_cada := 1 if dist_jogador < 25.0 else (2 if dist_jogador < 50.0 else 4)
+	if dist_jogador > 6.0:
+		if _cam == null or not is_instance_valid(_cam):
+			_cam = get_viewport().get_camera_3d()
+		if _cam != null and not _cam.is_position_in_frustum(global_position + Vector3(0, 1.0, 0)):
+			a_cada = 8
+	if _quadro % a_cada != 0:
+		return
+	modelo.atualizar(_dt_anim, _vel_h)
+	_dt_anim = 0.0
+	if dist_jogador < 70.0:
+		_forma_cabeca.position = to_local(modelo.pos_cabeca())
+
 # ---------- quadro a quadro ----------
 func _physics_process(dt: float) -> void:
 	if gerente == null or gerente.jogador == null:
@@ -377,14 +402,7 @@ func _physics_process(dt: float) -> void:
 	_recarga = maxf(0.0, _recarga - dt)
 	_decidir(dt, j)
 	_mover(dt)
-	# animação: perto todo quadro, longe a cada 2-4 quadros
-	_quadro += 1
-	_dt_anim += dt
-	var a_cada := 1 if dist_jogador < 40.0 else (2 if dist_jogador < 80.0 else 4)
-	if _quadro % a_cada == 0 and dist_jogador < 145.0:      # depois de ~140 m o modelo nem aparece
-		modelo.atualizar(_dt_anim, _vel_h)
-		_dt_anim = 0.0
-		_forma_cabeca.position = to_local(modelo.pos_cabeca())
+	# (a animação roda em _process: só nos quadros que vão para a tela)
 	# passos de quem vem correndo (dá para ouvir chegando por trás)
 	if _vel_h > 2.0 and dist_jogador < 25.0 and som2 != null:
 		_t_passo -= dt

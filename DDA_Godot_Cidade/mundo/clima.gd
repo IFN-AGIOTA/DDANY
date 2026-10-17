@@ -224,6 +224,14 @@ func ligar(c: Node3D, j: Node3D) -> void:
 	_atualizar_ceu()
 	_atualizar_lanterna()
 
+var _globais := {}
+
+func _global(nome: String, v: float) -> void:
+	if absf(float(_globais.get(nome, -99.0)) - v) < 0.002:
+		return
+	_globais[nome] = v
+	RenderingServer.global_shader_parameter_set(nome, v)
+
 func definir_hora(h: float) -> void:
 	hora = fposmod(h, 24.0)
 	if _ligado:
@@ -321,6 +329,7 @@ func restaurar() -> void:
 			env.fog_density = _nevoa_base
 	RenderingServer.global_shader_parameter_set("molhado", 0.0)
 	RenderingServer.global_shader_parameter_set("noite", 0.0)
+	_globais.clear()
 	if _ceu != null:
 		_ceu.sky_top_color = o["topo"]
 		_ceu.sky_horizon_color = o["hor"]
@@ -491,9 +500,11 @@ func _process(dt: float) -> void:
 		molhado = move_toward(molhado, 1.0, dt * chuva / 30.0)
 	else:
 		molhado = move_toward(molhado, 0.0, dt / (240.0 if _escuridao > 0.5 else 160.0))
-	RenderingServer.global_shader_parameter_set("molhado", molhado)
-	RenderingServer.global_shader_parameter_set("vento", 0.25 + 0.35 * nuvens + 0.9 * chuva)
-	RenderingServer.global_shader_parameter_set("noite", _escuridao)
+	# OTIMIZAÇÃO: os valores globais dos shaders só são mandados quando mudam de verdade (cada envio faz a
+	# placa de vídeo receber de novo o bloco de valores globais)
+	_global("molhado", molhado)
+	_global("vento", 0.25 + 0.35 * nuvens + 0.9 * chuva)
+	_global("noite", _escuridao)
 	_t_ceu -= dt
 	if _t_ceu <= 0.0:
 		_t_ceu = TICK_CEU

@@ -174,27 +174,60 @@ func _tri(v: PackedVector3Array, a: Vector3, b: Vector3, c: Vector3) -> void:
 		v.append(c)
 		v.append(b)
 
+# OTIMIZAÇÃO: o chão (terra, parques, lagos, calçadas, asfalto, faixas) era UMA malha para a cidade inteira, que a
+# placa de vídeo processava toda em todo quadro. Agora cada malha é cortada em PEDAÇOS de PEDACO_CHAO metros
+# (cada triângulo vai para o pedaço do seu centro): só os pedaços que aparecem na câmera são desenhados.
+const PEDACO_CHAO := 800.0
+const LONGE_FAIXAS := 700.0                  # faixas pintadas somem de longe (nem dá para ver)
+
 func _malha(verts: PackedVector3Array, mat: Material, cores := PackedColorArray(), nome := "") -> void:
 	if verts.is_empty():
 		return
-	var normals := PackedVector3Array()
-	normals.resize(verts.size())
-	normals.fill(Vector3.UP)
-	var arr := []
-	arr.resize(Mesh.ARRAY_MAX)
-	arr[Mesh.ARRAY_VERTEX] = verts
-	arr[Mesh.ARRAY_NORMAL] = normals
-	if not cores.is_empty():
-		arr[Mesh.ARRAY_COLOR] = cores
-	var m := ArrayMesh.new()
-	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
-	m.surface_set_material(0, mat)
-	var mi := MeshInstance3D.new()
-	mi.mesh = m
-	if nome != "":
-		mi.name = nome
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_adopt(mi)
+	var com_cor := not cores.is_empty()
+	var pv := {}                               # Vector2i -> PackedVector3Array
+	var pc := {}                               # Vector2i -> PackedColorArray
+	for t in range(0, verts.size() - 2, 3):
+		var a := verts[t]
+		var b := verts[t + 1]
+		var c := verts[t + 2]
+		var k := Vector2i(floori((a.x + b.x + c.x) / (3.0 * PEDACO_CHAO)), floori((a.z + b.z + c.z) / (3.0 * PEDACO_CHAO)))
+		if not pv.has(k):
+			pv[k] = PackedVector3Array()
+			if com_cor:
+				pc[k] = PackedColorArray()
+		var v: PackedVector3Array = pv[k]
+		v.append(a)
+		v.append(b)
+		v.append(c)
+		pv[k] = v
+		if com_cor:
+			var cc: PackedColorArray = pc[k]
+			cc.append(cores[t])
+			cc.append(cores[t + 1])
+			cc.append(cores[t + 2])
+			pc[k] = cc
+	for k in pv:
+		var vv: PackedVector3Array = pv[k]
+		var normals := PackedVector3Array()
+		normals.resize(vv.size())
+		normals.fill(Vector3.UP)
+		var arr := []
+		arr.resize(Mesh.ARRAY_MAX)
+		arr[Mesh.ARRAY_VERTEX] = vv
+		arr[Mesh.ARRAY_NORMAL] = normals
+		if com_cor:
+			arr[Mesh.ARRAY_COLOR] = pc[k]
+		var m := ArrayMesh.new()
+		m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+		m.surface_set_material(0, mat)
+		var mi := MeshInstance3D.new()
+		mi.mesh = m
+		if nome != "":
+			mi.name = "%s_%d_%d" % [nome, k.x, k.y]
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		if nome == "Faixas":
+			mi.visibility_range_end = LONGE_FAIXAS
+		_adopt(mi)
 
 func _poly(v: PackedVector3Array, polys: Array, y: float) -> void:
 	for p in polys:

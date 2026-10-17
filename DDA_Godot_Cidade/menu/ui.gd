@@ -82,16 +82,25 @@ static func degrade_h(ci: CanvasItem, pts: PackedVector2Array, a: Color, b: Colo
 		cores.append(a.lerp(b, clampf((p.x - x0) / maxf(1.0, x1 - x0), 0.0, 1.0)))
 	ci.draw_polygon(pts, cores)
 
+# OTIMIZAÇÃO: o StyleBox de cada combinação (cor, raio, cheio, largura) é criado uma vez e reaproveitado
+static var _caixas := {}
+
 static func caixa_arredondada(ci: CanvasItem, r: Rect2, cor: Color, raio: float, cheio := true, largura := 1.0) -> void:
-	var sb := StyleBoxFlat.new()
-	sb.set_corner_radius_all(int(raio))
-	if cheio:
-		sb.bg_color = cor
-	else:
-		sb.draw_center = false
-		sb.border_color = cor
-		sb.set_border_width_all(int(maxf(1.0, largura)))
-	sb.anti_aliasing = true
+	var k := [cor, int(raio), cheio, int(maxf(1.0, largura))]
+	var sb: StyleBoxFlat = _caixas.get(k)
+	if sb == null:
+		sb = StyleBoxFlat.new()
+		sb.set_corner_radius_all(int(raio))
+		if cheio:
+			sb.bg_color = cor
+		else:
+			sb.draw_center = false
+			sb.border_color = cor
+			sb.set_border_width_all(int(maxf(1.0, largura)))
+		sb.anti_aliasing = true
+		if _caixas.size() > 256:
+			_caixas.clear()
+		_caixas[k] = sb
 	ci.draw_style_box(sb, r)
 
 # ======================================================================
