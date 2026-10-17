@@ -390,12 +390,35 @@ func _convites(lista: Array) -> void:
 		b.apertado.connect(func(): _entrar_amigo(c))
 		_partidas_amigos.add_child(b)
 
-# escolhe o código que deve funcionar daqui: mesmo Wi-Fi > VPN (se eu também estou nela) > internet
+# ordem: MESMO WI-FI (código) > INTERNET COM WEBRTC (sem abrir porta) > VPN > código "Internet" do roteador
 func _entrar_amigo(c: Dictionary) -> void:
+	if _esperando:
+		return
 	var cods: Array = c.get("codigos", [])
+	var meus := Rede.meus_ips()
+	var mesmo_wifi := ""
+	for k in cods:
+		var ip := str(k[2])
+		for m in meus:
+			if str(k[0]) == "Mesmo Wi-Fi" and ip.get_slice(".", 0) + "." + ip.get_slice(".", 1) + "." + ip.get_slice(".", 2) == m.get_slice(".", 0) + "." + m.get_slice(".", 1) + "." + m.get_slice(".", 2):
+				mesmo_wifi = str(k[1])
+	if mesmo_wifi != "":
+		_entrar(mesmo_wifi)
+		return
+	if bool(c.get("rtc", false)):
+		_reserva = _codigo_de_longe(cods)     # se o WebRTC falhar, tenta o código
+		_esperando = true
+		_status.text = "Conectando pela internet com %s…" % c["nome"]
+		Rede.entrar_amigo(str(c["uid"]), _meu_nome())
+		return
 	if cods.is_empty():
 		_status.text = "A partida de %s não mandou códigos (tente de novo em alguns segundos)." % c["nome"]
 		return
+	_entrar(_codigo_de_longe(cods) if _codigo_de_longe(cods) != "" else str(cods[0][1]))
+
+var _reserva := ""                            # código para tentar se a conexão pela internet (WebRTC) falhar
+
+func _codigo_de_longe(cods: Array) -> String:
 	var meus := Rede.meus_ips()
 	var escolha := ""
 	for k in cods:
@@ -411,9 +434,7 @@ func _entrar_amigo(c: Dictionary) -> void:
 		for k in cods:
 			if str(k[0]) == "Internet":
 				escolha = str(k[1])
-	if escolha == "":
-		escolha = str(cods[0][1])
-	_entrar(escolha)
+	return escolha
 
 # ---------- ações ----------
 func _colar() -> void:
@@ -454,6 +475,7 @@ func _entrar(ip: String) -> void:
 
 func _pronto() -> void:
 	_esperando = false
+	_reserva = ""
 	if Rede.eh_host():
 		_sala = true                           # mostra os códigos; o host começa quando quiser
 		_montar()
@@ -462,6 +484,11 @@ func _pronto() -> void:
 
 func _falhou(motivo: String) -> void:
 	_esperando = false
+	if _reserva != "":                         # o WebRTC não passou: tenta o código do host
+		var r := _reserva
+		_reserva = ""
+		_entrar(r)
+		return
 	if _status != null:
 		_status.text = motivo
 

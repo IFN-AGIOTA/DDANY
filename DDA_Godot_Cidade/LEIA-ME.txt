@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.32 (APK código 28)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.33 (APK código 29)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,16 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.33 · ONLINE DE VERDADE COM OS AMIGOS (WebRTC)
+- Tocou em "Partida de Fulano" (PARTIDAS DOS AMIGOS) e vocês não estão no mesmo Wi-Fi: o jogo conecta pela
+  INTERNET do jeito das chamadas de vídeo (WebRTC). Não precisa abrir porta no roteador nem usar VPN, e
+  funciona na maioria das redes, inclusive 4G. Se não passar (redes muito fechadas), tenta sozinho os códigos.
+- Precisa: os dois com CONTA (Google ou convidado), AMIGOS um do outro e na MESMA VERSÃO.
+- O host aceita ao mesmo tempo quem entra pelo Wi-Fi/código e quem entra pela internet (rede/peer_misto.gd).
+- PRECISA ATUALIZAR AS REGRAS DO BANCO (uma vez): Firebase > Realtime Database > Regras > colar
+  rede/firebase_regras.json > Publicar (entrou a parte "sinal").
+- Componente novo: addons/webrtc_native (plugin oficial de WebRTC da Godot, MIT; créditos no menu).
+
 ATUALIZAÇÃO 0.32 · CONTA LIGADA (Firebase "DDA ONLINE")
 - O Firebase do projeto "DDA ONLINE" está configurado: login com Google, convidado, amigos e partidas dos
   amigos funcionam de verdade. A tela ENTRAR aparece ao abrir o jogo.
@@ -629,6 +639,9 @@ MULTIJOGADOR (pasta rede/ · modo livre)
 - conta (Google/convidado), amigos e
   partidas dos amigos (Firebase) ...... rede/conta.gd (autoload "Conta")
 - chaves do Firebase / regras do banco  rede/firebase_config.cfg / rede/firebase_regras.json
+- internet com WebRTC (achar o amigo
+  pelo Firebase e conectar direto) .... rede/rtc.gd (servidores STUN/TURN no topo)
+- host com Wi-Fi/código + WebRTC ...... rede/peer_misto.gd
 - tela do menu e sala do host ......... menu/tela_multijogador.gd
 - tela de login ao abrir o jogo ....... menu/tela_login.gd (quando aparece: main.gd, _pedir_login)
 - "Copiar convite" na pausa ........... menu/pausa.gd
@@ -805,4 +818,10 @@ Como funciona por dentro (rede/conta.gd, tudo por HTTP, sem plugin):
     (só pega código livre) · amigos/{uid}/{amigo} · convites/{amigo}/{host} = {nome, codigos, n, versao, t}.
     A regra só deixa o host escrever o convite para quem o adicionou como amigo. O host republica a cada 45 s;
     convite com mais de 150 s é ignorado (partida fechada); ao sair da partida ele apaga.
+  · WEBRTC (0.33): sinal/{host}/{amigo} = {c: oferta do amigo {id, sessao, sdp, cand, t}, h: resposta do host
+    {sessao, sdp, cand}}. O amigo grava a oferta (só se o host o tem como amigo), o host vigia sinal/{seu uid}
+    a cada 1,2 s, responde, os dois trocam candidatos ICE (STUN do Google) e o canal WebRTC abre; aí a troca
+    é apagada. O host usa um MultiplayerPeerExtension (peer_misto.gd) que junta ENet + WebRTCMultiplayerPeer.
+    Canais: 1 = estado (não confiável, em ordem), 2 = eventos (confiável). Sem TURN algumas redes não passam:
+    dá para pôr um em firebase_config.cfg ([webrtc] turn="turn:servidor:3478", turn_usuario, turn_senha).
   · Testes sem Firebase: variável DDA_FIREBASE_CFG aponta para outra configuração (servidor falso local).

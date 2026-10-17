@@ -27,6 +27,8 @@ const RECURSOS := [
 	["Animações de andar de lado e de costas, fuzil (mirar, atirar, recarregar), golpes com arma, pegar do chão, levar golpe, mortes e sentar",
 		"Kay Lousberg · \"KayKit Character Animations\" (convertidas para o esqueleto do jogo)",
 		"CC0 1.0 (domínio público)", "kaylousberg.itch.io/kaykit-character-animations · kaylousberg.com"],
+	["Conexão pela internet no multijogador (WebRTC)", "Godot Engine contributors · \"webrtc-native\" (com libdatachannel, libjuice, usrsctp, libsrtp, Mbed TLS e plog)",
+		"MIT (libdatachannel e libjuice: MPL 2.0 · usrsctp e libsrtp: BSD · Mbed TLS: Apache 2.0)", "github.com/godotengine/webrtc-native (licenças em addons/webrtc_native/)"],
 	["Pistola, rifle de caça, faca, facão, taco, machado e pé de cabra (modelos realistas)",
 		"Poly Haven · Mateusz Sadek, Ulan Cabanilla, Enrique Martín, James Ray Cock, Alexander Otterbeck",
 		"CC0 1.0 (domínio público)", "polyhaven.com (lista completa em armas/modelos/LICENCA.txt)"],

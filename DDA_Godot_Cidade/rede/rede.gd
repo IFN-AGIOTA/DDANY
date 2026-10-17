@@ -14,6 +14,9 @@ extends Node
 # IP + porta em 10 letras para mandar no WhatsApp. Se o roteador não deixar (ou internet do celular/4G, que
 # quase nunca deixa), use uma VPN gratuita nos dois aparelhos (Tailscale ou ZeroTier): o código "VPN" funciona.
 #
+# PELA INTERNET COM A CONTA (0.33): o host aceita também conexões WEBRTC (rede/rtc.gd + rede/peer_misto.gd):
+# o amigo toca na "Partida de Fulano" e Rede.entrar_amigo(uid) conecta direto, sem abrir porta nem VPN.
+#
 # O que passa pela rede está em rede/sessao_rede.gd (estado dos jogadores, tiros, ações, roupa, clima).
 # Mexa AQUI para: porta, limite de jogadores, versão do protocolo, anúncio na rede local.
 
@@ -47,9 +50,17 @@ var internet_motivo := ""                      # host: por que não abriu (ou "a
 var _upnp: UPNP = null
 var _thread: Thread = null
 const ALFABETO := "0123456789ABCDEFGHJKMNPQRSTVWXYZ"   # base 32 sem I, L, O, U (não confunde ao digitar)
+const RtcCls := preload("res://rede/rtc.gd")
+const PeerMistoCls := preload("res://rede/peer_misto.gd")
+var rtc: Node                                  # rede/rtc.gd (WebRTC pela internet)
+var _com_rtc := false                          # host: aceita amigos pelo WebRTC
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS    # a rede continua com o jogo pausado
+	rtc = RtcCls.new()
+	rtc.name = "Rtc"
+	add_child(rtc)
+	rtc.cliente_falhou.connect(_falhar)
 	multiplayer.peer_connected.connect(_peer_conectou)
 	multiplayer.peer_disconnected.connect(_peer_saiu)
 	multiplayer.connected_to_server.connect(_conectou_no_host)
@@ -77,7 +88,11 @@ func criar_partida(meu_nome: String, semente_loot: int) -> void:
 	if e != OK:
 		_falhar("Não deu para abrir a partida (porta %d ocupada?)." % PORTA)
 		return
-	multiplayer.multiplayer_peer = p
+	_com_rtc = RtcCls.disponivel()
+	if _com_rtc:
+		multiplayer.multiplayer_peer = PeerMistoCls.new(p, rtc.comecar_host())   # Wi-Fi/código + internet (WebRTC)
+	else:
+		multiplayer.multiplayer_peer = p
 	ligado = true
 	_host_nome = nome
 	jogadores = {1: {"nome": nome}}
@@ -102,7 +117,26 @@ func entrar(endereco: String, meu_nome: String) -> void:
 		return
 	multiplayer.multiplayer_peer = p           # "ligado" só quando o host aceitar (_aceito)
 
+# entra na partida de um AMIGO da conta pela internet (WebRTC, rede/rtc.gd)
+func entrar_amigo(host_uid: String, meu_nome: String) -> void:
+	sair()
+	nome = _limpar_nome(meu_nome)
+	if not Conta.logado:
+		_falhar("Entre na sua conta para jogar com amigos pela internet.")
+		return
+	if not RtcCls.disponivel():
+		_falhar("Este aparelho não tem a conexão pela internet (WebRTC).")
+		return
+	multiplayer.multiplayer_peer = rtc.conectar(host_uid)   # "ligado" só quando o host aceitar (_aceito)
+
+# o host aceita amigos pela internet (WebRTC)?
+func aceita_rtc() -> bool:
+	return eh_host() and _com_rtc
+
 func sair() -> void:
+	if rtc != null:
+		rtc.parar()
+	_com_rtc = false
 	if multiplayer.has_multiplayer_peer() and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
@@ -350,7 +384,7 @@ func _peer_saiu(id: int) -> void:
 func _derrubar_depois(id: int) -> void:
 	await get_tree().create_timer(0.5).timeout
 	if multiplayer.has_multiplayer_peer() and multiplayer.is_server():
-		(multiplayer.multiplayer_peer as ENetMultiplayerPeer).disconnect_peer(id)
+		multiplayer.multiplayer_peer.disconnect_peer(id)
 
 # ---------- mensagens do jogo (rede/sessao_rede.gd) ----------
 # estado: chega rápido e pode perder pacote (o próximo corrige)

@@ -271,7 +271,7 @@ func atualizar_convites() -> void:
 				continue
 			if agora - float(c.get("t", 0)) > VALIDADE_CONVITE * 1000.0:
 				continue
-			lista.append({"uid": host, "nome": str(c.get("nome", "?")), "codigos": c.get("codigos", []),
+			lista.append({"uid": host, "nome": str(c.get("nome", "?")), "codigos": c.get("codigos", []), "rtc": bool(c.get("rtc", false)),
 				"n": int(c.get("n", 1)), "versao": str(c.get("versao", ""))})
 	convites = lista
 	convites_mudaram.emit(convites)
@@ -279,7 +279,7 @@ func atualizar_convites() -> void:
 func publicar_partida() -> void:
 	if not logado or not Rede.eh_host():
 		return
-	var conv := {"nome": nome, "codigos": Rede.codigos(), "n": Rede.jogadores.size(), "versao": Config.VERSAO,
+	var conv := {"nome": nome, "codigos": Rede.codigos(), "n": Rede.jogadores.size(), "versao": Config.VERSAO, "rtc": Rede.aceita_rtc(),
 		"t": {".sv": "timestamp"}}
 	for outro in amigos:
 		await _db(HTTPClient.METHOD_PUT, "convites/%s/%s" % [outro, uid], conv)   # só vale se a pessoa também me adicionou
@@ -317,6 +317,16 @@ func _renovar() -> bool:
 	_expira = Time.get_unix_time_from_system() + float(d.get("expires_in", 3600)) - 60.0
 	_guardar()
 	return _id_token != ""
+
+# para outros sistemas (rede/rtc.gd): ler, gravar e apagar no banco com a conta aberta
+func db_get(caminho: String):
+	return await _db(HTTPClient.METHOD_GET, caminho)
+
+func db_put(caminho: String, valor) -> bool:
+	return await _db_ok(HTTPClient.METHOD_PUT, caminho, valor)
+
+func db_del(caminho: String) -> bool:
+	return await _db_ok(HTTPClient.METHOD_DELETE, caminho)
 
 # banco (Realtime Database REST). Volta o valor (GET) ou null
 func _db(metodo: int, caminho: String, corpo = null):
