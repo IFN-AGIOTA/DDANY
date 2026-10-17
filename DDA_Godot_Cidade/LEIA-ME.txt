@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.46 (APK código 42)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.47 (APK código 43)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,27 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.47 · ATUALIZAÇÕES PELO PRÓPRIO JOGO (hospedadas no GitHub público IFN-AGIOTA/DDANY)
+  · Ao abrir, o jogo lê o MANIFESTO atualizacoes/atualizacao.json (na raiz do repositório, ramo
+    claude/dayz-inventory-system-pckjpx) e faz uma de duas coisas:
+      1) APK NOVO (muda algo do Android: permissões, plugins, a Godot, o atualizador): aviso no menu com o botão
+         BAIXAR -> abre o link do APK (o Android baixa e pergunta se instala; save e conta continuam).
+      2) PACOTE (.pck) para ESTE APK: baixa sozinho em segundo plano, confere tamanho e SHA-256 e avisa "vale quando
+         abrir o jogo de novo". Consertos, ajustes, coisas novas e "remoções" (trocando o arquivo por outro que não faz
+         nada) chegam assim, sem reinstalar: só os arquivos que mudaram (kilobytes).
+  · rede/atualizador.gd (NOVO, o 1º autoload): aplica o pacote ANTES dos outros scripts carregarem. Fica no APK e não
+    é trocado por pacote. SEGURANÇA: se o jogo não chegar ao menu com um pacote novo, na abertura seguinte ele é
+    desfeito (volta ao pacote anterior ou ao APK), marcado como "ruim" e não é baixado de novo. Pacote de outro APK
+    é apagado. CODIGO_APK = version/code do export_presets.cfg (atualizar a cada APK novo).
+  · rede/atualizacoes.gd (NOVO, pode ser trocado por pacote): procura, baixa e mostra os avisos (só no menu).
+  · ferramentas/gerar_pacote.gd (NOVO): gera o pacote e o manifesto. Ver as instruções no começo do arquivo:
+      MODO=pacote VERSAO=0.47.1 NOTAS="..." ARQUIVOS="pasta/arquivo.gd,..." godot --headless -s res://ferramentas/gerar_pacote.gd
+      MODO=apk VERSAO=0.48 NOTAS="..." (depois de subir o APK novo) · MODO=tirar (tira o pacote do ar)
+    Depois é só fazer commit/push da pasta atualizacoes/ (e do APK) para o GitHub.
+  · Testado com um servidor local: baixa, aplica na abertura seguinte, pacote com defeito é desfeito sozinho e não
+    volta, aviso de APK novo, pacote tirado do ar some.
+  · A partir desta versão é preciso instalar o APK 0.47 uma vez (as versões antigas não têm o atualizador).
+
 ATUALIZAÇÃO 0.46 · GRÁFICOS: MENOS CHAMADAS DE DESENHO (o que mais pesa no processador do celular)
   · Medido em 32 vistas de rua: 367 -> 252 chamadas de desenho por quadro (-31%), mesma imagem.
   · HUD (82 -> 49): no renderizador do celular cada draw_circle/draw_arc/draw_line é uma chamada própria; só
@@ -769,6 +790,7 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   nas fachadas ........................ mundo/fachadas.gd
 - oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd
 - chunks de 500 m (o que fica na cena, raio) ....... mundo/chunks.gd (+ Opções › Gráficos › Raio de chunks)
+- atualizações pelo jogo (APK e pacotes) .......... rede/atualizador.gd, rede/atualizacoes.gd, ferramentas/gerar_pacote.gd
 - texturas do chão (concreto, terra, grama...) ... mundo/texturas/ + shader TERRA (mundo/materiais_cidade.gd)
 - placas, pichações, cortinas e luzes
   nas janelas (shader PREDIO/GRAFITE) . mundo/materiais_cidade.gd
