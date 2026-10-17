@@ -8,10 +8,12 @@ signal continuar
 signal historia
 signal opcoes
 signal multijogador
+signal perfil                            # ícone de perfil no canto (menu/tela_perfil.gd)
 
 const UI := preload("res://menu/ui.gd")
 const Salvamento := preload("res://menu/salvamento.gd")
 const CreditosCls := preload("res://menu/creditos.gd")
+const AvatarCls := preload("res://menu/avatar.gd")
 
 var _raiz: Control
 var _aviso: Label
@@ -21,6 +23,8 @@ var _carregando: Label
 func _ready() -> void:
 	layer = 20
 	get_viewport().size_changed.connect(_montar)
+	Conta.mudou.connect(_montar)
+	Conta.pedidos_mudaram.connect(_montar)
 	_montar()
 
 const SHADER_VEU := """
@@ -143,6 +147,16 @@ func _montar() -> void:
 	tc.offset_top = 2.0 * v
 	tc.offset_bottom = 8.5 * v
 	_raiz.add_child(tc)
+	# PERFIL: ícone + nome no canto de cima (ao lado da tela cheia); bolinha com os pedidos de amizade
+	if Conta.configurado:
+		var bp := _BotaoPerfil.new()
+		bp.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		bp.offset_left = -46.0 * v
+		bp.offset_right = -10.5 * v
+		bp.offset_top = 2.0 * v
+		bp.offset_bottom = 8.5 * v
+		bp.apertado.connect(func(): perfil.emit())
+		_raiz.add_child(bp)
 	_aviso = UI.rotulo("", 3.0 * v, UI.AMBAR, 700, 0.0, true)
 	_aviso.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	_aviso.offset_top = -9.0 * v
@@ -197,6 +211,56 @@ func _process(dt: float) -> void:
 		_aviso.modulate.a = clampf(_aviso_t, 0.0, 1.0)
 		if _aviso_t <= 0.0:
 			_aviso.visible = false
+
+func _exit_tree() -> void:
+	if Conta.mudou.is_connected(_montar):
+		Conta.mudou.disconnect(_montar)
+		Conta.pedidos_mudaram.disconnect(_montar)
+
+# botão do PERFIL: ícone, nome (ou "Entrar") e bolinha de pedidos de amizade
+class _BotaoPerfil extends Control:
+	signal apertado
+	const UIp := preload("res://menu/ui.gd")
+	const Av := preload("res://menu/avatar.gd")
+	var _av: Control
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_STOP
+	func _ready() -> void:
+		_av = Av.new(Conta.avatar if Conta.logado else 1, 10.0)
+		_av.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(_av)
+		resized.connect(_ajustar)
+		_ajustar()
+	func _ajustar() -> void:
+		var s := size.y
+		_av.position = Vector2(size.x - s, 0)
+		_av.size = Vector2(s, s)
+		queue_redraw()
+	func _gui_input(e: InputEvent) -> void:
+		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+			accept_event()
+			apertado.emit()
+	func _draw() -> void:
+		var v: float = UIp.vh(self)
+		var s := size.y
+		var txt: String = Conta.nome if Conta.logado else "Entrar"
+		var sub: String = ("código " + Conta.codigo_amigo) if Conta.logado else "conta e amigos"
+		var ft: Font = UIp.fonte(900)
+		var t1 := int(2.8 * v)
+		var w1 := ft.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, t1).x
+		var f2: Font = UIp.fonte(400, 0.0, false)
+		var t2 := int(1.9 * v)
+		var w2 := f2.get_string_size(sub, HORIZONTAL_ALIGNMENT_LEFT, -1, t2).x
+		var x := size.x - s - 1.2 * v
+		draw_string(ft, Vector2(x - w1, s * 0.5), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, t1, Color.WHITE)
+		draw_string(f2, Vector2(x - w2, s * 0.5 + t2 * 1.3), sub, HORIZONTAL_ALIGNMENT_LEFT, -1, t2, Color(1, 0.91, 0.82, 0.75))
+		var n: int = Conta.pedidos.size()
+		if n > 0:
+			var c := Vector2(size.x - s * 0.12, s * 0.12)
+			draw_circle(c, s * 0.2, Color("#e0312b"))
+			var tn := int(s * 0.26)
+			var wn := ft.get_string_size(str(n), HORIZONTAL_ALIGNMENT_LEFT, -1, tn).x
+			draw_string(ft, c + Vector2(-wn * 0.5, tn * 0.36), str(n), HORIZONTAL_ALIGNMENT_LEFT, -1, tn, Color.WHITE)
 
 # ícone ⛶ de tela cheia (canto de cima à direita)
 class _BotaoTelaCheia extends Control:

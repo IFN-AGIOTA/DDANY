@@ -18,6 +18,10 @@ signal login_codigo(codigo: String, site: String)   # mostre o código e o site 
 signal login_erro(motivo: String)
 signal aviso(texto: String)
 signal convites_mudaram(lista: Array)          # [{"uid", "nome", "codigos", "n", "versao"}, ...]
+signal chamado(convite: Dictionary)            # um amigo me CHAMOU para a sala dele agora (main.gd mostra o aviso)
+signal pedidos_mudaram                         # pedidos de amizade recebidos mudaram
+signal amigos_atualizados                      # status (online, ícone, recorde) dos amigos chegou
+signal resposta(amigo_uid: String, aceitou: bool)   # host: o amigo chamado aceitou/recusou
 
 const CONFIG := "res://rede/firebase_config.cfg"
 const SALVO := "user://conta.cfg"
@@ -36,6 +40,18 @@ var codigo_amigo := ""
 var amigos := {}                               # uid -> {"nome", "codigo"}
 var convites: Array = []
 var entrando := false                          # login em andamento
+var avatar := 0                                # ícone do perfil (menu/avatar.gd)
+var recorde_tempo := 0.0                       # melhor tempo vivo (s) e mais abates (vêm do Config, vão para a conta)
+var recorde_abates := 0
+var pedidos := {}                              # uid -> {"nome", "codigo", "avatar"} (pedidos de amizade recebidos)
+var status_amigos := {}                        # uid -> {"nome", "avatar", "visto", "estado", "mutuo", "recorde_tempo"}
+var _chamados_vistos := {}                     # host -> "chamou" já mostrado
+var _t_presenca := 0.0
+var _ultimo_estado := ""
+var _t_chamados := 2.0
+const PRESENCA_A_CADA := 60.0                  # segundos entre "estou online"
+const ONLINE_ATE := 150.0                      # visto há menos que isso = online
+const CHAMADO_VALE := 45.0                     # um chamado mais velho que isso não vira aviso
 
 var _api_key := ""
 var _db_url := ""
@@ -74,6 +90,9 @@ func _ready() -> void:
 	Rede.internet.connect(func(_a, _b, _c): _t_publicar = 0.0)
 	Rede.jogador_entrou.connect(func(_a, _b): _t_publicar = minf(_t_publicar, 2.0))
 	Rede.jogador_saiu.connect(func(_a): _t_publicar = minf(_t_publicar, 2.0))
+	Config.mudou.connect(func(k):
+		if k == "rec_tempo" or k == "rec_abates":
+			_sincronizar_recordes())
 	var s := ConfigFile.new()
 	if s.load(SALVO) == OK and str(s.get_value("conta", "refresh", "")) != "":
 		_refresh = str(s.get_value("conta", "refresh", ""))
@@ -195,6 +214,9 @@ func _carregar_perfil(nome_google: String) -> void:
 	var perfil: Dictionary = p if p is Dictionary else {}
 	codigo_amigo = str(perfil.get("codigo", ""))
 	nome = str(perfil.get("nome", ""))
+	avatar = int(perfil.get("avatar", randi() % 12))
+	recorde_tempo = maxf(float(perfil.get("recorde_tempo", 0.0)), float(Config.valor("rec_tempo")))
+	recorde_abates = maxi(int(perfil.get("recorde_abates", 0)), int(Config.valor("rec_abates")))
 	if nome == "":
 		nome = str(Config.valor("nome_rede")) if str(Config.valor("nome_rede")) != "" else (nome_google if nome_google != "" else "Sobrevivente")
 	if codigo_amigo == "":
@@ -205,7 +227,8 @@ func _carregar_perfil(nome_google: String) -> void:
 			if await _db_ok(HTTPClient.METHOD_PUT, "codigos/" + c, uid):
 				codigo_amigo = c
 				break
-	await _db(HTTPClient.METHOD_PUT, "usuarios/" + uid, {"nome": nome, "codigo": codigo_amigo})
+	await _db(HTTPClient.METHOD_PUT, "usuarios/" + uid, {"nome": nome, "codigo": codigo_amigo, "avatar": avatar,
+		"recorde_tempo": recorde_tempo, "recorde_abates": recorde_abates, "visto": {".sv": "timestamp"}, "estado": _estado()})
 	if str(Config.valor("nome_rede")) == "":
 		Config.definir("nome_rede", nome)
 	var a = await _db(HTTPClient.METHOD_GET, "amigos/" + uid)
@@ -214,6 +237,33 @@ func _carregar_perfil(nome_google: String) -> void:
 	entrando = false
 	mudou.emit()
 	atualizar_convites()
+	atualizar_pedidos()
+	atualizar_amigos()
+
+func definir_avatar(i: int) -> void:
+	if not logado:
+		return
+	avatar = i
+	mudou.emit()
+	await _db(HTTPClient.METHOD_PATCH, "usuarios/" + uid, {"avatar": avatar})
+
+func _sincronizar_recordes() -> void:
+	var t := float(Config.valor("rec_tempo"))
+	var a := int(Config.valor("rec_abates"))
+	if not logado or (t <= recorde_tempo and a <= recorde_abates):
+		return
+	recorde_tempo = maxf(recorde_tempo, t)
+	recorde_abates = maxi(recorde_abates, a)
+	await _db(HTTPClient.METHOD_PATCH, "usuarios/" + uid, {"recorde_tempo": recorde_tempo, "recorde_abates": recorde_abates})
+
+# o que estou fazendo agora (aparece para os amigos)
+func _estado() -> String:
+	if Rede.ligado:
+		return "online" if not Rede.partida_comecou else "jogando online"
+	var m = get_tree().current_scene if is_inside_tree() else null
+	if m != null and m.get("jogo") != null:
+		return "jogando sozinho"
+	return "no menu"
 
 func definir_nome(n: String) -> void:
 	n = n.strip_edges().left(16)
@@ -241,13 +291,121 @@ func adicionar_amigo(codigo: String) -> void:
 		return
 	var p = await _db(HTTPClient.METHOD_GET, "usuarios/" + outro)
 	var nm := str(p.get("nome", "?")) if p is Dictionary else "?"
-	if await _db_ok(HTTPClient.METHOD_PUT, "amigos/%s/%s" % [uid, outro], {"nome": nm, "codigo": codigo}):
-		amigos[outro] = {"nome": nm, "codigo": codigo}
+	var av := int(p.get("avatar", 0)) if p is Dictionary else 0
+	if amigos.has(outro):
+		aviso.emit("%s já está na sua lista." % nm)
+		return
+	if await _db_ok(HTTPClient.METHOD_PUT, "amigos/%s/%s" % [uid, outro], {"nome": nm, "codigo": codigo, "avatar": av}):
+		amigos[outro] = {"nome": nm, "codigo": codigo, "avatar": av}
+		var ja = await _db(HTTPClient.METHOD_GET, "amigos/%s/%s" % [outro, uid])   # a pessoa já tinha me adicionado?
+		if ja is Dictionary:
+			aviso.emit("Agora você e %s são amigos!" % nm)
+		else:
+			await _db(HTTPClient.METHOD_PUT, "pedidos/%s/%s" % [outro, uid], {"nome": nome, "codigo": codigo_amigo, "avatar": avatar,
+				"t": {".sv": "timestamp"}})
+			aviso.emit("Pedido de amizade enviado para %s. Quando aceitar, vocês podem se chamar." % nm)
 		mudou.emit()
-		aviso.emit("%s adicionado! Para verem as partidas um do outro, peça para essa pessoa adicionar o seu código: %s" % [nm, codigo_amigo])
+		atualizar_amigos()
 		_t_publicar = minf(_t_publicar, 1.0)
 	else:
 		aviso.emit("Não deu para adicionar agora. Tente de novo.")
+
+# ---------- pedidos de amizade ----------
+func atualizar_pedidos() -> void:
+	if not logado:
+		return
+	var d = await _db(HTTPClient.METHOD_GET, "pedidos/" + uid)
+	pedidos = {}
+	if d is Dictionary:
+		for de in d:
+			if amigos.has(de):                  # já é amigo: o pedido não serve mais
+				_db(HTTPClient.METHOD_DELETE, "pedidos/%s/%s" % [uid, de])
+				continue
+			var x = d[de]
+			if x is Dictionary:
+				pedidos[de] = {"nome": str(x.get("nome", "?")), "codigo": str(x.get("codigo", "")), "avatar": int(x.get("avatar", 0))}
+	pedidos_mudaram.emit()
+
+func aceitar_pedido(de: String) -> void:
+	var p: Dictionary = pedidos.get(de, {})
+	if p.is_empty():
+		return
+	if await _db_ok(HTTPClient.METHOD_PUT, "amigos/%s/%s" % [uid, de], {"nome": p["nome"], "codigo": p["codigo"], "avatar": p["avatar"]}):
+		amigos[de] = {"nome": p["nome"], "codigo": p["codigo"], "avatar": p["avatar"]}
+		aviso.emit("Agora você e %s são amigos!" % p["nome"])
+	await _db(HTTPClient.METHOD_DELETE, "pedidos/%s/%s" % [uid, de])
+	pedidos.erase(de)
+	pedidos_mudaram.emit()
+	mudou.emit()
+	atualizar_amigos()
+
+func recusar_pedido(de: String) -> void:
+	pedidos.erase(de)
+	pedidos_mudaram.emit()
+	await _db(HTTPClient.METHOD_DELETE, "pedidos/%s/%s" % [uid, de])
+
+# ---------- status dos amigos (online, ícone, recorde, se já aceitou) ----------
+func atualizar_amigos() -> void:
+	if not logado:
+		return
+	var novo := {}
+	for f in amigos.keys():
+		var p = await _db(HTTPClient.METHOD_GET, "usuarios/" + f)
+		var m = await _db(HTTPClient.METHOD_GET, "amigos/%s/%s" % [f, uid])
+		var d: Dictionary = p if p is Dictionary else {}
+		novo[f] = {"nome": str(d.get("nome", amigos.get(f, {}).get("nome", "?"))), "avatar": int(d.get("avatar", 0)),
+			"visto": float(d.get("visto", 0)), "estado": str(d.get("estado", "")), "mutuo": m is Dictionary,
+			"recorde_tempo": float(d.get("recorde_tempo", 0.0)), "recorde_abates": int(d.get("recorde_abates", 0))}
+	status_amigos = novo
+	amigos_atualizados.emit()
+
+# [0 offline · 1 online · 2 jogando, texto]
+func status_de(f: String) -> Array:
+	var s: Dictionary = status_amigos.get(f, {})
+	if s.is_empty():
+		return [0, "…"]
+	if not bool(s.get("mutuo", false)):
+		return [0, "pedido enviado · aguardando aceitar"]
+	var seg := Time.get_unix_time_from_system() - float(s.get("visto", 0)) / 1000.0
+	if seg < ONLINE_ATE:
+		var e := str(s.get("estado", "online"))
+		return [2 if e.begins_with("jogando") else 1, e]
+	if float(s.get("visto", 0)) <= 0.0:
+		return [0, "offline"]
+	if seg < 3600.0:
+		return [0, "visto há %d min" % int(seg / 60.0)]
+	if seg < 86400.0:
+		return [0, "visto há %d h" % int(seg / 3600.0)]
+	return [0, "visto há %d dias" % int(seg / 86400.0)]
+
+# ---------- chamar amigo para a sala (host) e responder ----------
+func chamar(f: String) -> bool:
+	if not logado or not Rede.eh_host():
+		return false
+	var conv := _convite()
+	conv["chamou"] = {".sv": "timestamp"}
+	var ok := await _db_ok(HTTPClient.METHOD_PUT, "convites/%s/%s" % [f, uid], conv)
+	if not ok:
+		aviso.emit("%s ainda não aceitou seu pedido de amizade." % status_amigos.get(f, amigos.get(f, {})).get("nome", "?"))
+	_publicado = true
+	return ok
+
+func responder(c: Dictionary, aceitou: bool) -> void:
+	if logado:
+		await _db(HTTPClient.METHOD_PUT, "respostas/%s/%s" % [str(c["uid"]), uid], {"r": "aceitou" if aceitou else "recusou", "t": {".sv": "timestamp"}})
+
+# host: lê quem aceitou/recusou (e apaga)
+func ler_respostas() -> void:
+	if not logado or not Rede.eh_host():
+		return
+	var d = await _db(HTTPClient.METHOD_GET, "respostas/" + uid)
+	if not (d is Dictionary):
+		return
+	await _db(HTTPClient.METHOD_DELETE, "respostas/" + uid)
+	for f in d:
+		var x = d[f]
+		if x is Dictionary:
+			resposta.emit(f, str(x.get("r", "")) == "aceitou")
 
 func remover_amigo(outro: String) -> void:
 	if not logado or not amigos.has(outro):
@@ -271,18 +429,29 @@ func atualizar_convites() -> void:
 				continue
 			if agora - float(c.get("t", 0)) > VALIDADE_CONVITE * 1000.0:
 				continue
-			lista.append({"uid": host, "nome": str(c.get("nome", "?")), "codigos": c.get("codigos", []), "rtc": bool(c.get("rtc", false)),
-				"n": int(c.get("n", 1)), "versao": str(c.get("versao", ""))})
+			var item := {"uid": host, "nome": str(c.get("nome", "?")), "codigos": c.get("codigos", []), "rtc": bool(c.get("rtc", false)),
+				"n": int(c.get("n", 1)), "versao": str(c.get("versao", "")), "avatar": int(c.get("avatar", 0)),
+				"chamou": float(c.get("chamou", 0)), "comecou": bool(c.get("comecou", false))}
+			lista.append(item)
+			# CHAMADO novo (o host tocou em CHAMAR há pouco): vira aviso na tela (main.gd)
+			var ch: float = item["chamou"]
+			if ch > float(_chamados_vistos.get(host, 0.0)) and agora - ch < CHAMADO_VALE * 1000.0:
+				_chamados_vistos[host] = ch
+				if not Rede.ligado:
+					chamado.emit(item)
 	convites = lista
 	convites_mudaram.emit(convites)
+
+func _convite() -> Dictionary:
+	return {"nome": nome, "avatar": avatar, "codigos": Rede.codigos(), "n": Rede.jogadores.size(), "versao": Config.VERSAO,
+		"rtc": Rede.aceita_rtc(), "comecou": Rede.partida_comecou, "t": {".sv": "timestamp"}}
 
 func publicar_partida() -> void:
 	if not logado or not Rede.eh_host():
 		return
-	var conv := {"nome": nome, "codigos": Rede.codigos(), "n": Rede.jogadores.size(), "versao": Config.VERSAO, "rtc": Rede.aceita_rtc(),
-		"t": {".sv": "timestamp"}}
+	var conv := _convite()
 	for outro in amigos:
-		await _db(HTTPClient.METHOD_PUT, "convites/%s/%s" % [outro, uid], conv)   # só vale se a pessoa também me adicionou
+		await _db(HTTPClient.METHOD_PATCH, "convites/%s/%s" % [outro, uid], conv)   # PATCH: não apaga o "chamou"; só vale se a pessoa também me adicionou
 	_publicado = true
 
 func retirar_partida() -> void:
@@ -295,6 +464,19 @@ func retirar_partida() -> void:
 func _process(dt: float) -> void:
 	if not logado:
 		return
+	_t_presenca -= dt
+	var e := _estado()
+	if _t_presenca <= 0.0 or e != _ultimo_estado:   # de minuto em minuto, ou na hora que muda (entrou na sala, começou...)
+		_t_presenca = PRESENCA_A_CADA
+		_ultimo_estado = e
+		_db(HTTPClient.METHOD_PATCH, "usuarios/" + uid, {"visto": {".sv": "timestamp"}, "estado": e})
+	_t_chamados -= dt
+	if _t_chamados <= 0.0:
+		_t_chamados = 5.0
+		if not Rede.ligado:
+			atualizar_convites()               # também acha os CHAMADOS novos
+		if int(Time.get_ticks_msec() / 5000) % 6 == 0:
+			atualizar_pedidos()
 	if Rede.eh_host():
 		_t_publicar -= dt
 		if _t_publicar <= 0.0:

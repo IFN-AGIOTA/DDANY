@@ -42,6 +42,8 @@ const JOGADOR_CENA := preload("res://jogador/jogador.tscn")
 const SessaoRedeCls := preload("res://rede/sessao_rede.gd")
 const TelaMultiCls := preload("res://menu/tela_multijogador.gd")
 const TelaLoginCls := preload("res://menu/tela_login.gd")
+const TelaPerfilCls := preload("res://menu/tela_perfil.gd")
+const AvisoChamadoCls := preload("res://menu/aviso_chamado.gd")
 
 var cidade: Node3D
 var jogo: Node3D                            # tudo do jogo em andamento (apagado ao voltar ao menu)
@@ -73,6 +75,7 @@ var sessao_rede: Node = null                # rede/sessao_rede.gd (só na partid
 var tela_multi: CanvasLayer = null          # menu/tela_multijogador.gd
 var tela_login: CanvasLayer = null          # menu/tela_login.gd (pede o login ao abrir o jogo)
 var _login_perguntado := false
+var tela_perfil: CanvasLayer = null         # menu/tela_perfil.gd (ícone de perfil no menu)
 var abates := 0
 var _tempo_jogo := 0.0
 var _t_salvar := 0.0
@@ -104,6 +107,7 @@ func _ready() -> void:
 	aplicador.main = self
 	add_child(aplicador)
 	Rede.caiu.connect(_rede_caiu)
+	Conta.chamado.connect(_chamado)
 	_abrir_menu()
 
 # nó "Cidade" (construções). No editor é criado sem dono, então não é salvo na cena.
@@ -131,6 +135,7 @@ func _abrir_menu() -> void:
 	menu.historia.connect(func(): _jogar(false, true))
 	menu.opcoes.connect(_abrir_opcoes)
 	menu.multijogador.connect(_abrir_multijogador)
+	menu.perfil.connect(_abrir_perfil)
 	Musica.definir_modo("menu")
 	if not _login_perguntado:
 		_login_perguntado = true
@@ -148,13 +153,54 @@ func _pedir_login() -> void:
 	if Conta.logado:
 		menu.avisar("Olá, %s!" % Conta.nome)
 		return
+	_abrir_login()
+
+func _abrir_login() -> void:
+	if tela_login != null or not Conta.configurado:
+		return
 	tela_login = TelaLoginCls.new()
 	tela_login.name = "TelaLogin"
 	add_child(tela_login)
 	tela_login.fechar.connect(func():
 		tela_login = null
 		if Conta.logado and menu != null:
-			menu.avisar("Olá, %s! Seus amigos estão em Multijogador." % Conta.nome))
+			menu.avisar("Olá, %s! Toque no seu ícone para ver o perfil e os amigos." % Conta.nome))
+
+# PERFIL (ícone no canto do menu e botão na tela Multijogador)
+func _abrir_perfil() -> void:
+	if tela_perfil != null:
+		return
+	tela_perfil = TelaPerfilCls.new()
+	tela_perfil.name = "TelaPerfil"
+	add_child(tela_perfil)
+	tela_perfil.fechar.connect(func(): tela_perfil = null)
+	tela_perfil.pedir_login.connect(func():
+		tela_perfil.queue_free()
+		tela_perfil = null
+		_abrir_login())
+
+# um amigo me CHAMOU para a sala dele (rede/conta.gd): aviso por cima de tudo
+func _chamado(c: Dictionary) -> void:
+	if Rede.ligado or get_node_or_null("AvisoChamado") != null:
+		return
+	var a := AvisoChamadoCls.new()
+	a.name = "AvisoChamado"
+	a.convite = c
+	add_child(a)
+	a.aceitou.connect(_aceitar_chamado)
+
+func _aceitar_chamado(c: Dictionary) -> void:
+	if jogo != null:                        # estava jogando sozinho: salva e volta ao menu
+		salvar_jogo()
+		_continuar()
+		_abrir_menu()
+	for t in [tela_perfil, tela_login]:
+		if t != null and is_instance_valid(t):
+			t.queue_free()
+	tela_perfil = null
+	tela_login = null
+	_abrir_multijogador()
+	tela_multi.entrar_na_sala(c)
 
 func _jogar(carregar_salvo := false, modo_historia := false) -> void:
 	menu.mostrar_carregando()
@@ -189,11 +235,18 @@ func _abrir_multijogador() -> void:
 	add_child(tela_multi)
 	tela_multi.fechar.connect(func():
 		tela_multi.queue_free()
-		tela_multi = null)
+		tela_multi = null
+		if pausa != null:
+			pausa.visible = true)
 	tela_multi.comecar.connect(func():
 		tela_multi.queue_free()
 		tela_multi = null
-		_jogar())
+		if jogo == null:
+			_jogar())
+	tela_multi.abrir_perfil.connect(_abrir_perfil)
+	tela_multi.pedir_login.connect(_abrir_login)
+	if pausa != null:                        # host chamando amigos de dentro do jogo
+		pausa.visible = false
 
 # partida em rede: mesma semente de loot do host, nasce perto dos outros e liga a sessão (rede/sessao_rede.gd)
 func _ligar_rede() -> void:
@@ -234,7 +287,9 @@ func _notification(what: int) -> void:
 
 # botão VOLTAR do Android (e Esc): fecha a tela de cima; no jogo, pausa; no menu, sai
 func _voltar() -> void:
-	if tela_login != null:
+	if tela_perfil != null:
+		tela_perfil._sair()
+	elif tela_login != null:
 		if Conta.entrando:
 			Conta.cancelar_login()                # volta para os botões da tela de login
 		else:
@@ -301,6 +356,7 @@ func _pausar() -> void:
 	pausa.estatisticas = _estatisticas()
 	add_child(pausa)
 	pausa.continuar.connect(_continuar)
+	pausa.chamar_amigos.connect(_abrir_multijogador)
 	pausa.opcoes.connect(_abrir_opcoes)
 	pausa.reiniciar.connect(func():
 		_continuar()

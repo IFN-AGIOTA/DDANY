@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.33 (APK código 29)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.34 (APK código 30)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,23 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.34 · PERFIL E SALA COM CHAMAR AMIGOS (do jeito dos jogos de celular)
+- PERFIL: ícone com seu nome no canto de cima do menu (bolinha vermelha = pedidos de amizade). Abre:
+  · seu ÍCONE (toque para escolher entre 12), nome, conta (Google/convidado), CÓDIGO DE AMIGO (copiar);
+  · RECORDES (melhor tempo vivo e mais abates numa vida, salvos na conta);
+  · PEDIDOS DE AMIZADE (aceitar/recusar), AMIGOS com bolinha verde = online, amarela = jogando, cinza =
+    offline ("visto há 2 h"), o recorde de cada um e remover; ADICIONAR AMIGO pelo código.
+  Adicionar alguém manda um PEDIDO; quando a pessoa aceita, os dois viram amigos.
+- MULTIJOGADOR agora tem só dois botões grandes: CRIAR SALA e ENTRAR NUMA SALA.
+- SALA: 8 vagas com ícone e nome de quem está nela (o host pode "tirar"). À direita, os AMIGOS (online
+  primeiro) com o botão CHAMAR. O amigo recebe um AVISO na tela (com 30 s para responder): ENTRAR ou AGORA NÃO.
+  O host vê "Chamado 29 s", "recusou" ou "Na sala". Quem entra ESPERA na sala até o host tocar em COMEÇAR;
+  aí todo mundo vai para a cidade junto. Para quem não é amigo: "Convidar por código" (WhatsApp).
+- No jogo, a PAUSA do host tem "Chamar amigos" (abre a sala de novo para chamar mais gente).
+- ENTRAR NUMA SALA: salas dos amigos (quem te chamou aparece primeiro), salas no mesmo Wi-Fi e com código.
+- PRECISA ATUALIZAR AS REGRAS DO BANCO de novo (entraram "pedidos" e "respostas"): Firebase > Realtime
+  Database > Regras > colar rede/firebase_regras.json > Publicar.
+
 ATUALIZAÇÃO 0.33 · ONLINE DE VERDADE COM OS AMIGOS (WebRTC)
 - Tocou em "Partida de Fulano" (PARTIDAS DOS AMIGOS) e vocês não estão no mesmo Wi-Fi: o jogo conecta pela
   INTERNET do jeito das chamadas de vídeo (WebRTC). Não precisa abrir porta no roteador nem usar VPN, e
@@ -642,7 +659,14 @@ MULTIJOGADOR (pasta rede/ · modo livre)
 - internet com WebRTC (achar o amigo
   pelo Firebase e conectar direto) .... rede/rtc.gd (servidores STUN/TURN no topo)
 - host com Wi-Fi/código + WebRTC ...... rede/peer_misto.gd
-- tela do menu e sala do host ......... menu/tela_multijogador.gd
+- tela do multijogador (início, sala
+  com vagas e CHAMAR, entrar) ......... menu/tela_multijogador.gd
+- perfil (ícone, código, recordes,
+  amigos, pedidos) .................... menu/tela_perfil.gd
+- ícones de perfil (cores/símbolos) ... menu/avatar.gd (tabela ICONES)
+- aviso "Fulano te chamou" ............ menu/aviso_chamado.gd (quando aparece: main.gd, _chamado)
+- pedidos de amizade, status online,
+  chamar e responder .................. rede/conta.gd
 - tela de login ao abrir o jogo ....... menu/tela_login.gd (quando aparece: main.gd, _pedir_login)
 - "Copiar convite" na pausa ........... menu/pausa.gd
 - liga ao jogo (semente do loot, nascer
@@ -824,4 +848,9 @@ Como funciona por dentro (rede/conta.gd, tudo por HTTP, sem plugin):
     é apagada. O host usa um MultiplayerPeerExtension (peer_misto.gd) que junta ENet + WebRTCMultiplayerPeer.
     Canais: 1 = estado (não confiável, em ordem), 2 = eventos (confiável). Sem TURN algumas redes não passam:
     dá para pôr um em firebase_config.cfg ([webrtc] turn="turn:servidor:3478", turn_usuario, turn_senha).
-  · Testes sem Firebase: variável DDA_FIREBASE_CFG aponta para outra configuração (servidor falso local).
+  · SALA (0.34): usuarios/{uid} ganhou avatar, recorde_tempo, recorde_abates, visto (hora) e estado ("no menu",
+    "online", "jogando sozinho", "jogando online"). pedidos/{dest}/{de} = pedido de amizade. convites/{amigo}/{host}
+    ganhou "chamou" (hora do CHAMAR) e "comecou"; o amigo consulta convites a cada 5 s e um "chamou" novo (até
+    45 s) vira o aviso. respostas/{host}/{amigo} = {r: aceitou/recusou}; o host lê a cada 3 s na sala.
+    Rede: protocolo 2 (o _ola leva ícone e uid da conta); Rede.partida_comecou / comecar_partida() / expulsar().
+ variável DDA_FIREBASE_CFG aponta para outra configuração (servidor falso local).

@@ -28,18 +28,20 @@ signal jogador_saiu(id: int)
 signal partida_achada(ip: String, nome: String, jogadores: int)
 signal internet(ok: bool, ip: String, motivo: String)    # resultado do UPnP (só no host)
 signal estado_recebido(id: int, d: Array)      # posição/animação de um jogador (sessao_rede.gd)
+signal comecou                                 # o host tocou em COMEÇAR (a sala vira partida)
 signal evento_recebido(id: int, tipo: String, d: Dictionary)   # tiro, ação, roupa, mundo... (sessao_rede.gd)
 
 const PORTA := 24560                           # partida (UDP, ENet)
 const PORTA_ANUNCIO := 24561                   # anúncio "tem partida aqui" na rede local (UDP broadcast)
 const MAX_JOGADORES := 8
-const PROTOCOLO := 1                           # aumente quando mudar o formato das mensagens
+const PROTOCOLO := 2                           # aumente quando mudar o formato das mensagens
 const ANUNCIO_A_CADA := 1.0                    # segundos
 
 var ligado := false                            # tem partida aberta/conectada (e aceita)
 var nome := "Sobrevivente"
 var jogadores := {}                            # id -> {"nome": String}  (inclui o próprio)
-var mundo := {}                                # o que o host mandou ao aceitar: {"semente": int, "clima": {...}}
+var mundo := {}                                # o que o host mandou ao aceitar: {"semente": int, "clima": {...}, "comecou": bool}
+var partida_comecou := false                   # false = ainda na SALA (esperando o host começar)
 
 var _anuncio: PacketPeerUDP = null             # host: manda o anúncio
 var _escuta: PacketPeerUDP = null              # menu: escuta anúncios
@@ -95,8 +97,9 @@ func criar_partida(meu_nome: String, semente_loot: int) -> void:
 		multiplayer.multiplayer_peer = p
 	ligado = true
 	_host_nome = nome
-	jogadores = {1: {"nome": nome}}
-	mundo = {"semente": semente_loot}
+	jogadores = {1: {"nome": nome, "avatar": Conta.avatar, "uid": Conta.uid}}
+	mundo = {"semente": semente_loot, "comecou": false}
+	partida_comecou = false
 	_anuncio = PacketPeerUDP.new()
 	_anuncio.set_broadcast_enabled(true)
 	_anuncio.set_dest_address("255.255.255.255", PORTA_ANUNCIO)
@@ -141,6 +144,7 @@ func sair() -> void:
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	ligado = false
+	partida_comecou = false
 	jogadores = {}
 	mundo = {}
 	if _anuncio != null:
@@ -336,10 +340,35 @@ func _process(dt: float) -> void:
 
 # ---------- entrada na partida (aperto de mão) ----------
 func _conectou_no_host() -> void:
-	_ola.rpc_id(1, nome, PROTOCOLO, Config.VERSAO)
+	_ola.rpc_id(1, nome, PROTOCOLO, Config.VERSAO, Conta.avatar, Conta.uid)
+
+# ---------- sala ----------
+# host: a sala vira partida (todos vão para a cidade)
+func comecar_partida() -> void:
+	if not eh_host() or partida_comecou:
+		return
+	partida_comecou = true
+	mundo["comecou"] = true
+	_comecou.rpc()
+	comecou.emit()
+
+@rpc("authority", "call_remote", "reliable")
+func _comecou() -> void:
+	partida_comecou = true
+	mundo["comecou"] = true
+	comecou.emit()
+
+# host: tira alguém da sala
+func expulsar(id: int) -> void:
+	if eh_host() and id != 1:
+		_recusado.rpc_id(id, "O host tirou você da sala.")
+		_derrubar_depois(id)
+
+func avatar_de(id: int) -> int:
+	return int(jogadores.get(id, {}).get("avatar", 0))
 
 @rpc("any_peer", "call_remote", "reliable")
-func _ola(n: String, protocolo: int, versao: String) -> void:
+func _ola(n: String, protocolo: int, versao: String, av := 0, conta_uid := "") -> void:
 	if not multiplayer.is_server():
 		return
 	var id := multiplayer.get_remote_sender_id()
@@ -348,18 +377,19 @@ func _ola(n: String, protocolo: int, versao: String) -> void:
 		_derrubar_depois(id)
 		return
 	var nm := _limpar_nome(n)
-	jogadores[id] = {"nome": nm}
+	jogadores[id] = {"nome": nm, "avatar": av, "uid": conta_uid}
 	var cl = _clima_atual()
 	if cl != null:
 		mundo["clima"] = cl
 	_aceito.rpc_id(id, jogadores, mundo)
-	_entrou.rpc(id, nm)                        # avisa todo mundo (inclusive quem entrou)
+	_entrou.rpc(id, nm, av, conta_uid)         # avisa todo mundo (inclusive quem entrou)
 	jogador_entrou.emit(id, nm)
 
 @rpc("authority", "call_remote", "reliable")
 func _aceito(lista: Dictionary, dados_mundo: Dictionary) -> void:
 	jogadores = lista
 	mundo = dados_mundo
+	partida_comecou = bool(mundo.get("comecou", true))
 	ligado = true
 	pronto.emit()
 
@@ -368,10 +398,10 @@ func _recusado(motivo: String) -> void:
 	_falhar(motivo)
 
 @rpc("authority", "call_remote", "reliable")
-func _entrou(id: int, nm: String) -> void:
+func _entrou(id: int, nm: String, av := 0, conta_uid := "") -> void:
 	if id == meu_id():
 		return
-	jogadores[id] = {"nome": nm}
+	jogadores[id] = {"nome": nm, "avatar": av, "uid": conta_uid}
 	jogador_entrou.emit(id, nm)
 
 func _peer_conectou(_id: int) -> void:
