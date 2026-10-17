@@ -404,6 +404,8 @@ func _pagina_graficos(v: float) -> Control:
 	_gfx_seg(lista, "wire", "Fios de poste", EM_BREVE.strip_edges(), [[false, "DESLIGADOS"], [true, "LIGADOS"]], v)
 	_gfx_seg(lista, "halo", "Halos de luz", "semáforos e luzes dos postes à noite" + EM_BREVE, [[false, "DESLIGADOS"], [true, "LIGADOS"]], v)
 	_gfx_seg(lista, "dist", "Distância de visão", "quanto da cidade é desenhado", NIVEIS, v)
+	_gfx_passo(lista, "chk", "Raio de chunks", "pedaços de 500 m da cidade em volta da câmera (menor = mais leve; AUTO segue a distância de visão)",
+		[[0, "AUTO"], [1, "1 (±500 m)"], [2, "2 (±1 km)"], [3, "3 (±1,5 km)"], [4, "4 (±2 km)"], [6, "6 (±3 km)"], [8, "8 (±4 km)"], [10, "10 (±5 km)"]], v)
 	_gfx_seg(lista, "ocl", "Ocultar o que está atrás", "não desenha o que os prédios escondem (mais leve na placa, usa um pouco do processador)", [[true, "LIGADO"], [false, "DESLIGADO"]], v)
 	_gfx_seg(lista, "fog", "Neblina", "densa esconde mais e deixa o jogo mais leve", [[0, "DENSA"], [1, "NORMAL"], [2, "LIMPA"]], v)
 	_gfx_seg(lista, "res", "Resolução da tela", "", NIVEIS, v)

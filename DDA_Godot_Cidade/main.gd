@@ -10,6 +10,7 @@ const SPAWN := Vector2(6230.0, 590.0)       # onde o jogador nasce (virado para 
 
 const CidadeCls := preload("res://mundo/cidade.gd")
 const ColisaoMundoCls := preload("res://mundo/colisao_mundo.gd")
+const ChunksCls := preload("res://mundo/chunks.gd")
 const EstandeCls := preload("res://mundo/estande_tiro.gd")
 const LootCls := preload("res://mundo/loot.gd")
 const LootMundoCls := preload("res://mundo/loot_mundo.gd")
@@ -50,6 +51,7 @@ var jogo: Node3D                            # tudo do jogo em andamento (apagado
 var jogador: CharacterBody3D
 var controles: CanvasLayer
 var mundo: Node3D
+var chunks: Node                            # mundo/chunks.gd (só os chunks de 500 m perto da câmera ficam na cena)
 var hud: CanvasLayer
 var estande: Node3D
 var tela_inventario: CanvasLayer
@@ -412,6 +414,10 @@ func _criar_jogo() -> void:
 	jogo.add_child(mundo)
 	mundo.configurar(cidade.dados_cidade, cidade.predios)
 	mundo.configurar_lotes(cidade.lote, cidade.W, cidade.H, cidade.CELL, cidade.WORLD, cidade.RAMPA_LOTE)   # chão dos quarteirões
+	chunks = ChunksCls.new()
+	chunks.name = "Chunks"
+	jogo.add_child(chunks)
+	chunks.configurar(cidade, AplicarOpcoesCls.raio_chunks())
 	if cidade.abandono != null:
 		mundo.configurar_obstaculos(cidade.abandono.obstaculos)
 	jogador = JOGADOR_CENA.instantiate()
@@ -574,6 +580,7 @@ func _fechar_jogo() -> void:
 	if jogo != null:
 		jogo.queue_free()
 	jogo = null
+	chunks = null
 	jogador = null
 	controles = null
 	mundo = null

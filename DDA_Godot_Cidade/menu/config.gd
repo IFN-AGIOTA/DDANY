@@ -5,7 +5,7 @@ extends Node
 
 signal mudou(chave: String)          # "gfx" quando os gráficos foram aplicados; "hud" quando a HUD foi editada
 
-const VERSAO := "0.41"
+const VERSAO := "0.42"
 const ARQUIVO := "user://opcoes.cfg"
 
 const PADRAO := {
@@ -22,19 +22,20 @@ const PADRAO := {
 }
 
 # shd/tex/models/detd/fx: 0..3 · shad: 0..2 · den: 0..2 · fog: 0 densa, 1 normal, 2 limpa · dist/res: 0..3
+# chk: raio de chunks de 500 m (0 = AUTO, segue "dist"; mundo/chunks.gd)
 # ocl: ocultar o que está atrás dos prédios (occlusion culling, mundo/oclusao.gd)
 # aa: 0 desligado, 1 MSAA 2x, 2 MSAA 4x, 3 MSAA 8x · aniso: 1, 2, 4, 8, 16 · cap: 0 = sem limite
 const GFX_PRESETS := {
 	"auto": {"shd": 3, "res": 3, "dyn": true, "dist": 2, "fx": 2, "models": 2, "tex": 3, "aniso": 8, "aa": 0, "cap": 0,
-		"shad": 1, "den": 1, "detd": 2, "wtr": true, "wire": true, "halo": true, "fog": 1, "rp": 35, "ocl": true},
+		"shad": 1, "den": 1, "detd": 2, "wtr": true, "wire": true, "halo": true, "fog": 1, "rp": 35, "chk": 0, "ocl": true},
 	"low": {"shd": 1, "res": 1, "dyn": false, "dist": 0, "fx": 0, "models": 0, "tex": 1, "aniso": 1, "aa": 0, "cap": 0,
-		"shad": 0, "den": 0, "detd": 0, "wtr": false, "wire": false, "halo": false, "fog": 0, "rp": 35, "ocl": false},
+		"shad": 0, "den": 0, "detd": 0, "wtr": false, "wire": false, "halo": false, "fog": 0, "rp": 35, "chk": 0, "ocl": false},
 	"mid": {"shd": 2, "res": 2, "dyn": true, "dist": 1, "fx": 1, "models": 1, "tex": 2, "aniso": 4, "aa": 0, "cap": 0,
-		"shad": 1, "den": 1, "detd": 1, "wtr": true, "wire": true, "halo": true, "fog": 1, "rp": 35, "ocl": true},
+		"shad": 1, "den": 1, "detd": 1, "wtr": true, "wire": true, "halo": true, "fog": 1, "rp": 35, "chk": 0, "ocl": true},
 	"high": {"shd": 3, "res": 3, "dyn": false, "dist": 2, "fx": 3, "models": 3, "tex": 3, "aniso": 16, "aa": 2, "cap": 0,
-		"shad": 1, "den": 2, "detd": 2, "wtr": true, "wire": true, "halo": true, "fog": 1, "rp": 35, "ocl": true},
+		"shad": 1, "den": 2, "detd": 2, "wtr": true, "wire": true, "halo": true, "fog": 1, "rp": 35, "chk": 0, "ocl": true},
 	"ultra": {"shd": 3, "res": 3, "dyn": false, "dist": 3, "fx": 3, "models": 3, "tex": 3, "aniso": 16, "aa": 3, "cap": 0,
-		"shad": 2, "den": 2, "detd": 3, "wtr": true, "wire": true, "halo": true, "fog": 2, "rp": 35, "ocl": true},
+		"shad": 2, "den": 2, "detd": 3, "wtr": true, "wire": true, "halo": true, "fog": 2, "rp": 35, "chk": 0, "ocl": true},
 }
 const GFX_COR := {"bri": 100, "con": 100, "sat": 100, "vig": false}
 

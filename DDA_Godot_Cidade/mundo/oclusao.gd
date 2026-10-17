@@ -32,6 +32,7 @@ func montar(c) -> void:
 	for k in _cels:
 		var oi := OccluderInstance3D.new()
 		oi.name = "Oclusor_%d_%d" % [k.x, k.y]
+		oi.position = Vector3((k.x + 0.5) * CEL, 0.0, (k.y + 0.5) * CEL)   # vértices relativos a este centro (AABB do tamanho do pedaço: mundo/chunks.gd)
 		_no[k] = oi
 		nos.append(oi)
 		_refazer(k)
@@ -53,21 +54,22 @@ func predio_fora(i: int, fora: bool) -> void:
 func _refazer(k: Vector2i) -> void:
 	var v := PackedVector3Array()
 	var ix := PackedInt32Array()
+	var o := Vector3((k.x + 0.5) * CEL, 0.0, (k.y + 0.5) * CEL)
 	for i in _cels[k]:
 		if not _fora.has(i):
-			_caixa(v, ix, cidade.predio_info[i])
+			_caixa(v, ix, cidade.predio_info[i], o)
 	var oc := ArrayOccluder3D.new()
 	oc.set_arrays(v, ix)
 	_no[k].occluder = oc
 
 # caixa sem o fundo (a câmera nunca fica embaixo do chão): 8 cantos, 10 triângulos
-func _caixa(v: PackedVector3Array, ix: PackedInt32Array, inf: Dictionary) -> void:
+func _caixa(v: PackedVector3Array, ix: PackedInt32Array, inf: Dictionary, o: Vector3) -> void:
 	var hx: float = inf["sx"] * 0.5 - RECUO
 	var hz: float = inf["sz"] * 0.5 - RECUO
 	if hx <= 0.5 or hz <= 0.5:
 		return
-	var x: float = inf["x"]
-	var z: float = inf["z"]
+	var x: float = float(inf["x"]) - o.x
+	var z: float = float(inf["z"]) - o.z
 	var y0: float = cidade.Y_TERRA
 	var y1: float = cidade.Y_RUA + float(inf["h"]) - RECUO
 	var b := v.size()

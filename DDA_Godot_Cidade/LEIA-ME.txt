@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.41 (APK código 37)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.42 (APK código 38)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,22 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.42 · CHUNKS DE 500 m COM RAIO CONFIGURÁVEL (mundo/chunks.gd, NOVO)
+  · O mundo é dividido em CHUNKS de 500 x 500 m. Só ficam na cena os chunks em volta da CÂMERA ativa (jogador, voo
+    ou cutscene): RAIO chunks para cada lado. "Alimentar" = um chunk entrou no raio: os nós dele voltam para a cena.
+    "Diminuir" = passou de RAIO + 1 (folga para não ficar carrega/descarrega na divisa): saem da cena (a placa e o
+    culling da Godot nem sabem que existem). Trabalho espalhado: até 90 nós por quadro, os chunks mais perto primeiro;
+    se a câmera pula longe (renascer, cutscene, carregar o jogo) carrega tudo na hora.
+  · Cada pedaço da cidade foi alinhado à grade: prédios 500 m, chão/lotes 500 m (PEDACO_CHAO, antes 800), fachadas
+    500 m (antes 400), árvores/carros/oclusores 250 m. Um nó entra em TODO chunk que a caixa dele encosta e fica na
+    cena enquanto qualquer um deles estiver carregado. Mar e os pedaços grandes de terra ficam sempre (93 nós).
+    Oclusores agora têm os vértices relativos ao centro do pedaço (a caixa deles era do tamanho do mapa).
+  · Opções › Gráficos › "Raio de chunks": AUTO (segue a Distância de visão: 2, 4, 7 ou 10) ou 1, 2, 3, 4, 6, 8, 10.
+    A câmera nunca enxerga além do raio (far = raio x 500 m) e a neblina engrossa para esconder a borda.
+  · Ao sair da partida tudo volta para a cidade (o menu e a próxima partida usam a cidade inteira).
+  · Medido em 32 vistas de rua (teste por software): raio 7 (AUTO) 94 ms · raio 4 91 ms · raio 2 86 ms
+    (tudo carregado com a mesma visão: 97 ms). Com raio 7, ~27% dos 24.600 nós da cidade ficam na cena.
+
 ATUALIZAÇÃO 0.41 · TEXTURAS DE VERDADE NO CHÃO (Poly Haven, CC0)
   · mundo/texturas/ (NOVO): concreto velho, terra com pedrinhas, grama seca, areia e lama (512 x 512, com mipmaps e
     compressão de vídeo; fonte e autores em mundo/texturas/LICENCA.txt e na tela de Créditos).
@@ -699,6 +715,7 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - escadas de incêndio e ar-condicionado
   nas fachadas ........................ mundo/fachadas.gd
 - oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd
+- chunks de 500 m (o que fica na cena, raio) ....... mundo/chunks.gd (+ Opções › Gráficos › Raio de chunks)
 - texturas do chão (concreto, terra, grama...) ... mundo/texturas/ + shader TERRA (mundo/materiais_cidade.gd)
 - placas, pichações, cortinas e luzes
   nas janelas (shader PREDIO/GRAFITE) . mundo/materiais_cidade.gd

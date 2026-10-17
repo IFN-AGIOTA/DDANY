@@ -13,6 +13,16 @@ const ALCANCE := [900.0, 1800.0, 3200.0, 5000.0]                     # distânci
 const NEVOA_DIST := [2.2, 1.45, 1.0, 0.75]
 const NEVOA := [1.9, 1.0, 0.45]                                      # densa / normal / limpa
 const NEVOA_BASE := 0.0006                                          # neblina "normal" (antes 0.00025: cidade limpa demais)
+const ChunksCls := preload("res://mundo/chunks.gd")
+
+# raio de chunks de 500 m (mundo/chunks.gd): "chk" 0 = AUTO (segue a Distância de visão) ou o número de chunks
+static func raio_chunks() -> int:
+	var k := int(Config.g.get("chk", 0))
+	return k if k > 0 else ChunksCls.raio_auto(int(Config.g["dist"]))
+
+# até onde a câmera enxerga: a Distância de visão, mas nunca além dos chunks carregados
+static func alcance_visao() -> float:
+	return minf(ALCANCE[clampi(int(Config.g["dist"]), 0, 3)], raio_chunks() * ChunksCls.TAM_CHUNK)
 const MSAA := [Viewport.MSAA_DISABLED, Viewport.MSAA_2X, Viewport.MSAA_4X, Viewport.MSAA_8X]
 
 var main: Node = null              # main.gd (tem jogador, controles, hud, cidade quando o jogo está rodando)
@@ -65,7 +75,7 @@ func aplicar() -> void:
 		j.lateral_camera = LADO.get(o["pos"], 0.32)
 		j.fov_camera = float(o["fov"])
 		j.armas.vibrar = bool(o["vib"])
-		j.camera.far = ALCANCE[clampi(int(g["dist"]), 0, 3)]
+		j.camera.far = alcance_visao()
 		var sf = j.find_child("SombraFalsa", true, false)
 		if sf != null:
 			sf.visible = int(g["shad"]) >= 1
@@ -87,7 +97,12 @@ func aplicar() -> void:
 		if cid.has_method("aplicar_detalhes"):
 			cid.aplicar_detalhes(int(g["shd"]), int(g["detd"]), bool(g["wtr"]))     # janelas dos prédios · árvores/caixas d'água
 		if cid.ambiente != null:
-			cid.ambiente.fog_density = NEVOA_BASE * NEVOA[clampi(int(g["fog"]), 0, 2)] * NEVOA_DIST[clampi(int(g["dist"]), 0, 3)]
+			# raio de chunks menor que a distância de visão: mais neblina, para a borda do mundo carregado não aparecer
+			var corte: float = ALCANCE[clampi(int(g["dist"]), 0, 3)] / alcance_visao()
+			cid.ambiente.fog_density = NEVOA_BASE * NEVOA[clampi(int(g["fog"]), 0, 2)] * NEVOA_DIST[clampi(int(g["dist"]), 0, 3)] * corte
+		var ch = main.get("chunks")
+		if ch != null and is_instance_valid(ch):
+			ch.definir_raio(raio_chunks())
 
 func _aplicar_resolucao() -> void:
 	var g: Dictionary = Config.g

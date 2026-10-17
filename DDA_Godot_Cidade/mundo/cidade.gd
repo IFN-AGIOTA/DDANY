@@ -86,7 +86,11 @@ func _adopt(n: Node) -> void:
 
 func limpar() -> void:
 	for n in built:
-		n.queue_free()
+		if is_instance_valid(n):
+			if n.is_inside_tree():
+				n.queue_free()
+			else:
+				n.free()                   # chunk descarregado (fora da cena: mundo/chunks.gd)
 	built.clear()
 	detalhes.clear()
 	detalhes_abandono.clear()
@@ -185,7 +189,7 @@ func _tri(v: PackedVector3Array, a: Vector3, b: Vector3, c: Vector3) -> void:
 # OTIMIZAÇÃO: o chão (terra, parques, lagos, calçadas, asfalto, faixas) era UMA malha para a cidade inteira, que a
 # placa de vídeo processava toda em todo quadro. Agora cada malha é cortada em PEDAÇOS de PEDACO_CHAO metros
 # (cada triângulo vai para o pedaço do seu centro): só os pedaços que aparecem na câmera são desenhados.
-const PEDACO_CHAO := 800.0
+const PEDACO_CHAO := 500.0                  # = mundo/chunks.gd TAM_CHUNK (cada pedaço cabe num chunk)
 const LONGE_FAIXAS := 700.0                  # faixas pintadas somem de longe (nem dá para ver)
 
 func _malha(verts: PackedVector3Array, mat: Material, cores := PackedColorArray(), nome := "") -> void:

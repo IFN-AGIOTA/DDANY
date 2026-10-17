@@ -10,7 +10,7 @@ extends RefCounted
 # Mexa AQUI para: quantos prédios têm escada, quantos aparelhos, tamanhos e cores.
 
 const Malhas := preload("res://mundo/malhas.gd")
-const CEL := 400.0
+const CEL := 500.0                       # = mundo/chunks.gd TAM_CHUNK
 const ANDAR := 3.3
 const BASE := 4.6
 const COLUNA := 2.7
