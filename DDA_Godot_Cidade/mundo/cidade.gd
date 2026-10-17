@@ -6,7 +6,8 @@ extends Node3D
 #   cruzamentos se encaixam sem buracos (igual à colisão, que trata a rua como "cápsula"). Pontas que quase
 #   encostavam em outra rua (até 20 m) são puxadas para encostar de verdade. Calçada por baixo, asfalto por
 #   cima, faixas no topo; faixas de pedestre e linha de parada nos cruzamentos.
-#   PRÉDIOS: divididos em blocos de 1 km (o celular só desenha o que a câmera vê), com tipos (concreto,
+#   PRÉDIOS: divididos em blocos de 500 m (o celular só desenha o que a câmera vê e o que não está escondido
+#   atrás de outros prédios: mundo/oclusao.gd), com tipos (concreto,
 #   tijolo, pedra, vidro), torres escalonadas no centro e caixas d'água nos telhados.
 # Mexa AQUI para: densidade/altura dos prédios, largura da calçada, faixas, árvores, céu e sol.
 # Aparência (cores, ondas, janelas): mundo/materiais_cidade.gd.
@@ -15,11 +16,13 @@ extends Node3D
 const Mat := preload("res://mundo/materiais_cidade.gd")
 const AbandonoCls := preload("res://mundo/abandono.gd")
 const FachadasCls := preload("res://mundo/fachadas.gd")
+const OclusaoCls := preload("res://mundo/oclusao.gd")
 
 const CELL := 20.0                          # resolução das máscaras (m)
 const WORLD := Vector2(11000.0, 8600.0)     # metade do mundo (m)
 const DOWNTOWN := Vector2(-1550.0, -237.0)  # centro (Algonquin): prédios mais altos
-const BLOCO := 1000.0                       # tamanho dos blocos de prédios/árvores (m)
+const BLOCO_ARVORE := 250.0                 # blocos de árvores
+const BLOCO_PREDIO := 500.0                 # blocos de prédios: menores = a câmera e a oclusão descartam mais
 const CALCADA := 5.0                        # largura da calçada de cada lado (m)
 const PUXAR_PONTA := 20.0                   # pontas de rua a até 20 m de outra rua são ligadas
 
@@ -52,6 +55,7 @@ var mats_chao: Array[ShaderMaterial] = []   # terra, parque, calçada, asfalto (
 var detalhes: Array[GeometryInstance3D] = []   # árvores e caixas d'água (Opções › Distância dos detalhes)
 var detalhes_abandono: Array[GeometryInstance3D] = []   # carros, lixo, entulho
 var detalhes_fachada: Array[GeometryInstance3D] = []    # escadas de incêndio e ar-condicionado (mundo/fachadas.gd)
+var oclusao                                 # mundo/oclusao.gd (caixas oclusoras dos prédios)
 
 var _mascara: ImageTexture                  # terra (1) / água (0) para praias, mar raso e espuma
 var _nos := {}                              # Vector2i (m) -> {"n": quantas ruas chegam, "r": raio}
@@ -71,6 +75,7 @@ func construir() -> void:
 	_fachadas()
 	_abandono()
 	_arvores()
+	_oclusao()
 	print("Cidade pronta em ", Time.get_ticks_msec() - t0, " ms")
 
 func _adopt(n: Node) -> void:
@@ -84,6 +89,7 @@ func limpar() -> void:
 	detalhes.clear()
 	detalhes_abandono.clear()
 	detalhes_fachada.clear()
+	oclusao = null
 	is_built = false
 
 # grava res://cidade.scn: a cidade vira uma cena de verdade, editável com as ferramentas da Godot
@@ -597,7 +603,7 @@ func _buildings() -> void:
 			var cor: Color = CORES_TIPO[tipo] * extra.randf_range(0.82, 1.12)
 			cor.a = 1.0
 			var sem := extra.randf() * 0.98
-			var chave := Vector2i(floori(bx / BLOCO), floori(bz / BLOCO))
+			var chave := Vector2i(floori(bx / BLOCO_PREDIO), floori(bz / BLOCO_PREDIO))
 			if not blocos.has(chave):
 				blocos[chave] = []
 			var ruina := sorte.randf() < CHANCE_RUINA
@@ -689,10 +695,19 @@ func esconder_predio(i: int, esconder: bool) -> void:
 	if info["idx"] < 0:
 		return
 	var mm: MultiMesh = _mm_predios[info["bloco"]]
+	if oclusao != null:
+		oclusao.predio_fora(i, esconder)
 	if esconder:
 		mm.set_instance_transform(info["idx"], Transform3D(Basis.from_scale(Vector3.ONE * 0.001), Vector3(info["x"], -500.0, info["z"])))
 	else:
 		mm.set_instance_transform(info["idx"], info["t"])
+
+# caixas oclusoras: o que fica todo atrás dos prédios não é desenhado (mundo/oclusao.gd)
+func _oclusao() -> void:
+	oclusao = OclusaoCls.new()
+	oclusao.montar(self)
+	for oi in oclusao.nos:
+		_adopt(oi)
 
 # ---------- cidade abandonada (carros, barreiras, lixo, entulho) ----------
 # escadas de incêndio e aparelhos de ar-condicionado nas fachadas
@@ -754,6 +769,7 @@ func _malha_caixa_dagua() -> ArrayMesh:
 
 # ---------- árvores nos parques ----------
 const MAX_ARVORES := 9000
+const PERTO_ARVORE := 320.0                 # até aqui a árvore completa; depois, a versão simples (LOD)
 
 func _arvores() -> void:
 	var celulas := PackedInt32Array()
@@ -777,7 +793,7 @@ func _arvores() -> void:
 		if rng.randf() < 0.15:
 			verde = Color(0.55, 0.40, 0.15) * rng.randf_range(0.8, 1.1)    # algumas já amareladas (outono)
 		verde.a = 1.0
-		var chave := Vector2i(floori(x / BLOCO), floori(z / BLOCO))
+		var chave := Vector2i(floori(x / BLOCO_ARVORE), floori(z / BLOCO_ARVORE))
 		if not blocos.has(chave):
 			blocos[chave] = []
 		blocos[chave].append([t, verde])
@@ -793,6 +809,13 @@ func _arvores() -> void:
 	copa.radial_segments = 7
 	copa.rings = 4
 	var malha := _juntar([[tronco, Vector3(0, 1.5, 0), _mat_simples(Color(0.30, 0.22, 0.15))], [copa, Vector3(0, 4.4, 0), _mat_simples(Color.WHITE, 1.0, true)]])
+	# LOD: de longe a árvore vira uma copa de 5 lados sem tronco (~6x menos triângulos; no meio da neblina ninguém vê)
+	var copa_longe := SphereMesh.new()
+	copa_longe.radius = 2.6
+	copa_longe.height = 4.6
+	copa_longe.radial_segments = 5
+	copa_longe.rings = 2
+	var malha_longe := _juntar([[copa_longe, Vector3(0, 4.2, 0), _mat_simples(Color.WHITE, 1.0, true)]])
 	var total := 0
 	for chave in blocos:
 		var lista: Array = blocos[chave]
@@ -809,7 +832,16 @@ func _arvores() -> void:
 		mi.name = "Arvores_%d_%d" % [chave.x, chave.y]
 		mi.multimesh = mm
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		mi.visibility_range_end = 1500.0
+		mi.visibility_range_end = PERTO_ARVORE
 		_adopt(mi)
-		detalhes.append(mi)
+		var mm_l := mm.duplicate() as MultiMesh
+		mm_l.mesh = malha_longe
+		var ml := MultiMeshInstance3D.new()
+		ml.name = "ArvoresLonge_%d_%d" % [chave.x, chave.y]
+		ml.multimesh = mm_l
+		ml.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		ml.visibility_range_begin = PERTO_ARVORE
+		ml.visibility_range_end = 1500.0
+		_adopt(ml)
+		detalhes.append(ml)
 	print("Árvores: ", total)

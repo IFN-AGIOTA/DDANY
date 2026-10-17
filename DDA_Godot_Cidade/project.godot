@@ -31,6 +31,8 @@ pointing/emulate_touch_from_mouse=true
 3d_physics/layer_3="inimigos"
 
 [rendering]
+
+occlusion_culling/use_occlusion_culling=true
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true

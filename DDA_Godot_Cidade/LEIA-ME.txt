@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.37 (APK código 33)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.38 (APK código 34)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,21 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.38 · CULLING (não desenhar o que não aparece) · medido em 32 vistas de rua do centro de Nova York
+  · Resultado (placa de vídeo, teste por software): 118 ms -> 105 ms por quadro · triângulos 363 mil -> 174 mil (-52%).
+    Visto de frente para um prédio: 381 -> 103 chamadas de desenho e 257 mil -> 97 mil triângulos.
+  · FRUSTUM CULLING (o que está fora da câmera): a Godot descarta OBJETOS inteiros, então pedaço grande não é
+    descartado nunca. Pedaços menores: prédios em blocos de 500 m (antes 1 km, mundo/cidade.gd BLOCO_PREDIO), árvores
+    de 250 m (BLOCO_ARVORE) e carros/entulho/postes de 250 m (mundo/abandono.gd BLOCO). Também deixa o
+    "visibility_range" (some de longe) mais certo, porque a distância é medida até o centro de cada pedaço.
+  · OCCLUSION CULLING (o que está escondido atrás dos prédios) · mundo/oclusao.gd (NOVO): cada prédio ganha uma caixa
+    oclusora invisível 0,5 m menor que ele (pedaços de 250 m). O que fica todo atrás delas (carros, árvores, infectados,
+    pessoas, blocos de prédios) não vai para a placa. Prédio com o interior montado sai da oclusão (senão a caixa
+    esconderia o interior). Ligado em project.godot e em Opções › Gráficos › "Ocultar o que está atrás"
+    (LIGADO em todas as predefinições, menos LEVE, porque gasta um pouco do processador).
+  · LOD DAS ÁRVORES: até 320 m (PERTO_ARVORE) a árvore completa; depois uma copa simples sem tronco (~6x menos triângulos).
+  · Observação: o teste de placa de vídeo da 0.37 media de um lugar errado (câmera parada no mar); este é o certo.
+
 ATUALIZAÇÃO 0.37 · REVISÃO E OTIMIZAÇÃO DO CÓDIGO (mesmo jogo, mais leve; medido no centro de Nova York)
   · CPU por quadro: 1,27 ms -> 0,87 ms (-31%) · GPU (teste de desenho): 85 ms -> 49 ms (-43%), triângulos 481k -> 106k.
   · Chão/calçadas/ruas (mundo/cidade.gd): a malha gigante virou pedaços de 800 m (PEDACO_CHAO), então a placa de
@@ -622,6 +637,7 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - colunas de fumaça no horizonte ...... mundo/fumaca.gd
 - escadas de incêndio e ar-condicionado
   nas fachadas ........................ mundo/fachadas.gd
+- oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd
 - placas, pichações, cortinas e luzes
   nas janelas (shader PREDIO/GRAFITE) . mundo/materiais_cidade.gd
 - juntar caixas numa malha só ......... mundo/malhas.gd

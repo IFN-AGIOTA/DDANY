@@ -48,6 +48,7 @@ func aplicar() -> void:
 	Engine.max_fps = int(g["cap"]) if int(g["cap"]) > 0 else (60 if OS.has_feature("mobile") else 0)   # celular: no máximo 60 (esquenta menos)
 	var vp := get_viewport()
 	vp.msaa_3d = MSAA[clampi(int(g["aa"]), 0, 3)]
+	vp.use_occlusion_culling = bool(g.get("ocl", true))     # não desenha o que está escondido atrás dos prédios
 	_aplicar_resolucao()
 	filtro.definir(float(g["bri"]) / 100.0, float(g["con"]) / 100.0, float(g["sat"]) / 100.0, bool(g["vig"]))
 	if main == null:

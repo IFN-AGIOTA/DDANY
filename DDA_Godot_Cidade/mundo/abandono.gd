@@ -2,12 +2,13 @@ extends RefCounted
 # CIDADE ABANDONADA: carros largados nas ruas (estacionados, parados no meio da pista, batidos, capotados e
 # queimados), engavetamentos em cruzamentos, barreiras de concreto, barris, caçambas, sacos de lixo,
 # montes de entulho e pedaços de concreto (mais perto dos prédios em ruína).
-# Tudo em MultiMesh por blocos de 1 km (o celular só desenha o que está perto: "visibility_range_end").
+# Tudo em MultiMesh por blocos de 250 m (o celular só desenha o que está perto, na frente da câmera e não escondido
+# atrás dos prédios: "visibility_range_end" + frustum + oclusão).
 # Devolve também os OBSTÁCULOS (caixas para a colisão perto do jogador) e os CARROS (porta-malas com loot).
 # Mexa AQUI para: quantos carros/obstáculos por rua, modelos dos carros, cores.
 
 const Malhas := preload("res://mundo/malhas.gd")
-const BLOCO := 1000.0
+const BLOCO := 250.0
 const Y := 0.6                       # altura do asfalto
 
 const CORES_CARRO := [Color(0.55, 0.08, 0.07), Color(0.12, 0.2, 0.42), Color(0.75, 0.75, 0.72), Color(0.1, 0.1, 0.11),
