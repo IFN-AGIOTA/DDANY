@@ -7,9 +7,23 @@ extends Node
 #   2) SEGURANÇA: se o jogo não chegar ao menu com o pacote (pacote com defeito), o pacote é apagado e marcado como
 #      "ruim" (não é baixado de novo); o jogo volta a ser o do APK. Também apaga o pacote quando o APK é atualizado.
 #   3) liga o resto (procurar atualização, baixar, avisar na tela) em rede/atualizacoes.gd, que o pacote PODE trocar.
+#   4) ASSINATURA: o manifesto só vale se estiver assinado com a CHAVE PRIVADA dos pacotes (fica só com o dono, fora
+#      do GitHub). A chave PÚBLICA abaixo confere. Quem mexer no repositório sem a chave não consegue mandar pacote
+#      nem link de APK para os aparelhos.
 # Mexa AQUI para: CODIGO_APK (tem de ser igual a version/code do export_presets.cfg a cada APK novo).
 
-const CODIGO_APK := 43
+const CODIGO_APK := 44
+const CHAVE_PUBLICA := """-----BEGIN PUBLIC KEY-----
+MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAoX/PSEJ5Pqhsjhx4Mnwv
+jMdXyJEEo0S0+H1rPQ89ELIKcsW5jdkQmdDGJqz8CxXtKDziiGYVMI9Gi+ZFJOj6
+XOUxa3DlMfvmJ/yegVcd43RgWEDDszhoLRQ3FY5AcoeN/hTm3G2TPQXUwyEHVZAg
+CrgInU1MGz1daI9JDWZwVQTnwURq3wXQLSlI9i2BlctrLTPAgCZLA1TkNn8VXuW5
+PRRt/X0m7++ft2DjUGI6jBJtNS+aW739cBoDad2A1QznoBRXRDWfWq1BLaUmdA50
+2Tt/7WjFmmLeq7lujNL3tNJA0oiCfhjtPWpa1lfp5WDhewm8nNkAFfcsv8VVKDmK
+CvPWu610yOmJNZ3op4oW4GwGQxdAG8oQkx5tQWUm7g/CEW31Etop5BSruuO88bOo
+6w0hKTV5NocrmWmMNDR9/5nQyS3JLodZtUgi0v2xuaXlTHYgygBNP9pyoDH5zWl3
+5rKtDXtzNYzFyo7RcnGOeMsSxLlGl5oqCcf23FYKu597AgMBAAE=
+-----END PUBLIC KEY-----"""
 const PASTA := "user://atualizacao/"
 const PACOTE := PASTA + "pacote.pck"
 const PACOTE_NOVO := PASTA + "pacote_novo.pck"
@@ -109,6 +123,24 @@ func _conferir() -> void:
 	# se nunca ficar ok, "falhou" continua true: na próxima abertura o pacote é desfeito
 
 # ---------- usados por rede/atualizacoes.gd ----------
+# o manifesto chega como {"dados": "<json>", "assinatura": "<base64>"}: devolve os dados só se a assinatura conferir
+func abrir_manifesto(m: Dictionary):
+	var dados = m.get("dados")
+	var ass = m.get("assinatura")
+	if not (dados is String) or not (ass is String):
+		return null
+	var chave := CryptoKey.new()
+	if chave.load_from_string(CHAVE_PUBLICA, true) != OK:
+		return null
+	var h := HashingContext.new()
+	h.start(HashingContext.HASH_SHA256)
+	h.update((dados as String).to_utf8_buffer())
+	if not Crypto.new().verify(HashingContext.HASH_SHA256, h.finish(), Marshalls.base64_to_raw(ass), chave):
+		print("Atualizador: manifesto com assinatura inválida (ignorado)")
+		return null
+	var d = JSON.parse_string(dados)
+	return d if d is Dictionary else null
+
 func versao_instalada() -> String:
 	if estado.has("novo_versao"):
 		return str(estado["novo_versao"])

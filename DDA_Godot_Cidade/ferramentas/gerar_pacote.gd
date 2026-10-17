@@ -21,6 +21,8 @@ extends SceneTree
 #   · usa o version/code do export_presets.cfg (tem de ser igual ao rede/atualizador.gd CODIGO_APK) e tira o pacote
 #     do manifesto (pacotes valem só para o APK em que foram feitos).
 # Para TIRAR o pacote do ar (deu problema): MODO=tirar ... -> "pacote": null (os aparelhos apagam na próxima abertura).
+# ASSINATURA: todo manifesto sai assinado com a chave PRIVADA dos pacotes (CHAVE_PACOTES=caminho do .pem; padrão
+# ../chaves_privadas/chave_pacotes.pem, fora do GitHub). Sem ela não gera nada: o jogo ignora manifesto sem assinatura.
 
 const RAMO := "claude/dayz-inventory-system-pckjpx"
 const URL_BASE := "https://raw.githubusercontent.com/IFN-AGIOTA/DDANY/refs/heads/" + RAMO + "/"
@@ -31,6 +33,9 @@ func _initialize() -> void:
 	var versao := OS.get_environment("VERSAO")
 	var notas := OS.get_environment("NOTAS")
 	var saida := OS.get_environment("SAIDA")
+	var base := OS.get_environment("URL_BASE")    # testes: outro endereço (o padrão é o GitHub)
+	if base == "":
+		base = URL_BASE
 	if saida == "":
 		saida = ProjectSettings.globalize_path("res://").path_join("../atualizacoes").simplify_path()
 	DirAccess.make_dir_recursive_absolute(saida)
@@ -39,8 +44,13 @@ func _initialize() -> void:
 		printerr("ERRO: export_presets.cfg version/code = %d, mas rede/atualizador.gd CODIGO_APK = %d. Deixe iguais." % [codigo, Atualizador.CODIGO_APK])
 		quit(1)
 		return
+	var chave := _chave()
+	if chave == null:
+		quit(1)
+		return
 	var man_arq := saida.path_join("atualizacao.json")
-	var man = JSON.parse_string(FileAccess.get_file_as_string(man_arq)) if FileAccess.file_exists(man_arq) else {}
+	var fora = JSON.parse_string(FileAccess.get_file_as_string(man_arq)) if FileAccess.file_exists(man_arq) else {}
+	var man = JSON.parse_string(fora["dados"]) if fora is Dictionary and fora.get("dados") is String else {}
 	if not (man is Dictionary):
 		man = {}
 	match modo:
@@ -65,11 +75,11 @@ func _initialize() -> void:
 			var f := FileAccess.open(caminho, FileAccess.READ)
 			var tam := f.get_length()
 			f = null
-			man["pacote"] = {"base": codigo, "versao": versao, "url": URL_BASE + "atualizacoes/" + nome,
+			man["pacote"] = {"base": codigo, "versao": versao, "url": base + "atualizacoes/" + nome,
 				"sha256": FileAccess.get_sha256(caminho), "tamanho": tam, "notas": notas, "arquivos": lista}
 			print("pacote %s: %d arquivos, %d bytes -> %s" % [versao, n, tam, caminho])
 		"apk":
-			man["apk"] = {"codigo": codigo, "versao": versao, "url": URL_BASE + "DiasDeUmApocalipse.apk", "notas": notas}
+			man["apk"] = {"codigo": codigo, "versao": versao, "url": base + "DiasDeUmApocalipse.apk", "notas": notas}
 			man["pacote"] = null
 			print("APK %s (código %d) publicado no manifesto" % [versao, codigo])
 		"tirar":
@@ -79,11 +89,33 @@ func _initialize() -> void:
 			printerr("MODO=pacote, apk ou tirar")
 			quit(1)
 			return
+	var dados := JSON.stringify(man, "  ")
+	var h := HashingContext.new()
+	h.start(HashingContext.HASH_SHA256)
+	h.update(dados.to_utf8_buffer())
+	var saida_man := {"dados": dados, "assinatura": Marshalls.raw_to_base64(Crypto.new().sign(HashingContext.HASH_SHA256, h.finish(), chave))}
+	if man.get("apk") is Dictionary:
+		saida_man["apk"] = man["apk"]         # só para o APK 0.47 (antes da assinatura) achar o APK novo
 	var mf := FileAccess.open(man_arq, FileAccess.WRITE)
-	mf.store_string(JSON.stringify(man, "  "))
+	mf.store_string(JSON.stringify(saida_man, "  "))
 	mf = null
 	print("manifesto: ", man_arq)
 	quit()
+
+func _chave() -> CryptoKey:
+	var arq := OS.get_environment("CHAVE_PACOTES")
+	if arq == "":
+		arq = ProjectSettings.globalize_path("res://").path_join("../chaves_privadas/chave_pacotes.pem").simplify_path()
+	var k := CryptoKey.new()
+	if not FileAccess.file_exists(arq) or k.load(arq) != OK:
+		printerr("ERRO: sem a chave privada dos pacotes (", arq, "). Ponha CHAVE_PACOTES=caminho do chave_pacotes.pem")
+		return null
+	var pub := CryptoKey.new()
+	pub.load_from_string(k.save_to_string(true), true)
+	if pub.save_to_string(true).strip_edges() != Atualizador.CHAVE_PUBLICA.strip_edges():
+		printerr("ERRO: essa chave não é a do jogo (rede/atualizador.gd CHAVE_PUBLICA)")
+		return null
+	return k
 
 func _codigo_apk() -> int:
 	var cf := ConfigFile.new()

@@ -1,8 +1,9 @@
 extends Node
 # ATUALIZAÇÕES · criado pelo rede/atualizador.gd (este arquivo PODE ser trocado por um pacote).
-# Ao abrir o jogo lê o MANIFESTO no GitHub (atualizacoes/atualizacao.json, repositório público IFN-AGIOTA/DDANY):
-#   {"apk": {"codigo": 44, "versao": "0.48", "url": ".../DiasDeUmApocalipse.apk", "notas": "..."},
-#    "pacote": {"base": 43, "versao": "0.47.1", "url": ".../pacote_0.47.1.pck", "sha256": "...", "tamanho": 1234,
+# Ao abrir o jogo lê o MANIFESTO no GitHub (atualizacoes/atualizacao.json, repositório público IFN-AGIOTA/DDANY).
+# Ele vem ASSINADO: {"dados": "<o json abaixo em texto>", "assinatura": "..."}; sem assinatura válida é ignorado.
+#   {"apk":{"codigo": 44, "versao": "0.48", "url": ".../DiasDeUmApocalipse.apk", "notas": "..."},
+#    "pacote": {"base": 44, "versao": "0.48.1", "url": ".../pacote_0.47.1.pck", "sha256": "...", "tamanho": 1234,
 #               "notas": "..."}   ou   "pacote": null}
 #   · APK mais novo que este -> aviso no menu com o botão BAIXAR (abre o link: o Android baixa e pergunta se instala;
 #     o save e a conta continuam). Precisa de APK quando muda algo do Android (permissões, plugins, a Godot).
@@ -52,9 +53,12 @@ func _manifesto_chegou(res: int, codigo: int, _h: PackedStringArray, corpo: Pack
 	_http.queue_free()
 	if res != HTTPRequest.RESULT_SUCCESS or codigo != 200:
 		return                                # sem internet: tenta na próxima abertura
-	var d = JSON.parse_string(corpo.get_string_from_utf8())
-	if not (d is Dictionary):
+	var bruto = JSON.parse_string(corpo.get_string_from_utf8())
+	if not (bruto is Dictionary):
 		return
+	var d = boot.abrir_manifesto(bruto)      # confere a assinatura (rede/atualizador.gd, dentro do APK)
+	if not (d is Dictionary):
+		return                                # sem assinatura válida: não confia em nada dele
 	manifesto = d
 	var apk = d.get("apk")
 	if apk is Dictionary and int(apk.get("codigo", 0)) > boot.CODIGO_APK:

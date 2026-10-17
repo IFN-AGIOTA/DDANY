@@ -21,20 +21,41 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 1. COMO ABRIR, JOGAR E GERAR O APK
 -----------------------------------------------------------------------------------------------------
 - Celular: instale DiasDeUmApocalipse.apk (pasta principal do repositório; Android arm64, paisagem).
-  Ele é assinado sempre com a mesma chave (dda.keystore), então cada versão nova instala por cima da antiga
-  e o jogo salvo continua.
+  Ele é assinado sempre com a mesma chave (chave nova desde a 0.48, com "rotação" a partir da antiga), então cada
+  versão nova instala por cima da antiga e o jogo salvo continua.
 - PC: Godot 4.3 > Importar projeto > escolha esta pasta (a que tem project.godot) > Rodar (F5).
   Renderizador "Compatibilidade" (GL Compatibility), o mesmo do celular.
   Ao entrar no jogo, a cidade leva ~2 s para ser montada (veja "Cidade pronta em ... ms" na Saída).
 - Gerar o APK: Projeto > Exportar > "Android" (já configurado: paisagem, tela cheia, VIBRATE, arm64, ETC2).
-  Release: keystore ../dda.keystore · usuário dda · senha android (ou as variáveis de ambiente
-  GODOT_ANDROID_KEYSTORE_RELEASE_PATH / _USER / _PASSWORD). Precisa do Android SDK (build-tools) e do Java em
-  Configurações do Editor > Exportar > Android. A cada versão nova, aumente "versão/código" em export_presets.cfg.
+  Release: keystore ../chaves_privadas/dda_nova.keystore · usuário dda2 · senha em chaves_privadas/senha_keystore.txt
+  (ou as variáveis GODOT_ANDROID_KEYSTORE_RELEASE_PATH / _USER / _PASSWORD). DEPOIS de exportar, assine com a
+  rotação de chave:  sh ferramentas/assinar_apk.sh ../DiasDeUmApocalipse.apk  (sem isso o APK não instala por cima).
+  As chaves NÃO ficam no GitHub (pasta chaves_privadas/ no .gitignore): o dono guarda o chaves_privadas.zip e manda
+  na conversa quando for gerar APK ou pacote. Precisa do Android SDK (build-tools) e do Java em
+  Configurações do Editor > Exportar > Android. A cada versão nova, aumente "versão/código" em export_presets.cfg
+  e o CODIGO_APK em rede/atualizador.gd (os dois iguais).
 - Se der erro, mande a mensagem exata (painel Saída/Depurador) ou uma foto da tela.
 
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.48 · SEGURANÇA: CHAVE NOVA DO APK E ATUALIZAÇÕES ASSINADAS
+  · A chave antiga (dda.keystore, senha "android") estava no GitHub PÚBLICO: qualquer um podia assinar um APK falso
+    que o Android aceitaria como atualização do jogo. Ela saiu do repositório e foi aposentada.
+  · CHAVE NOVA (dda_nova.keystore, RSA 4096, senha aleatória) com ROTAÇÃO DE CHAVE do Android (assinatura v3 +
+    "linhagem"): o APK 0.48 instala POR CIMA do antigo, sem desinstalar e sem perder o jogo salvo nem o login.
+    Depois de instalado, um APK assinado só com a chave antiga NÃO instala mais por cima (rollback desligado).
+    (Android 8 ou mais velho não entende a rotação e continua aceitando a chave antiga; Android 9+ fica protegido.)
+    ferramentas/assinar_apk.sh (NOVO) assina o APK depois do export da Godot.
+  · MANIFESTO ASSINADO: atualizacoes/atualizacao.json agora é {"dados", "assinatura"} (RSA 3072 + SHA-256). A chave
+    PÚBLICA está em rede/atualizador.gd (dentro do APK, pacote não troca); a PRIVADA (chave_pacotes.pem) fica só com
+    o dono. Manifesto sem assinatura ou mexido é ignorado: quem conseguir mexer no repositório sem a chave não manda
+    pacote nem link de APK para os aparelhos. ferramentas/gerar_pacote.gd assina sozinho (CHAVE_PACOTES=caminho).
+  · As chaves ficam em chaves_privadas/ (no .gitignore, NUNCA no GitHub): dda_nova.keystore, senha_keystore.txt,
+    dda_antiga.keystore (só para a rotação), linhagem.bin, chave_pacotes.pem. Se perder a chave nova, o Android não
+    aceita mais atualização por cima; se perder a chave dos pacotes, precisa de um APK novo com outra chave pública.
+  · Testado: manifesto assinado baixa e aplica o pacote; manifesto alterado ou sem assinatura é recusado.
+
 ATUALIZAÇÃO 0.47 · ATUALIZAÇÕES PELO PRÓPRIO JOGO (hospedadas no GitHub público IFN-AGIOTA/DDANY)
   · Ao abrir, o jogo lê o MANIFESTO atualizacoes/atualizacao.json (na raiz do repositório, ramo
     claude/dayz-inventory-system-pckjpx) e faz uma de duas coisas:
@@ -791,6 +812,7 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd
 - chunks de 500 m (o que fica na cena, raio) ....... mundo/chunks.gd (+ Opções › Gráficos › Raio de chunks)
 - atualizações pelo jogo (APK e pacotes) .......... rede/atualizador.gd, rede/atualizacoes.gd, ferramentas/gerar_pacote.gd
+- assinatura do APK (chave nova + rotação) ......... ferramentas/assinar_apk.sh (chaves em ../chaves_privadas, fora do git)
 - texturas do chão (concreto, terra, grama...) ... mundo/texturas/ + shader TERRA (mundo/materiais_cidade.gd)
 - placas, pichações, cortinas e luzes
   nas janelas (shader PREDIO/GRAFITE) . mundo/materiais_cidade.gd
@@ -1012,7 +1034,7 @@ amigos e os convites das partidas abertas. A partida em si continua indo direto 
 ATUALIZAR O JOGO DEPOIS (o que precisa fazer):
   · Nada no Firebase/Google: a configuração é para sempre. Contas, amigos e códigos continuam lá.
   · Instale o APK novo POR CIMA (sem desinstalar): quem já entrou continua logado. Funciona porque todo APK é
-    assinado com a mesma chave (dda.keystore, guardada no repositório). Se essa chave se perder, o Android não
+    assinado com a mesma chave (chaves_privadas/dda_nova.keystore, guardada com o dono, FORA do repositório). Se essa chave se perder, o Android não
     aceita instalar por cima: aí tem que desinstalar e entrar de novo na conta (os amigos não se perdem).
   · Multijogador: TODOS precisam estar na MESMA VERSÃO (a partida de quem está em outra versão aparece com
     "atualize o jogo"). Mande o APK novo para os amigos.
