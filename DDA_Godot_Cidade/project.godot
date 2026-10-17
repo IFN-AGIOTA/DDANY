@@ -12,6 +12,7 @@ config/icon="res://icon.png"
 Config="*res://menu/config.gd"
 Musica="*res://audio/musica_procedural.gd"
 Rede="*res://rede/rede.gd"
+Conta="*res://rede/conta.gd"
 
 [display]
 window/size/viewport_width=1280

@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.29 (APK código 25)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.30 (APK código 26)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,16 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.30 · CONTA GOOGLE E AMIGOS (Firebase)
+- Na tela Multijogador, parte CONTA: ENTRAR COM GOOGLE ou CONVIDADO (sem Google). Login com Google "por código"
+  (igual nas TVs): aparece um código, você toca ABRIR O SITE (google.com/device; o código já vai copiado), cola,
+  escolhe a conta e volta para o jogo, que entra sozinho. Fica conectado nas próximas vezes.
+- Cada conta tem um CÓDIGO DE AMIGO (6 letras). Adicione o código do amigo e peça para ele adicionar o seu.
+  Com os dois adicionados, a partida que um cria aparece para o outro em PARTIDAS DOS AMIGOS: é só tocar para
+  entrar, sem código (o jogo escolhe sozinho Wi-Fi, VPN ou internet).
+- PRECISA CONFIGURAR UMA VEZ (grátis): criar um projeto no Firebase e preencher rede/firebase_config.cfg.
+  Passo a passo na seção 11 (CONTA (FIREBASE)). Sem isso o jogo funciona igual, só sem conta.
+
 ATUALIZAÇÃO 0.29 · MULTIJOGADOR DE LONGE (internet, código e convite)
 - CRIAR PARTIDA abre a SALA: aparecem os CÓDIGOS da partida (10 letras, ex.: K7G2Q-0M4XA = IP + porta):
   · "Internet": o jogo pede ao roteador para abrir a porta sozinho (UPnP). Funciona de qualquer lugar.
@@ -605,6 +615,9 @@ MULTIJOGADOR (pasta rede/ · modo livre)
   15x/s, roupa, ações, tiros, clima) .. rede/sessao_rede.gd
 - o boneco do outro jogador (suavizado,
   nome em cima, roupa, arma) .......... rede/jogador_remoto.gd
+- conta (Google/convidado), amigos e
+  partidas dos amigos (Firebase) ...... rede/conta.gd (autoload "Conta")
+- chaves do Firebase / regras do banco  rede/firebase_config.cfg / rede/firebase_regras.json
 - tela do menu e sala do host ......... menu/tela_multijogador.gd
 - "Copiar convite" na pausa ........... menu/pausa.gd
 - liga ao jogo (semente do loot, nascer
@@ -734,3 +747,37 @@ MÚSICA (pasta audio/)
 - Ideias para depois: loot por região, lugares
   especiais (postos do exército, quarentena, metrô), helicópteros caídos, elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,
   outros sobreviventes (NPCs), mais atos da história.
+
+-----------------------------------------------------------------------------------------------------
+11. CONTA (FIREBASE): COMO LIGAR O LOGIN COM GOOGLE E OS AMIGOS (uma vez só, grátis, ~10 min)
+-----------------------------------------------------------------------------------------------------
+O Firebase é do Google e o plano grátis (Spark) basta. Ele guarda: perfil (nome e código de amigo), lista de
+amigos e os convites das partidas abertas. A partida em si continua indo direto entre os aparelhos.
+ 1. Entre em console.firebase.google.com com a SUA conta Google > "Adicionar projeto" > nome (ex.: dias-de-um-
+    apocalipse) > pode desligar o Google Analytics > Criar.
+ 2. Menu "Criação" > Authentication > Vamos começar > aba "Método de login": ative GOOGLE (escolha o e-mail de
+    suporte) e ative ANÔNIMO.
+ 3. Menu "Criação" > Realtime Database > Criar banco de dados > local "Estados Unidos" > "modo bloqueado".
+    Na aba REGRAS apague tudo, cole o conteúdo de rede/firebase_regras.json e toque PUBLICAR.
+    Copie o endereço do banco (no alto da aba Dados, ex.: https://dias-de-um-apocalipse-default-rtdb.firebaseio.com)
+    -> é o database_url.
+ 4. Engrenagem (Configurações do projeto) > Geral > "Chave de API da Web" -> é o api_key.
+ 5. Login com Google "por código": abra console.cloud.google.com (já logado, escolha o MESMO projeto no topo).
+    a) APIs e serviços > Tela de permissão OAuth: tipo EXTERNO, nome do app, e-mail; salve. Em "Público-alvo",
+       toque PUBLICAR APP (senão só os e-mails de "usuários de teste" conseguem entrar).
+    b) APIs e serviços > Credenciais > Criar credenciais > ID do cliente OAuth > tipo "TVs e dispositivos de
+       entrada limitada" > Criar. Copie o ID DO CLIENTE (client_id) e a CHAVE SECRETA (client_secret).
+ 6. De volta ao Firebase > Authentication > Método de login > Google > "Lista de permissões de IDs de cliente
+    de projetos externos": cole o client_id do passo 5 > Salvar.
+ 7. Preencha rede/firebase_config.cfg (api_key, database_url, client_id, client_secret) e gere o APK de novo
+    — ou mande esses 4 valores na conversa que eu ponho e gero o APK. (A chave de API e o ID do cliente da TV
+    não são senhas: quem protege os dados são as REGRAS do passo 3.)
+Como funciona por dentro (rede/conta.gd, tudo por HTTP, sem plugin):
+  · Google: "device flow" do OAuth (oauth2.googleapis.com/device/code e /token) -> id_token do Google ->
+    Firebase Auth (identitytoolkit accounts:signInWithIdp). Convidado: accounts:signUp (anônimo). A sessão é
+    renovada com o refresh token (securetoken) e fica em user://conta.cfg.
+  · Banco (Realtime Database REST, ?auth=token): usuarios/{uid} = {nome, codigo} · codigos/{CODIGO} = uid
+    (só pega código livre) · amigos/{uid}/{amigo} · convites/{amigo}/{host} = {nome, codigos, n, versao, t}.
+    A regra só deixa o host escrever o convite para quem o adicionou como amigo. O host republica a cada 45 s;
+    convite com mais de 150 s é ignorado (partida fechada); ao sair da partida ele apaga.
+  · Testes sem Firebase: variável DDA_FIREBASE_CFG aponta para outra configuração (servidor falso local).

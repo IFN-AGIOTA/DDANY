@@ -3,6 +3,8 @@ extends CanvasLayer
 # sozinhas no mesmo Wi-Fi) e ENTRAR (código, convite colado, IP, IP:porta ou endereço:porta).
 # Criando a partida abre a SALA: os CÓDIGOS (internet, VPN, Wi-Fi), COPIAR CONVITE (para mandar no WhatsApp),
 # quem já entrou e COMEÇAR A JOGAR. Quem entra começa assim que o host aceita.
+# CONTA (rede/conta.gd, Firebase): entrar com GOOGLE ou como convidado, seu CÓDIGO DE AMIGO, adicionar amigos e
+# PARTIDAS DOS AMIGOS (aparecem sozinhas: é só tocar para entrar).
 # Quando é hora de jogar emite "comecar" e o main.gd abre o mundo livre.
 # Mexa AQUI para: textos e o layout desta tela.
 
@@ -20,6 +22,13 @@ var _achadas := {}                            # ip -> [nome, jogadores, tempo]
 var _esperando := false
 var _sala := false                            # host com a partida criada (mostra códigos e convite)
 var _sala_info: VBoxContainer
+var _conta_box: VBoxContainer                 # login / perfil
+var _amigos_box: VBoxContainer                # lista de amigos + adicionar
+var _partidas_amigos: VBoxContainer
+var _cod_amigo: LineEdit
+var _login_codigo := ""
+var _login_site := ""
+var _t_convites := 0.0
 
 func _ready() -> void:
 	layer = 30
@@ -29,6 +38,11 @@ func _ready() -> void:
 	Rede.internet.connect(_internet)
 	Rede.jogador_entrou.connect(_mudou_sala)
 	Rede.jogador_saiu.connect(_mudou_sala)
+	Conta.mudou.connect(_conta_mudou)
+	Conta.login_codigo.connect(_conta_codigo)
+	Conta.login_erro.connect(_conta_erro)
+	Conta.aviso.connect(_conta_aviso)
+	Conta.convites_mudaram.connect(_convites)
 	Rede.procurar(true)
 	get_viewport().size_changed.connect(_montar)
 	_montar()
@@ -41,6 +55,11 @@ func _exit_tree() -> void:
 	Rede.internet.disconnect(_internet)
 	Rede.jogador_entrou.disconnect(_mudou_sala)
 	Rede.jogador_saiu.disconnect(_mudou_sala)
+	Conta.mudou.disconnect(_conta_mudou)
+	Conta.login_codigo.disconnect(_conta_codigo)
+	Conta.login_erro.disconnect(_conta_erro)
+	Conta.aviso.disconnect(_conta_aviso)
+	Conta.convites_mudaram.disconnect(_convites)
 
 func _montar() -> void:
 	var nome_antes := _nome.text if _nome != null else str(Config.valor("nome_rede"))
@@ -109,19 +128,32 @@ func _montar() -> void:
 	var bcol := UI.BotaoMenu.new("Colar", "da área de transferência", false, 3.4, 18.0)
 	bcol.apertado.connect(_colar)
 	bes.add_child(bcol)
-	# coluna da direita: partidas achadas na rede local
+	# coluna da direita: conta, partidas dos amigos, partidas na rede local, amigos
 	var dir := VBoxContainer.new()
 	dir.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	dir.add_theme_constant_override("separation", int(1.2 * v))
 	linhas.add_child(dir)
-	_secao(dir, "PARTIDAS NA REDE", v)
-	_lista = VBoxContainer.new()
-	_lista.add_theme_constant_override("separation", int(1.0 * v))
-	dir.add_child(_lista)
 	_status = _texto("", v)
 	_status.add_theme_color_override("font_color", UI.AMBAR)
 	dir.add_child(_status)
+	_secao(dir, "CONTA", v)
+	_conta_box = VBoxContainer.new()
+	_conta_box.add_theme_constant_override("separation", int(1.0 * v))
+	dir.add_child(_conta_box)
+	_secao(dir, "PARTIDAS DOS AMIGOS", v)
+	_partidas_amigos = VBoxContainer.new()
+	_partidas_amigos.add_theme_constant_override("separation", int(1.0 * v))
+	dir.add_child(_partidas_amigos)
+	_secao(dir, "PARTIDAS NA REDE (WI-FI)", v)
+	_lista = VBoxContainer.new()
+	_lista.add_theme_constant_override("separation", int(1.0 * v))
+	dir.add_child(_lista)
+	_amigos_box = VBoxContainer.new()
+	_amigos_box.add_theme_constant_override("separation", int(1.0 * v))
+	dir.add_child(_amigos_box)
 	_atualizar_lista()
+	_montar_conta()
+	_convites(Conta.convites)
 
 func _secao(col: VBoxContainer, txt: String, v: float) -> void:
 	var m := MarginContainer.new()
@@ -199,6 +231,10 @@ func _montar_sala(v: float) -> void:
 	_status = _texto("", v)
 	_status.add_theme_color_override("font_color", UI.AMBAR)
 	dir.add_child(_status)
+	if Conta.logado:
+		var ta := _texto("Seus AMIGOS da conta já veem esta partida na lista deles (é só tocar para entrar).", v)
+		ta.add_theme_color_override("font_color", UI.AMBAR)
+		dir.add_child(ta)
 	_secao(dir, "DE LONGE NÃO CONECTA?", v)
 	dir.add_child(_texto("Internet do celular (4G/5G) e muitos roteadores não deixam ninguém entrar de fora. Solução grátis: instalem o app TAILSCALE (ou ZeroTier) nos dois aparelhos, entrem na mesma conta/rede e usem o código \"VPN\". Também dá para usar um túnel (ex.: playit.gg, porta UDP %d) e entrar por endereço:porta." % Rede.PORTA, v))
 	_atualizar_sala()
@@ -229,6 +265,156 @@ func _mudou_sala(_id: int, _n := "") -> void:
 	if _sala:
 		_atualizar_sala()
 
+# ---------- CONTA (rede/conta.gd) ----------
+func _montar_conta() -> void:
+	if _conta_box == null or not is_instance_valid(_conta_box):
+		return
+	var v := UI.vh(self)
+	for f in _conta_box.get_children():
+		f.queue_free()
+	for f in _amigos_box.get_children():
+		f.queue_free()
+	if not Conta.configurado:
+		_conta_box.add_child(_texto("Login com Google e amigos: falta configurar o Firebase (rede/firebase_config.cfg, passo a passo no LEIA-ME). O resto do multijogador funciona sem conta.", v))
+		return
+	if Conta.entrando and _login_codigo != "":
+		_conta_box.add_child(_texto("Abra o site abaixo (neste celular ou em qualquer outro aparelho), digite o código e escolha sua conta Google:", v))
+		_conta_box.add_child(UI.rotulo(_login_codigo, 6.0 * v, UI.TEXTO, 900, 0.12 * 6.0 * v, true))
+		_conta_box.add_child(_texto(_login_site, v))
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", int(1.4 * v))
+		var ba := UI.BotaoMenu.new("Abrir o site", "o código já vai copiado", true, 3.2, 22.0)
+		ba.apertado.connect(func():
+			DisplayServer.clipboard_set(_login_codigo)
+			OS.shell_open(_login_site))
+		h.add_child(ba)
+		var bx := UI.BotaoMenu.new("Cancelar", "", false, 3.2, 16.0)
+		bx.apertado.connect(func():
+			_login_codigo = ""
+			Conta.cancelar_login())
+		h.add_child(bx)
+		_conta_box.add_child(h)
+		_conta_box.add_child(_texto("Esperando você confirmar no site…", v))
+		return
+	if Conta.entrando:
+		_conta_box.add_child(_texto("Entrando…", v))
+		return
+	if not Conta.logado:
+		_conta_box.add_child(_texto("Entre para ter AMIGOS: as partidas deles aparecem aqui sozinhas, sem precisar de código.", v))
+		var h := HBoxContainer.new()
+		h.add_theme_constant_override("separation", int(1.4 * v))
+		if Conta.google_disponivel():
+			var bg := UI.BotaoMenu.new("Entrar com Google", "conta Google", true, 3.2, 24.0)
+			bg.apertado.connect(func(): Conta.entrar_google())
+			h.add_child(bg)
+		var bv := UI.BotaoMenu.new("Convidado", "sem Google", false, 3.2, 18.0)
+		bv.apertado.connect(func(): Conta.entrar_convidado())
+		h.add_child(bv)
+		_conta_box.add_child(h)
+		return
+	var quem := Conta.nome + ("  ·  " + Conta.email if Conta.email != "" else ("  ·  convidado" if Conta.tipo == "convidado" else ""))
+	_conta_box.add_child(UI.rotulo(quem, 3.0 * v, UI.TEXTO, 800))
+	var hc := HBoxContainer.new()
+	hc.add_theme_constant_override("separation", int(1.4 * v))
+	hc.add_child(UI.rotulo("Seu código de amigo: %s" % Conta.codigo_amigo, 3.0 * v, UI.AMBAR, 900, 0.0, true))
+	var bcop := UI.BotaoMenu.new("Copiar", "", false, 2.6, 12.0)
+	bcop.apertado.connect(func():
+		DisplayServer.clipboard_set("Me adiciona no Dias de um Apocalipse! Meu código de amigo: %s" % Conta.codigo_amigo)
+		_status.text = "Código de amigo copiado.")
+	hc.add_child(bcop)
+	var bsair := UI.BotaoMenu.new("Sair da conta", "", false, 2.6, 18.0)
+	bsair.apertado.connect(func(): Conta.sair_da_conta())
+	hc.add_child(bsair)
+	_conta_box.add_child(hc)
+	# amigos
+	_secao(_amigos_box, "AMIGOS", v)
+	_amigos_box.add_child(_texto("Os dois precisam adicionar o código um do outro para verem as partidas.", v))
+	var ha := HBoxContainer.new()
+	ha.add_theme_constant_override("separation", int(1.4 * v))
+	_cod_amigo = _campo("", "código do amigo", v)
+	_cod_amigo.custom_minimum_size.x = 24.0 * v
+	_cod_amigo.max_length = 10
+	ha.add_child(_cod_amigo)
+	var badd := UI.BotaoMenu.new("Adicionar", "", false, 3.0, 16.0)
+	badd.apertado.connect(func(): Conta.adicionar_amigo(_cod_amigo.text))
+	ha.add_child(badd)
+	_amigos_box.add_child(ha)
+	for outro in Conta.amigos:
+		var a: Dictionary = Conta.amigos[outro]
+		var hl := HBoxContainer.new()
+		hl.add_theme_constant_override("separation", int(1.4 * v))
+		hl.add_child(UI.rotulo("• %s  (%s)" % [a.get("nome", "?"), a.get("codigo", "")], 2.8 * v, UI.TEXTO, 700))
+		var brm := UI.BotaoMenu.new("Remover", "", false, 2.2, 10.0)
+		brm.apertado.connect(func(): Conta.remover_amigo(outro))
+		hl.add_child(brm)
+		_amigos_box.add_child(hl)
+
+func _conta_mudou() -> void:
+	if not Conta.entrando:
+		_login_codigo = ""
+	if Conta.logado and _nome != null and (_nome.text == "" or _nome.text == "Sobrevivente"):
+		_nome.text = Conta.nome
+	_montar_conta()
+
+func _conta_codigo(codigo: String, site: String) -> void:
+	_login_codigo = codigo
+	_login_site = site
+	_montar_conta()
+
+func _conta_erro(motivo: String) -> void:
+	_login_codigo = ""
+	if _status != null:
+		_status.text = motivo
+	_montar_conta()
+
+func _conta_aviso(t: String) -> void:
+	if _status != null:
+		_status.text = t
+
+func _convites(lista: Array) -> void:
+	if _partidas_amigos == null or not is_instance_valid(_partidas_amigos):
+		return
+	var v := UI.vh(self)
+	for f in _partidas_amigos.get_children():
+		f.queue_free()
+	if not Conta.logado:
+		_partidas_amigos.add_child(_texto("Entre na conta (acima) para ver as partidas dos seus amigos.", v))
+		return
+	if lista.is_empty():
+		_partidas_amigos.add_child(_texto("Nenhum amigo com partida aberta agora.", v))
+		return
+	for c in lista:
+		var outra_versao: bool = str(c["versao"]) != Config.VERSAO
+		var b := UI.BotaoMenu.new("Partida de %s" % c["nome"], ("versão %s: atualize o jogo" % c["versao"]) if outra_versao else "%d jogador(es) · tocar para entrar" % c["n"], not outra_versao, 3.2, 34.0)
+		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+		b.apertado.connect(func(): _entrar_amigo(c))
+		_partidas_amigos.add_child(b)
+
+# escolhe o código que deve funcionar daqui: mesmo Wi-Fi > VPN (se eu também estou nela) > internet
+func _entrar_amigo(c: Dictionary) -> void:
+	var cods: Array = c.get("codigos", [])
+	if cods.is_empty():
+		_status.text = "A partida de %s não mandou códigos (tente de novo em alguns segundos)." % c["nome"]
+		return
+	var meus := Rede.meus_ips()
+	var escolha := ""
+	for k in cods:
+		var ip := str(k[2])
+		for m in meus:
+			if ip.get_slice(".", 0) + "." + ip.get_slice(".", 1) + "." + ip.get_slice(".", 2) == m.get_slice(".", 0) + "." + m.get_slice(".", 1) + "." + m.get_slice(".", 2):
+				escolha = str(k[1])
+	if escolha == "":
+		for k in cods:
+			if str(k[0]).begins_with("VPN") and meus.size() > 0 and Array(meus).any(func(m): return m.begins_with("100.") or m.begins_with("10.147.")):
+				escolha = str(k[1])
+	if escolha == "":
+		for k in cods:
+			if str(k[0]) == "Internet":
+				escolha = str(k[1])
+	if escolha == "":
+		escolha = str(cods[0][1])
+	_entrar(escolha)
+
 # ---------- ações ----------
 func _colar() -> void:
 	var t := DisplayServer.clipboard_get().strip_edges()
@@ -242,6 +428,7 @@ func _colar() -> void:
 
 func _meu_nome() -> String:
 	Config.definir("nome_rede", _nome.text.strip_edges())
+	Conta.definir_nome(_nome.text)
 	return _nome.text
 
 func _criar() -> void:
@@ -291,7 +478,7 @@ func _atualizar_lista() -> void:
 		f.queue_free()
 	var v := UI.vh(self)
 	if _achadas.is_empty():
-		_lista.add_child(_texto("Procurando partidas no mesmo Wi-Fi…\nSe não aparecer, peça o IP ao host e use ENTRAR POR IP.", v))
+		_lista.add_child(_texto("Procurando partidas no mesmo Wi-Fi…\nSe não aparecer, peça o convite ao host e use ENTRAR.", v))
 		return
 	for ip in _achadas:
 		var a: Array = _achadas[ip]
@@ -300,7 +487,13 @@ func _atualizar_lista() -> void:
 		b.apertado.connect(func(): _entrar(ip))
 		_lista.add_child(b)
 
-func _process(_dt: float) -> void:
+func _process(dt: float) -> void:
+	# partidas dos amigos: pergunta de novo a cada 8 s enquanto esta tela está aberta
+	if Conta.logado and not _sala:
+		_t_convites -= dt
+		if _t_convites <= 0.0:
+			_t_convites = 8.0
+			Conta.atualizar_convites()
 	# some da lista a partida que parou de anunciar (5 s)
 	var agora := Time.get_ticks_msec()
 	var mudou := false
