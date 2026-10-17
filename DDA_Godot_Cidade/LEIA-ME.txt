@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.30 (APK código 26)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.31 (APK código 27)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,11 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.31 · LOGIN AO ABRIR O JOGO
+- Ao abrir o jogo aparece a tela ENTRAR: "Entrar com Google", "Jogar como convidado" ou "Agora não"
+  (menu/tela_login.gd). Quem já entrou antes neste aparelho entra sozinho e o menu só diz "Olá, Fulano!".
+- Só aparece depois de configurar o Firebase (seção 11); sem isso o jogo abre direto no menu, como antes.
+
 ATUALIZAÇÃO 0.30 · CONTA GOOGLE E AMIGOS (Firebase)
 - Na tela Multijogador, parte CONTA: ENTRAR COM GOOGLE ou CONVIDADO (sem Google). Login com Google "por código"
   (igual nas TVs): aparece um código, você toca ABRIR O SITE (google.com/device; o código já vai copiado), cola,
@@ -619,6 +624,7 @@ MULTIJOGADOR (pasta rede/ · modo livre)
   partidas dos amigos (Firebase) ...... rede/conta.gd (autoload "Conta")
 - chaves do Firebase / regras do banco  rede/firebase_config.cfg / rede/firebase_regras.json
 - tela do menu e sala do host ......... menu/tela_multijogador.gd
+- tela de login ao abrir o jogo ....... menu/tela_login.gd (quando aparece: main.gd, _pedir_login)
 - "Copiar convite" na pausa ........... menu/pausa.gd
 - liga ao jogo (semente do loot, nascer
   perto, pausa, sem salvar em rede) ... main.gd (_ligar_rede, _rede_caiu)

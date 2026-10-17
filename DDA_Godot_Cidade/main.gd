@@ -41,6 +41,7 @@ const AplicarOpcoesCls := preload("res://menu/aplicar_opcoes.gd")
 const JOGADOR_CENA := preload("res://jogador/jogador.tscn")
 const SessaoRedeCls := preload("res://rede/sessao_rede.gd")
 const TelaMultiCls := preload("res://menu/tela_multijogador.gd")
+const TelaLoginCls := preload("res://menu/tela_login.gd")
 
 var cidade: Node3D
 var jogo: Node3D                            # tudo do jogo em andamento (apagado ao voltar ao menu)
@@ -70,6 +71,8 @@ var companheiros: Node                      # npc/companheiros.gd (Greg e Mavie,
 var mato: Node3D                            # mundo/mato.gd (mato perto do jogador + sombra dos prédios no chão)
 var sessao_rede: Node = null                # rede/sessao_rede.gd (só na partida multijogador)
 var tela_multi: CanvasLayer = null          # menu/tela_multijogador.gd
+var tela_login: CanvasLayer = null          # menu/tela_login.gd (pede o login ao abrir o jogo)
+var _login_perguntado := false
 var abates := 0
 var _tempo_jogo := 0.0
 var _t_salvar := 0.0
@@ -129,6 +132,29 @@ func _abrir_menu() -> void:
 	menu.opcoes.connect(_abrir_opcoes)
 	menu.multijogador.connect(_abrir_multijogador)
 	Musica.definir_modo("menu")
+	if not _login_perguntado:
+		_login_perguntado = true
+		_pedir_login()
+
+# AO ABRIR O JOGO: pede para entrar com a conta Google (rede/conta.gd), se o Firebase estiver configurado.
+# Quem já entrou antes volta logado sozinho e só recebe um "Olá".
+func _pedir_login() -> void:
+	if not Conta.configurado:
+		return
+	while Conta.entrando and tela_login == null:      # recuperando a sessão salva
+		await get_tree().process_frame
+	if menu == null:
+		return
+	if Conta.logado:
+		menu.avisar("Olá, %s!" % Conta.nome)
+		return
+	tela_login = TelaLoginCls.new()
+	tela_login.name = "TelaLogin"
+	add_child(tela_login)
+	tela_login.fechar.connect(func():
+		tela_login = null
+		if Conta.logado and menu != null:
+			menu.avisar("Olá, %s! Seus amigos estão em Multijogador." % Conta.nome))
 
 func _jogar(carregar_salvo := false, modo_historia := false) -> void:
 	menu.mostrar_carregando()
@@ -208,7 +234,12 @@ func _notification(what: int) -> void:
 
 # botão VOLTAR do Android (e Esc): fecha a tela de cima; no jogo, pausa; no menu, sai
 func _voltar() -> void:
-	if tela_multi != null:
+	if tela_login != null:
+		if Conta.entrando:
+			Conta.cancelar_login()                # volta para os botões da tela de login
+		else:
+			tela_login._sair()
+	elif tela_multi != null:
 		tela_multi._sair()
 	elif opcoes != null:
 		_fechar_opcoes()
