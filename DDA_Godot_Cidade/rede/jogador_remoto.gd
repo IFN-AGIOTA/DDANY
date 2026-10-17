@@ -34,6 +34,7 @@ var _armas_3d := {}                           # tipo -> Node3D
 var _arma_atual := ""
 
 func _ready() -> void:
+	add_to_group("jogadores_remotos")          # os infectados do host caçam os amigos também (inimigos/vagos.gd)
 	_slot = Node3D.new()
 	_slot.name = "Modelo"
 	add_child(_slot)
@@ -62,6 +63,10 @@ func _ready() -> void:
 
 func is_on_floor() -> bool:
 	return _no_chao
+
+# um infectado do HOST mordeu este amigo: o dano vai para o aparelho dele (rede/sessao_rede.gd "mordida")
+func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3) -> void:
+	Rede.enviar_evento("mordida", {"d": dano, "c": chance_sangrar, "o": origem}, id)
 
 # ---------- o que chega pela rede ----------
 # estado (rede/sessao_rede.gd monta): [pos, yaw, vel, bits, arma, aim, since]

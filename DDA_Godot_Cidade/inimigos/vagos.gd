@@ -69,6 +69,17 @@ var _t_sep := 0.0
 var _thread: Thread = null
 var _musica: Node = null
 
+# ----- MULTIJOGADOR (rede/sessao_rede.gd) -----
+# HOST (rede_host): os infectados de verdade nascem em volta de TODOS os jogadores e caçam qualquer um deles;
+#   10 vezes por segundo a sessão manda a posição dos que estão perto de cada amigo (estado_rede).
+# CLIENTE (espelho): não cria nem pensa; mostra cópias (vago.gd "remoto") do que o host manda.
+var rede_host := false
+var espelho := false
+var sessao: Node = null                 # rede/sessao_rede.gd
+var por_id := {}                        # id de rede -> vago
+var _prox_id := 1
+const TIPOS_REDE := ["comum", "corredor", "pesado", "gritador"]
+
 func ligar(c, m, j, a) -> void:
 	cidade = c
 	mundo = m
@@ -131,8 +142,8 @@ func alvo_para(v: Node3D) -> Node3D:
 	var p := v.global_position
 	var melhor: Node3D = jogador
 	var md := p.distance_squared_to(jogador.global_position)
-	for c in companheiros:
-		if not is_instance_valid(c) or c.morto:
+	for c in companheiros + remotos():
+		if not is_instance_valid(c) or c.morto or not c.visible:
 			continue
 		var d := p.distance_squared_to(c.global_position)
 		if d < md * 0.7:                        # prefere o jogador se estiverem parecidos
@@ -153,10 +164,14 @@ func barulho(posicao: Vector3, raio: float, do_jogador := true) -> void:
 		v.ouvir(posicao, raio, do_jogador)
 
 func _vago_acertou(_v: Node, dano: float) -> void:
-	atacou_jogador.emit(dano)
+	if _v.get("_alvo") == null or _v._alvo == jogador:      # mordida num amigo: o aparelho dele que treme
+		atacou_jogador.emit(dano)
 
 func _process(dt: float) -> void:
 	if jogador == null or not is_instance_valid(jogador) or mundo == null:
+		return
+	if espelho:
+		_processar_espelho(dt)
 		return
 	var pj := jogador.global_position
 	# vivos longe demais somem
@@ -167,8 +182,9 @@ func _process(dt: float) -> void:
 			vivos.remove_at(i)
 			continue
 		var p: Vector3 = v.global_position
-		if Vector2(p.x - pj.x, p.z - pj.z).length_squared() > lim2:
+		if _longe_de_todos(p, lim2):
 			vivos.remove_at(i)
+			por_id.erase(v.id_rede)
 			v.queue_free()
 	for i in range(corpos.size() - 1, -1, -1):
 		var v = corpos[i]
@@ -176,8 +192,9 @@ func _process(dt: float) -> void:
 			corpos.remove_at(i)
 			continue
 		var p: Vector3 = v.global_position
-		if Vector2(p.x - pj.x, p.z - pj.z).length_squared() > lim2:
+		if _longe_de_todos(p, lim2):
 			corpos.remove_at(i)
+			por_id.erase(v.id_rede)
 			v.queue_free()
 	# nascer aos poucos (só com ativo = true)
 	_t_surgir -= dt
@@ -186,13 +203,17 @@ func _process(dt: float) -> void:
 		if not _fila.is_empty():
 			var f: Array = _fila.pop_front()
 			_criar(f[0], f[1])
-		elif vivos.size() < alvo_ativos():
-			_planejar(pj)
+		else:
+			# multijogador: nasce em volta do jogador que está com menos infectados perto
+			var centro := _centro_para_nascer()
+			if _perto_de(centro) < alvo_ativos_em(centro):
+				_planejar(centro)
 	# passos do jogador
 	_t_ruido -= dt
 	if _t_ruido <= 0.0:
 		_t_ruido = 0.5
 		_ruido_jogador()
+		_ruido_remotos()
 	# separação (não se amontoarem) e música
 	_t_sep -= dt
 	if _t_sep <= 0.0:
@@ -208,7 +229,9 @@ func _process(dt: float) -> void:
 func alvo_ativos() -> int:
 	if jogador == null:
 		return 0
-	var pj := jogador.global_position
+	return alvo_ativos_em(jogador.global_position)
+
+func alvo_ativos_em(pj: Vector3) -> int:
 	var dc: Vector2 = Vector2(pj.x, pj.z) - cidade.DOWNTOWN
 	var perto := clampf(1.0 - dc.length() / RAIO_CENTRO, 0.0, 1.0)
 	# a cada dia sobrevivido a cidade fica mais perigosa (+8% por dia, até +60%)
@@ -270,10 +293,145 @@ func _livre(x: float, z: float) -> bool:
 	return true
 
 func _visivel(p: Vector3) -> bool:
+	if p.distance_to(jogador.global_position) > DIST_MAX + 40.0:
+		return false                           # perto de um amigo: a câmera daqui nem vê
 	var cam = jogador.get("camera")
 	if cam == null or not (cam is Camera3D):
 		return false
 	return (cam as Camera3D).is_position_in_frustum(p + Vector3(0, 1.0, 0))
+
+# ---------- multijogador ----------
+func remotos() -> Array:
+	if not rede_host or sessao == null or not is_instance_valid(sessao):
+		return []
+	return sessao.remotos.values()
+
+# centros de todos os jogadores (este + os amigos que já apareceram)
+func _centros() -> Array:
+	var l := [jogador.global_position]
+	for r in remotos():
+		if is_instance_valid(r) and r.visible:
+			l.append(r.global_position)
+	return l
+
+func _longe_de_todos(p: Vector3, lim2: float) -> bool:
+	for c in _centros():
+		if Vector2(p.x - c.x, p.z - c.z).length_squared() <= lim2:
+			return false
+	return true
+
+func _perto_de(c: Vector3) -> int:
+	var n := 0
+	for v in vivos:
+		var p: Vector3 = v.global_position
+		if Vector2(p.x - c.x, p.z - c.z).length_squared() < DIST_SUMIR * DIST_SUMIR:
+			n += 1
+	return n + _fila.size()
+
+func _centro_para_nascer() -> Vector3:
+	var melhor: Vector3 = jogador.global_position
+	var falta := alvo_ativos_em(melhor) - _perto_de(melhor)
+	for c in _centros():
+		var f := alvo_ativos_em(c) - _perto_de(c)
+		if f > falta:
+			falta = f
+			melhor = c
+	return melhor
+
+# passos dos amigos (o host não tem o "jogador" deles: usa a velocidade que chega pela rede)
+func _ruido_remotos() -> void:
+	for r in remotos():
+		if not is_instance_valid(r) or not r.visible or r.morto:
+			continue
+		var vel: float = r.vel_horizontal
+		if vel < 0.3:
+			continue
+		var raio := RUIDO_ANDANDO
+		if r.agachado:
+			raio = RUIDO_AGACHADO
+		elif vel > 5.5:
+			raio = RUIDO_CORRENDO
+		elif vel > 2.5:
+			raio = RUIDO_TROTE
+		barulho(r.global_position, raio, true)
+
+# host: um Vago avisa uma animação (a sessão manda para todos)
+func rede_ani(v: Node, tipo_ani: String, d: Dictionary) -> void:
+	if rede_host and sessao != null and v.id_rede > 0:
+		sessao.mandar_ani_infectado(v.id_rede, tipo_ani, d)
+
+# cliente: um tiro/golpe DAQUI acertou uma cópia -> pede o dano ao host
+func rede_dano(v: Node, dano: float, forma: int, dir: Vector3, golpe: bool) -> void:
+	if espelho and sessao != null and v.id_rede > 0:
+		sessao.pedir_dano_infectado(v.id_rede, dano, forma, dir, golpe)
+
+# host: pacote com os infectados perto de "c" -> [id, x, y, z, giro, vel, estado, tipo, aparência] por infectado
+func estado_rede(c: Vector3, raio: float) -> PackedFloat32Array:
+	var o := PackedFloat32Array()
+	var r2 := raio * raio
+	for v in vivos:
+		if not is_instance_valid(v) or v.id_rede <= 0:
+			continue
+		var p: Vector3 = v.global_position
+		if Vector2(p.x - c.x, p.z - c.z).length_squared() > r2:
+			continue
+		o.append_array(PackedFloat32Array([v.id_rede, p.x, p.y, p.z, v.rotation.y, v._vel_h, v.estado,
+			TIPOS_REDE.find(v.tipo), v.semente_modelo]))
+	return o
+
+# cliente: chegou o pacote do host
+func receber_estado_rede(d: PackedFloat32Array) -> void:
+	for k in range(0, d.size() - 8, 9):
+		var id := int(d[k])
+		var pos := Vector3(d[k + 1], d[k + 2], d[k + 3])
+		var v = por_id.get(id)
+		if v == null or not is_instance_valid(v):
+			v = VagoCls.new()
+			v.gerente = self
+			v.remoto = true
+			v.id_rede = id
+			v.tipo_fixo = TIPOS_REDE[clampi(int(d[k + 7]), 0, TIPOS_REDE.size() - 1)]
+			v.semente_modelo = int(d[k + 8])
+			v.position = pos
+			v.rotation.y = d[k + 4]
+			add_child(v)
+			v.morreu.connect(_ao_morrer)
+			vivos.append(v)
+			por_id[id] = v
+		if v.estado != VagoCls.MORTO:
+			v.receber_rede(pos, d[k + 4], d[k + 5], int(d[k + 6]))
+
+# cliente: o host mandou ataque/golpe/morte de um infectado
+func receber_ani_rede(id: int, tipo_ani: String, d: Dictionary) -> void:
+	var v = por_id.get(id)
+	if v == null or not is_instance_valid(v):
+		return
+	if tipo_ani == "morrer":
+		_matou_eu = int(d.get("por", 0)) == multiplayer.get_unique_id()
+	v.ani_rede(tipo_ani, d)
+
+var _matou_eu := false
+
+# cliente: tira as cópias que o host parou de mandar (saíram de perto ou sumiram) e cuida da música
+func _processar_espelho(dt: float) -> void:
+	var cacando := false
+	for i in range(vivos.size() - 1, -1, -1):
+		var v = vivos[i]
+		if not is_instance_valid(v):
+			vivos.remove_at(i)
+			continue
+		if v.t_sem_rede > 1.5:
+			vivos.remove_at(i)
+			por_id.erase(v.id_rede)
+			v.queue_free()
+			continue
+		if v.esta_cacando():
+			cacando = true
+	for i in range(corpos.size() - 1, -1, -1):
+		if not is_instance_valid(corpos[i]):
+			corpos.remove_at(i)
+	if cacando and _musica != null:
+		_musica.adicionar_tensao(dt * 0.06)
 
 func _ponto(pj: Vector3) -> Vector3:
 	for tentativa in 10:
@@ -296,7 +454,7 @@ func _planejar(pj: Vector3) -> void:
 	var chance := CHANCE_HORDA * (1.8 if escuridao() > 0.6 else 1.0)   # de noite vagam em bandos
 	if randf() < chance:
 		var n := randi_range(HORDA_MIN, HORDA_MAX)
-		n = mini(n, alvo_ativos() + 4 - vivos.size())
+		n = mini(n, alvo_ativos_em(p) + 4 - _perto_de(p))
 		var a := randf() * TAU
 		var destino := p + Vector3(cos(a), 0.0, sin(a)) * randf_range(10.0, 25.0)
 		_fila.append([p, destino])
@@ -321,12 +479,23 @@ func _criar(p: Vector3, destino: Vector3) -> void:
 		v._espera = 0.0
 	v.morreu.connect(_ao_morrer)
 	vivos.append(v)
+	v.id_rede = _prox_id
+	por_id[_prox_id] = v
+	_prox_id += 1
 
 func _ao_morrer(v: Node, cabeca: bool) -> void:
 	vivos.erase(v)
 	corpos.append(v)
-	abates += 1
-	abatido.emit(cabeca)
+	# multijogador: o abate conta para quem matou (host: "_quem_bateu" do Vago · cliente: o host diz "por")
+	var meu := true
+	if espelho:
+		meu = _matou_eu
+		_matou_eu = false
+	elif rede_host:
+		meu = int(v._quem_bateu) == 1
+	if meu:
+		abates += 1
+		abatido.emit(cabeca)
 	while corpos.size() > MAX_CORPOS:
 		var velho = corpos.pop_front()
 		if is_instance_valid(velho):

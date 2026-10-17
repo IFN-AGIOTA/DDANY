@@ -275,6 +275,7 @@ func retirar(it) -> void:
 	if it.no_mundo != null:
 		var n: Node = it.no_mundo
 		it.no_mundo = null
+		ItemMundo.pegou(it)                  # multijogador: some do chão dos outros também
 		if is_instance_valid(n):
 			n.queue_free()
 

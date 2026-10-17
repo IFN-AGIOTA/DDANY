@@ -21,11 +21,16 @@ const CAIXAS_BASE := [
 
 # loot de teste ao lado de onde o jogador nasce (base militar)
 static func espalhar(pai: Node, mundo, centro: Vector2) -> void:
-	for c in CHAO_BASE:
+	for k in CHAO_BASE.size():
+		var c: Array = CHAO_BASE[k]
 		var p: Vector2 = centro + c[2]
-		ItemMundoCls.soltar(pai, ItemCls.novo(c[0], c[1]), Vector3(p.x, mundo.altura(p.x, p.y), p.y))
-	for d in CAIXAS_BASE:
+		var it = ItemCls.novo(c[0], c[1])
+		it.uid = "base:%d" % k                     # igual em todos os aparelhos (multijogador)
+		ItemMundoCls.soltar(pai, it, Vector3(p.x, mundo.altura(p.x, p.y), p.y), false)
+	for k in CAIXAS_BASE.size():
+		var d: Dictionary = CAIXAS_BASE[k]
 		var caixa = CaixaMundoCls.new()
+		caixa.id_loot = "base_%d" % k              # multijogador: o conteúdo é sincronizado por este nome
 		caixa.name = String(d["nome"]).replace(" ", "_")
 		caixa.nome = d["nome"]
 		caixa.tamanho = d["tamanho"]

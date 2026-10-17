@@ -13,7 +13,15 @@ const ModelosItens := preload("res://inventario/modelos_itens.gd")
 
 var item = null               # item.gd
 
-static func soltar(pai: Node, it, pos: Vector3) -> Node3D:
+# MULTIJOGADOR (rede/sessao_rede.gd liga os ganchos): cada item no chão tem um "uid" igual em todos os aparelhos.
+#   ao_soltar(no): alguém LARGOU um item aqui -> a sessão dá um uid novo e avisa os outros (item_solto)
+#   ao_pegar(item): alguém PEGOU um item do chão aqui -> a sessão avisa os outros (item_pego), que tiram o item
+# Itens que nascem iguais em todo aparelho (chão dos prédios, loot da base) já vêm com uid fixo e não avisam.
+static var por_uid := {}                     # uid -> nó (os itens no chão deste aparelho)
+static var ao_soltar := Callable()
+static var ao_pegar := Callable()
+
+static func soltar(pai: Node, it, pos: Vector3, avisar := true) -> Node3D:
 	var n: Node3D = load("res://inventario/item_mundo.gd").new()
 	n.item = it
 	it.no_mundo = n
@@ -22,7 +30,21 @@ static func soltar(pai: Node, it, pos: Vector3) -> Node3D:
 	pai.add_child(n)
 	n.global_position = pos
 	n.rotation.y = randf() * TAU
+	if avisar and ao_soltar.is_valid():
+		ao_soltar.call(n)
+	if it.uid != "":
+		por_uid[it.uid] = n
 	return n
+
+static func pegou(it) -> void:
+	if it.uid != "":
+		if ao_pegar.is_valid():
+			ao_pegar.call(it)
+		por_uid.erase(it.uid)
+
+func _exit_tree() -> void:
+	if item != null and item.uid != "" and por_uid.get(item.uid) == self:
+		por_uid.erase(item.uid)
 
 func _ready() -> void:
 	add_to_group("itens_chao")

@@ -7,11 +7,26 @@ extends Node
 #     "tiro" (som + traçante + os infectados de quem ouviu escutam), "mundo" (só o host: hora e clima).
 # O HOST manda no mundo: a semente do loot (todo mundo acha as mesmas coisas nos mesmos lugares) e a hora/clima
 # (os clientes não trocam o tempo sozinhos).
-# AINDA NÃO SINCRONIZADO (próximos passos, ver LEIA-ME): infectados (cada aparelho tem os seus), itens pegos/
-# largados e caixas, dano entre jogadores, salvar a partida em rede.
+# MUNDO SINCRONIZADO (0.44):
+#   · INFECTADOS: só o host cria e controla (nascem em volta de TODOS e caçam qualquer um). 10x/s ele manda a cada
+#     amigo os que estão perto dele (Rede.enviar_infectados); o amigo mostra cópias (vago.gd "remoto").
+#     "inf_ani" (ataque, levar golpe, morte) · "inf_dano" (tiro/golpe de um amigo -> host aplica) ·
+#     "mordida" (infectado do host mordeu um amigo -> o aparelho dele leva o dano).
+#   · ITENS NO CHÃO: cada um tem um uid (inventario/item_mundo.gd). "item_solto" = alguém largou (aparece para
+#     todos) · "item_pego" = alguém pegou (some para todos). Os que nascem iguais em todo aparelho (chão dos
+#     prédios, base) já têm uid fixo; os pegos ficam em loot_mundo.pegos e não voltam a aparecer.
+#   · CAIXAS, MÓVEIS E PORTA-MALAS: quando o conteúdo muda aqui, "grade" manda o conteúdo novo para todos.
+#   · Quem chega recebe do host "mundo_itens": as grades mexidas, os pegos e os itens largados.
+# AINDA NÃO: dano entre jogadores, salvar a partida em rede, missões do rádio (cada um tem as suas), infectados
+# não entram em prédio atrás de um amigo (o host não tem as paredes do interior onde o amigo está).
 # Mexa AQUI para: o que vai em cada mensagem e de quanto em quanto tempo.
 
 const RemotoCls := preload("res://rede/jogador_remoto.gd")
+const ItemMundo := preload("res://inventario/item_mundo.gd")
+const ItemCls := preload("res://inventario/item.gd")
+const LootMundo := preload("res://mundo/loot_mundo.gd")
+const INFECTADOS_POR_SEG := 10.0
+const RAIO_INFECTADOS := 170.0                # host manda a cada amigo os infectados até essa distância dele
 const ENVIOS_POR_SEG := 15.0
 const MUNDO_A_CADA := 5.0                     # host: hora/clima para todos (segundos)
 const SLOTS_ROUPA := ["cabeca", "camisa", "colete", "cinto", "ombro", "coldre", "calca", "mochila"]
@@ -22,6 +37,10 @@ var jogador: Node
 var remotos := {}                             # id -> jogador_remoto.gd
 var _t_envio := 0.0
 var _t_mundo := 0.0
+var _t_inf := 0.0
+var _sig := {}                                # id da grade -> assinatura do conteúdo (o que todos já sabem)
+var _mexidas := {}                            # grades que mudaram desde o sorteio (vão para quem chega)
+var _cont_uid := 0
 
 func ligar(m: Node) -> void:
 	main = m
@@ -40,14 +59,21 @@ func ligar(m: Node) -> void:
 		_aplicar_mundo(Rede.mundo)
 	# "cheguei": os outros respondem com a roupa deles (e o host com o mundo). Antes disso este aparelho ainda
 	# estava montando a cidade e não tinha sessão para receber nada.
+	_ligar_mundo()
 	Rede.enviar_evento("cheguei", {})
 	_roupa_enviada = {}
 	_mandar_roupa()
 
 func _exit_tree() -> void:
-	for s in [[Rede.estado_recebido, _estado], [Rede.evento_recebido, _evento], [Rede.jogador_entrou, _entrou], [Rede.jogador_saiu, _saiu]]:
+	for s in [[Rede.estado_recebido, _estado], [Rede.evento_recebido, _evento], [Rede.jogador_entrou, _entrou], [Rede.jogador_saiu, _saiu],
+			[Rede.infectados_recebidos, _infectados]]:
 		if (s[0] as Signal).is_connected(s[1]):
 			(s[0] as Signal).disconnect(s[1])
+	ItemMundo.ao_soltar = Callable()
+	ItemMundo.ao_pegar = Callable()
+	ItemMundo.por_uid.clear()
+	if main != null and main.loot_mundo != null:
+		main.loot_mundo.grade_criada = Callable()
 
 # ---------- jogadores ----------
 func _criar(id: int) -> Node3D:
@@ -89,6 +115,14 @@ func _physics_process(dt: float) -> void:
 		if _t_mundo <= 0.0:
 			_t_mundo = MUNDO_A_CADA
 			_mandar_mundo()
+		# infectados: a cada amigo, os que estão perto DELE (o aparelho dele mostra as cópias)
+		_t_inf -= dt
+		if _t_inf <= 0.0 and main.vagos != null:
+			_t_inf = 1.0 / INFECTADOS_POR_SEG
+			for id in remotos:
+				var rm = remotos[id]
+				if is_instance_valid(rm) and rm.visible:
+					Rede.enviar_infectados(id, main.vagos.estado_rede(rm.global_position, RAIO_INFECTADOS))
 
 # [pos, yaw, vel, bits, arma, aim, since]  (o jogador_remoto.gd lê nesta ordem)
 func estado_local() -> Array:
@@ -139,6 +173,7 @@ func _evento(id: int, tipo: String, d: Dictionary) -> void:
 			_mandar_roupa(id)
 			if Rede.eh_host():
 				_mandar_mundo(id)
+				_mandar_mundo_itens(id)
 		"roupa":
 			if Rede.jogadores.has(id):
 				_criar(id).vestir(d)
@@ -149,6 +184,25 @@ func _evento(id: int, tipo: String, d: Dictionary) -> void:
 			_tiro_remoto(id, d)
 		"mundo":
 			_aplicar_mundo(d)
+		"inf_dano":
+			_inf_dano(id, d)
+		"inf_ani":
+			if id == 1 and main.vagos != null:
+				main.vagos.receber_ani_rede(int(d.get("i", 0)), str(d.get("a", "")), d.get("d", {}))
+		"mordida":
+			if id == 1 and not jogador.morto:
+				jogador.receber_ataque(float(d.get("d", 10.0)), float(d.get("c", 0.3)), d.get("o", jogador.global_position))
+				if main.vagos != null:
+					main.vagos.atacou_jogador.emit(float(d.get("d", 10.0)))
+		"item_solto":
+			_item_solto(d)
+		"item_pego":
+			_item_pego(str(d.get("u", "")))
+		"grade":
+			_grade_recebida(d)
+		"mundo_itens":
+			if id == 1:
+				_aplicar_mundo_itens(d)
 
 func _tiro_remoto(id: int, d: Dictionary) -> void:
 	var r = remotos.get(id)
@@ -187,3 +241,155 @@ func _aplicar_mundo(d: Dictionary) -> void:
 	cl.set("_t_estado", 1.0e9)                # o tempo só muda quando o host mandar
 
 var _mundo_recebido := false
+
+# =====================================================================================================
+# MUNDO SINCRONIZADO: infectados, itens no chão e caixas
+# =====================================================================================================
+func _ligar_mundo() -> void:
+	Rede.infectados_recebidos.connect(_infectados)
+	var v = main.vagos
+	if v != null:
+		v.sessao = self
+		if Rede.eh_host():
+			v.rede_host = true
+		else:
+			v.espelho = true                   # cliente: os infectados são do host
+			v.limpar()
+	ItemMundo.ao_soltar = _item_solto_aqui
+	ItemMundo.ao_pegar = _item_pego_aqui
+	var lm = main.loot_mundo
+	if lm != null:
+		lm.grade_criada = func(gid: String, g) -> void: _sig[gid] = LootMundo.assinatura(g)
+		for gid in lm._grades:
+			_sig[gid] = LootMundo.assinatura(lm._grades[gid])
+		# caixas da base (mundo/loot.gd): entram na lista das grades com o nome "base_N"
+		for c in get_tree().get_nodes_in_group("conteineres_mundo"):
+			var cid := String(c.get("id_loot"))
+			if cid.begins_with("base_") and c.grade != null:
+				lm._grades[cid] = c.grade
+				_sig[cid] = LootMundo.assinatura(c.grade)
+	jogador.inventario.mudou.connect(_checar_grades)
+
+# ---------- infectados ----------
+func _infectados(d: PackedFloat32Array) -> void:
+	if main.vagos != null and main.vagos.espelho:
+		main.vagos.receber_estado_rede(d)
+
+# host: avisa uma animação de um infectado a todos
+func mandar_ani_infectado(id_inf: int, tipo_ani: String, d: Dictionary) -> void:
+	Rede.enviar_evento("inf_ani", {"i": id_inf, "a": tipo_ani, "d": d})
+
+# cliente: meu tiro/golpe acertou a cópia de um infectado -> o host aplica
+func pedir_dano_infectado(id_inf: int, dano: float, forma: int, dir: Vector3, golpe: bool) -> void:
+	Rede.enviar_evento("inf_dano", {"i": id_inf, "dn": dano, "f": forma, "d": dir, "g": golpe}, 1)
+
+func _inf_dano(de: int, d: Dictionary) -> void:
+	if not Rede.eh_host() or main.vagos == null:
+		return
+	var v = main.vagos.por_id.get(int(d.get("i", 0)))
+	if v == null or not is_instance_valid(v):
+		return
+	var quem = remotos.get(de)
+	var dir: Vector3 = d.get("d", Vector3.FORWARD)
+	if bool(d.get("g", false)):
+		v.receber_golpe(float(d.get("dn", 0.0)), dir, quem)
+	else:
+		v.receber_tiro(float(d.get("dn", 0.0)), v.global_position, dir, int(d.get("f", 0)), quem)
+
+# ---------- itens no chão ----------
+# alguém largou um item AQUI: ganha um uid novo (deste aparelho) e aparece para todos
+func _item_solto_aqui(n: Node3D) -> void:
+	if not Rede.ligado:
+		return
+	var it = n.item
+	_cont_uid += 1
+	it.uid = "%d:%d" % [Rede.meu_id(), _cont_uid]
+	Rede.enviar_evento("item_solto", {"u": it.uid, "it": it.para_dict(), "p": n.global_position})
+
+# alguém pegou um item do chão AQUI: some para todos
+func _item_pego_aqui(it) -> void:
+	if not Rede.ligado:
+		return
+	if main.loot_mundo != null:
+		main.loot_mundo.pegos[it.uid] = true
+	Rede.enviar_evento("item_pego", {"u": it.uid})
+
+func _item_solto(d: Dictionary) -> void:
+	var u := str(d.get("u", ""))
+	if u == "" or ItemMundo.por_uid.has(u):
+		return
+	var it = ItemCls.de_dict(d.get("it", {}))
+	if it == null:
+		return
+	it.uid = u
+	ItemMundo.soltar(main.jogo, it, d.get("p", Vector3.ZERO), false)
+	jogador.inventario.mudou.emit()                # a coluna "chão" do inventário se atualiza
+
+func _item_pego(u: String) -> void:
+	if u == "":
+		return
+	if main.loot_mundo != null:
+		main.loot_mundo.pegos[u] = true
+	var n = ItemMundo.por_uid.get(u)
+	ItemMundo.por_uid.erase(u)
+	if n != null and is_instance_valid(n) and not n.is_queued_for_deletion():
+		if n.item != null:
+			n.item.no_mundo = null
+		n.queue_free()
+		jogador.inventario.mudou.emit()
+
+# ---------- caixas, móveis e porta-malas ----------
+# depois de qualquer mexida no inventário: alguma grade mudou? manda o conteúdo novo para todos
+func _checar_grades() -> void:
+	var lm = main.loot_mundo
+	if lm == null or not Rede.ligado:
+		return
+	for gid in lm._grades:
+		var g = lm._grades[gid]
+		var s := LootMundo.assinatura(g)
+		if not _sig.has(gid):
+			_sig[gid] = s
+		elif _sig[gid] != s:
+			_sig[gid] = s
+			_mexidas[gid] = true
+			Rede.enviar_evento("grade", {"i": gid, "w": g.largura, "h": g.altura, "n": g.nome, "l": LootMundo.conteudo(g)})
+
+func _grade_recebida(d: Dictionary) -> void:
+	var lm = main.loot_mundo
+	if lm == null:
+		return
+	var gid := str(d.get("i", ""))
+	var g = lm.definir_conteudo(gid, int(d.get("w", 4)), int(d.get("h", 4)), str(d.get("n", "")), d.get("l", []))
+	_sig[gid] = LootMundo.assinatura(g)
+	_mexidas[gid] = true
+	jogador.inventario.mudou.emit()                # se a caixa estiver aberta na tela, mostra o novo conteúdo
+
+# host -> quem acabou de chegar: grades mexidas, itens que já foram pegos e itens largados no chão
+func _mandar_mundo_itens(para: int) -> void:
+	var lm = main.loot_mundo
+	var gr := {}
+	if lm != null:
+		for gid in _mexidas:
+			var g = lm._grades.get(gid)
+			if g != null:
+				gr[gid] = [g.largura, g.altura, g.nome, LootMundo.conteudo(g)]
+	var soltos := []
+	for u in ItemMundo.por_uid:
+		var n = ItemMundo.por_uid[u]
+		if n != null and is_instance_valid(n) and n.get_parent() == main.jogo and n.item != null:
+			soltos.append([u, n.item.para_dict(), n.global_position])
+	Rede.enviar_evento("mundo_itens", {"grades": gr, "pegos": lm.pegos.keys() if lm != null else [], "soltos": soltos}, para)
+
+func _aplicar_mundo_itens(d: Dictionary) -> void:
+	var lm = main.loot_mundo
+	if lm != null:
+		var gr: Dictionary = d.get("grades", {})
+		for gid in gr:
+			var e: Array = gr[gid]
+			var g = lm.definir_conteudo(gid, int(e[0]), int(e[1]), str(e[2]), e[3])
+			_sig[gid] = LootMundo.assinatura(g)
+			_mexidas[gid] = true
+	for u in d.get("pegos", []):
+		_item_pego(str(u))
+	for e in d.get("soltos", []):
+		_item_solto({"u": e[0], "it": e[1], "p": e[2]})

@@ -80,6 +80,10 @@ const CHAO_DO_USO := {"residencial": "chao_residencial", "loja": "chao_comercio"
 var semente := 1234                   # muda o loot do mundo inteiro (salvo junto com o jogo)
 var _grades := {}                     # id do lugar -> grade (já sorteada; o que o jogador mexeu fica aqui)
 var _chao := {}                       # id do prédio -> [[item.gd, Vector3 local], ...] (itens soltos ainda não pegos)
+# multijogador (rede/sessao_rede.gd): uids dos itens fixos (chão dos prédios "p12:3", base "base:2") que alguém já
+# pegou: não aparecem mais em nenhum aparelho · grade_criada avisa a sessão quando um móvel é sorteado (conteúdo base)
+var pegos := {}
+var grade_criada := Callable()
 
 # grade de um móvel / porta-malas (sorteada na 1ª vez, depois a mesma)
 func grade(id: String, tabela: String, nome: String, tam: Vector2i):
@@ -103,6 +107,8 @@ func grade(id: String, tabela: String, nome: String, tam: Vector2i):
 					g.colocar(it, v.x, v.y, v.z == 1)
 					break
 	_grades[id] = g
+	if grade_criada.is_valid():
+		grade_criada.call(id, g)
 	return g
 
 # itens soltos no chão de um prédio (pontos = meta "pontos_chao" do interior: [[Vector3 local, cômodo], ...])
@@ -118,13 +124,14 @@ func espalhar_chao(id: String, uso: String, pontos: Array, pai: Node3D) -> void:
 			if r.randf() < CHANCE_CHAO:
 				var it = _sortear(tabela, r)
 				if it != null:
+					it.uid = "%s:%d" % [id, lista.size()]     # igual em todos os aparelhos (mesma semente)
 					lista.append([it, p[0]])
 		_chao[id] = lista
 	for par in _chao[id]:
 		var it = par[0]
-		if it.no_mundo != null or it.onde != null or it.slot != "":
+		if it.no_mundo != null or it.onde != null or it.slot != "" or pegos.has(it.uid):
 			continue
-		ItemMundoCls.soltar(pai, it, pai.global_transform * (par[1] as Vector3))
+		ItemMundoCls.soltar(pai, it, pai.global_transform * (par[1] as Vector3), false)
 	_chao[id] = []                    # agora os itens estão no mundo; ao fechar o prédio, guardar_chao devolve
 
 # o prédio vai fechar: guarda o que ainda está no chão dele (posição local)
@@ -136,6 +143,34 @@ func guardar_chao(id: String, pai: Node3D) -> void:
 			it.no_mundo = null
 			lista.append([it, pai.global_transform.affine_inverse() * n.global_position])
 	_chao[id] = lista
+
+# ---------- multijogador: conteúdo das grades pela rede ----------
+# "assinatura" curta do conteúdo (muda quando alguém põe/tira/gira/gasta algo)
+static func assinatura(g) -> String:
+	var s := PackedStringArray()
+	for it in g.itens:
+		s.append("%s,%d,%d,%d,%d,%d" % [it.id, it.qtd, it.x, it.y, int(it.rot), it.municao])
+	return "|".join(s)
+
+static func conteudo(g) -> Array:
+	var l := []
+	for it in g.itens:
+		l.append(it.para_dict())
+	return l
+
+# troca o conteúdo da grade "id" pelo que veio da rede (cria a grade se este aparelho ainda não abriu o lugar)
+func definir_conteudo(id: String, larg: int, alt: int, nome: String, itens: Array):
+	var g = _grades.get(id)
+	if g == null:
+		g = GradeCls.new(larg, alt, nome, null)
+		_grades[id] = g
+	for it in g.itens.duplicate():
+		g.remover(it)
+	for od in itens:
+		var it = ItemCls.de_dict(od)
+		if it != null:
+			g.colocar(it, it.x, it.y, it.rot)
+	return g
 
 func _sortear(tabela: String, r: RandomNumberGenerator, tam := Vector2i(99, 99)):
 	var t: Array = []

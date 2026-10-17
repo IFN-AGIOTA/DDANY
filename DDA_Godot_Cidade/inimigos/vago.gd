@@ -132,6 +132,20 @@ var _quadro := 0
 var _dt_anim := 0.0
 var _consulta: PhysicsRayQueryParameters3D
 var _alvo: Node3D = null              # jogador ou companheiro (gerente.alvo_para)
+# ----- multijogador (inimigos/vagos.gd + rede/sessao_rede.gd) -----
+# HOST: o Vago de verdade (IA, vida); avisa os outros de ataque/golpe/morte (gerente.rede_ani).
+# CLIENTE: "remoto" = cópia que só segue a posição que o host manda (sem IA); tiros e golpes daqui viram pedido
+# de dano para o host (gerente.rede_dano), e a reação aparece na hora.
+var remoto := false
+var id_rede := 0
+var semente_modelo := -1              # aparência (igual em todos os aparelhos)
+var tipo_fixo := ""
+var _rede_pos := Vector3.ZERO
+var _rede_yaw := 0.0
+var _rede_vel := 0.0
+var _rede_estado := 0
+var t_sem_rede := 0.0                 # cliente: tempo sem notícia do host (some se passar de ~1,5 s)
+var _quem_bateu := 1                  # host: id de rede de quem deu o último golpe/tiro (1 = o próprio host)
 
 func _ready() -> void:
 	collision_layer = 4                # camada 3 = inimigos
@@ -157,14 +171,19 @@ func _ready() -> void:
 	modelo = ModeloCls.new()
 	modelo.name = "Modelo"
 	add_child(modelo)
-	modelo.montar(randi())
+	if semente_modelo < 0:
+		semente_modelo = randi() % 16000000
+	modelo.montar(semente_modelo)
 	# tipo de infectado
-	var x := randf()
-	for t in TIPOS:
-		x -= float(TIPOS[t][0])
-		if x <= 0.0:
-			tipo = t
-			break
+	if tipo_fixo != "" and TIPOS.has(tipo_fixo):
+		tipo = tipo_fixo
+	else:
+		var x := randf()
+		for t in TIPOS:
+			x -= float(TIPOS[t][0])
+			if x <= 0.0:
+				tipo = t
+				break
 	var td: Array = TIPOS[tipo]
 	vida = float(td[1])
 	_mult_dano = float(td[3])
@@ -192,11 +211,56 @@ func _ready() -> void:
 	_y_chao = global_position.y
 	_destino = global_position
 	_espera = randf_range(0.0, 3.0)
+	_rede_pos = global_position
+	_rede_yaw = rotation.y
+
+# ---------- multijogador: cópia que segue o host ----------
+func receber_rede(pos: Vector3, yaw: float, vel: float, est: int) -> void:
+	_rede_pos = pos
+	_rede_yaw = yaw
+	_rede_vel = vel
+	_rede_estado = est
+	t_sem_rede = 0.0
+
+# o host mandou uma animação: "atacar", "golpe" (forca, lado) ou "morrer" (cabeça, direção)
+func ani_rede(tipo_ani: String, d: Dictionary) -> void:
+	match tipo_ani:
+		"atacar":
+			if estado != MORTO:
+				modelo.atacar()
+				_tocar("rosnado", randf_range(1.0, 1.25), 1.0)
+		"golpe":
+			if estado != MORTO:
+				modelo.levar_golpe(float(d.get("f", 0.6)), float(d.get("l", 1.0)))
+		"morrer":
+			if estado != MORTO:
+				var dr: Vector3 = d.get("d", Vector3.FORWARD)
+				_morrer(bool(d.get("c", false)), dr)
+
+func _seguir_rede(dt: float) -> void:
+	t_sem_rede += dt
+	var p := global_position
+	if p.distance_squared_to(_rede_pos) > 64.0:
+		global_position = _rede_pos                     # muito longe (pulou): vai direto
+	else:
+		global_position = p.lerp(_rede_pos, minf(1.0, dt * 10.0))
+	rotation.y = lerp_angle(rotation.y, _rede_yaw, minf(1.0, dt * 10.0))
+	_vel_h = _rede_vel
+	estado = _rede_estado if _rede_estado != MORTO else estado
+	var j = gerente.jogador if gerente != null else null
+	if j != null and is_instance_valid(j):
+		var pj: Vector3 = j.global_position
+		dist_jogador = Vector2(pj.x - p.x, pj.z - p.z).length()
+	_t_grunhido -= dt
+	if _t_grunhido <= 0.0:
+		_t_grunhido = randf_range(2.0, 5.0) if esta_cacando() else randf_range(4.0, 12.0)
+		if dist_jogador < ALCANCE_SOM + 5.0:
+			_tocar("gemido%d" % (randi() % 4), randf_range(0.85, 1.15), 0.0)
 
 # ---------- ordens do gerente ----------
 # barulho em "pos" com alcance "raio" (do_jogador = foi o jogador que fez: tiro, passos)
 func ouvir(pos: Vector3, raio: float, do_jogador: bool) -> void:
-	if estado == MORTO:
+	if estado == MORTO or remoto:          # cópia: quem ouve é o Vago do host
 		return
 	var d := global_position.distance_to(pos)
 	if d > raio:
@@ -252,10 +316,19 @@ func receber_tiro(dano: float, _ponto: Vector3, direcao: Vector3, forma: int, at
 	if estado == MORTO:
 		return {"cabeca": false, "morto": false}
 	var cabeca := forma == 1
-	vida -= dano * (CABECA_X if cabeca else 1.0)
 	var lado := signf(global_basis.x.dot(direcao))
+	if remoto:                                          # cópia: a vida é do host
+		modelo.levar_golpe(0.9 if cabeca else 0.6, lado)
+		_tocar("baque", randf_range(0.9, 1.15), -2.0, true)
+		if gerente != null:
+			gerente.rede_dano(self, dano, forma, direcao, false)
+		return {"cabeca": cabeca, "morto": false}
+	_quem_bateu = int(atirador.get("id")) if atirador != null and atirador.get("id") != null else 1
+	vida -= dano * (CABECA_X if cabeca else 1.0)
 	modelo.levar_golpe(0.9 if cabeca else 0.6, lado)
 	_tocar("baque", randf_range(0.9, 1.15), -2.0, true)
+	if gerente != null and vida > 0.0:
+		gerente.rede_ani(self, "golpe", {"f": 0.9 if cabeca else 0.6, "l": lado})
 	if vida <= 0.0:
 		_morrer(cabeca, direcao)
 		return {"cabeca": cabeca, "morto": true}
@@ -267,7 +340,16 @@ func receber_tiro(dano: float, _ponto: Vector3, direcao: Vector3, forma: int, at
 func receber_golpe(dano: float, direcao: Vector3, atacante: Node) -> Dictionary:
 	if estado == MORTO:
 		return {"cabeca": false, "morto": false}
+	if remoto:
+		modelo.levar_golpe(1.0, signf(global_basis.x.dot(direcao)))
+		_tocar("baque", randf_range(0.75, 0.95), 0.0, true)
+		if gerente != null:
+			gerente.rede_dano(self, dano, 0, direcao, true)
+		return {"cabeca": false, "morto": false}
+	_quem_bateu = int(atacante.get("id")) if atacante != null and atacante.get("id") != null else 1
 	vida -= dano
+	if gerente != null and vida > 0.0:
+		gerente.rede_ani(self, "golpe", {"f": 1.0, "l": signf(global_basis.x.dot(direcao))})
 	var d := Vector3(direcao.x, 0.0, direcao.z)
 	if d.length_squared() > 0.0001:
 		_empurrao = d.normalized() * 3.2
@@ -288,7 +370,7 @@ func _alertar(quem: Node) -> void:
 	if quem == null or not is_instance_valid(quem) or not (quem is Node3D):
 		return
 	var p: Vector3 = (quem as Node3D).global_position
-	if gerente != null and (quem == gerente.jogador or quem.is_in_group("companheiros")):
+	if gerente != null and (quem == gerente.jogador or quem.is_in_group("companheiros") or quem.is_in_group("jogadores_remotos")):
 		_alvo = quem as Node3D
 		_ultimo_visto = p
 		_t_sem_ver = 0.0
@@ -312,8 +394,11 @@ func _morrer(cabeca: bool, direcao: Vector3) -> void:
 	var frente := -global_basis.z
 	modelo.morrer(Vector3(direcao.x, 0.0, direcao.z).dot(frente) <= 0.0)   # tiro de frente: cai de costas
 	_tocar("gemido%d" % (randi() % 4), randf_range(0.6, 0.72), 0.0)
-	if randf() < CHANCE_LOOT:
-		_soltar_loot()
+	if not remoto:
+		if gerente != null:
+			gerente.rede_ani(self, "morrer", {"c": cabeca, "d": direcao, "por": _quem_bateu})
+		if randf() < CHANCE_LOOT:
+			_soltar_loot()
 	morreu.emit(self, cabeca)
 
 func _soltar_loot() -> void:
@@ -362,6 +447,9 @@ func _physics_process(dt: float) -> void:
 		return
 	if estado == MORTO:
 		_corpo(dt)
+		return
+	if remoto:
+		_seguir_rede(dt)
 		return
 	if _alvo == null or not is_instance_valid(_alvo):
 		_alvo = gerente.jogador
@@ -517,6 +605,7 @@ func _decidir(dt: float, j: Node3D) -> void:
 				_golpeou = false
 				modelo.atacar()
 				_tocar("rosnado", randf_range(1.0, 1.25), 1.0)
+				gerente.rede_ani(self, "atacar", {})
 		ATACANDO:
 			_vel_alvo = 0.0
 			_destino = j.global_position

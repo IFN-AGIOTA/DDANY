@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.43 (APK código 39)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.44 (APK código 40)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,24 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.44 · MUNDO SINCRONIZADO NO MULTIJOGADOR (os mesmos infectados, itens e caixas para todos)
+  · INFECTADOS (inimigos/vagos.gd + vago.gd): só o HOST cria e controla. Eles nascem em volta de TODOS os jogadores
+    (onde há menos infectados), caçam qualquer um (os amigos viram alvo: rede/jogador_remoto.gd) e ouvem os passos
+    e tiros dos amigos. 10 vezes por segundo o host manda a cada amigo os infectados a até 170 m dele
+    (Rede.enviar_infectados); o aparelho do amigo mostra CÓPIAS ("remoto": seguem a posição, mesma aparência e tipo).
+    Tiro/golpe do amigo -> pedido de dano ao host ("inf_dano"); ataque, levar golpe e morte -> "inf_ani" para todos;
+    mordida num amigo -> "mordida" no aparelho dele. O abate conta para quem matou. Loot do infectado: do host.
+  · ITENS NO CHÃO (inventario/item_mundo.gd): cada item tem um uid igual em todos os aparelhos. Largou -> aparece
+    para todos ("item_solto"); pegou -> some para todos ("item_pego"). Chão dos prédios e loot da base já nascem com
+    uid fixo (mesma semente); o que alguém pegou fica em loot_mundo.pegos e não aparece mais para ninguém.
+  · CAIXAS, MÓVEIS, PORTA-MALAS E A CAIXA DA BASE: quando o conteúdo muda, vai o conteúdo novo para todos ("grade").
+  · QUEM ENTRA DEPOIS recebe do host as caixas mexidas, os itens já pegos e os itens largados ("mundo_itens").
+  · Rede: PROTOCOLO 3 (os dois aparelhos precisam estar na 0.44).
+  · Testado com dois jogos ligados: 16 infectados iguais nos dois (posição < 0,5 m), tiro do amigo mata no host,
+    mordida tira vida do amigo, item largado/pego, caixa da base e amigo que entra atrasado.
+  · AINDA NÃO: dano entre jogadores, salvar a partida em rede, missões do rádio (cada um tem as suas) e infectado
+    entrando em prédio atrás de um amigo (o host não tem as paredes do interior onde o amigo está).
+
 ATUALIZAÇÃO 0.43 · PRÉDIOS FORA DO LUGAR REMOVIDOS (água e rua)
   · Análise (mundo/cidade.gd _predio_ruim): a grade de 20 m que escolhia onde pôr prédio é grossa; um prédio de até
     34 m (+3 m sorteados) podia ficar com o pé na água. Agora a conta é EXATA, com a planta de cada prédio:

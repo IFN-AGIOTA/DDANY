@@ -26,6 +26,7 @@ var onde:                     # referência fraca (a grade já guarda o item; ev
 var _onde: WeakRef = null
 var slot := ""
 var no_mundo: Node = null
+var uid := ""                 # multijogador: identidade do item no CHÃO (inventario/item_mundo.gd); "" = não está na rede
 
 static func novo(tipo: String, quantidade := 1) -> RefCounted:
 	var d := Itens.def(tipo)

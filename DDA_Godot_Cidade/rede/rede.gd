@@ -30,11 +30,12 @@ signal internet(ok: bool, ip: String, motivo: String)    # resultado do UPnP (s�
 signal estado_recebido(id: int, d: Array)      # posição/animação de um jogador (sessao_rede.gd)
 signal comecou                                 # o host tocou em COMEÇAR (a sala vira partida)
 signal evento_recebido(id: int, tipo: String, d: Dictionary)   # tiro, ação, roupa, mundo... (sessao_rede.gd)
+signal infectados_recebidos(d: PackedFloat32Array)             # cliente: posição dos infectados que o host manda
 
 const PORTA := 24560                           # partida (UDP, ENet)
 const PORTA_ANUNCIO := 24561                   # anúncio "tem partida aqui" na rede local (UDP broadcast)
 const MAX_JOGADORES := 10                      # no máximo 10 na sala (host + 9)
-const PROTOCOLO := 2                           # aumente quando mudar o formato das mensagens
+const PROTOCOLO := 3                           # aumente quando mudar o formato das mensagens (3: mundo sincronizado)
 const ANUNCIO_A_CADA := 1.0                    # segundos
 
 var ligado := false                            # tem partida aberta/conectada (e aceita)
@@ -429,6 +430,15 @@ func enviar_estado(d: Array) -> void:
 @rpc("any_peer", "call_remote", "unreliable_ordered", 1)
 func _estado(d: Array) -> void:
 	estado_recebido.emit(multiplayer.get_remote_sender_id(), d)
+
+# infectados: só o HOST manda, para cada amigo os que estão perto dele (pode perder pacote: o próximo corrige)
+func enviar_infectados(para: int, d: PackedFloat32Array) -> void:
+	if ligado and eh_host():
+		_infectados.rpc_id(para, d)
+
+@rpc("authority", "call_remote", "unreliable_ordered", 1)
+func _infectados(d: PackedFloat32Array) -> void:
+	infectados_recebidos.emit(d)
 
 # evento: chega sempre e na ordem (tiro, ação, roupa, clima...). para = 0: todos
 func enviar_evento(tipo: String, d: Dictionary, para := 0) -> void:
