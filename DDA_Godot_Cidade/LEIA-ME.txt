@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.34 (APK código 30)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.35 (APK código 31)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -43,7 +43,7 @@ ATUALIZAÇÃO 0.34 · PERFIL E SALA COM CHAMAR AMIGOS (do jeito dos jogos de cel
     offline ("visto há 2 h"), o recorde de cada um e remover; ADICIONAR AMIGO pelo código.
   Adicionar alguém manda um PEDIDO; quando a pessoa aceita, os dois viram amigos.
 - MULTIJOGADOR agora tem só dois botões grandes: CRIAR SALA e ENTRAR NUMA SALA.
-- SALA: 8 vagas com ícone e nome de quem está nela (o host pode "tirar"). À direita, os AMIGOS (online
+- SALA: 10 vagas (no máximo 10 jogadores, 0.35) com ícone e nome de quem está nela (o host pode "tirar"). À direita, os AMIGOS (online
   primeiro) com o botão CHAMAR. O amigo recebe um AVISO na tela (com 30 s para responder): ENTRAR ou AGORA NÃO.
   O host vê "Chamado 29 s", "recusou" ou "Na sala". Quem entra ESPERA na sala até o host tocar em COMEÇAR;
   aí todo mundo vai para a cidade junto. Para quem não é amigo: "Convidar por código" (WhatsApp).
@@ -98,7 +98,7 @@ ATUALIZAÇÃO 0.29 · MULTIJOGADOR DE LONGE (internet, código e convite)
 
 ATUALIZAÇÃO 0.28 · BASE DO MULTIJOGADOR (modo livre)
 - Botão MULTIJOGADOR no menu (menu/tela_multijogador.gd): seu nome, CRIAR PARTIDA (você vira o host),
-  PARTIDAS NA REDE (achadas sozinhas no mesmo Wi-Fi) e ENTRAR POR IP. Até 8 jogadores. Porta UDP 24560
+  PARTIDAS NA REDE (achadas sozinhas no mesmo Wi-Fi) e ENTRAR POR IP. Até 10 jogadores (0.35). Porta UDP 24560
   (partida) e 24561 (anúncio na rede local). Os dois aparelhos precisam estar na MESMA VERSÃO.
 - Já funciona: cada um vê os outros andando, correndo, agachando, mirando, atirando (som de longe e traçante),
   recarregando/golpeando/comendo, com a ROUPA e a ARMA certas e o NOME em cima da cabeça. A hora e o clima

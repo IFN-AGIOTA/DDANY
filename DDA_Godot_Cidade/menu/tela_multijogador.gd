@@ -1,7 +1,7 @@
 extends CanvasLayer
 # TELA MULTIJOGADOR (botão "Multijogador" do menu principal), do jeito dos jogos de celular com SALA:
 #   INÍCIO   -> dois botões grandes: CRIAR SALA e ENTRAR NUMA SALA (+ seu perfil e convites que chegaram)
-#   SALA     -> 8 vagas com quem já entrou (ícone e nome). O HOST vê a lista de AMIGOS (online primeiro) com o
+#   SALA     -> 10 vagas com quem já entrou (ícone e nome). O HOST vê a lista de AMIGOS (online primeiro) com o
 #               botão CHAMAR em cada um: o amigo recebe um aviso na tela (menu/aviso_chamado.gd) e, se aceitar,
 #               aparece numa vaga. O host toca COMEÇAR e todo mundo vai para a cidade. Quem entrou espera na sala.
 #               Para quem não é amigo: "Convidar por código" (copia uma mensagem para o WhatsApp).
@@ -201,7 +201,7 @@ func _tela_sala(area: Control, v: float) -> void:
 	esq.add_child(UI.rotulo("Sala de %s · %d/%d jogadores" % [host_nome, Rede.jogadores.size(), Rede.MAX_JOGADORES], 3.6 * v, Color.WHITE, 900, 0.0, true))
 	# vagas
 	var g := GridContainer.new()
-	g.columns = 4
+	g.columns = 5                             # 10 vagas: 5 x 2
 	g.add_theme_constant_override("h_separation", int(1.2 * v))
 	g.add_theme_constant_override("v_separation", int(1.2 * v))
 	esq.add_child(g)
@@ -277,7 +277,7 @@ func _vaga(id: int, v: float) -> Control:
 	sb.content_margin_top = 0.8 * v
 	sb.content_margin_bottom = 0.8 * v
 	p.add_theme_stylebox_override("panel", sb)
-	p.custom_minimum_size = Vector2(15.5 * v, 15.0 * v)
+	p.custom_minimum_size = Vector2(13.4 * v, 14.0 * v)
 	var c := VBoxContainer.new()
 	c.alignment = BoxContainer.ALIGNMENT_CENTER
 	c.add_theme_constant_override("separation", int(0.3 * v))
@@ -294,7 +294,7 @@ func _vaga(id: int, v: float) -> Control:
 	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	n.clip_text = true
 	n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	n.custom_minimum_size.x = 13.5 * v
+	n.custom_minimum_size.x = 11.6 * v
 	c.add_child(n)
 	var tag := "HOST" if id == 1 else ("você" if id == Rede.meu_id() else "")
 	if tag != "":

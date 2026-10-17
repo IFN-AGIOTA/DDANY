@@ -33,7 +33,7 @@ signal evento_recebido(id: int, tipo: String, d: Dictionary)   # tiro, ação, r
 
 const PORTA := 24560                           # partida (UDP, ENet)
 const PORTA_ANUNCIO := 24561                   # anúncio "tem partida aqui" na rede local (UDP broadcast)
-const MAX_JOGADORES := 8
+const MAX_JOGADORES := 10                      # no máximo 10 na sala (host + 9)
 const PROTOCOLO := 2                           # aumente quando mudar o formato das mensagens
 const ANUNCIO_A_CADA := 1.0                    # segundos
 
@@ -374,6 +374,10 @@ func _ola(n: String, protocolo: int, versao: String, av := 0, conta_uid := "") -
 	var id := multiplayer.get_remote_sender_id()
 	if protocolo != PROTOCOLO or versao != Config.VERSAO:
 		_recusado.rpc_id(id, "Versão diferente: o host está na %s." % Config.VERSAO)
+		_derrubar_depois(id)
+		return
+	if jogadores.size() >= MAX_JOGADORES:     # sala cheia (também vale para quem entra pela internet/WebRTC)
+		_recusado.rpc_id(id, "A sala está cheia (%d/%d)." % [jogadores.size(), MAX_JOGADORES])
 		_derrubar_depois(id)
 		return
 	var nm := _limpar_nome(n)
