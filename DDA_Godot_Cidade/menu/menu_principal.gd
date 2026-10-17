@@ -1,6 +1,6 @@
 extends CanvasLayer
 # MENU PRINCIPAL (igual ao do HTML): "DIAS DE UM / APOCALIPSE / NOVA YORK", versão, botões
-# História · Ato 1 · Jogar (mundo livre) · Multijogador (menu/tela_multijogador.gd) · Opções · Créditos (menu/creditos.gd), e o ícone de tela cheia no canto. Fica por cima da cena_menu.gd.
+# História · Ato 1 · Jogar (mundo livre) · Multijogador (menu/tela_multijogador.gd) · Opções · Créditos (menu/creditos.gd), e o ícone do PERFIL no canto. Fica por cima da cena_menu.gd.
 # Mexa AQUI para: textos e botões do menu principal. (A cena 3D de fundo é menu/cena_menu.gd.)
 
 signal jogar
@@ -139,20 +139,12 @@ func _montar() -> void:
 		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		nav.add_child(b)
 	col.add_child(nav)
-	# tela cheia (canto de cima)
-	var tc := _BotaoTelaCheia.new()
-	tc.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	tc.offset_left = -8.5 * v
-	tc.offset_right = -2.0 * v
-	tc.offset_top = 2.0 * v
-	tc.offset_bottom = 8.5 * v
-	_raiz.add_child(tc)
-	# PERFIL: ícone + nome no canto de cima (ao lado da tela cheia); bolinha com os pedidos de amizade
+	# PERFIL: ícone + nome no canto de cima à direita; bolinha com os pedidos de amizade
 	if Conta.configurado:
 		var bp := _BotaoPerfil.new()
 		bp.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		bp.offset_left = -46.0 * v
-		bp.offset_right = -10.5 * v
+		bp.offset_left = -38.0 * v
+		bp.offset_right = -2.5 * v
 		bp.offset_top = 2.0 * v
 		bp.offset_bottom = 8.5 * v
 		bp.apertado.connect(func(): perfil.emit())
@@ -261,31 +253,3 @@ class _BotaoPerfil extends Control:
 			var tn := int(s * 0.26)
 			var wn := ft.get_string_size(str(n), HORIZONTAL_ALIGNMENT_LEFT, -1, tn).x
 			draw_string(ft, c + Vector2(-wn * 0.5, tn * 0.36), str(n), HORIZONTAL_ALIGNMENT_LEFT, -1, tn, Color.WHITE)
-
-# ícone ⛶ de tela cheia (canto de cima à direita)
-class _BotaoTelaCheia extends Control:
-	func _init() -> void:
-		mouse_filter = Control.MOUSE_FILTER_STOP
-	func _gui_input(e: InputEvent) -> void:
-		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
-			accept_event()
-			var w := DisplayServer.window_get_mode()
-			var cheia := w == DisplayServer.WINDOW_MODE_FULLSCREEN or w == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
-			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if cheia else DisplayServer.WINDOW_MODE_FULLSCREEN)
-	func _draw() -> void:
-		var s := size
-		var r := Rect2(Vector2.ZERO, s)
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = Color(0.157, 0.055, 0.016, 0.5)
-		sb.border_color = Color(1.0, 0.667, 0.353, 0.55)
-		sb.set_border_width_all(2)
-		sb.set_corner_radius_all(int(s.x * 0.12))
-		draw_style_box(sb, r)
-		var m := s.x * 0.3
-		var l := s.x * 0.14
-		var c := Color("#ffe9d0")
-		var w := maxf(2.0, s.x * 0.06)
-		for q in [[Vector2(m, m), Vector2(1, 0), Vector2(0, 1)], [Vector2(s.x - m, m), Vector2(-1, 0), Vector2(0, 1)],
-				[Vector2(m, s.y - m), Vector2(1, 0), Vector2(0, -1)], [Vector2(s.x - m, s.y - m), Vector2(-1, 0), Vector2(0, -1)]]:
-			draw_line(q[0], q[0] + q[1] * l, c, w)
-			draw_line(q[0], q[0] + q[2] * l, c, w)
