@@ -39,6 +39,20 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.48.1 · CHÃO SEM BOLINHAS E SEM LISTRAS DE AREIA NO CELULAR (primeiro PACOTE pelo próprio jogo)
+  · Defeito: no celular (placa Mali, ex.: Realme C61) o chão tinha bolinhas laranja em grade (no asfalto, na calçada
+    e na terra), listras e faixas de "areia" no meio da cidade. No PC não aparecia.
+  · Causa: o "aleatório" dos shaders (hash) usava sin() de números enormes (coordenadas de milhares de metros x 300).
+    A placa do celular calcula sin() de número grande com pouca precisão, então o aleatório virava quase constante:
+    TODA célula ganhava uma "folha seca" igual (as bolinhas) e os ruídos viravam listras.
+  · Conserto: hash novo sem sin() (só multiplicações, número pequeno com mod): o mesmo resultado no celular e no PC.
+    Vale para chão, asfalto, calçada, prédios, interiores, ruínas/abandono e fumaça (mundo/materiais_cidade.gd,
+    mundo/abandono.gd, mundo/fumaca.gd). O balanço do mato (mundo/mato.gd) também usa números pequenos.
+  · A areia do chão (shader TERRA) só aparece perto da água: longe dela o "relevo" da textura não faz mais a areia
+    furar o concreto/terra (as faixas bege).
+  · Chega pelo SISTEMA DE ATUALIZAÇÃO: pacote 0.48.1 para o APK 0.48 (abre o jogo, ele baixa; vale na próxima
+    abertura). Não precisa instalar APK.
+
 ATUALIZAÇÃO 0.48 · SEGURANÇA: CHAVE NOVA DO APK E ATUALIZAÇÕES ASSINADAS
   · A chave antiga (dda.keystore, senha "android") estava no GitHub PÚBLICO: qualquer um podia assinar um APK falso
     que o Android aceitaria como atualização do jogo. Ela saiu do repositório e foi aposentada.

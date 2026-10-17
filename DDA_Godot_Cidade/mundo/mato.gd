@@ -48,7 +48,7 @@ void vertex() {
 	float alto = max(w.y - origem.y, 0.0);
 	float fase = INSTANCE_CUSTOM.w * 6.2832;
 	// vento: balanço + inclinação para um lado
-	vec2 v = vec2(sin(TIME * 1.9 + w.x * 0.4 + fase), cos(TIME * 1.4 + w.z * 0.35 + fase)) * (0.04 + 0.12 * vento);
+	vec2 v = vec2(sin(TIME * 1.9 + mod(w.x, 15.708) * 0.4 + fase), cos(TIME * 1.4 + mod(w.z, 17.952) * 0.35 + fase)) * (0.04 + 0.12 * vento);
 	v += vec2(0.55, 0.3) * 0.1 * vento;
 	// o jogador abre o mato quando passa
 	vec2 a = origem.xz - pos_jogador.xz;

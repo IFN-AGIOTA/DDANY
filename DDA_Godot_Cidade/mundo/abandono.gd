@@ -482,7 +482,15 @@ const SHADER_PROPS := """
 shader_type spatial;
 uniform float ferrugem = 0.5;
 varying vec3 wo;
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// "aleatório" sem sin(): sin() de número grande (coordenadas de milhares de metros) perde a precisão na placa do
+// celular (Mali) e o resultado vira quase constante -> bolinhas iguais em grade e listras. Números pequenos (mod) e
+// só multiplicações = igual no celular e no PC.
+float hash(vec2 p) {
+	p = mod(p, 4096.0);
+	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+	p3 += dot(p3, p3.yzx + 33.33);
+	return fract((p3.x + p3.y) * p3.z);
+}
 float ruido(vec2 p) {
 	vec2 i = floor(p);
 	vec2 f = fract(p);

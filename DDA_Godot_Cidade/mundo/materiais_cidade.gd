@@ -13,7 +13,15 @@ extends RefCounted
 const COMUM := """
 uniform float camada = 0.0;
 varying vec3 wp;
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// "aleatório" sem sin(): sin() de número grande (coordenadas de milhares de metros) perde a precisão na placa do
+// celular (Mali) e o resultado vira quase constante -> bolinhas iguais em grade e listras. Números pequenos (mod) e
+// só multiplicações = igual no celular e no PC.
+float hash(vec2 p) {
+	p = mod(p, 4096.0);
+	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+	p3 += dot(p3, p3.yzx + 33.33);
+	return fract((p3.x + p3.y) * p3.z);
+}
 float ruido(vec2 p) {
 	vec2 i = floor(p);
 	vec2 f = fract(p);
@@ -218,7 +226,7 @@ void fragment() {
 	float a1 = grama + h_gram * 0.6;
 	float a2 = terra + h_terr * 0.6;
 	float a3 = pedra + h_pedr * 0.6;
-	float a4 = areia + h_arei * 0.6;
+	float a4 = areia + h_arei * 0.6 * min(areia, 1.0);   // areia só perto da água (longe dela o relevo não a faz "furar")
 	float topo = max(max(max(a0, a1), max(a2, a3)), a4) - 0.22;
 	vec4 w = max(vec4(a0, a1, a2, a3) - topo, vec4(0.0));
 	float w4 = max(a4 - topo, 0.0);
@@ -402,7 +410,15 @@ varying flat vec3 tam;                     // flat = igual no prédio todo (inte
 varying flat float tipo;
 varying flat float sem;
 varying vec3 nl;
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// "aleatório" sem sin(): sin() de número grande (coordenadas de milhares de metros) perde a precisão na placa do
+// celular (Mali) e o resultado vira quase constante -> bolinhas iguais em grade e listras. Números pequenos (mod) e
+// só multiplicações = igual no celular e no PC.
+float hash(vec2 p) {
+	p = mod(p, 4096.0);
+	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+	p3 += dot(p3, p3.yzx + 33.33);
+	return fract((p3.x + p3.y) * p3.z);
+}
 float ruido(vec2 p) {
 	vec2 i = floor(p);
 	vec2 f = fract(p);
@@ -552,7 +568,15 @@ uniform float semente = 0.0;                  // a mesma do prédio (hera do lad
 global uniform float molhado;
 varying vec3 wp;
 varying float dentro;
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// "aleatório" sem sin(): sin() de número grande (coordenadas de milhares de metros) perde a precisão na placa do
+// celular (Mali) e o resultado vira quase constante -> bolinhas iguais em grade e listras. Números pequenos (mod) e
+// só multiplicações = igual no celular e no PC.
+float hash(vec2 p) {
+	p = mod(p, 4096.0);
+	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+	p3 += dot(p3, p3.yzx + 33.33);
+	return fract((p3.x + p3.y) * p3.z);
+}
 float ruido(vec2 p) {
 	vec2 i = floor(p);
 	vec2 f = fract(p);
