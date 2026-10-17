@@ -238,7 +238,50 @@ func altura(x: float, z: float) -> float:
 	var r := altura_rua(x, z)
 	if r > -100.0:
 		return r
-	return altura_sem_rua(x, z)
+	var b := altura_sem_rua(x, z)
+	return maxf(b, altura_lote(x, z, b))
+
+# ---------- LOTES (mundo/cidade.gd _lotes): células de 20 m com prédio ficam na altura da calçada, com rampa ----------
+var _lote := PackedByteArray()
+var _lote_w := 0
+var _lote_h := 0
+var _lote_cel := 20.0
+var _lote_origem := Vector2.ZERO
+var _lote_rampa := 2.0
+
+func configurar_lotes(mascara: PackedByteArray, w: int, h: int, cel: float, metade_mundo: Vector2, rampa: float) -> void:
+	_lote = mascara
+	_lote_w = w
+	_lote_h = h
+	_lote_cel = cel
+	_lote_origem = metade_mundo
+	_lote_rampa = rampa
+	_centro = Vector2(1.0e9, 1.0e9)                 # refaz o chão em volta do jogador
+
+func _eh_lote(c: int, r: int) -> bool:
+	return c >= 0 and r >= 0 and c < _lote_w and r < _lote_h and _lote[r * _lote_w + c] == 1
+
+# ALT_CALCADA em cima do lote; na rampa desce em linha reta até "base"; fora: -1000
+func altura_lote(x: float, z: float, base: float) -> float:
+	if _lote.is_empty():
+		return -1000.0
+	var fx := (x + _lote_origem.x) / _lote_cel
+	var fz := (z + _lote_origem.y) / _lote_cel
+	var c := floori(fx)
+	var r := floori(fz)
+	if _eh_lote(c, r):
+		return ALT_CALCADA
+	var d := _lote_rampa
+	for dr in range(-1, 2):
+		for dc in range(-1, 2):
+			if not _eh_lote(c + dc, r + dr):
+				continue
+			var qx := clampf(fx, c + dc, c + dc + 1) - fx
+			var qz := clampf(fz, r + dr, r + dr + 1) - fz
+			d = minf(d, Vector2(qx, qz).length() * _lote_cel)
+	if d >= _lote_rampa:
+		return -1000.0
+	return lerpf(ALT_CALCADA, minf(base, ALT_TERRA), d / _lote_rampa)
 
 # só ruas e calçadas: ALT_RUA, ALT_CALCADA ou -1000 (não é rua)
 func altura_rua(x: float, z: float) -> float:

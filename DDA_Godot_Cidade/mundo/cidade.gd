@@ -33,7 +33,7 @@ const Y_LAGO := 0.2
 const Y_PARQUE := 0.4
 const Y_CALCADA := 0.55
 const Y_RUA := 0.6
-const CAMADA := {"mar": 0.0, "terra": 1.0, "lago": 2.0, "parque": 3.0, "calcada": 4.0, "rua": 5.0, "faixa": 6.0}
+const CAMADA := {"mar": 0.0, "terra": 1.0, "lago": 2.0, "parque": 3.0, "lote": 3.5, "calcada": 4.0, "rua": 5.0, "faixa": 6.0}
 
 const BRANCO := Color(0.92, 0.92, 0.88)
 const AMARELO := Color(0.95, 0.72, 0.15)
@@ -43,6 +43,7 @@ var H := 0
 var land := PackedByteArray()
 var park := PackedByteArray()
 var road := PackedByteArray()
+var lote := PackedByteArray()              # 1 = célula de 20 m com prédio: chão na altura da calçada (mundo/colisao_mundo.gd)
 var built: Array[Node] = []
 var is_built := false
 var dados_cidade = null
@@ -72,6 +73,7 @@ func construir() -> void:
 	_ground(data)
 	_roads(data)
 	_buildings()
+	_lotes()
 	_fachadas()
 	_abandono()
 	_arvores()
@@ -322,6 +324,9 @@ func _ground(data) -> void:
 	land.resize(W * H)
 	park.resize(W * H)
 	road.resize(W * H)
+	lote.resize(W * H)
+	lote.fill(0)
+	_lote_idx.clear()
 	_fill(land, lpolys)
 	_fill(park, parks)
 	# máscara terra/água em textura (com mipmaps = versão "borrada" para praias, mar raso e espuma)
@@ -603,6 +608,9 @@ func _buildings() -> void:
 			var cor: Color = CORES_TIPO[tipo] * extra.randf_range(0.82, 1.12)
 			cor.a = 1.0
 			var sem := extra.randf() * 0.98
+			for o in [0, 1, W, W + 1]:
+				lote[lr * W + lc + o] = 1
+				_lote_idx.append(lr * W + lc + o)
 			var chave := Vector2i(floori(bx / BLOCO_PREDIO), floori(bz / BLOCO_PREDIO))
 			if not blocos.has(chave):
 				blocos[chave] = []
@@ -701,6 +709,167 @@ func esconder_predio(i: int, esconder: bool) -> void:
 		mm.set_instance_transform(info["idx"], Transform3D(Basis.from_scale(Vector3.ONE * 0.001), Vector3(info["x"], -500.0, info["z"])))
 	else:
 		mm.set_instance_transform(info["idx"], info["t"])
+
+# ---------- LOTES: o chão dos quarteirões na altura da calçada ----------
+# Antes os prédios ficavam em 0,6 m (altura da rua) em cima da terra em 0,0 m: pareciam flutuar e o piso dos
+# interiores virava um degrau de 60 cm (o personagem travava na porta). Agora toda célula de 20 m com prédio vira
+# um LOTE na altura da calçada (0,55 m), com RAMPA de RAMPA_LOTE m descendo até a terra nas bordas. A colisão
+# (mundo/colisao_mundo.gd altura_lote) segue o mesmo desenho.
+# VERTEX PAINT: cada vértice leva os pesos dos materiais do chão em COLOR (r = concreto, g = grama, b = terra):
+# em cima do lote, concreto; no pé da rampa, terra e mato (o shader TERRA mistura com o splatmap).
+const RAMPA_LOTE := 2.0
+const PINTA_TOPO := Color(1.0, 0.12, 0.2, 1.0)
+const PINTA_PE := Color(0.15, 0.45, 1.0, 1.0)
+var _lote_idx := PackedInt32Array()       # células de lote (para não varrer o mapa inteiro)
+var splat: ImageTexture                    # SPLATMAP (r = urbano, g = grama, b = entulho/terra), 1 pixel = 40 m
+var mat_lote: ShaderMaterial
+
+func _lote(c: int, r: int) -> bool:
+	return c >= 0 and r >= 0 and c < W and r < H and lote[r * W + c] == 1
+
+func _tri_cor(v: PackedVector3Array, cs: PackedColorArray, a: Vector3, b: Vector3, c: Vector3, ca: Color, cb: Color, cc: Color) -> void:
+	var cr := (b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x)
+	v.append(a)
+	cs.append(ca)
+	if cr >= 0.0:
+		v.append(b)
+		v.append(c)
+		cs.append(cb)
+		cs.append(cc)
+	else:
+		v.append(c)
+		v.append(b)
+		cs.append(cc)
+		cs.append(cb)
+
+# quadrilátero a-b-c-d (em volta) com uma cor por vértice
+func _quad_cor(v: PackedVector3Array, cs: PackedColorArray, a: Vector3, b: Vector3, c: Vector3, d: Vector3, ca: Color, cb: Color, cc: Color, cd: Color) -> void:
+	_tri_cor(v, cs, a, b, c, ca, cb, cc)
+	_tri_cor(v, cs, a, c, d, ca, cc, cd)
+
+func _lotes() -> void:
+	var v := PackedVector3Array()
+	var cs := PackedColorArray()
+	var y1 := Y_CALCADA
+	var y0 := Y_TERRA - 0.05
+	var R := RAMPA_LOTE
+	var idx := _lote_idx.duplicate()
+	idx.sort()
+	# topo: células seguidas na mesma linha viram um retângulo só (menos triângulos)
+	var tr := _trechos(idx)
+	for n in range(0, tr.size(), 2):
+		var a := tr[n]
+		var b := tr[n + 1]
+		var r := a / W
+		var xa := (a % W) * CELL - WORLD.x
+		var xb := (b % W + 1) * CELL - WORLD.x
+		var za := r * CELL - WORLD.y
+		var zb := za + CELL
+		_quad_cor(v, cs, Vector3(xa, y1, za), Vector3(xb, y1, za), Vector3(xb, y1, zb), Vector3(xa, y1, zb), PINTA_TOPO, PINTA_TOPO, PINTA_TOPO, PINTA_TOPO)
+	# rampas norte/sul: bordas sem lote do outro lado, em trechos por linha
+	for lado in [-1, 1]:
+		var borda := PackedInt32Array()
+		for i in idx:
+			if not _lote(i % W, i / W + lado):
+				borda.append(i)
+		tr = _trechos(borda)
+		for n in range(0, tr.size(), 2):
+			var a := tr[n]
+			var b := tr[n + 1]
+			var xa := (a % W) * CELL - WORLD.x
+			var xb := (b % W + 1) * CELL - WORLD.x
+			var zb := (a / W + (1 if lado > 0 else 0)) * CELL - WORLD.y
+			_quad_cor(v, cs, Vector3(xa, y1, zb), Vector3(xb, y1, zb), Vector3(xb, y0, zb + R * lado), Vector3(xa, y0, zb + R * lado), PINTA_TOPO, PINTA_TOPO, PINTA_PE, PINTA_PE)
+	# rampas oeste/leste: trechos por coluna (chave = coluna * H + linha)
+	for lado in [-1, 1]:
+		var borda := PackedInt32Array()
+		for i in idx:
+			if not _lote(i % W + lado, i / W):
+				borda.append((i % W) * H + i / W)
+		borda.sort()
+		var ini := -1
+		var ant := -10
+		borda.append(-5)                              # sentinela: fecha o último trecho
+		for k in borda:
+			if k == ant + 1 and k % H != 0:
+				ant = k
+				continue
+			if ini >= 0:
+				var c := ini / H
+				var za := (ini % H) * CELL - WORLD.y
+				var zb := (ant % H + 1) * CELL - WORLD.y
+				var xb := (c + (1 if lado > 0 else 0)) * CELL - WORLD.x
+				_quad_cor(v, cs, Vector3(xb, y1, za), Vector3(xb, y1, zb), Vector3(xb + R * lado, y0, zb), Vector3(xb + R * lado, y0, za), PINTA_TOPO, PINTA_TOPO, PINTA_PE, PINTA_PE)
+			ini = k
+			ant = k
+	# cantos de fora (as duas rampas vizinhas não se encostam): um quadradinho inclinado
+	for i in idx:
+		var c := i % W
+		var r := i / W
+		for d in [Vector2i(-1, -1), Vector2i(1, -1), Vector2i(1, 1), Vector2i(-1, 1)]:
+			if _lote(c + d.x, r) or _lote(c, r + d.y):
+				continue
+			var px := (c + (1 if d.x > 0 else 0)) * CELL - WORLD.x
+			var pz := (r + (1 if d.y > 0 else 0)) * CELL - WORLD.y
+			_quad_cor(v, cs, Vector3(px, y1, pz), Vector3(px + R * d.x, y0, pz), Vector3(px + R * d.x, y0, pz + R * d.y), Vector3(px, y0, pz + R * d.y), PINTA_TOPO, PINTA_PE, PINTA_PE, PINTA_PE)
+	_splatmap()
+	mat_lote = Mat.material(Mat.TERRA, {"mascara": _mascara, "splat": splat, "mundo": WORLD, "camada": CAMADA["lote"], "pintura": 1.0})
+	mats_chao.append(mat_lote)
+	(mats_chao[0] as ShaderMaterial).set_shader_parameter("splat", splat)
+	_malha(v, mat_lote, cs, "Lotes")
+
+# índices ORDENADOS -> pares (primeiro, último) de cada trecho de células seguidas na mesma linha
+func _trechos(idx: PackedInt32Array) -> PackedInt32Array:
+	var o := PackedInt32Array()
+	if idx.is_empty():
+		return o
+	var ini := idx[0]
+	var ant := idx[0]
+	for n in range(1, idx.size()):
+		var i := idx[n]
+		if i == ant + 1 and i % W != 0:
+			ant = i
+			continue
+		o.append(ini)
+		o.append(ant)
+		ini = i
+		ant = i
+	o.append(ini)
+	o.append(ant)
+	return o
+
+# SPLATMAP: uma imagem do mapa inteiro (1 pixel = 1 célula de 20 m) que diz qual material do chão domina em cada
+# lugar: R = urbano (lotes e ruas: concreto), G = grama (parques e beira deles), B = entulho/terra (em volta das
+# ruínas). Meia resolução: 1 pixel = 40 m (o tamanho de um bloco de prédio). Com mipmaps: o shader lê "borrado" (transição larga e suave) e mexe a
+# posição com ruído (a borda não fica quadrada).
+func _splatmap() -> void:
+	var w2 := W / 2
+	var h2 := H / 2
+	var dados := PackedByteArray()
+	dados.resize(w2 * h2 * 3)                  # já vem tudo 0
+	for i in _lote_idx:
+		dados[((i / W) / 2 * w2 + (i % W) / 2) * 3] = 255
+	for r in h2:
+		var base := (r * 2 + 1) * W
+		for c in w2:
+			var k := base + c * 2 + 1             # amostra o centro do bloco de 40 m
+			if road[k] == 1:
+				dados[(r * w2 + c) * 3] = 255
+			if park[k] == 1:
+				dados[(r * w2 + c) * 3 + 1] = 255
+	for ru in ruinas:
+		var cc := int((ru[0] + WORLD.x) / (CELL * 2.0))
+		var rr := int((ru[1] + WORLD.y) / (CELL * 2.0))
+		for dr in range(-2, 3):
+			for dc in range(-2, 3):
+				var c: int = cc + dc
+				var r: int = rr + dr
+				if c >= 0 and r >= 0 and c < w2 and r < h2:
+					var o := (r * w2 + c) * 3 + 2
+					dados[o] = maxi(dados[o], 255 - 80 * maxi(absi(dr), absi(dc)))
+	var img := Image.create_from_data(w2, h2, false, Image.FORMAT_RGB8, dados)
+	img.generate_mipmaps()
+	splat = ImageTexture.create_from_image(img)
 
 # caixas oclusoras: o que fica todo atrás dos prédios não é desenhado (mundo/oclusao.gd)
 func _oclusao() -> void:

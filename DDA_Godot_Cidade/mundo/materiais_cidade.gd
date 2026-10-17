@@ -129,41 +129,99 @@ void molhar(inout vec3 c, inout float rough, inout float spec, float poca) {
 }
 """
 
+# TERRA (e LOTES): mistura SUAVE de 5 materiais, sem quadriculado. Quem decide quanto de cada um:
+#   1) SPLATMAP (textura "splat", 1 pixel = 20 m, lida borrada pelos mipmaps e com a posição mexida por ruído):
+#      r = urbano -> concreto · g = grama · b = entulho/terra (ruínas)
+#   2) VERTEX PAINT (só nos lotes, "pintura" = 1): COLOR.rgb = pesos pintados nos vértices (concreto em cima do lote,
+#      terra/mato no pé da rampa), misturados com o splatmap
+#   3) INCLINAÇÃO/ALTURA (procedural): rampa (íngreme) -> pedra/terra; baixo (perto da água, pé das rampas) -> lama;
+#      beira d'água -> areia (máscara terra/água)
+# HEIGHT BLENDING: cada material tem um "relevo" (placas de concreto altas e juntas baixas, tufos de grama, pedrinhas):
+# na transição ganha quem é mais alto, então a grama nasce nas rachaduras e as pedras furam a terra (sem degradê
+# borrado). Detalhe fino só de perto (longe = só as cores misturadas).
 const TERRA := """
 shader_type spatial;
 uniform sampler2D mascara : filter_linear_mipmap;
+uniform sampler2D splat : filter_linear_mipmap;
 uniform vec2 mundo = vec2(11000.0, 8600.0);
-uniform vec3 cor_chao : source_color = vec3(0.42, 0.40, 0.37);
+uniform float pintura = 0.0;             // 1 = usa as cores dos vértices (lotes)
+uniform vec3 cor_concreto : source_color = vec3(0.47, 0.45, 0.42);
+uniform vec3 cor_terra : source_color = vec3(0.37, 0.30, 0.22);
+uniform vec3 cor_grama : source_color = vec3(0.24, 0.40, 0.17);
+uniform vec3 cor_pedra : source_color = vec3(0.40, 0.38, 0.36);
 uniform vec3 cor_areia : source_color = vec3(0.80, 0.70, 0.52);
+uniform vec3 cor_lama : source_color = vec3(0.20, 0.16, 0.11);
 """ + COMUM + CHAO + VERTICE_CAMADA + """
 void fragment() {
-	vec2 uv = (wp.xz + mundo) / (2.0 * mundo);
-	float terra = textureLod(mascara, uv, 1.0).r;
 	float dist = length(wp - CAMERA_POSITION_WORLD);
 	float perto = (1.0 - smoothstep(35.0, 90.0, dist)) * detalhe;
-	float n = fbm(wp.xz * 0.02);
-	vec3 cor = cor_chao * (0.82 + 0.3 * n);
-	// terrenos da cidade: concreto velho em placas OU terra batida com cascalho, conforme a mancha
-	float barro = smoothstep(0.45, 0.7, fbm(wp.xz * 0.013 + 7.0));
-	vec2 g = abs(fract(wp.xz / 3.5) - 0.5);
-	float junta = smoothstep(0.475, 0.5, max(g.x, g.y)) * perto * (1.0 - barro);
-	cor *= 1.0 - junta * 0.3;
-	cor = mix(cor, vec3(0.36, 0.30, 0.22) * (0.8 + 0.4 * fbm(wp.xz * 0.5)), barro * 0.85);              // terra
-	cor *= 1.0 - 0.25 * step(0.86, hash(floor(wp.xz * 9.0))) * perto * barro;                           // cascalho
-	cor = mix(cor, cor * vec3(0.78, 0.95, 0.62), smoothstep(0.55, 0.8, fbm(wp.xz * 0.004)) * 0.8);    // mato baixo
-	cor = mix(cor, vec3(0.20, 0.27, 0.12), smoothstep(0.6, 0.75, fbm(wp.xz * 0.09 + 2.0)) * 0.55 * perto);   // tufos de musgo
-	float praia = 1.0 - smoothstep(0.80, 0.96, terra);
-	if (perto > 0.001) {                // rachaduras e folhas só perto (longe nem dá para ver: economiza GPU)
-		float r = rachas(wp.xz * 0.3, 0.03) * perto * (1.0 - barro) * smoothstep(0.5, 0.68, fbm(wp.xz * 0.05));
-		cor *= 1.0 - r * 0.3;
-		vec4 fo = folhas(wp.xz, 0.04 + 0.2 * smoothstep(0.5, 0.8, fbm(wp.xz * 0.03))) * perto * (1.0 - praia);
+	// ---- normal de verdade pela própria geometria (rampas dos lotes): inclinação
+	vec3 nw = normalize(cross(dFdy(wp), dFdx(wp)));
+	if (nw.y < 0.0) nw = -nw;
+	float inclin = smoothstep(0.1, 0.3, length(nw.xz));
+	if (pintura > 0.5) NORMAL = normalize((VIEW_MATRIX * vec4(nw, 0.0)).xyz);
+	// ---- 1) splatmap: lido borrado (mip ~0,9 de 40 m = ~70 m) e com a posição torta (ruído de ~25 m)
+	vec2 torto = (vec2(ruido(wp.xz * 0.011), ruido(wp.xz * 0.011 + 13.7)) - 0.5) * 50.0;
+	vec2 uv = (wp.xz + torto + mundo) / (2.0 * mundo);
+	vec4 sp = textureLod(splat, uv, 0.9);
+	float urb = sp.r;
+	float m1 = ruido(wp.xz * 0.006 + 3.0);                            // manchas grandes (uma conta só para várias coisas)
+	float m2 = ruido(wp.xz * 0.013 + 7.0);
+	float grama = max(sp.g * 1.2, 0.18 + 0.5 * smoothstep(0.45, 0.8, m1));   // mato toma conta
+	float terra = 0.22 + sp.b * 0.9 + 0.35 * smoothstep(0.5, 0.75, m2);
+	float concreto = urb * 1.1;
+	// ---- 2) vertex paint (lotes)
+	vec3 pv = vec3(concreto, grama, terra);
+	pv = mix(pv, COLOR.rgb * vec3(1.2, 0.9, 0.9) + vec3(0.0, grama * 0.35, 0.1), clamp(pintura * COLOR.a, 0.0, 1.0));
+	concreto = pv.r;
+	grama = pv.g;
+	terra = pv.b;
+	// ---- 3) inclinação e altura
+	float pedra = inclin * 1.4;
+	concreto *= 1.0 - inclin * 0.7;
+	float baixo = 1.0 - smoothstep(-0.05, 0.35, wp.y);                // chão baixo (pé das rampas, terrenos)
+	float beira = textureLod(mascara, (wp.xz + mundo) / (2.0 * mundo), 1.0).r;
+	float areia = (1.0 - smoothstep(0.80, 0.96, beira)) * 2.0;
+	// ---- relevo de cada material (0..1) para o height blending
+	float n1 = ruido(wp.xz * 0.9);
+	float n2 = ruido(wp.xz * 2.7 + 5.0);
+	float rach = 0.0;
+	if (perto > 0.001) rach = rachas(wp.xz * 0.22, 0.025) * perto * smoothstep(0.52, 0.7, fbm(wp.xz * 0.045 + 5.0));   // rachaduras tortas, só em partes
+	float h_conc = 0.55 + 0.25 * n1 - rach * 0.4;
+	float h_gram = 0.25 + 0.65 * smoothstep(0.3, 0.8, n2);            // tufos
+	float h_terr = 0.35 + 0.3 * n1;
+	float h_pedr = 0.3 + 0.6 * smoothstep(0.45, 0.7, ruido(wp.xz * 4.0));   // pedras furando a terra
+	float h_arei = 0.45 + 0.1 * sin(wp.x * 1.3 + n1 * 4.0);
+	float a0 = concreto + h_conc * 0.6;
+	float a1 = grama + h_gram * 0.6;
+	float a2 = terra + h_terr * 0.6;
+	float a3 = pedra + h_pedr * 0.6;
+	float a4 = areia + h_arei * 0.6;
+	float topo = max(max(max(a0, a1), max(a2, a3)), a4) - 0.22;
+	vec4 w = max(vec4(a0, a1, a2, a3) - topo, vec4(0.0));
+	float w4 = max(a4 - topo, 0.0);
+	float soma = w.x + w.y + w.z + w.w + w4 + 1e-4;
+	// ---- cor de cada material
+	vec3 c_conc = cor_concreto * (0.85 + 0.25 * ruido(wp.xz * 0.05)) * (1.0 - rach * 0.22);
+	vec3 c_gram = cor_grama * (0.7 + 0.5 * n2);
+	c_gram = mix(c_gram, vec3(0.42, 0.40, 0.18), smoothstep(0.5, 0.8, m2) * 0.7);   // seca
+	vec3 c_terr = cor_terra * (0.8 + 0.4 * mix(0.5, ruido(wp.xz * 0.5), perto + 0.3));
+	c_terr *= 1.0 - 0.22 * step(0.86, hash(floor(wp.xz * 9.0))) * perto;                             // cascalho
+	vec3 c_pedr = cor_pedra * (0.75 + 0.45 * n2);
+	vec3 c_arei = cor_areia * (0.9 + 0.15 * n1);
+	vec3 cor = (c_conc * w.x + c_gram * w.y + c_terr * w.z + c_pedr * w.w + c_arei * w4) / soma;
+	// lama: chão baixo e úmido (pé das rampas, perto da água, poças com chuva)
+	float lama = clamp(baixo * 0.35 + (1.0 - beira) * 0.4, 0.0, 1.0) * (1.0 - w4 / soma) * smoothstep(0.35, 0.7, ruido(wp.xz * 0.05 + 1.0));
+	cor = mix(cor, cor_lama, lama * (0.5 + 0.5 * molhado));
+	if (perto > 0.001) {
+		vec4 fo = folhas(wp.xz + vec2(n1, n2) * 0.6, 0.02 + 0.06 * w.x / soma) * perto * (1.0 - w4 / soma);
 		cor = mix(cor, fo.rgb, fo.a);
 	}
 	float rough = 0.95;
 	float spec = 0.3;
-	molhar(cor, rough, spec, pocas(wp.xz) * (1.0 - praia));
+	molhar(cor, rough, spec, pocas(wp.xz) * (1.0 - w4 / soma));
 	cor *= sombra_predios(wp.xz, dist);
-	ALBEDO = mix(cor, cor_areia * (0.9 + 0.15 * n) * mix(1.0, 0.75, molhado), praia);
+	ALBEDO = cor * mix(1.0, 0.85, molhado * w4 / soma);
 	ROUGHNESS = rough;
 	SPECULAR = spec;
 }
@@ -333,6 +391,9 @@ void vertex() {
 	tam = INSTANCE_CUSTOM.xyz;
 	tipo = floor(INSTANCE_CUSTOM.w);
 	sem = fract(INSTANCE_CUSTOM.w);
+	// a base desce 0,8 m para dentro do chão (o prédio nunca fica "flutuando" sobre o lote/terra); lp é calculado
+	// DEPOIS, então a grade de janelas continua no mesmo lugar (bate com as escadas de incêndio)
+	if (VERTEX.y < 0.0) VERTEX.y -= 0.8 / max(tam.y, 1.0);
 	lp = VERTEX * tam;
 	lp.y += tam.y * 0.5 + (1.0 - COLOR.a) * 40.0;   // altura a partir do chão
 	nl = NORMAL;

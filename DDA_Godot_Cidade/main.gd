@@ -411,6 +411,7 @@ func _criar_jogo() -> void:
 	mundo.name = "ColisaoMundo"
 	jogo.add_child(mundo)
 	mundo.configurar(cidade.dados_cidade, cidade.predios)
+	mundo.configurar_lotes(cidade.lote, cidade.W, cidade.H, cidade.CELL, cidade.WORLD, cidade.RAMPA_LOTE)   # chão dos quarteirões
 	if cidade.abandono != null:
 		mundo.configurar_obstaculos(cidade.abandono.obstaculos)
 	jogador = JOGADOR_CENA.instantiate()

@@ -251,6 +251,11 @@ func _criar(k: Vector2i) -> Node3D:
 				if sorte > 0.8 or mundo.dentro_de_predio(x, z, 0.0, true):
 					continue
 				tipo = 2 if sorte < 0.07 else 0
+				var yl: float = mundo.altura_lote(x, z, y)      # lote (chão dos quarteirões) e as rampas dele
+				if yl > y:
+					y = yl
+					if sorte > 0.45:                     # em cima do lote (concreto) nasce menos mato
+						continue
 			else:
 				continue                             # mar, lago
 		if mundo.dentro_de_obstaculo(x, z, 0.1):

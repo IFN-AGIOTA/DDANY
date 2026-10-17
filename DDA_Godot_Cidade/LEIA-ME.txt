@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.39 (APK código 35)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.40 (APK código 36)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,26 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.40 · PRÉDIOS NO CHÃO, PORTAS SEM DEGRAU E CHÃO SEM QUADRICULADO
+  · O PROBLEMA: os prédios e o piso dos interiores ficavam em 0,6 m (altura da rua), em cima da terra em 0,0 m.
+    Pareciam flutuar e a porta virava um degrau de 60 cm (era preciso pular para entrar).
+  · LOTES (mundo/cidade.gd _lotes): toda célula de 20 m com prédio vira um lote na altura da calçada (0,55 m),
+    com RAMPA de 2 m descendo até a terra nas bordas (RAMPA_LOTE). A colisão segue o mesmo desenho
+    (mundo/colisao_mundo.gd altura_lote; main.gd liga com configurar_lotes). O mato também nasce na altura do lote.
+  · Interiores (mundo/interior.gd): o piso fica no nível do lote (0,55 m) -> entra-se andando, sem degrau.
+    Testado: o personagem entra andando em 3 de 3 prédios sorteados.
+  · A base dos prédios desce 0,8 m para dentro do chão (shader PREDIO) -> nunca "flutua"; a grade de janelas não muda.
+  · CHÃO SEM QUADRICULADO (shader TERRA, mundo/materiais_cidade.gd): saíram as juntas em grade de 3,5 m. Agora o chão
+    mistura 5 materiais (concreto velho, terra, grama/mato, pedra, areia, + lama) com transições suaves:
+      1) SPLATMAP (mundo/cidade.gd _splatmap): imagem do mapa inteiro, 1 pixel = 40 m: R = urbano (lotes e ruas),
+         G = grama (parques), B = entulho/terra (em volta das ruínas). Lida "borrada" pelos mipmaps e com a posição
+         torta por ruído (a borda não fica quadrada).
+      2) VERTEX PAINT: os vértices dos lotes levam os pesos pintados (concreto em cima, terra e mato no pé da rampa).
+      3) INCLINAÇÃO/ALTURA: rampa -> pedra/terra; chão baixo e beira d'água -> lama; beira do mar -> areia.
+      HEIGHT BLENDING: cada material tem um relevo; na transição ganha o mais alto (grama nas rachaduras, pedras
+      furando a terra), em vez de um degradê borrado.
+  · Custo: cidade monta ~0,3 s a mais; quadro na rua 93 -> 97 ms (teste por software).
+
 ATUALIZAÇÃO 0.39 · INSTANCING, BATCHING, BACK-FACE CULLING, MIPMAPPING E LOD (revisão técnica por técnica)
   · Resultado nas 32 vistas de rua: 105 ms -> 93 ms por quadro · triângulos 174 mil -> 153 mil · CPU 0,82 ms.
   · INSTANCING (já era usado; revisado): prédios, árvores, carros, entulho, fachadas e móveis dos interiores são

@@ -530,7 +530,7 @@ func criar(lm) -> Node3D:
 	var uso: String = info["uso"]
 	var raiz := Node3D.new()
 	raiz.name = "Interior_%d" % idx
-	raiz.position = Vector3(info["x"], cid.Y_RUA, info["z"])
+	raiz.position = Vector3(info["x"], cid.Y_CALCADA, info["z"])     # piso no nível do lote (sem degrau na porta)
 	if _malha == null:
 		_criar_malha()
 	var mi := MeshInstance3D.new()
