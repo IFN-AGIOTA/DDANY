@@ -15,6 +15,7 @@ var _chamas: Array[MeshInstance3D] = []
 static var _mat_fogo: StandardMaterial3D = null
 
 func _ready() -> void:
+	add_to_group("pausa_por_chunk")    # fora dos chunks ativos fica pausada (mundo/chunks.gd)
 	add_to_group("fogueiras")
 	var c := Malhas.Construtor.new()
 	for k in 7:                                              # pedras em volta

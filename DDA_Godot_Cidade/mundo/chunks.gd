@@ -12,7 +12,12 @@ extends Node
 # pular longe (renascer, cutscene, carregar o jogo) carrega tudo na hora (forcar).
 # Raio: Opções › Gráficos › "Raio de chunks" (AUTO = segue a "Distância de visão"). A câmera não enxerga além
 # do raio (menu/aplicar_opcoes.gd ajusta o "far" e a neblina).
-# Mexa AQUI para: tamanho do chunk, folga, quantos nós por quadro.
+# PAUSA FORA DOS CHUNKS: o que se mexe no mundo (infectados e corpos, fogueiras, companheiros, jogadores remotos:
+# grupo GRUPO_PAUSA) fica PAUSADO (process_mode desligado: não pensa, não anima, não toca som) quando está fora dos
+# chunks ativos. Ativo = a até RAIO chunks da câmera; no HOST do multijogador também em volta de cada amigo
+# (centros_extra), porque os infectados perto dele precisam continuar vivos. Quem tem pausar_por_chunk(bool)
+# decide sozinho o que para (o jogador remoto para só a animação: a posição continua chegando).
+# Mexa AQUI para: tamanho do chunk, folga, quantos nós por quadro, de quanto em quanto tempo confere a pausa.
 
 const TAM_CHUNK := 500.0
 const FOLGA := 1                       # descarrega só em RAIO + FOLGA
@@ -20,7 +25,13 @@ const OPS_POR_QUADRO := 90
 const MAX_CHUNKS_POR_NO := 9           # nó que encosta em mais chunks que isso fica sempre na cena
 const RAIO_AUTO := [2, 4, 7, 10]       # AUTO: por "Distância de visão" (900, 1800, 3200, 5000 m)
 
+const GRUPO_PAUSA := "pausa_por_chunk"
+const PAUSA_A_CADA := 0.5              # segundos
+
 var raio := 4
+var centros_extra := Callable()       # host: -> Array[Vector3] (posição dos amigos) · rede/sessao_rede.gd
+var pausados := 0                      # quantos estão pausados agora (estatística/testes)
+var _t_pausa := 0.0
 var cidade: Node3D
 var _chunks := {}                      # Vector2i -> Array[Node3D] (nós que encostam nesse chunk)
 var _cont := {}                        # Node3D -> em quantos chunks carregados ele está
@@ -87,6 +98,10 @@ func _process(_dt: float) -> void:
 	var cam := get_viewport().get_camera_3d()
 	if cam != null:
 		atualizar(cam.global_position)
+	_t_pausa -= _dt
+	if _t_pausa <= 0.0:
+		_t_pausa = PAUSA_A_CADA
+		_atualizar_pausa()
 
 # chamar todo quadro com a posição da câmera (o _process já faz isso com a câmera ativa)
 func atualizar(pos: Vector3) -> void:
@@ -166,3 +181,34 @@ func _chunks_do_no(n: VisualInstance3D) -> Array:
 
 static func raio_auto(dist: int) -> int:
 	return RAIO_AUTO[clampi(dist, 0, 3)]
+
+# ---------- pausa de quem está fora dos chunks ativos ----------
+func _chunk_de(p: Vector3) -> Vector2i:
+	return Vector2i(floori(p.x / TAM_CHUNK), floori(p.z / TAM_CHUNK))
+
+func ativo_em(p: Vector3, extras := []) -> bool:
+	var k := _chunk_de(p)
+	if maxi(absi(k.x - _centro.x), absi(k.y - _centro.y)) <= raio:
+		return true
+	for c in extras:
+		var kc := _chunk_de(c)
+		if maxi(absi(k.x - kc.x), absi(k.y - kc.y)) <= raio:
+			return true
+	return false
+
+func _atualizar_pausa() -> void:
+	var extras: Array = centros_extra.call() if centros_extra.is_valid() else []
+	var n_p := 0
+	for n in get_tree().get_nodes_in_group(GRUPO_PAUSA):
+		if not (n is Node3D) or not n.is_inside_tree():
+			continue
+		var pausar := not ativo_em((n as Node3D).global_position, extras)
+		if pausar:
+			n_p += 1
+		if n.has_method("pausar_por_chunk"):
+			n.pausar_por_chunk(pausar)
+		else:
+			var modo := Node.PROCESS_MODE_DISABLED if pausar else Node.PROCESS_MODE_INHERIT
+			if n.process_mode != modo:
+				n.process_mode = modo
+	pausados = n_p

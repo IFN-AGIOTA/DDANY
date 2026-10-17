@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.44 (APK código 40)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.45 (APK código 41)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,16 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.45 · PAUSA FORA DOS CHUNKS (mundo/chunks.gd)
+  · A cidade fora dos chunks já saía da cena (0.42). Agora o que SE MEXE no mundo e está fora dos chunks ativos fica
+    PAUSADO (não pensa, não anima, não toca som): infectados e corpos (inimigos/vago.gd), fogueiras
+    (mundo/fogueira.gd), companheiros (npc/companheiro.gd) e o boneco dos amigos (rede/jogador_remoto.gd: para só
+    a animação; a posição continua chegando). Grupo "pausa_por_chunk"; confere a cada 0,5 s.
+  · Ativo = até "Raio de chunks" da câmera. No HOST do multijogador também em volta de cada amigo
+    (rede/sessao_rede.gd centros_extra): os infectados perto dele continuam vivos mesmo longe do host.
+  · Testado: fogueira a 4 km pausa e volta quando o jogador chega; amigo a 4 km do host: os 9 infectados perto
+    dele seguem rodando e aparecendo para ele.
+
 ATUALIZAÇÃO 0.44 · MUNDO SINCRONIZADO NO MULTIJOGADOR (os mesmos infectados, itens e caixas para todos)
   · INFECTADOS (inimigos/vagos.gd + vago.gd): só o HOST cria e controla. Eles nascem em volta de TODOS os jogadores
     (onde há menos infectados), caçam qualquer um (os amigos viram alvo: rede/jogador_remoto.gd) e ouvem os passos

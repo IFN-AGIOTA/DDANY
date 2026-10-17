@@ -148,6 +148,7 @@ var t_sem_rede := 0.0                 # cliente: tempo sem notícia do host (som
 var _quem_bateu := 1                  # host: id de rede de quem deu o último golpe/tiro (1 = o próprio host)
 
 func _ready() -> void:
+	add_to_group("pausa_por_chunk")    # fora dos chunks ativos fica pausado (mundo/chunks.gd)
 	collision_layer = 4                # camada 3 = inimigos
 	collision_mask = 1                 # só o mundo (passa por outros Vagos e pelo jogador)
 	# "flutuando": a cápsula não encosta no chão (contato com o mapa de alturas custa caro com muitos Vagos);

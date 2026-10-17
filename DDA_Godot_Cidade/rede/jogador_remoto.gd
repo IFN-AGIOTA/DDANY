@@ -35,6 +35,7 @@ var _arma_atual := ""
 
 func _ready() -> void:
 	add_to_group("jogadores_remotos")          # os infectados do host caçam os amigos também (inimigos/vagos.gd)
+	add_to_group("pausa_por_chunk")            # longe: para só a animação (mundo/chunks.gd chama pausar_por_chunk)
 	_slot = Node3D.new()
 	_slot.name = "Modelo"
 	add_child(_slot)
@@ -142,7 +143,16 @@ func _process(dt: float) -> void:
 		global_position = global_position.lerp(_amostras[0][1], minf(1.0, dt * 10.0))
 		rotation.y = lerp_angle(rotation.y, float(_amostras[0][2]), minf(1.0, dt * 10.0))
 	armas.since += dt
-	animador.atualizar(dt, self)
+	if not _pausado:
+		animador.atualizar(dt, self)
+
+# fora dos chunks ativos: o boneco não anima (a posição continua seguindo a rede: os infectados do host usam)
+var _pausado := false
+func pausar_por_chunk(p: bool) -> void:
+	if p == _pausado:
+		return
+	_pausado = p
+	_slot.process_mode = Node.PROCESS_MODE_DISABLED if p else Node.PROCESS_MODE_INHERIT
 
 # o que o animador e o modelo leem de "armas" no jogador de verdade
 class _Armas extends RefCounted:

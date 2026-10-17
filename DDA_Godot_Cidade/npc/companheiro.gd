@@ -81,6 +81,7 @@ func configurar(q: String, j: CharacterBody3D, m, v) -> void:
 	vida = vida_max
 
 func _ready() -> void:
+	add_to_group("pausa_por_chunk")    # fora dos chunks ativos fica pausado (mundo/chunks.gd)
 	add_to_group("companheiros")
 	collision_layer = 0              # não atrapalha o jogador nem os tiros dele
 	collision_mask = 1

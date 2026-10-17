@@ -255,6 +255,14 @@ func _ligar_mundo() -> void:
 		else:
 			v.espelho = true                   # cliente: os infectados são do host
 			v.limpar()
+	# host: os chunks em volta de cada amigo também ficam "ativos" (não pausa os infectados perto dele)
+	if Rede.eh_host() and main.get("chunks") != null:
+		main.chunks.centros_extra = func() -> Array:
+			var l := []
+			for rm in remotos.values():
+				if is_instance_valid(rm) and rm.visible:
+					l.append(rm.global_position)
+			return l
 	ItemMundo.ao_soltar = _item_solto_aqui
 	ItemMundo.ao_pegar = _item_pego_aqui
 	var lm = main.loot_mundo
