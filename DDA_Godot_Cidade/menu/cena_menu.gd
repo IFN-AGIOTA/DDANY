@@ -261,6 +261,7 @@ func _terraco() -> void:
 		for yy in range(py, mini(128, py + h)):
 			for xx in range(px, mini(128, px + w)):
 				img.set_pixel(xx, yy, img.get_pixel(xx, yy).lerp(Color8(v, v - 12, v - 22), a))
+	img.generate_mipmaps()
 	var tex := ImageTexture.create_from_image(img)
 	var m := StandardMaterial3D.new()
 	m.albedo_texture = tex

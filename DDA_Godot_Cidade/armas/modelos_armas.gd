@@ -48,6 +48,7 @@ static func _C(g: Node3D, r0: float, r1: float, comp: float, m: Material, x: flo
 static var _cenas := {}
 static var _acess := {}
 # quais acessórios cada arma de fogo aceita (o mesmo que "acess" em inventario/itens.gd)
+const Malhas := preload("res://mundo/malhas.gd")
 const SILENCIADOR := ["pistola", "m4", "ak", "rifle_caca"]
 const MIRA := {"m4": "mira_acog", "ak": "mira_acog", "rifle_caca": "luneta"}
 
@@ -59,6 +60,7 @@ static func construir(tipo: String) -> Node3D:
 	if _cenas[tipo] != null:
 		var n: Node3D = _cenas[tipo].instantiate()
 		n.name = "Arma_" + tipo
+		Malhas.culling_fechadas(n)                 # malha fechada: só a frente dos triângulos (back-face culling)
 		for mi in n.find_children("*", "MeshInstance3D", true, false):
 			(mi as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		var mira := n.get_node_or_null("Mira") as Node3D

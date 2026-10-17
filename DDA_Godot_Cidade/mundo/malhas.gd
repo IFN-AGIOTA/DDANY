@@ -104,3 +104,63 @@ static func mat_cores(rough := 0.85) -> StandardMaterial3D:
 	m.vertex_color_use_as_albedo = true
 	m.roughness = rough
 	return m
+
+# BACK-FACE CULLING nos modelos baixados: quase todos vêm marcados "dupla face" (a placa pinta os dois lados de
+# cada triângulo). Numa malha FECHADA o lado de dentro nunca aparece, então liga o culling (metade do trabalho).
+# Malha com borda solta (plano, folha, fita) continua dupla face. Mexe no material compartilhado: basta 1 vez por cena.
+static var _cull_visto := {}
+
+static func culling_fechadas(no: Node) -> void:
+	var abertos := {}
+	var fechados := {}
+	for mi in no.find_children("*", "MeshInstance3D", true, false):
+		var m: Mesh = (mi as MeshInstance3D).mesh
+		if m == null:
+			continue
+		for s in m.get_surface_count():
+			var mat := (mi as MeshInstance3D).get_active_material(s) as BaseMaterial3D
+			if mat == null or mat.cull_mode != BaseMaterial3D.CULL_DISABLED or _cull_visto.has(mat.get_instance_id()):
+				continue
+			if _superficie_fechada(m, s):
+				fechados[mat] = true
+			else:
+				abertos[mat] = true
+	for mat in fechados:
+		_cull_visto[mat.get_instance_id()] = true
+		if not abertos.has(mat) and mat.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED:
+			mat.cull_mode = BaseMaterial3D.CULL_BACK
+	for mat in abertos:
+		_cull_visto[mat.get_instance_id()] = true
+
+# fechada = toda aresta (vértices soldados pela posição) é de exatamente 2 triângulos
+static func _superficie_fechada(m: Mesh, s: int) -> bool:
+	if m.surface_get_primitive_type(s) != Mesh.PRIMITIVE_TRIANGLES:
+		return false
+	var arr := m.surface_get_arrays(s)
+	var v: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var ix: PackedInt32Array = arr[Mesh.ARRAY_INDEX] if arr[Mesh.ARRAY_INDEX] != null else PackedInt32Array()
+	if ix.is_empty():
+		ix.resize(v.size())
+		for i in v.size():
+			ix[i] = i
+	var id_pos := {}
+	var solda := PackedInt32Array()
+	solda.resize(v.size())
+	for i in v.size():
+		var k := Vector3i((v[i] * 10000.0).round())
+		if not id_pos.has(k):
+			id_pos[k] = id_pos.size()
+		solda[i] = id_pos[k]
+	var arestas := {}
+	for t in range(0, ix.size() - 2, 3):
+		for e in [[ix[t], ix[t + 1]], [ix[t + 1], ix[t + 2]], [ix[t + 2], ix[t]]]:
+			var a := solda[e[0]]
+			var b := solda[e[1]]
+			if a == b:
+				continue
+			var k := Vector2i(mini(a, b), maxi(a, b))
+			arestas[k] = arestas.get(k, 0) + 1
+	for k in arestas:
+		if arestas[k] != 2:
+			return false
+	return not arestas.is_empty()

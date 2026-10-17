@@ -67,6 +67,7 @@ func _camo_tex() -> ImageTexture:
 		s = (s * 16807) % 2147483647
 		var h := 4 * (1 + int(float(s) / 2147483647.0 * 2.0))
 		img.fill_rect(Rect2i(x, y, w, h), c)
+	img.generate_mipmaps()                 # mipmap: de longe a camuflagem não "chia"
 	return ImageTexture.create_from_image(img)
 
 # camuflagem com repetição proporcional ao tamanho da peça (como no HTML)
@@ -77,7 +78,7 @@ func _camo(w: float, h: float) -> StandardMaterial3D:
 	if not _cache.has(chave):
 		var m := StandardMaterial3D.new()
 		m.albedo_texture = _tex_camo
-		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
+		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS
 		m.uv1_scale = Vector3(kx * 3.0, ky * 2.0, 1.0)   # BoxMesh: cada face ocupa 1/3 x 1/2 do UV
 		m.roughness = 0.95
 		_cache[chave] = m

@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.38 (APK código 34)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.39 (APK código 35)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,34 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.39 · INSTANCING, BATCHING, BACK-FACE CULLING, MIPMAPPING E LOD (revisão técnica por técnica)
+  · Resultado nas 32 vistas de rua: 105 ms -> 93 ms por quadro · triângulos 174 mil -> 153 mil · CPU 0,82 ms.
+  · INSTANCING (já era usado; revisado): prédios, árvores, carros, entulho, fachadas e móveis dos interiores são
+    MultiMesh (uma chamada de desenho para centenas de cópias). As versões de longe (LOD) reaproveitam as MESMAS
+    posições (MultiMesh duplicado com a malha simples).
+  · BATCHING (já era usado; revisado): mundo/malhas.gd junta todas as caixas/cilindros de um modelo numa malha só, e o
+    chão junta todos os triângulos de cada camada por pedaço de 800 m. Juntar camadas diferentes (asfalto + calçada)
+    não compensa: são shaders diferentes e a ordem de desenho delas evita "briga" de profundidade.
+  · BACK-FACE CULLING: 33 dos 35 materiais dos modelos baixados (armas/itens) vinham "dupla face". Agora
+    mundo/malhas.gd (culling_fechadas) confere as arestas de cada malha: se é FECHADA, liga o culling (a placa pinta
+    só a frente). Malha com borda solta continua dupla face (senão ficaria furada) -> 6 ligadas. Os "dupla face" do
+    jogo foram revistos e ficam: mato (folhas planas), fogo, chuva, fumaça, anel da missão e as ROUPAS do personagem
+    (o corpo embaixo da roupa é escondido; com culling daria para ver através da gola e das mangas).
+  · MIPMAPPING:
+      - texturas do personagem (jogador/sobrevivente/texturas, 8 de até 1024x1024) estavam SEM mipmap e SEM compressão
+        de vídeo: agora VRAM comprimida (ETC2/ASTC no celular) + mipmaps (~24 MB -> ~6 MB de memória de vídeo, sem
+        chiado de longe). Mudança nos arquivos .import (a Godot reimporta sozinha).
+      - texturas feitas por código ganharam mipmaps: camuflagem do soldado (jogador/soldado.gd, filtro "nearest com
+        mipmaps" para manter o visual pixelado), laje do menu (menu/cena_menu.gd) e texturas da abertura.
+      - janelas dos prédios (desenhadas pelo shader, sem textura: mundo/materiais_cidade.gd): quando a grade de janelas
+        fica menor que ~2 pixels, o shader usa a cobertura MÉDIA (o que um mipmap faria) -> sem chiado a média distância.
+  · LOD:
+      - carros, ônibus, postes, semáforos, árvores de rua e entulho (mundo/abandono.gd modelo_longe): até 300 m o modelo
+        completo, depois uma versão de 2 caixas (sem rodas/luzes) e sem sombra.
+      - corpo do personagem (jogador/sobrevivente/corpo.scn): ganhou 3 níveis automáticos (12.566 -> 7.912 -> 3.956 ->
+        1.978 triângulos); a Godot troca pela distância (outros jogadores na rede, menu). Ferramenta:
+        ferramentas/gerar_lod_corpo.gd (rodar de novo se o preparar_personagem.gd for usado).
+
 ATUALIZAÇÃO 0.38 · CULLING (não desenhar o que não aparece) · medido em 32 vistas de rua do centro de Nova York
   · Resultado (placa de vídeo, teste por software): 118 ms -> 105 ms por quadro · triângulos 363 mil -> 174 mil (-52%).
     Visto de frente para um prédio: 381 -> 103 chamadas de desenho e 257 mil -> 97 mil triângulos.
@@ -146,6 +174,7 @@ ATUALIZAÇÃO 0.27 · PERSONAGEM NOVO E ANIMAÇÕES REFINADAS (resumo do que mud
 - PERSONAGEM NOVO do jogador (modo livre, modo história e menu): um homem "normal" de verdade, com pele,
   olhos, sobrancelhas, cabelo e barba (Quaternius "Universal Base Characters", CC0), no lugar do manequim.
   Montado por ferramentas/preparar_personagem.gd -> jogador/sobrevivente/corpo.scn (+ texturas/).
+  Depois rodar ferramentas/gerar_lod_corpo.gd (gera os níveis de detalhe do corpo).
 - ROUPAS no corpo novo: cada peça é uma "casca" que acompanha o corpo (regata, camiseta, manga longa, jaqueta,
   short, calça, botas) com a cor do item; a pele embaixo some. Capacete, gorro e boné escondem o cabelo.
   Colete, mochilas, capacete etc. continuam encaixando nos ossos (equipamentos/modelos_equip.gd).

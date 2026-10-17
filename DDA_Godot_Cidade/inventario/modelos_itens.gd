@@ -7,6 +7,7 @@ extends RefCounted
 # Mexa AQUI para: qual modelo cada item usa, o tamanho e se fica deitado no chão.
 
 const PASTA := "res://inventario/modelos/"
+const Malhas := preload("res://mundo/malhas.gd")
 # id do item: [modelo, escala, deitado (gira 90° para ficar de lado no chão)]
 const ITENS := {
 	"kit_medico": ["kit_medico", 1.0, false],
@@ -56,6 +57,7 @@ static func instancia(id: String, deitar := true) -> Node3D:
 		if ps == null:
 			return null
 		var n: Node3D = ps.instantiate()
+		Malhas.culling_fechadas(n)                 # malha fechada: só a frente dos triângulos (back-face culling)
 		var raiz := Node3D.new()
 		raiz.name = "Modelo_" + id
 		raiz.add_child(n)

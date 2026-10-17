@@ -649,6 +649,7 @@ func _textura_janelas(acesas := 0.28, so_luz := false) -> ImageTexture:
 			if r.randf() < acesas:
 				c = Color(0.9, 0.85, 0.55)
 			im.fill_rect(Rect2i(jx * 16 + 3, jy * 16 + 4, 10, 9), c)
+	im.generate_mipmaps()
 	return ImageTexture.create_from_image(im)
 
 func _textura_fumaca() -> ImageTexture:
@@ -657,6 +658,7 @@ func _textura_fumaca() -> ImageTexture:
 		for x in 64:
 			var d := Vector2(x - 31.5, y - 31.5).length() / 32.0
 			im.set_pixel(x, y, Color(1, 1, 1, clampf(1.0 - d, 0.0, 1.0) ** 2))
+	im.generate_mipmaps()
 	return ImageTexture.create_from_image(im)
 
 # mancha de tinta preta (respingos) atrás do título, feita uma vez
@@ -695,6 +697,7 @@ func _textura_mancha() -> ImageTexture:
 					var a := clampf(rr - d, 0.0, 1.0)
 					var antes := im.get_pixel(x, y).a
 					im.set_pixel(x, y, Color(0.02, 0.02, 0.02, maxf(antes, a * 0.96)))
+	im.generate_mipmaps()
 	return ImageTexture.create_from_image(im)
 
 # ---------- interface: correção de cor, clarão, barras, logo, título e PULAR ----------

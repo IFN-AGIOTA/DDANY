@@ -142,6 +142,39 @@ static func modelo(nome: String) -> ArrayMesh:
 
 	return c.malha()
 
+# LOD: versão de LONGE (sem rodas, luzes, grades nem detalhes; ~5 a 10x menos triângulos). Só os modelos que
+# aparecem longe; os pequenos (lixo, cacos, hidrante...) já somem antes de PERTO_LOD.
+const PERTO_LOD := 300.0                 # até aqui o modelo completo (medido até o centro do pedaço de 250 m)
+const TEM_LOD := ["sedan", "taxi", "van", "onibus", "entulho", "poste", "semaforo", "arvore_rua"]
+
+static func modelo_longe(nome: String) -> ArrayMesh:
+	var c := Malhas.Construtor.new()
+	var vidro := Color(0.1, 0.11, 0.12)
+	match nome:
+		"sedan", "taxi":
+			c.caixa(Vector3(0, 0.55, 0), Vector3(4.4, 0.86, 1.85), Color.WHITE)
+			c.caixa(Vector3(-0.25, 1.27, 0), Vector3(2.3, 0.6, 1.68), vidro)
+		"van":
+			c.caixa(Vector3(0, 1.0, 0), Vector3(4.9, 2.05, 1.98), Color.WHITE)
+		"onibus":
+			c.caixa(Vector3(0, 1.6, 0), Vector3(11.0, 3.0, 2.5), Color.WHITE)
+			c.caixa(Vector3(0, 2.15, 0), Vector3(11.04, 0.9, 2.54), vidro)
+		"entulho":
+			c.caixa(Vector3(0, 0.35, 0), Vector3(3.0, 0.7, 2.6), Color.WHITE, Basis(Vector3.UP, 0.4))
+			c.caixa(Vector3(0.2, 0.75, 0.1), Vector3(1.6, 0.5, 1.4), Color(0.9, 0.88, 0.85), Basis(Vector3.UP, -0.3))
+		"poste":
+			var ferro := Color(0.2, 0.21, 0.22)
+			c.caixa(Vector3(0, 4.0, 0), Vector3(0.22, 8.0, 0.22), ferro)
+			c.caixa(Vector3(1.0, 7.85, 0), Vector3(2.1, 0.2, 0.25), ferro)
+		"semaforo":
+			var ferro := Color(0.18, 0.19, 0.2)
+			c.caixa(Vector3(0, 3.0, 0), Vector3(0.22, 6.0, 0.22), ferro)
+			c.caixa(Vector3(2.6, 5.6, 0), Vector3(5.2, 0.5, 0.25), Color(0.14, 0.14, 0.12))
+		"arvore_rua":
+			c.caixa(Vector3(0, 1.6, 0), Vector3(0.3, 3.2, 0.3), Color(0.32, 0.24, 0.17))
+			c.cilindro(Vector3(0, 4.4, 0), 1.6, 3.0, 5, Color.WHITE, Basis.IDENTITY, 0.9)
+	return c.malha()
+
 # ---------- colocação ----------
 func _por(nome: String, t: Transform3D, cor: Color) -> void:
 	if not _inst.has(nome):
@@ -402,6 +435,10 @@ func _montar() -> void:
 		var malha := modelo(nome)
 		var concreto: bool = nome in ["barreira", "entulho", "cacos", "lixo", "arvore_rua", "banco"]
 		malha.surface_set_material(0, mat_concreto if concreto else mat_metal)
+		var longe: ArrayMesh = null
+		if nome in TEM_LOD:
+			longe = modelo_longe(nome)
+			longe.surface_set_material(0, mat_concreto if concreto else mat_metal)
 		for k in _inst[nome]:
 			var lista: Array = _inst[nome][k]
 			var mm := MultiMesh.new()
@@ -419,6 +456,18 @@ func _montar() -> void:
 			if nome in ["lixo", "cacos", "barril", "hidrante", "banco"]:
 				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			nos.append(mi)
+			if longe != null:
+				# mesmas posições (instancing), malha simples: completo até PERTO_LOD, simples dali até o alcance
+				mi.visibility_range_end = PERTO_LOD
+				var mm_l := mm.duplicate() as MultiMesh
+				mm_l.mesh = longe
+				var ml := MultiMeshInstance3D.new()
+				ml.name = "%sLonge_%d_%d" % [nome, k.x, k.y]
+				ml.multimesh = mm_l
+				ml.visibility_range_begin = PERTO_LOD
+				ml.visibility_range_end = alcance.get(nome, 600.0)
+				ml.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF      # sombra de longe nem aparece
+				nos.append(ml)
 
 static func _material(ferrugem: float) -> ShaderMaterial:
 	var m := ShaderMaterial.new()

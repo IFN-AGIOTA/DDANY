@@ -340,6 +340,7 @@ void vertex() {
 void fragment() {
 	vec3 base = COLOR.rgb;
 	float dist = length(VERTEX);
+	vec3 px = fwidth(lp);                      // quantos metros cabem em 1 pixel (fora do "if": derivada segura)
 	if (nl.y > 0.5) {
 		// telhado: laje escura com manchas + borda (platibanda)
 		vec2 b = 0.5 * tam.xz - abs(lp.xz);
@@ -357,6 +358,10 @@ void fragment() {
 		float corpo = step(4.6, v) * step(v, tam.y - 1.3);
 		float janela = corpo * step(0.2, fu) * step(fu, 0.8) * step(0.22, fv) * step(fv, 0.86);
 		if (tipo > 2.5) janela = corpo * step(0.06, fu) * step(0.08, fv);           // vidro: quase tudo é janela
+		// "MIPMAP" das janelas: quando a grade fica menor que ~2 pixels, troca pela cobertura MÉDIA da janela
+		// (é o que o mipmap faz com uma textura: sem chiado/serrilhado na média distância)
+		float pxg = max((abs(nl.x) > 0.5 ? px.z : px.x) / coluna, px.y / andar);
+		janela = mix(janela, corpo * (tipo > 2.5 ? 0.86 : 0.38), smoothstep(0.3, 0.6, pxg));
 		float longe = smoothstep(450.0, 1400.0, dist);
 		janela = mix(janela, 0.0, longe) * detalhe;
 		// vidro: escuro, refletindo o céu mais em cima; algumas janelas acesas (quente)
