@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.31 (APK código 27)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.32 (APK código 28)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
 abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
@@ -35,6 +35,12 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.32 · CONTA LIGADA (Firebase "DDA ONLINE")
+- O Firebase do projeto "DDA ONLINE" está configurado: login com Google, convidado, amigos e partidas dos
+  amigos funcionam de verdade. A tela ENTRAR aparece ao abrir o jogo.
+- A CHAVE SECRETA do Google fica em rede/firebase_segredo.cfg, FORA do git (o GitHub bloqueia segredos).
+  Sem esse arquivo o APK sai sem o botão "Entrar com Google" (convidado e amigos continuam). Guarde uma cópia.
+
 ATUALIZAÇÃO 0.31 · LOGIN AO ABRIR O JOGO
 - Ao abrir o jogo aparece a tela ENTRAR: "Entrar com Google", "Jogar como convidado" ou "Agora não"
   (menu/tela_login.gd). Quem já entrou antes neste aparelho entra sozinho e o menu só diz "Olá, Fulano!".
@@ -778,6 +784,19 @@ amigos e os convites das partidas abertas. A partida em si continua indo direto 
  7. Preencha rede/firebase_config.cfg (api_key, database_url, client_id, client_secret) e gere o APK de novo
     — ou mande esses 4 valores na conversa que eu ponho e gero o APK. (A chave de API e o ID do cliente da TV
     não são senhas: quem protege os dados são as REGRAS do passo 3.)
+ATUALIZAR O JOGO DEPOIS (o que precisa fazer):
+  · Nada no Firebase/Google: a configuração é para sempre. Contas, amigos e códigos continuam lá.
+  · Instale o APK novo POR CIMA (sem desinstalar): quem já entrou continua logado. Funciona porque todo APK é
+    assinado com a mesma chave (dda.keystore, guardada no repositório). Se essa chave se perder, o Android não
+    aceita instalar por cima: aí tem que desinstalar e entrar de novo na conta (os amigos não se perdem).
+  · Multijogador: TODOS precisam estar na MESMA VERSÃO (a partida de quem está em outra versão aparece com
+    "atualize o jogo"). Mande o APK novo para os amigos.
+  · Para gerar o APK: precisa de rede/firebase_segredo.cfg (chave secreta). Se ele sumir, crie de novo com:
+        [google]
+        client_secret="GOCSPX-..."
+    (a chave fica guardada com o dono do projeto; no Google Cloud > Google Auth Platform > Clientes dá para
+    criar outra chave no mesmo cliente se perder).
+  · Se uma atualização mudar o banco, eu aviso para colar as REGRAS novas (rede/firebase_regras.json).
 Como funciona por dentro (rede/conta.gd, tudo por HTTP, sem plugin):
   · Google: "device flow" do OAuth (oauth2.googleapis.com/device/code e /token) -> id_token do Google ->
     Firebase Auth (identitytoolkit accounts:signInWithIdp). Convidado: accounts:signUp (anônimo). A sessão é
