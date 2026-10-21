@@ -39,6 +39,17 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.52 · MULTIJOGADOR PELA INTERNET NO 4G (RETRANSMISSOR TURN)
+  · No 4G (e com CGNAT dos dois lados) o WebRTC não consegue "furar" os roteadores: agora, quando a ligação direta
+    não dá, os dados passam por um RETRANSMISSOR (TURN) da Metered (plano grátis, conta do dono do jogo).
+  · rede/turn.cfg (FORA do git, vai dentro do APK, do servidor do PC e dos pacotes): [turn] urls (UDP 80, TCP 80,
+    UDP 443 e TLS 443, que passa em quase qualquer rede), usuario, senha. Modelo: rede/turn_exemplo.cfg.
+    Trocar a senha: no painel da Metered (TURN Server > Credentials) crie outra e ponha em rede/turn.cfg.
+  · rede/rtc.gd lê as várias URLs; sem retransmissor, a falha diz isso. ferramentas/gerar_pacote.gd: arquivos que
+    não são script/cena vão no pacote sem ".remap" (ex.: rede/turn.cfg).
+  · Testado: as credenciais pediram e ganharam um endereço no retransmissor (TURN sobre TLS na porta 443).
+  · Franquia grátis da Metered: o retransmissor só é usado quando a ligação direta falha. Veja o consumo no painel.
+
 ATUALIZAÇÃO 0.51 · SERVIDOR DO PC PELA INTERNET SEM ABRIR PORTA ("técnica do WhatsApp": WebRTC)
   · O servidor do PC (rede/servidor.gd) entra no Firebase como CONVIDADO (a conta fica salva no PC: sempre o mesmo
     id), publica servidores/{uid} (nome, jogadores, versão) a cada 45 s e aceita conexões WebRTC de QUALQUER conta
