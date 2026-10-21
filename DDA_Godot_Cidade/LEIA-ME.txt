@@ -39,6 +39,16 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.55 · SERVIDOR DO PC POR TÚNEL (playit.gg): FUNCIONA NO 4G SEM WebRTC
+  · Teste 0.54 no celular (Wi-Fi e 4G): o WebRTC do Android NÃO cria a oferta (estado 0, nenhum caminho): a
+    biblioteca nativa não inicia no aparelho. Enquanto isso é investigado, o servidor ganhou o caminho por TÚNEL.
+  · servidor.bat: set ENDERECO= (endereço público do túnel UDP do playit.gg -> porta 24560 do PC). O servidor
+    publica esse endereço na lista SERVIDORES (código "Túnel", rede/rede.gd endereco_tunel) e o celular entra
+    DIRETO por ele com ENet (menu/tela_multijogador.gd), sem WebRTC e sem app no celular. Passo a passo no
+    servidor_windows/LEIA-ME_SERVIDOR.txt.
+  · Diagnóstico do WebRTC: a falha mostra também o retorno de add_peer e create_offer e o sistema.
+  · Testado: servidor com túnel publicado, o celular de teste achou na lista e entrou pelo endereço (ENet).
+
 ATUALIZAÇÃO 0.54 · WebRTC SÓ COM O QUE A BIBLIOTECA DO CELULAR ACEITA + DIAGNÓSTICO COMPLETO
   · Teste no 4G (0.53): o celular não achou NENHUM caminho (nem rede local) e o servidor não respondeu.
   · A biblioteca de WebRTC (libjuice) só fala UDP e usa um STUN só: agora vão 1 STUN (Google) e o retransmissor só

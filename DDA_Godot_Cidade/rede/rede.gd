@@ -43,6 +43,7 @@ const PROTOCOLO := 3                           # aumente quando mudar o formato 
 const ANUNCIO_A_CADA := 1.0                    # segundos
 
 var ligado := false                            # tem partida aberta/conectada (e aceita)
+var endereco_tunel := ""                       # servidor do PC: endereço público de um túnel UDP (playit.gg), 0.55
 var servidor_dedicado := false                 # este aparelho é o SERVIDOR do PC (rede/servidor.gd): não é jogador
 var nome := "Sobrevivente"
 var jogadores := {}                            # id -> {"nome": String}  (inclui o próprio)
@@ -289,6 +290,8 @@ func resolver_endereco(txt: String) -> Array:
 # códigos desta partida, do que funciona de mais longe para o mais perto: [[tipo, código, ip], ...]
 func codigos() -> Array:
 	var r := []
+	if endereco_tunel != "":                     # túnel (playit.gg): funciona de qualquer rede, inclusive 4G
+		r.append(["Túnel", endereco_tunel, endereco_tunel])
 	if ip_internet != "":
 		r.append(["Internet", codificar(ip_internet), ip_internet])
 	for ip in meus_ips():

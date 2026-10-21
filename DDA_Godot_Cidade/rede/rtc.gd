@@ -185,8 +185,8 @@ func conectar(host_uid: String) -> WebRTCMultiplayerPeer:
 		var t := tipo_cand(n)
 		_tipos[t] = int(_tipos.get(t, 0)) + 1
 		_gravar(caminho, _c))
-	_peer_cli.add_peer(_conn, 1)
-	_conn.create_offer()
+	_diag["add_peer"] = _peer_cli.add_peer(_conn, 1)
+	_diag["create_offer"] = _conn.create_offer()
 	return _peer_cli
 
 func _vigiar_cliente() -> void:
@@ -249,6 +249,7 @@ func _process(dt: float) -> void:
 			var d := "[%s · resposta do servidor: %s · retransmissor: %s · config: %s · oferta: %s · banco: %d ok/%d erro · estado: %d]" % [
 				resumo_tipos(_c.get("cand", [])), "sim" if resp else "NÃO", "sim" if tem_turn else "não", _diag.get("config", "?"),
 				_diag.get("oferta", "?"), int(_diag.get("banco_ok", 0)), int(_diag.get("banco_erro", 0)), int(_diag.get("estado", -1))]
+			d += " [add_peer %s · create_offer %s · %s]" % [_diag.get("add_peer", "?"), _diag.get("create_offer", "?"), OS.get_name()]
 			var motivo := "Não deu para conectar pela internet."
 			if not resp:
 				motivo = "O servidor não respondeu (está ligado? na mesma versão?)."

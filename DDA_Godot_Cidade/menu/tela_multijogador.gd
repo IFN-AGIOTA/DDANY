@@ -509,6 +509,10 @@ func entrar_na_sala(c: Dictionary) -> void:
 			if str(k[0]) == "Mesmo Wi-Fi" and ip.get_slice(".", 0) + "." + ip.get_slice(".", 1) + "." + ip.get_slice(".", 2) == m.get_slice(".", 0) + "." + m.get_slice(".", 1) + "." + m.get_slice(".", 2):
 				_entrar(str(k[1]))
 				return
+	for k in cods:                            # servidor com TÚNEL (playit.gg): entra direto por ele (0.55)
+		if str(k[0]) == "Túnel":
+			_entrar(str(k[1]))
+			return
 	if bool(c.get("rtc", false)) and Conta.logado:   # internet com WebRTC
 		_reserva = _codigo_de_longe(cods)
 		_esperando = true

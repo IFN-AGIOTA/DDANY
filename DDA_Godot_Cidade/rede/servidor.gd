@@ -60,6 +60,9 @@ func iniciar(m: Node) -> void:
 	Rede.falhou.connect(func(motivo): _log("ERRO: " + motivo))
 	Rede.rtc.diagnostico.connect(_log)          # 0.53: cada tentativa de conexão pela internet aparece aqui
 	_log("retransmissor (TURN): %s" % ("configurado" if Rede.rtc.tem_turn else "NÃO configurado (rede/turn.cfg)"))
+	Rede.endereco_tunel = _arg("endereco", "").strip_edges()
+	if Rede.endereco_tunel != "":
+		_log("TÚNEL: os celulares vão entrar por  %s  (playit.gg, funciona no 4G)" % Rede.endereco_tunel)
 	await _entrar_na_conta(nome)
 	Rede.criar_partida(nome, randi())
 	if not Rede.ligado:
