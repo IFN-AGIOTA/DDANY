@@ -96,7 +96,7 @@ func criar_partida(meu_nome: String, semente_loot: int) -> void:
 	if e != OK:
 		_falhar("Não deu para abrir a partida (porta %d ocupada?)." % PORTA)
 		return
-	_com_rtc = RtcCls.disponivel() and not servidor_dedicado      # servidor do PC: só IP (sem conta Google)
+	_com_rtc = RtcCls.disponivel() and (not servidor_dedicado or Conta.logado)   # servidor do PC: com a conta de convidado (0.51)
 	if _com_rtc:
 		multiplayer.multiplayer_peer = PeerMistoCls.new(p, rtc.comecar_host())   # Wi-Fi/código + internet (WebRTC)
 	else:

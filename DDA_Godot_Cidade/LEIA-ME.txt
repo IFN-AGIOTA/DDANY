@@ -39,6 +39,22 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.51 · SERVIDOR DO PC PELA INTERNET SEM ABRIR PORTA ("técnica do WhatsApp": WebRTC)
+  · O servidor do PC (rede/servidor.gd) entra no Firebase como CONVIDADO (a conta fica salva no PC: sempre o mesmo
+    id), publica servidores/{uid} (nome, jogadores, versão) a cada 45 s e aceita conexões WebRTC de QUALQUER conta
+    (rede/rtc.gd), não só de amigos. Sem conta/WebRTC continua por IP como na 0.50.
+  · Celular: Multijogador > Entrar > SERVIDORES lista os servidores ligados (rede/conta.gd atualizar_servidores,
+    menu/tela_multijogador.gd). Toque em Entrar: mesmo Wi-Fi vai direto pelo IP; de longe, WebRTC (os dois
+    aparelhos se acham pelo Firebase e "furam" o roteador juntos, como numa chamada de vídeo). Sem conta, o botão
+    "Ver servidores" entra como convidado.
+  · REGRAS DO BANCO MUDARAM (uma vez só): cole o rede/firebase_regras.json novo no Firebase > Realtime Database >
+    Regras > Publicar. Novo: "servidores" e oferta WebRTC para servidor publicado (sem ser amigo).
+  · Redes muito fechadas (CGNAT dos dois lados, alguns 4G) podem precisar de um retransmissor TURN:
+    rede/firebase_config.cfg [webrtc] turn / turn_usuario / turn_senha (já suportado).
+  · Servidor: FPS travado em 60 mesmo depois de as Opções serem reaplicadas pelo login.
+  · Testado com um Firebase falso local (mesmas regras): servidor entra como convidado, aparece na lista, o celular
+    conecta por WebRTC (WebRTCMultiplayerPeer), recebe infectados e hora; multijogador normal e testes ok.
+
 ATUALIZAÇÃO 0.50 · SERVIDOR DE TESTE NO PC (Windows)
   · Pasta servidor_windows/ (na raiz do repositório, fora da pasta do jogo; também servidor_windows.zip):
     servidor.bat + o jogo exportado para Windows. Dois cliques no servidor.bat liga o servidor (janela de texto).

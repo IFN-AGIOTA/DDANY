@@ -4,6 +4,8 @@ extends Node
 #   · HOST: com a conta aberta, vigia sinal/{meu uid} no banco. Quando um AMIGO deixa uma "oferta" lá, responde
 #     e o amigo entra pela parte WebRTC do rede/peer_misto.gd.
 #   · AMIGO: conectar(uid do host) cria a oferta, grava em sinal/{host}/{eu}/c e espera a resposta em .../h.
+# SERVIDOR DO PC (0.51): rede/servidor.gd entra como convidado e publica servidores/{uid}; aceita oferta de qualquer
+# jogador (não só amigos). As regras do banco deixam qualquer conta mandar oferta para um servidor publicado.
 # Servidores STUN públicos do Google descobrem o endereço de cada um. Redes muito fechadas (alguns 4G e redes de
 # empresa) só passam com um servidor TURN (retransmissão): dá para pôr um em rede/firebase_config.cfg [webrtc].
 # Banco: sinal/{host}/{amigo} = {c: {id, sessao, sdp, cand: [[midia, indice, nome], ...], t}, h: {sessao, sdp, cand}}
@@ -74,7 +76,7 @@ func _vigiar_host() -> void:
 	for cli in d:
 		var e = d[cli]
 		var c = e.get("c") if e is Dictionary else null
-		if not (c is Dictionary) or not Conta.amigos.has(cli):
+		if not (c is Dictionary) or not (Conta.amigos.has(cli) or Rede.servidor_dedicado):   # servidor do PC: aceita qualquer um
 			continue
 		var sessao := str(c.get("sessao", ""))
 		if agora - float(c.get("t", 0)) > VALIDADE * 1000.0:

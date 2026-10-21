@@ -40,7 +40,7 @@ func _ready() -> void:
 	_sinais = [[Rede.pronto, _pronto], [Rede.falhou, _falhou], [Rede.caiu, _falhou], [Rede.partida_achada, _achou],
 		[Rede.internet, _redesenhar], [Rede.jogador_entrou, _redesenhar], [Rede.jogador_saiu, _redesenhar], [Rede.comecou, _comecou],
 		[Conta.mudou, _redesenhar], [Conta.convites_mudaram, _redesenhar], [Conta.amigos_atualizados, _redesenhar],
-		[Conta.aviso, _aviso], [Conta.resposta, _resposta]]
+		[Conta.aviso, _aviso], [Conta.resposta, _resposta], [Conta.servidores_mudaram, _redesenhar]]
 	for s in _sinais:
 		(s[0] as Signal).connect(s[1])
 	Rede.procurar(true)
@@ -50,6 +50,7 @@ func _ready() -> void:
 	_montar()
 	Conta.atualizar_amigos()
 	Conta.atualizar_convites()
+	Conta.atualizar_servidores()
 
 func _exit_tree() -> void:
 	Rede.procurar(false)
@@ -177,7 +178,7 @@ func _tela_inicio(area: Control, v: float, nome_antes: String) -> void:
 	cc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cc.apertado.connect(_criar)
 	cartoes.add_child(cc)
-	var n_salas := Conta.convites.size() + _achadas.size()
+	var n_salas := Conta.convites.size() + _achadas.size() + Conta.servidores.size()
 	var ce := _Cartao.new(">", "ENTRAR NUMA SALA", ("%d sala(s) aberta(s) para você" % n_salas) if n_salas > 0 else "Salas dos amigos, mesmo Wi-Fi ou código.", false)
 	ce.custom_minimum_size = Vector2(0, 30.0 * v)
 	ce.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -388,6 +389,22 @@ func _tela_entrar(area: Control, v: float, ip_antes: String) -> void:
 	esq.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	esq.add_theme_constant_override("separation", int(1.2 * v))
 	linhas.add_child(esq)
+	# 0.51: SERVIDORES do PC (qualquer um entra pela internet, técnica do WhatsApp: WebRTC)
+	_secao(esq, "SERVIDORES", v)
+	if not Conta.logado:
+		esq.add_child(_texto("Para ver os servidores, entre na conta ou como convidado (rápido, sem e-mail).", v))
+		if Conta.configurado:
+			var bg := UI.BotaoMenu.new("Ver servidores", "entrar como convidado", true, 3.0, 26.0)
+			bg.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			bg.apertado.connect(func():
+				if not Conta.entrando:
+					Conta.entrar_convidado())
+			esq.add_child(bg)
+	elif Conta.servidores.is_empty():
+		esq.add_child(_texto("Nenhum servidor ligado agora.", v))
+	else:
+		for c in Conta.servidores:
+			esq.add_child(_linha_sala(c, v))
 	_secao(esq, "SALAS DOS AMIGOS", v)
 	if not Conta.logado:
 		esq.add_child(_texto("Entre na sua conta para ver as salas dos seus amigos aqui.", v))
@@ -442,9 +459,12 @@ func _linha_sala(c: Dictionary, v: float) -> Control:
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 0)
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	col.add_child(UI.rotulo("Sala de %s" % c["nome"], 3.0 * v, Color.WHITE, 800))
+	var servidor := bool(c.get("servidor", false))
+	col.add_child(UI.rotulo(str(c["nome"]) if servidor else "Sala de %s" % c["nome"], 3.0 * v, Color.WHITE, 800))
 	var agora := Time.get_unix_time_from_system() * 1000.0
 	var sub := "%d/%d jogadores" % [int(c["n"]), Rede.MAX_JOGADORES] + (" · já começou" if bool(c.get("comecou", false)) else " · na sala")
+	if servidor:
+		sub = "servidor · %d/%d jogadores" % [int(c["n"]), Rede.MAX_JOGADORES] + (" · pela internet" if bool(c.get("rtc", false)) else "")
 	var chamou := float(c.get("chamou", 0)) > 0.0 and agora - float(c["chamou"]) < 120000.0
 	if chamou:
 		sub += " · te chamou!"
@@ -614,6 +634,7 @@ func _process(dt: float) -> void:
 		if _t_convites <= 0.0:
 			_t_convites = 6.0
 			Conta.atualizar_convites()
+			Conta.atualizar_servidores()
 	if modo == "sala" and Rede.eh_host():
 		_t_respostas -= dt
 		if _t_respostas <= 0.0:

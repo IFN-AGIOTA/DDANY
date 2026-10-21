@@ -15,6 +15,7 @@ extends Node
 # Mexa AQUI para: nome padrão, FPS do servidor, troca de foco, resumo.
 
 const NOME_PADRAO := "Servidor do PC"
+const RtcCls := preload("res://rede/rtc.gd")
 const FPS := 60
 const TROCA_FOCO := 8.0
 const RESUMO_A_CADA := 60.0
@@ -57,6 +58,7 @@ func iniciar(m: Node) -> void:
 	Rede.jogador_entrou.connect(func(id, nm): _log("ENTROU: %s (id %d) · %d na partida" % [nm, id, Rede.jogadores.size()]))
 	Rede.jogador_saiu.connect(func(id): _log("SAIU: id %d · %d na partida" % [id, Rede.jogadores.size()]))
 	Rede.falhou.connect(func(motivo): _log("ERRO: " + motivo))
+	await _entrar_na_conta(nome)
 	Rede.criar_partida(nome, randi())
 	if not Rede.ligado:
 		_log("Não deu para abrir a partida. Feche outro jogo/servidor que esteja usando a porta %d e tente de novo." % Rede.PORTA)
@@ -66,8 +68,34 @@ func iniciar(m: Node) -> void:
 	for ip in Rede.meus_ips():
 		var tipo := "Tailscale" if ip.begins_with("100.") else "mesmo Wi-Fi"
 		_log("   %s   (%s)" % [ip, tipo])
-	_log("   (pela internet: o IP da internet aparece abaixo se o roteador abrir a porta sozinho)")
+	if Rede.aceita_rtc():
+		Conta._t_publicar = 0.0                  # aparece na lista agora (depois a cada 45 s)
+		_log("PELA INTERNET (técnica do WhatsApp, sem abrir porta): no celular, Multijogador > Entrar > SERVIDORES >")
+		_log("   \"%s\". Funciona de qualquer lugar (Wi-Fi de outra casa, 4G)." % nome)
+	else:
+		_log("   (pela internet: o IP da internet aparece abaixo se o roteador abrir a porta sozinho)")
 	_log("Para desligar o servidor: feche esta janela.")
+
+# 0.51: entra como CONVIDADO no Firebase (a conta fica salva no PC: o servidor tem sempre o mesmo id) para
+# aparecer na lista de SERVIDORES e aceitar conexões pela internet com WebRTC (rede/rtc.gd)
+func _entrar_na_conta(nome: String) -> void:
+	Conta.nome_servidor = nome
+	if not Conta.configurado:
+		_log("INTERNET (WebRTC): sem rede/firebase_config.cfg: só por IP.")
+		return
+	if not RtcCls.disponivel():
+		_log("INTERNET (WebRTC): a biblioteca libwebrtc_native...dll não está junto do servidor: só por IP.")
+		return
+	if not Conta.logado:
+		_log("entrando na conta do servidor (convidado)...")
+		Conta.entrar_convidado()
+		var t0 := Time.get_ticks_msec()
+		while not Conta.logado and Time.get_ticks_msec() - t0 < 20000:
+			await get_tree().create_timer(0.25).timeout
+	if Conta.logado:
+		_log("conta do servidor OK (id %s)." % Conta.uid.left(8))
+	else:
+		_log("INTERNET (WebRTC): não deu para entrar na conta (sem internet?). Continua só por IP.")
 
 func _internet(ok: bool, ip: String, motivo: String) -> void:
 	if ok:
@@ -76,6 +104,8 @@ func _internet(ok: bool, ip: String, motivo: String) -> void:
 		_log("INTERNET: o roteador não abriu a porta sozinho (%s). Use o Tailscale ou abra a porta UDP %d à mão." % [motivo, Rede.PORTA])
 
 func _process(dt: float) -> void:
+	if Engine.max_fps != FPS:
+		Engine.max_fps = FPS                     # as Opções (menu/aplicar_opcoes.gd) reaplicam e soltam o limite
 	if main == null or main.jogador == null or main.sessao_rede == null:
 		return
 	# o "jogador" do servidor vai para perto de um amigo (chão e prédios com física em volta dele)

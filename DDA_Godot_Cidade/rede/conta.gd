@@ -9,6 +9,9 @@ extends Node
 #     se adicionam, um vê as partidas do outro.
 #   · PARTIDAS DOS AMIGOS: quem cria a partida (rede/rede.gd) publica os códigos dela para os amigos (a cada
 #     45 s enquanto estiver aberta; apaga ao fechar). Na tela Multijogador aparece "Partida de Fulano" e é só tocar.
+#   · SERVIDORES (0.51): o servidor do PC (rede/servidor.gd, conta de convidado) publica servidores/{uid} a cada
+#     45 s. A tela Multijogador lista os servidores ligados para QUALQUER conta (não precisa ser amigo) e entra pela
+#     internet com WebRTC (rede/rtc.gd), sem abrir porta.
 # Configuração: rede/firebase_config.cfg (vazia = sem conta; o resto do jogo funciona igual).
 # Regras do banco (segurança): rede/firebase_regras.json. Passo a passo: LEIA-ME, seção "CONTA (FIREBASE)".
 # Mexa AQUI para: tempo de publicação, tamanho do código de amigo, o que vai em cada convite.
@@ -22,6 +25,7 @@ signal chamado(convite: Dictionary)            # um amigo me CHAMOU para a sala 
 signal pedidos_mudaram                         # pedidos de amizade recebidos mudaram
 signal amigos_atualizados                      # status (online, ícone, recorde) dos amigos chegou
 signal resposta(amigo_uid: String, aceitou: bool)   # host: o amigo chamado aceitou/recusou
+signal servidores_mudaram                      # lista de servidores do PC ligados mudou (servidores)
 
 const CONFIG := "res://rede/firebase_config.cfg"
 const SALVO := "user://conta.cfg"
@@ -39,6 +43,9 @@ var tipo := ""                                 # "google" ou "convidado"
 var codigo_amigo := ""
 var amigos := {}                               # uid -> {"nome", "codigo"}
 var convites: Array = []
+var servidores: Array = []                     # servidores do PC ligados: [{"uid", "nome", "codigos", "n", "versao", "rtc", ...}]
+var nome_servidor := ""                        # este aparelho é um servidor do PC com este nome (rede/servidor.gd)
+var _t_servidores := 0.0
 var entrando := false                          # login em andamento
 var avatar := 0                                # ícone do perfil (menu/avatar.gd)
 var recorde_tempo := 0.0                       # melhor tempo vivo (s) e mais abates (vêm do Config, vão para a conta)
@@ -442,6 +449,36 @@ func atualizar_convites() -> void:
 	convites = lista
 	convites_mudaram.emit(convites)
 
+# ---------- servidores do PC ----------
+func atualizar_servidores() -> void:
+	if not logado:
+		return
+	var d = await _db(HTTPClient.METHOD_GET, "servidores")
+	var lista: Array = []
+	var agora := Time.get_unix_time_from_system() * 1000.0
+	if d is Dictionary:
+		for host in d:
+			var c = d[host]
+			if not (c is Dictionary) or host == uid or agora - float(c.get("t", 0)) > VALIDADE_CONVITE * 1000.0:
+				continue
+			lista.append({"uid": host, "nome": str(c.get("nome", "Servidor")), "codigos": c.get("codigos", []),
+				"rtc": bool(c.get("rtc", false)), "n": int(c.get("n", 0)), "versao": str(c.get("versao", "")),
+				"avatar": 0, "comecou": true, "servidor": true})
+	lista.sort_custom(func(a, b): return int(a["n"]) > int(b["n"]))
+	servidores = lista
+	servidores_mudaram.emit()
+
+func publicar_servidor() -> void:
+	if not logado or not Rede.eh_host():
+		return
+	await _db(HTTPClient.METHOD_PUT, "servidores/" + uid, {"nome": nome_servidor, "codigos": Rede.codigos(), "n": Rede.jogadores.size(),
+		"versao": Config.VERSAO, "rtc": Rede.aceita_rtc(), "t": {".sv": "timestamp"}})
+	_publicado = true
+
+func retirar_servidor() -> void:
+	if logado:
+		await _db(HTTPClient.METHOD_DELETE, "servidores/" + uid)
+
 func _convite() -> Dictionary:
 	return {"nome": nome, "avatar": avatar, "codigos": Rede.codigos(), "n": Rede.jogadores.size(), "versao": Config.VERSAO,
 		"rtc": Rede.aceita_rtc(), "comecou": Rede.partida_comecou, "t": {".sv": "timestamp"}}
@@ -477,13 +514,25 @@ func _process(dt: float) -> void:
 			atualizar_convites()               # também acha os CHAMADOS novos
 		if int(Time.get_ticks_msec() / 5000) % 6 == 0:
 			atualizar_pedidos()
+	if not Rede.ligado:
+		_t_servidores -= dt
+		if _t_servidores <= 0.0:
+			_t_servidores = 15.0
+			atualizar_servidores()
 	if Rede.eh_host():
 		_t_publicar -= dt
 		if _t_publicar <= 0.0:
 			_t_publicar = PUBLICAR_A_CADA
-			publicar_partida()
+			if Rede.servidor_dedicado:
+				publicar_servidor()            # servidor do PC: na lista pública de servidores (não nos convites)
+			else:
+				publicar_partida()
 	elif _publicado:
-		retirar_partida()
+		if nome_servidor != "":
+			_publicado = false
+			retirar_servidor()
+		else:
+			retirar_partida()
 
 # ---------- Firebase por HTTP ----------
 func _renovar() -> bool:
