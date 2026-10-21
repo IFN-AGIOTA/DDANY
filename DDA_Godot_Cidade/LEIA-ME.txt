@@ -39,6 +39,13 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.54 · WebRTC SÓ COM O QUE A BIBLIOTECA DO CELULAR ACEITA + DIAGNÓSTICO COMPLETO
+  · Teste no 4G (0.53): o celular não achou NENHUM caminho (nem rede local) e o servidor não respondeu.
+  · A biblioteca de WebRTC (libjuice) só fala UDP e usa um STUN só: agora vão 1 STUN (Google) e o retransmissor só
+    por UDP (turn:...:80 e turn:...:443). TCP/TLS ficam de fora (a biblioteca ignora). Espera até 40 s.
+  · A falha no celular mostra tudo: caminhos achados, resposta do servidor, se a configuração foi aceita, se a
+    oferta foi criada (e quantos caminhos dentro dela), gravações no banco (ok/erro) e o estado da conexão.
+
 ATUALIZAÇÃO 0.53 · CONSERTO: CONEXÃO PELA INTERNET (WebRTC) QUEBRADA NA 0.52 + DIAGNÓSTICO
   · Defeito da 0.52: a lista de endereços do retransmissor ia como PackedStringArray e a biblioteca do WebRTC só
     aceita Array: a conexão falhava ANTES de começar (nem no Wi-Fi conectava pela internet). Agora é Array, e se a

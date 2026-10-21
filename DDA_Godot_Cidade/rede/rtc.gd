@@ -14,14 +14,15 @@ extends Node
 signal cliente_falhou(motivo: String)
 signal diagnostico(texto: String)              # 0.53: o que aconteceu na conexão (o servidor do PC escreve no console)
 
-const STUN := ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"]
+const STUN := ["stun:stun.l.google.com:19302"]   # a biblioteca do celular (libjuice) usa UM servidor STUN só
 const OLHAR_A_CADA := 1.2                     # segundos entre consultas ao banco
-const DESISTIR := 25.0                        # amigo: sem conectar nesse tempo, desiste
+const DESISTIR := 40.0                        # amigo: sem conectar nesse tempo, desiste
 const VALIDADE := 60.0                        # host: oferta mais velha que isso é ignorada
 const CANAIS := [MultiplayerPeer.TRANSFER_MODE_UNRELIABLE_ORDERED, MultiplayerPeer.TRANSFER_MODE_RELIABLE]  # canais 1 e 2 das RPCs
 
 var _ice := {}
 var tem_turn := false                         # tem retransmissor configurado (rede/turn.cfg)
+var _diag := {}                               # amigo: até onde chegou (aparece na mensagem de falha)
 var _tipos := {}                              # amigo: caminhos achados por mim {"host": n, "srflx": n, "relay": n}
 
 # tipo do caminho de um candidato ICE: host (rede local), srflx (internet direta), relay (retransmissor)
@@ -71,8 +72,10 @@ func _ready() -> void:
 		senha = str(cf.get_value("webrtc", "turn_senha", ""))
 	var lista: Array = []                     # lista COMUM: o WebRTC recusa PackedStringArray (initialize dá erro)
 	for u in urls.split(",", false):
-		if u.strip_edges() != "":
-			lista.append(u.strip_edges())
+		u = u.strip_edges()
+		# libjuice (WebRTC do jogo) só fala UDP: TURN por TCP/TLS e STUN extra atrapalham (0.54)
+		if u.begins_with("turn:") and not "transport=tcp" in u:
+			lista.append(u)
 	if not lista.is_empty() and usuario.strip_edges() != "":
 		servidores.append({"urls": lista, "username": usuario.strip_edges(), "credential": senha.strip_edges()})
 		tem_turn = true
@@ -88,6 +91,7 @@ static func disponivel() -> bool:
 func _nova_conexao() -> WebRTCPeerConnection:
 	var c := WebRTCPeerConnection.new()
 	var e := c.initialize(_ice)
+	_diag["config"] = "ok" if e == OK else "RECUSADA(%d)" % e
 	if e != OK:                                  # configuração recusada: tenta só com o STUN (melhor que nada)
 		push_warning("WebRTC: configuração ICE recusada (%d); seguindo sem retransmissor" % e)
 		c = WebRTCPeerConnection.new()
@@ -172,8 +176,10 @@ func conectar(host_uid: String) -> WebRTCMultiplayerPeer:
 	_conn.session_description_created.connect(func(tipo: String, sdp: String):
 		_conn.set_local_description(tipo, sdp)
 		_c["sdp"] = sdp
+		_diag["oferta"] = "sim (%d caminhos dentro)" % sdp.count("a=candidate")
 		_gravar(caminho, _c))
 	_tipos = {}
+	_diag = {"config": _diag.get("config", "?"), "oferta": "não", "banco_ok": 0, "banco_erro": 0}
 	_conn.ice_candidate_created.connect(func(m: String, i: int, n: String):
 		_c["cand"].append([m, i, n])
 		var t := tipo_cand(n)
@@ -236,11 +242,13 @@ func _process(dt: float) -> void:
 				Conta.db_del("sinal/%s/%s/c" % [_host_uid, Conta.uid])
 				_host_uid = ""
 			return
+		_diag["estado"] = _conn.get_connection_state()
 		if _t_cli > DESISTIR:
 			var resp := _resposta
 			parar()
-			var d := "[%s · resposta do servidor: %s · retransmissor configurado: %s]" % [resumo_tipos(_c.get("cand", [])),
-				"sim" if resp else "NÃO", "sim" if tem_turn else "não"]
+			var d := "[%s · resposta do servidor: %s · retransmissor: %s · config: %s · oferta: %s · banco: %d ok/%d erro · estado: %d]" % [
+				resumo_tipos(_c.get("cand", [])), "sim" if resp else "NÃO", "sim" if tem_turn else "não", _diag.get("config", "?"),
+				_diag.get("oferta", "?"), int(_diag.get("banco_ok", 0)), int(_diag.get("banco_erro", 0)), int(_diag.get("estado", -1))]
 			var motivo := "Não deu para conectar pela internet."
 			if not resp:
 				motivo = "O servidor não respondeu (está ligado? na mesma versão?)."
@@ -261,5 +269,8 @@ func _gravar(caminho: String, valor: Dictionary) -> void:
 	while _pendente.has(caminho):
 		var v = _pendente[caminho]
 		_pendente.erase(caminho)
-		await Conta.db_put(caminho, v)
+		if await Conta.db_put(caminho, v):
+			_diag["banco_ok"] = int(_diag.get("banco_ok", 0)) + 1
+		else:
+			_diag["banco_erro"] = int(_diag.get("banco_erro", 0)) + 1
 	_gravando[caminho] = false
