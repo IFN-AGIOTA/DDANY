@@ -453,7 +453,7 @@ func _physics_process(dt: float) -> void:
 		_seguir_rede(dt)
 		return
 	if _alvo == null or not is_instance_valid(_alvo):
-		_alvo = gerente.jogador
+		_alvo = gerente.alvo_para(self)
 	var j: Node3D = _alvo
 	var mundo = gerente.mundo
 	var p := global_position

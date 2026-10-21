@@ -107,7 +107,7 @@ func _physics_process(dt: float) -> void:
 	if not Rede.ligado or jogador == null or not is_instance_valid(jogador):
 		return
 	_t_envio -= dt
-	if _t_envio <= 0.0:
+	if _t_envio <= 0.0 and not Rede.servidor_dedicado:      # o servidor do PC não é jogador: não manda posição
 		_t_envio = 1.0 / ENVIOS_POR_SEG
 		Rede.enviar_estado(estado_local())
 	if Rede.eh_host():
@@ -131,6 +131,8 @@ func estado_local() -> Array:
 	return [j.global_position, j.rotation.y, j.velocity, bits, str(j.armas.atual), snappedf(j.armas.aim, 0.01), minf(j.armas.since, 9.0)]
 
 func _mandar_roupa(para := 0) -> void:
+	if Rede.servidor_dedicado:
+		return
 	var inv = jogador.inventario
 	var na_mao = inv.slots.get("maos")
 	var d := {}

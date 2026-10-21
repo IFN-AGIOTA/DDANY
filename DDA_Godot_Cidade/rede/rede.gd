@@ -17,6 +17,10 @@ extends Node
 # PELA INTERNET COM A CONTA (0.33): o host aceita também conexões WEBRTC (rede/rtc.gd + rede/peer_misto.gd):
 # o amigo toca na "Partida de Fulano" e Rede.entrar_amigo(uid) conecta direto, sem abrir porta nem VPN.
 #
+# SERVIDOR DEDICADO (0.50, rede/servidor.gd): o PC abre a partida SEM ser jogador (servidor_dedicado = true):
+# não entra na lista de jogadores, não manda posição/roupa e a partida já começa aberta (quem entra vai direto
+# para a cidade). Os celulares entram pelo IP do PC (mesmo Wi-Fi, porta aberta no roteador ou Tailscale).
+#
 # O que passa pela rede está em rede/sessao_rede.gd (estado dos jogadores, tiros, ações, roupa, clima).
 # Mexa AQUI para: porta, limite de jogadores, versão do protocolo, anúncio na rede local.
 
@@ -39,6 +43,7 @@ const PROTOCOLO := 3                           # aumente quando mudar o formato 
 const ANUNCIO_A_CADA := 1.0                    # segundos
 
 var ligado := false                            # tem partida aberta/conectada (e aceita)
+var servidor_dedicado := false                 # este aparelho é o SERVIDOR do PC (rede/servidor.gd): não é jogador
 var nome := "Sobrevivente"
 var jogadores := {}                            # id -> {"nome": String}  (inclui o próprio)
 var mundo := {}                                # o que o host mandou ao aceitar: {"semente": int, "clima": {...}, "comecou": bool}
@@ -91,16 +96,16 @@ func criar_partida(meu_nome: String, semente_loot: int) -> void:
 	if e != OK:
 		_falhar("Não deu para abrir a partida (porta %d ocupada?)." % PORTA)
 		return
-	_com_rtc = RtcCls.disponivel()
+	_com_rtc = RtcCls.disponivel() and not servidor_dedicado      # servidor do PC: só IP (sem conta Google)
 	if _com_rtc:
 		multiplayer.multiplayer_peer = PeerMistoCls.new(p, rtc.comecar_host())   # Wi-Fi/código + internet (WebRTC)
 	else:
 		multiplayer.multiplayer_peer = p
 	ligado = true
 	_host_nome = nome
-	jogadores = {1: {"nome": nome, "avatar": Conta.avatar, "uid": Conta.uid}}
-	mundo = {"semente": semente_loot, "comecou": false}
-	partida_comecou = false
+	jogadores = {} if servidor_dedicado else {1: {"nome": nome, "avatar": Conta.avatar, "uid": Conta.uid}}
+	mundo = {"semente": semente_loot, "comecou": servidor_dedicado}
+	partida_comecou = servidor_dedicado         # servidor: a partida já começa aberta (entra direto na cidade)
 	_anuncio = PacketPeerUDP.new()
 	_anuncio.set_broadcast_enabled(true)
 	_anuncio.set_dest_address("255.255.255.255", PORTA_ANUNCIO)

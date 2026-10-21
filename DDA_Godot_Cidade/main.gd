@@ -9,6 +9,7 @@ const MILBASE := Vector2(6230.0, 690.0)     # centro da base militar (aeroporto)
 const SPAWN := Vector2(6230.0, 590.0)       # onde o jogador nasce (virado para o sul)
 
 const Sons := preload("res://audio/sons.gd")
+const ServidorCls := preload("res://rede/servidor.gd")
 const CidadeCls := preload("res://mundo/cidade.gd")
 const ColisaoMundoCls := preload("res://mundo/colisao_mundo.gd")
 const ChunksCls := preload("res://mundo/chunks.gd")
@@ -109,6 +110,12 @@ func _ready() -> void:
 	aplicador.name = "AplicarOpcoes"
 	aplicador.main = self
 	add_child(aplicador)
+	if ServidorCls.pedido():                         # 0.50: aberto como SERVIDOR do PC (rede/servidor.gd)
+		var sv := ServidorCls.new()
+		sv.name = "Servidor"
+		add_child(sv)
+		sv.iniciar.call_deferred(self)
+		return
 	Rede.caiu.connect(_rede_caiu)
 	Conta.chamado.connect(_chamado)
 	_abrir_menu()

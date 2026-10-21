@@ -193,7 +193,11 @@ func _vestir() -> void:
 		m.vestir(inventario)
 
 # mordida/golpe de um infectado (inimigos/vago.gd chama aqui)
+var servidor := false               # é o "jogador" invisível do servidor do PC (rede/servidor.gd): não leva dano
+
 func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3) -> void:
+	if servidor:
+		return
 	if sobrevivencia != null:
 		sobrevivencia.receber_ataque(dano, chance_sangrar, origem)
 

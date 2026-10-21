@@ -35,10 +35,11 @@ var pacote_ativo := ""                    # versão do pacote carregado agora ("
 var estado := {}                          # {"versao", "base", "testando", "ruim", "novo_versao", "remover"}
 var aviso := ""                           # o que aconteceu ao abrir (para mostrar no menu)
 
-# rodando pelo EDITOR da Godot (testando no PC) não usa pacote: senão o pacote publicado cobriria o que está sendo
+# rodando pelo EDITOR da Godot (testando no PC) ou no PC (servidor) não usa pacote: senão o pacote publicado cobriria o que está sendo
 # editado. DDA_TESTAR_PACOTE=1 liga mesmo assim (testes do sistema de atualização).
+# Só no CELULAR (Android): o servidor do PC (rede/servidor.gd) é um programa à parte, sempre gerado inteiro.
 static func ligado() -> bool:
-	return not OS.has_feature("editor") or OS.get_environment("DDA_TESTAR_PACOTE") == "1"
+	return OS.get_environment("DDA_TESTAR_PACOTE") == "1" or (OS.has_feature("android") and not OS.has_feature("editor"))
 
 func _init() -> void:
 	if not ligado():

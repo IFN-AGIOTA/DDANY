@@ -74,6 +74,7 @@ var _musica: Node = null
 #   10 vezes por segundo a sessão manda a posição dos que estão perto de cada amigo (estado_rede).
 # CLIENTE (espelho): não cria nem pensa; mostra cópias (vago.gd "remoto") do que o host manda.
 var rede_host := false
+var sem_jogador := false                # servidor do PC (rede/servidor.gd): o "jogador" daqui não é gente; só os amigos contam
 var espelho := false
 var sessao: Node = null                 # rede/sessao_rede.gd
 var por_id := {}                        # id de rede -> vago
@@ -140,8 +141,8 @@ func escuridao() -> float:
 # quem este infectado vai caçar: o jogador ou um companheiro (o mais perto, de pé)
 func alvo_para(v: Node3D) -> Node3D:
 	var p := v.global_position
-	var melhor: Node3D = jogador
-	var md := p.distance_squared_to(jogador.global_position)
+	var melhor: Node3D = null if sem_jogador else jogador
+	var md := INF if sem_jogador else p.distance_squared_to(jogador.global_position)
 	for c in companheiros + remotos():
 		if not is_instance_valid(c) or c.morto or not c.visible:
 			continue
@@ -149,7 +150,7 @@ func alvo_para(v: Node3D) -> Node3D:
 		if d < md * 0.7:                        # prefere o jogador se estiverem parecidos
 			md = d
 			melhor = c
-	return melhor
+	return melhor if melhor != null else jogador
 
 func quantos_perseguindo() -> int:
 	var n := 0
@@ -198,7 +199,7 @@ func _process(dt: float) -> void:
 			v.queue_free()
 	# nascer aos poucos (só com ativo = true)
 	_t_surgir -= dt
-	if ativo and _t_surgir <= 0.0:
+	if ativo and _t_surgir <= 0.0 and not (sem_jogador and _centros().is_empty()):   # servidor vazio: ninguém nasce
 		_t_surgir = INTERVALO_SURGIR
 		if not _fila.is_empty():
 			var f: Array = _fila.pop_front()
@@ -240,7 +241,7 @@ func alvo_ativos_em(pj: Vector3) -> int:
 	return int(round(max_ativos * lerpf(FRACAO_LONGE, 1.0, perto) * mais))
 
 func _ruido_jogador() -> void:
-	if bool(jogador.get("morto")):
+	if sem_jogador or bool(jogador.get("morto")):
 		return
 	var vel: float = jogador.get("vel_horizontal")
 	if vel < 0.3:
@@ -293,6 +294,8 @@ func _livre(x: float, z: float) -> bool:
 	return true
 
 func _visivel(p: Vector3) -> bool:
+	if sem_jogador:
+		return false                           # servidor: não tem câmera de ninguém (nasce em qualquer lugar fora de casa)
 	if p.distance_to(jogador.global_position) > DIST_MAX + 40.0:
 		return false                           # perto de um amigo: a câmera daqui nem vê
 	var cam = jogador.get("camera")
@@ -308,7 +311,7 @@ func remotos() -> Array:
 
 # centros de todos os jogadores (este + os amigos que já apareceram)
 func _centros() -> Array:
-	var l := [jogador.global_position]
+	var l := [] if sem_jogador else [jogador.global_position]
 	for r in remotos():
 		if is_instance_valid(r) and r.visible:
 			l.append(r.global_position)
@@ -329,7 +332,8 @@ func _perto_de(c: Vector3) -> int:
 	return n + _fila.size()
 
 func _centro_para_nascer() -> Vector3:
-	var melhor: Vector3 = jogador.global_position
+	var cs := _centros()
+	var melhor: Vector3 = cs[0] if not cs.is_empty() else jogador.global_position
 	var falta := alvo_ativos_em(melhor) - _perto_de(melhor)
 	for c in _centros():
 		var f := alvo_ativos_em(c) - _perto_de(c)
