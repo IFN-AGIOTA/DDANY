@@ -1,6 +1,6 @@
 extends RefCounted
 # SONS GRAVADOS (baixados, licença livre, créditos no menu Créditos e em audio/sons/LICENCA.txt), em audio/sons/:
-#   armas/ ....... tiros de verdade (pistola, fuzil, espingarda, rifle)
+#   (0.49: tiros, recargas, menu, inventário, ambiente etc. ficam em audio/sons.gd, que acha os grupos sozinho)
 #   infectados/ .. gemidos, ataques, gritos, morte, passos
 #   jogador/ ..... passos, dor, morte
 #   impactos/ .... golpe acertando, bala batendo

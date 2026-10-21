@@ -1,7 +1,10 @@
 extends Node
-# SONS DAS ARMAS sintetizados por código, como no HTML (ruído filtrado + "tum" grave).
-# Gerados uma vez ao abrir o jogo; não precisa de arquivos de áudio.
-# Para trocar por sons gravados: substitua os streams em "sons" (ex.: sons["tiro_m4"] = load("res://sons/m4.wav")).
+# SONS DOS TIROS. 0.49: GRAVAÇÕES DE VERDADE (The Free Firearm Sound Library, CC0) em audio/sons/armas:
+#   tiro_<arma>_N (perto, várias por arma, sorteadas) e longe_<arma>_N (de longe: amigos e tiros distantes).
+#   1911 e Walther (pistola) · AR-15 (M4) · AK-47 · Benelli Nova e Mossberg (espingarda) · Tikka e Savage (rifle)
+#   · Ruger .22 abafado (silenciado). Feitos por ferramentas/preparar_sons.py.
+# Os sintetizados por código (como no HTML) ficam só de reserva, se faltar arquivo.
+# Recarga, gatilho em seco, cápsulas, sacar: armas/armas.gd (_som_recarga, _depois_do_tiro) via audio/sons.gd.
 
 const TAXA := 22050
 const N_CANAIS := 10
@@ -10,9 +13,19 @@ var sons := {}
 var _canais: Array[AudioStreamPlayer] = []
 var _ci := 0
 var volume_db := 0.0
-var _gravado := {}                    # quais tiros são gravações (variam um pouco o tom a cada tiro)
 const SonsBaixados := preload("res://audio/sons_baixados.gd")
+const Sons := preload("res://audio/sons.gd")
 const TOM := {"tiro_ak": 0.9, "tiro_m4": 1.04}
+const VOL_GRAVADO := {"tiro_rifle_caca": -3.0, "tiro_silenciado": -2.0}   # iguala o volume entre as armas
+
+# tiro de OUTRO jogador / ao longe: gravação de longe se estiver a mais de PERTO_LONGE m (3D, vem do lado certo)
+const PERTO_LONGE := 70.0
+func tocar_em(nome: String, pos: Vector3, dist: float) -> void:
+	var arma := nome.trim_prefix("tiro_")
+	if nome != "tiro_silenciado" and dist > PERTO_LONGE and Sons.existe("armas/longe_" + arma):
+		Sons.em("armas/longe_" + arma, pos, 6.0, 900.0)
+	else:
+		Sons.em("armas/" + nome, pos, 4.0 if nome != "tiro_silenciado" else -2.0, 260.0 if nome != "tiro_silenciado" else 45.0)
 
 func _ready() -> void:
 	sons["tiro_pistola"] = _tiro(4200.0, 0.42, 0.22, 130.0, 1717)
@@ -28,14 +41,6 @@ func _ready() -> void:
 	sons["clique_300"] = _clique(300.0, 0.1)
 	sons["clique_900"] = _clique(900.0, 0.06)
 	sons["clique_520"] = _clique(520.0, 0.07)
-	# tiros GRAVADOS (audio/sons/armas, licença livre) no lugar dos sintetizados, quando existem
-	var gravados := {"tiro_pistola": "armas/tiro_pistola", "tiro_m4": "armas/tiro_fuzil", "tiro_ak": "armas/tiro_fuzil2",
-		"tiro_espingarda": "armas/tiro_espingarda", "tiro_rifle_caca": "armas/tiro_rifle"}
-	for k in gravados:
-		var st := SonsBaixados.som(gravados[k])
-		if st != null:
-			sons[k] = st
-			_gravado[k] = true
 	for i in N_CANAIS:
 		var p := AudioStreamPlayer.new()
 		p.bus = "SFX" if AudioServer.get_bus_index("SFX") >= 0 else "Master"   # com eco de cidade
@@ -43,13 +48,14 @@ func _ready() -> void:
 		_canais.append(p)
 
 func tocar(nome: String, vol_db := 0.0) -> void:
-	if not sons.has(nome):
+	var gravado := Sons.sortear("armas/" + nome) if nome.begins_with("tiro_") else null
+	if gravado == null and not sons.has(nome):
 		return
 	_ci = (_ci + 1) % _canais.size()
 	var p := _canais[_ci]
-	p.stream = sons[nome]
-	p.volume_db = volume_db + vol_db
-	p.pitch_scale = float(TOM.get(nome, 1.0)) * (randf_range(0.95, 1.05) if _gravado.has(nome) else 1.0)
+	p.stream = gravado if gravado != null else sons[nome]
+	p.volume_db = volume_db + vol_db + (VOL_GRAVADO.get(nome, 0.0) if gravado != null else 0.0)
+	p.pitch_scale = randf_range(0.96, 1.04) if gravado != null else float(TOM.get(nome, 1.0))
 	if nome == "impacto":                 # golpe corpo a corpo acertando: um dos sons gravados de impacto
 		var b := SonsBaixados.sortear("impactos/soco")
 		if b != null:

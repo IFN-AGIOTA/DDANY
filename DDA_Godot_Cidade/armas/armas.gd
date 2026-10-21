@@ -23,6 +23,7 @@ signal barulho(posicao: Vector3, raio: float)   # para os inimigos ouvirem (pró
 const ModelosArmas := preload("res://armas/modelos_armas.gd")
 const EfeitosCls := preload("res://armas/efeitos_tiro.gd")
 const SonsCls := preload("res://armas/sons_armas.gd")
+const Sons := preload("res://audio/sons.gd")
 const Itens := preload("res://inventario/itens.gd")
 
 const WDEF := {
@@ -148,7 +149,7 @@ func _sincronizar() -> void:
 	if k != "" and k != "punhos":
 		_vibrar(15)
 		if sons != null:
-			sons.tocar("clique_520")
+			Sons.tocar("armas/sacar_faca" if WDEF[k].get("corpo", false) else "armas/sacar", -4.0)
 		aviso.emit(WDEF[k]["nome"])
 	mudou.emit()
 
@@ -256,6 +257,8 @@ func recarregar() -> void:
 		rel = float(W["rel"]) + float(W.get("rel_bala", 0.0)) * _encher
 	rel_tot = rel
 	rel_s = 0
+	_rel_bala = 0
+	_som_recarga("inicio")
 	_animar(("recarregar_fuzil" if atual in ["m4", "ak", "espingarda", "rifle_caca"] else "recarregar_pistola"), rel, false)
 	_vibrar(10)
 	mudou.emit()
@@ -274,6 +277,62 @@ func _fim_recarga() -> void:
 	elif _encher > 0:
 		item_arma.municao += inventario.consumir(item_arma.def().get("municao", ""), _encher)
 		_encher = 0
+
+# ---------- sons de mexer na arma (0.49: gravações de verdade, audio/sons/armas) ----------
+var _rel_bala := 0                     # balas soltas que já fizeram som nesta recarga
+
+func _tipo_recarga() -> String:
+	if atual in ["m4", "ak"]:
+		return "fuzil"
+	return atual                        # pistola, espingarda, rifle_caca
+
+# etapa: "inicio" · "meio" · "bala" (cada bala que entra) · "fim" · "fim_trava" (destravou)
+func _som_recarga(etapa: String) -> void:
+	var t := _tipo_recarga()
+	var com_pente := _pente_novo != null
+	match etapa:
+		"inicio":
+			if travada:
+				Sons.tocar("armas/ferrolho_rifle", -4.0, 1.1)
+			elif t in ["pistola", "fuzil"] and com_pente:
+				Sons.tocar("armas/%s_sai" % t, -3.0)
+			elif t == "rifle_caca":
+				Sons.tocar("armas/ferrolho_rifle", -3.0)
+		"meio":
+			if t in ["pistola", "fuzil"] and com_pente:
+				Sons.tocar("armas/%s_entra" % t, -2.0)
+		"bala":
+			Sons.tocar("armas/cartucho_espingarda" if t == "espingarda" else "armas/bala_pente", -4.0)
+		"fim":
+			match t:
+				"pistola", "fuzil":
+					Sons.tocar("armas/%s_ferrolho" % t, -2.0)
+				"espingarda":
+					Sons.tocar("armas/bombear", -2.0)
+				"rifle_caca":
+					Sons.tocar("armas/ferrolho_rifle", -3.0)
+		"fim_trava":
+			Sons.tocar("armas/pistola_ferrolho" if t == "pistola" else "armas/fuzil_ferrolho", -3.0)
+
+# cápsula caindo no chão (pistola/fuzis) ou bombear/ferrolho (espingarda/rifle: a cápsula sai aí)
+func _depois_do_tiro() -> void:
+	if atual == "" or eh_corpo():
+		return
+	var t := _tipo_recarga()
+	var atraso := randf_range(0.38, 0.62)
+	var nome := "armas/capsula"
+	var vol := -14.0
+	if t == "espingarda":
+		atraso = 0.32
+		nome = "armas/bombear"
+		vol = -6.0
+	elif t == "rifle_caca":
+		atraso = 0.5
+		nome = "armas/ferrolho_rifle"
+		vol = -6.0
+	elif jogador != null and not jogador.is_on_floor():
+		return
+	get_tree().create_timer(atraso).timeout.connect(func(): Sons.tocar(nome, vol))
 
 # troca de arma agora passa pelo inventário (coldre/ombro <-> mãos)
 func proxima_arma() -> void:
@@ -333,17 +392,18 @@ func _physics_process(dt: float) -> void:
 	ky *= exp(-dt * 6.5)
 	if rel > 0.0:
 		var e := 1.0 - rel / rel_tot
-		if rel_s < 1 and e > 0.3:
+		if rel_s < 1 and e > 0.45:
 			rel_s = 1
-			sons.tocar("clique_380")
-		if rel_s < 2 and e > 0.72:
-			rel_s = 2
-			sons.tocar("clique_620")
+			_som_recarga("meio")
+		if _encher > 0 and _rel_bala < _encher and e > (_rel_bala + 0.6) / (_encher + 1.0):
+			_rel_bala += 1
+			_som_recarga("bala")
 		rel -= dt
 		if rel <= 0.0:
 			rel = 0.0
+			var era_travada := travada
 			_fim_recarga()
-			sons.tocar("clique_300")
+			_som_recarga("fim_trava" if era_travada else "fim")
 		mudou.emit()
 	var aim_t := 0.3 if rel > 0.0 else (1.0 if (held or _pend or since < 1.6 or jogador.mirando) else 0.0)
 	aim += (aim_t - aim) * minf(1.0, dt * 11.0)
@@ -352,7 +412,7 @@ func _physics_process(dt: float) -> void:
 			if dry <= 0.0:
 				dry = 0.5
 				_pend = false
-				sons.tocar("clique_900")
+				Sons.tocar("armas/seco", -2.0)
 				aviso.emit("ARMA TRAVADA · RECARREGAR")
 		elif item_arma.estado <= 0.0:
 			if dry <= 0.0:
@@ -368,7 +428,7 @@ func _physics_process(dt: float) -> void:
 		elif dry <= 0.0:
 			dry = 0.35
 			_pend = false
-			sons.tocar("clique_900")
+			Sons.tocar("armas/seco", -2.0)
 			aviso.emit("SEM MUNIÇÃO")
 
 # ---------- tiro ----------
@@ -427,6 +487,7 @@ func _atirar(W: Dictionary) -> void:
 	kick = minf(kick + float(W["kick"]), 0.14)
 	ky += randf_range(-1.0, 1.0) * float(W["ky"])
 	sons.tocar("tiro_silenciado" if silenciada else "tiro_" + atual)
+	_depois_do_tiro()
 	_vibrar(int(W["vibra"]))
 	barulho.emit(jogador.global_position, float(W["ruido"]) * (0.22 if silenciada else 1.0))
 	disparou.emit(atual)
@@ -435,7 +496,7 @@ func _atirar(W: Dictionary) -> void:
 	item_arma.estado = maxf(0.0, e - float(W.get("desgaste", 0.0005)))
 	if e < 0.7 and randf() < (0.7 - e) * 0.09:
 		travada = true
-		sons.tocar("clique_900")
+		Sons.tocar("armas/seco", 0.0, 0.9)
 		aviso.emit("ARMA TRAVOU · RECARREGAR")
 	mudou.emit()
 

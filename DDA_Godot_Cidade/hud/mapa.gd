@@ -191,6 +191,8 @@ func aplicar_estilo(esc: float, opac: float) -> void:
 
 # pos = (x, z) do mundo
 func definir_objetivo(pos: Vector2, nome := "") -> void:
+	if not _obj or nome != _obj_nome:
+		UI.Sons.tocar("partida/objetivo", -6.0)       # 0.49: objetivo novo no mapa
 	_obj = true
 	_obj_pos = pos
 	_obj_nome = nome

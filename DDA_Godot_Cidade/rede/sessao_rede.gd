@@ -215,8 +215,8 @@ func _tiro_remoto(id: int, d: Dictionary) -> void:
 	var dist := de.distance_to(jogador.global_position)
 	if dist < DIST_SOM_TIRO:
 		var silenciada := bool(d.get("s", false))
-		var vol := -20.0 * log(maxf(1.0, dist / 6.0)) / log(10.0) - (12.0 if silenciada else 0.0)
-		jogador.armas.sons.tocar("tiro_silenciado" if silenciada else "tiro_" + arma, vol)
+		# 0.49: som 3D na posição do amigo (vem do lado certo); de longe, a gravação "de longe" (abafada, com eco)
+		jogador.armas.sons.tocar_em("tiro_silenciado" if silenciada else "tiro_" + arma, de, dist)
 		jogador.armas.efeitos.tracante(de, para, float(W.get("v", 400.0)), float(W.get("tl", 5.0)), 0, Vector3.UP)
 	# os infectados DESTE aparelho também ouvem o tiro do outro
 	if main.vagos != null:

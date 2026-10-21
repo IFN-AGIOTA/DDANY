@@ -54,6 +54,9 @@ func aplicar() -> void:
 	var bs := AudioServer.get_bus_index("SFX")             # efeitos (criado em audio/musica_procedural.gd)
 	if bs != -1:
 		AudioServer.set_bus_volume_db(bs, linear_to_db(maxf(0.0001, float(o.get("svol", 100)) / 100.0)))
+	var bu := AudioServer.get_bus_index("UI")              # sons do menu (audio/sons.gd): mesmo volume dos efeitos
+	if bu != -1:
+		AudioServer.set_bus_volume_db(bu, linear_to_db(maxf(0.0001, float(o.get("svol", 100)) / 100.0)))
 	DisplayServer.screen_set_keep_on(bool(o["awake"]))
 	Engine.max_fps = int(g["cap"]) if int(g["cap"]) > 0 else (60 if OS.has_feature("mobile") else 0)   # celular: no máximo 60 (esquenta menos)
 	var vp := get_viewport()

@@ -8,6 +8,7 @@ extends Node3D
 const MILBASE := Vector2(6230.0, 690.0)     # centro da base militar (aeroporto), como no jogo em HTML
 const SPAWN := Vector2(6230.0, 590.0)       # onde o jogador nasce (virado para o sul)
 
+const Sons := preload("res://audio/sons.gd")
 const CidadeCls := preload("res://mundo/cidade.gd")
 const ColisaoMundoCls := preload("res://mundo/colisao_mundo.gd")
 const ChunksCls := preload("res://mundo/chunks.gd")
@@ -225,6 +226,8 @@ func _jogar(carregar_salvo := false, modo_historia := false) -> void:
 				_renascer()
 	elif modo_historia:
 		historia.iniciar(self)
+	if not modo_historia:
+		Sons.tocar("partida/entrada", -3.0)        # 0.49: entrada da partida (pancada grave + eco + coração)
 	jogador.usar_sobrevivente()             # o personagem do jogador (livre e história): jogador/modelo_sobrevivente.gd
 	_ligar_rede()
 
@@ -353,6 +356,7 @@ func _pausar() -> void:
 	get_tree().paused = not Rede.ligado          # em rede o mundo não para (os outros continuam jogando)
 	if Rede.ligado:
 		controles.set_bloqueado(true)
+	Sons.ui("abrir")
 	pausa = PausaCls.new()
 	pausa.name = "Pausa"
 	pausa.estatisticas = _estatisticas()
@@ -513,6 +517,7 @@ func _criar_jogo() -> void:
 func _morreu(causa: String) -> void:
 	if jogador == null:
 		return
+	Sons.tocar("partida/morte", -2.0)
 	# tudo o que ele carregava cai no chão, junto do corpo
 	var p := jogador.global_position
 	for it in jogador.inventario.esvaziar():
@@ -547,6 +552,7 @@ func _renascer() -> void:
 	var morte := Vector2(jogador.global_position.x, jogador.global_position.z)
 	var p := _ponto_renascer(morte)
 	jogador.morto = false
+	Sons.tocar("partida/entrada", -8.0)
 	jogador.sobrevivencia.reiniciar()
 	jogador.inventario.equipamento_renascer()
 	mundo.forcar(p)

@@ -11,6 +11,8 @@ extends SceneTree
 #   · cada arquivo listado entra no pacote no lugar do do APK. Scripts e cenas vão em texto + um ".remap" que aponta
 #     para eles (o APK tem os scripts compilados .gdc). Texturas/modelos/sons: o ".import" e o arquivo importado
 #     (.godot/imported/...): importe no editor antes.
+#   · o pacote novo SUBSTITUI o anterior (só um fica valendo): ponha também os arquivos dos pacotes anteriores
+#     do mesmo APK (ex.: o 0.49 leva os sons E o conserto do chão da 0.48.1).
 #   · menu/config.gd entra sempre: ponha nele VERSAO = a mesma versão do pacote (no multijogador os dois aparelhos
 #     precisam estar na mesma versão).
 #   · REMOVER algo: troque o arquivo por um que não faz nada (ex.: tire a arma da lista de loot) e mande no pacote.

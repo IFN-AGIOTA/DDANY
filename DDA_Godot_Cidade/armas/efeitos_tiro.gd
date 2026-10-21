@@ -171,6 +171,7 @@ func clarao(cano: Node3D, tamanho: float) -> void:
 
 func impacto(p: Vector3, n: Vector3, k: int) -> void:
 	_ocioso = false
+	_som_impacto(p, k)
 	if k == 4:
 		# sangue: borrifo escuro + gotas + mancha no chão embaixo
 		fumaca(p, Color(0.42, 0.03, 0.03), 0.3, 0.45)
@@ -310,3 +311,29 @@ func _process(dt: float) -> void:
 		if _luz_tiro.visible:
 			_luz_tiro.visible = false
 	_ocioso = not algum
+
+# 0.49: bala batendo (gravações, audio/sons/impactos): terra, água, concreto (às vezes metal: placas, postes,
+# carros) e carne. Só perto da câmera (de longe não se ouve) e no máximo um por quadro por tipo (audio/sons.gd).
+const SonsImp := preload("res://audio/sons.gd")
+const DIST_SOM_IMPACTO := 55.0
+func _som_impacto(p: Vector3, k: int) -> void:
+	if camera == null or not is_instance_valid(camera) or camera.global_position.distance_to(p) > DIST_SOM_IMPACTO:
+		return
+	var nome := "impactos/bala"
+	var vol := -4.0
+	match k:
+		1:
+			nome = "impactos/bala_terra"
+			vol = -8.0
+		2:
+			nome = "impactos/bala_agua"
+			vol = -6.0
+		4:
+			nome = "impactos/bala_carne"
+			vol = -3.0
+		_:
+			if randf() < 0.22:
+				nome = "impactos/bala_metal"
+				vol = -10.0
+	SonsImp.em(nome, p, vol, 40.0)
+

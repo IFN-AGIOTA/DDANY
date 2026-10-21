@@ -467,6 +467,7 @@ func _botao_texto(t: String, v: float) -> Button:
 	b.add_theme_color_override("font_hover_color", Color.WHITE)
 	b.add_theme_color_override("font_pressed_color", UI.LARANJA)
 	b.add_theme_color_override("font_disabled_color", Color(1, 1, 1, 0.3))
+	b.pressed.connect(func(): UI.Sons.ui("clique"))
 	return b
 
 func _mudar_gfx(chave: String, val) -> void:

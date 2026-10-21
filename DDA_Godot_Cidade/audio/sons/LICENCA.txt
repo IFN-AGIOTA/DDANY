@@ -1,10 +1,6 @@
 SONS GRAVADOS baixados (todos de licença livre), convertidos para .ogg (cortados, sem chiado, volume igualado)
 e usados por audio/sons_baixados.gd. Créditos também no menu Créditos.
 
-armas/tiro_*.ogg ........ "Gunshot Sounds" — Tabasco / Vincent Sevedge (CZ-52, SKS, Mosin Nagant, espingarda)
-                          https://opengameart.org/content/gunshot-sounds
-                          Página: CC0. O arquivo do pacote cita Creative Commons Attribution 3.0 (CC-BY 3.0):
-                          por isso o crédito ao autor fica no jogo.
 infectados/gemido_*, grito_* ... "Zombies Sound Pack" — artisticdude — CC0
                           https://opengameart.org/content/zombies-sound-pack
 infectados/ataque_*, morte_* e jogador/dor_*, morte_* ... "Zombie / Skeleton / Monster Voice Effects" — ArcadeParty — CC0
@@ -15,3 +11,36 @@ infectados/passo_*, impactos/* ... "Impact Sounds" — Kenney (www.kenney.nl) �
                           https://kenney.nl/assets/impact-sounds
 ambiente/sirene.ogg ..... "Sirens and Alarm Noise" — aquinn — CC0
                           https://opengameart.org/content/sirens-and-alarm-noise
+
+---- 0.49 (todos CC0 1.0, domínio público; arquivos preparados por ferramentas/preparar_sons.py) ----
+armas/tiro_*, longe_*, tiro_silenciado_* ... "The Free Firearm Sound Library" — Ben Jaszczak, Brian Nelson, Kevin Heras
+                          e Matthew Nanney (Still North Media) — CC0 ("may be used without royalty or credit")
+                          https://opengameart.org/content/the-free-firearm-sound-library
+armas/pistola_* ......... "Handgun Reload Sound Effect" — zer0_sol — CC0
+                          https://opengameart.org/content/handgun-reload-sound-effect
+armas/cartucho_espingarda_*, bombear_1 ... "Shotgun Reload Sound Effects" — zer0_sol — CC0
+                          https://opengameart.org/content/shotgun-reload-sound-effects
+armas/fuzil_*, bombear_0 ... "Gun Reload Sounds" — SpringySpringo — CC0
+                          https://opengameart.org/content/gun-reload-sounds
+armas/bala_pente_* ...... "Gun Reload Sound Effects" — BMacZero — CC0
+                          https://opengameart.org/content/gun-reload-sound-effects
+armas/ferrolho_rifle_*, seco_* ... "Equipment Clicks III" — LFA — CC0
+                          https://opengameart.org/content/equipment-clicks-iii
+ui/* .................... "Interface Sounds" e "UI Audio" — Kenney (www.kenney.nl) — CC0
+                          https://kenney.nl/assets/interface-sounds · https://kenney.nl/assets/ui-audio
+inventario/mochila_*, pegar_*, largar_*, vestir_*, atadura_*, armas/sacar_*, jogador/pulo_*, mundo/porta_*, rangido_*
+                          ... "RPG Audio" — Kenney — CC0 · https://kenney.nl/assets/rpg-audio
+jogador/passo_concreto_*, passo_grama_*, passo_madeira_*, aterrissar_*, impactos/bala_terra_*, bala_metal_*,
+bala_madeira_*, bala_carne_*, vidro_*, armas/capsula_* (latão: metal leve mais agudo), partida/entrada (sino)
+                          ... "Impact Sounds" — Kenney — CC0 · https://kenney.nl/assets/impact-sounds
+inventario/comer_* ...... "7 Eating Crunches" — StarNinjas — CC0 · https://opengameart.org/content/7-eating-crunches
+jogador/coracao_* ....... "Heartbeat sounds" — bart — CC0 · https://opengameart.org/content/heartbeat-sounds
+mundo/fogo .............. "Fire Crackling" — AntumDeluge — CC0 · https://opengameart.org/content/fire-crackling
+mundo/vento ............. "Wind Whoosh Loop" — SketchMan3 — CC0 · https://opengameart.org/content/wind-whoosh-loop
+mundo/passaros .......... "Birds and Wind - Ambient" — Spring Spring — CC0
+                          https://opengameart.org/content/birds-and-wind-ambient-birds-wind-and-synth
+mundo/grilos ............ "Crickets Ambient Noise - loopable" — Wolfgang_ — CC0
+                          https://opengameart.org/content/crickets-ambient-noise-loopable
+Montados por código (ferramentas/preparar_sons.py, sem arquivo de terceiros além dos citados): partida/entrada e
+partida/morte (pancada grave + cauda de tiro ao contrário + coração), inventario/beber_*, jogador/respiracao_0,
+impactos/bala_agua_*. partida/objetivo_*: "Interface Sounds" (Kenney) mais grave.

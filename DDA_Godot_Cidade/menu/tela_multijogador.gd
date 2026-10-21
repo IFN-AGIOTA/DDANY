@@ -718,6 +718,7 @@ class _Cartao extends Control:
 			elif _aperto:
 				_aperto = false
 				if Rect2(Vector2.ZERO, size).has_point(e.position):
+					UI.Sons.ui("clique")
 					apertado.emit()
 			queue_redraw()
 			accept_event()

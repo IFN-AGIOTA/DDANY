@@ -7,6 +7,7 @@ extends CanvasLayer
 # Arrastar e soltar entre qualquer lugar; durante o arraste, R / Espaço / botão direito / 2º dedo = girar.
 # Duplo toque = ação rápida (pegar do chão, vestir, usar, guardar a arma). Com a tela aberta o jogador fica parado.
 
+const Sons := preload("res://audio/sons.gd")
 const GradeUi := preload("res://inventario/grade_ui.gd")
 const SlotUi := preload("res://inventario/slot_ui.gd")
 const GradeCls := preload("res://inventario/grade.gd")
@@ -75,8 +76,11 @@ func abrir() -> void:
 	_assinatura = inv.assinatura_perto()
 	_montar()
 	controles.set_bloqueado(true)
+	Sons.tocar("inventario/mochila", -6.0)        # abriu a mochila (pano/zíper)
 
 func fechar() -> void:
+	if aberto:
+		Sons.tocar("inventario/mochila", -9.0, 0.9)
 	aberto = false
 	_arrastando = null
 	if _raiz != null:
@@ -278,6 +282,7 @@ func _botao(txt: String, acao: Callable) -> Button:
 	b.add_theme_font_size_override("font_size", 14)
 	b.custom_minimum_size = Vector2(0, maxf(34.0, cel * 0.8))
 	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.pressed.connect(func(): Sons.ui("clique"))
 	b.pressed.connect(acao)
 	return b
 

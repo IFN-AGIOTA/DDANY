@@ -4,6 +4,7 @@ extends RefCounted
 # (1% da altura da tela), como no HTML. Funciona com toque e mouse.
 # Mexa AQUI para: cores, fontes e o formato dos botões de TODOS os menus.
 
+const Sons := preload("res://audio/sons.gd")   # cliques do menu (0.49)
 const TEXTO := Color("#ffe9d0")
 const TITULO_SECAO := Color("#ffb866")
 const AMBAR := Color("#ffb400")
@@ -185,6 +186,8 @@ class BotaoMenu extends Control:
 				_aperto = false
 				queue_redraw()
 				if Rect2(Vector2.ZERO, size).has_point(e.position):
+					var t := titulo.to_lower()
+					Sons.ui("voltar" if (t.begins_with("voltar") or t.begins_with("fechar") or t.begins_with("depois") or t.begins_with("cancelar") or t == "não") else "clique")
 					apertado.emit()
 			accept_event()
 	func _notification(what: int) -> void:
@@ -257,6 +260,7 @@ class Seletor extends Control:
 			if opcoes[i][0] != valor:
 				valor = opcoes[i][0]
 				queue_redraw()
+				Sons.ui("alternar")
 				escolheu.emit(valor)
 	func _draw() -> void:
 		var v := UI.vh(self)
@@ -320,6 +324,7 @@ class Deslizante extends Control:
 		if nv != valor:
 			valor = nv
 			queue_redraw()
+			Sons.ui("tique", -4.0)
 			mudou.emit(valor)
 	# só começa a mexer com um arraste para o LADO (ou um toque parado); arrastar para cima/baixo rola a lista
 	var _p0 := Vector2.ZERO
@@ -402,6 +407,7 @@ class Passo extends Control:
 				if opcoes[i][0] != valor:
 					valor = opcoes[i][0]
 					queue_redraw()
+					Sons.ui("alternar")
 					escolheu.emit(valor)
 	func _draw() -> void:
 		var v := UI.vh(self)
@@ -443,6 +449,7 @@ class Abas extends Control:
 				if r.has_point(e.position) and i != atual:
 					atual = i
 					queue_redraw()
+					Sons.ui("aba")
 					escolheu.emit(i)
 	func _draw() -> void:
 		var v := UI.vh(self)

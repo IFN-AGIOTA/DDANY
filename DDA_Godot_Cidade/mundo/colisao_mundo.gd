@@ -307,6 +307,18 @@ func altura_rua(x: float, z: float) -> float:
 		return ALT_CALCADA
 	return -1000.0
 
+# 0.49: de que é o chão aqui (som dos passos): "concreto" (rua, calçada, lote), "grama" (parque, terreno),
+# "madeira" (dentro de prédio) ou "agua"
+func tipo_piso(x: float, z: float) -> String:
+	if dentro_de_predio(x, z, 0.0, true):
+		return "madeira"
+	if altura_rua(x, z) > -100.0 or altura_lote(x, z, ALT_TERRA) >= ALT_CALCADA - 0.01:
+		return "concreto"
+	var b := altura_sem_rua(x, z)
+	if b == ALT_MAR or b == ALT_LAGO:
+		return "agua"
+	return "grama"
+
 # terra, parque, lago ou mar (ignorando as ruas)
 func altura_sem_rua(x: float, z: float) -> float:
 	var p := Vector2(x, z)

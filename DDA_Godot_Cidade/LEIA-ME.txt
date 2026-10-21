@@ -39,6 +39,35 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.49 · SONS NOVOS (menu, entrada da partida, tiros de verdade, recarga, inventário, corpo, ambiente)
+  · Chega pelo SISTEMA DE ATUALIZAÇÃO (pacote 0.49 para o APK 0.48): só abrir o jogo. A música não mudou.
+  · audio/sons.gd (NOVO): toca qualquer som pelo nome do grupo ("ui/clique", "armas/tiro_ak"...), sorteia uma das
+    gravações e varia um pouco o tom; Sons.ui (menu), Sons.tocar (perto) e Sons.em (3D, num ponto do mundo).
+    Não é autoload: se cria sozinho (por isso veio num pacote). Barramento "UI" novo (sem eco) com o volume dos EFEITOS.
+  · MENU: clique nos botões, "voltar" em Voltar/Fechar/Depois, troca de opção, aba, tique no deslizante, abrir a
+    pausa (menu/ui.gd: vale para todas as telas de uma vez).
+  · PARTIDA: som de ENTRADA (pancada grave + "sucção" de tiro ao contrário + eco + coração), som de MORTE (coração
+    parando), RENASCER, OBJETIVO novo no mapa e suprimento encontrado.
+  · TIROS DE VERDADE (The Free Firearm Sound Library, CC0): várias gravações por arma, sorteadas: 1911/Walther
+    (pistola), AR-15 (M4), AK-47, Benelli Nova/Mossberg (espingarda), Tikka/Savage (rifle), Ruger .22 abafado
+    (silenciado). Um limitador deixa o tiro "cheio" sem estourar. Gravação DE LONGE (abafada, com eco) para o tiro
+    do amigo a mais de 70 m e para os tiros distantes do ambiente. Tiro do amigo agora é 3D (vem do lado certo).
+  · ARMA NA MÃO: sacar (metal/couro; faca = lâmina), recarga em etapas que acompanham a animação (pente sai, pente
+    entra, ferrolho/slide), espingarda cartucho a cartucho + bombear, rifle com ferrolho, bala entrando no pente,
+    gatilho em seco (sem munição/travada), CÁPSULA caindo no chão depois do tiro, bombear/ferrolho depois do tiro
+    na espingarda e no rifle (armas/armas.gd: _som_recarga, _depois_do_tiro).
+  · BALA BATENDO (3D, até 55 m): terra, água, concreto (às vezes metal) e carne (armas/efeitos_tiro.gd).
+  · INVENTÁRIO: abrir/fechar a mochila, pegar, largar, mover, vestir/tirar roupa, comer, beber, atadura/kit, encher
+    pente (inventario/inventario.gd, inventario/tela_inventario.gd).
+  · CORPO: passos que mudam com o chão (asfalto/calçada, grama/terra, madeira dentro de prédio; colisao_mundo.tipo_piso),
+    assoalho rangendo ao entrar em prédio, pulo, aterrissagem (mais forte quanto maior a queda), CORAÇÃO com vida
+    baixa ou perdendo muito sangue, FÔLEGO depois de correr muito (jogador/jogador.gd).
+  · AMBIENTE: pássaros de dia, grilos à noite, vento forte na chuva/tempestade, tudo mais baixo dentro de prédio
+    (audio/ambiente.gd); estalos de FOGO na fogueira (3D, mundo/fogueira.gd).
+  · Os arquivos (audio/sons/...) são feitos por ferramentas/preparar_sons.py a partir dos downloads (corta, tira
+    silêncio, iguala volume, mono .ogg leve: ~3 MB no total). Licenças em audio/sons/LICENCA.txt e no menu Créditos.
+  · Testado: todos os grupos de som existem; atirar/recarregar as 5 armas, coração e fôlego tocam; testes do jogo ok.
+
 ATUALIZAÇÃO 0.48.1 · CHÃO SEM BOLINHAS E SEM LISTRAS DE AREIA NO CELULAR (primeiro PACOTE pelo próprio jogo)
   · Defeito: no celular (placa Mali, ex.: Realme C61) o chão tinha bolinhas laranja em grade (no asfalto, na calçada
     e na terra), listras e faixas de "areia" no meio da cidade. No PC não aparecia.
@@ -780,7 +809,8 @@ ARMAS (pasta armas/)
 - modelo 3D das armas e acessórios .... armas/modelos_armas.gd (usa armas/modelos/<arma>.glb realistas;
                                         .scn antigo só para a lança; cano de ferro feito por código)
 - traçantes, clarão, marcas de bala ... armas/efeitos_tiro.gd
-- sons dos tiros e golpes ............. armas/sons_armas.gd
+- SONS (central: menu, partida, armas, inventário, corpo, mundo) ... audio/sons.gd + audio/sons/ (preparar_sons.py)
+- sons dos tiros e golpes ............. armas/sons_armas.gd (tiros) e armas/armas.gd (recarga, cápsula, seco, sacar)
 - mira e painel de munição (HUD) ...... armas/hud_combate.gd
 
 INVENTÁRIO / ITENS (pasta inventario/)

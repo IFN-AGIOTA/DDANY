@@ -6,11 +6,13 @@ extends Node3D
 # Depois vira brasa e some. Mexa AQUI para: duração, luz e tamanho.
 
 const Malhas := preload("res://mundo/malhas.gd")
+const Sons := preload("res://audio/sons.gd")
 const DURACAO := 600.0
 
 var acesa := true
 var _t := 0.0
 var _luz: OmniLight3D
+var _som: AudioStreamPlayer3D                                # estalos do fogo (0.49), em laço
 var _chamas: Array[MeshInstance3D] = []
 static var _mat_fogo: StandardMaterial3D = null
 
@@ -51,6 +53,16 @@ func _ready() -> void:
 	_luz.omni_range = 9.0
 	_luz.position.y = 0.7
 	add_child(_luz)
+	_som = AudioStreamPlayer3D.new()
+	_som.stream = Sons.stream("mundo/fogo", true)
+	_som.bus = "SFX" if AudioServer.get_bus_index("SFX") >= 0 else "Master"
+	_som.volume_db = -4.0
+	_som.unit_size = 2.5
+	_som.max_distance = 28.0
+	_som.position.y = 0.3
+	add_child(_som)
+	if _som.stream != null:
+		_som.play(randf() * 4.0)
 
 func _process(dt: float) -> void:
 	_t += dt
@@ -67,4 +79,6 @@ func _process(dt: float) -> void:
 		_luz.light_color = Color(0.9, 0.3, 0.1)
 		for ch in _chamas:
 			ch.visible = false
+		if _som != null:
+			create_tween().tween_property(_som, "volume_db", -40.0, 6.0).finished.connect(_som.stop)
 		get_tree().create_timer(120.0).timeout.connect(queue_free)

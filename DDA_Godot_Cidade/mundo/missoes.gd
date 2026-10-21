@@ -137,6 +137,7 @@ func _soltar_horda() -> void:
 
 func _concluir() -> void:
 	encontrados += 1
+	preload("res://audio/sons.gd").tocar("partida/objetivo", -3.0)
 	_aviso("SUPRIMENTO ENCONTRADO!")
 	_encerrar(false)
 

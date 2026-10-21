@@ -26,6 +26,7 @@ const ALTURA_EM_PE := 1.8
 const ALTURA_AGACHADO := 1.3
 const EXTENSOES_MODELO := ["tscn", "scn", "glb", "gltf", "fbx"]
 const SonsCorpo := preload("res://audio/sons_corpo.gd")
+const Sons := preload("res://audio/sons.gd")
 const SonsBaixados := preload("res://audio/sons_baixados.gd")
 const InventarioCls := preload("res://inventario/inventario.gd")
 const SobrevivenciaCls := preload("res://jogador/sobrevivencia.gd")
@@ -113,6 +114,16 @@ func _ready() -> void:
 	_som_voz = AudioStreamPlayer.new()
 	_som_voz.bus = bus
 	add_child(_som_voz)
+	# 0.49: coração (vida baixa / sangrando muito) e fôlego (correu muito): laços que sobem e descem devagar
+	_som_coracao = AudioStreamPlayer.new()
+	_som_coracao.bus = bus
+	_som_coracao.volume_db = -80.0
+	add_child(_som_coracao)
+	_som_folego = AudioStreamPlayer.new()
+	_som_folego.bus = bus
+	_som_folego.volume_db = -80.0
+	add_child(_som_folego)
+	pulou.connect(func(): Sons.tocar("jogador/pulo", -12.0))
 	sobrevivencia.ferido.connect(_doeu)
 	sobrevivencia.morreu.connect(func(_c):
 		var m := SonsBaixados.sortear("jogador/morte")
@@ -202,13 +213,62 @@ func _passos(delta: float) -> void:
 		_clima = get_tree().current_scene.get("clima") if get_tree().current_scene != null else null
 	var cl = _clima
 	var molhado: bool = cl != null and is_instance_valid(cl) and float(cl.molhado) > 0.4
-	var gravado := SonsBaixados.sortear("jogador/passo")
+	# 0.49: o som muda com o chão (colisao_mundo.tipo_piso): asfalto/calçada, grama/terra, dentro de prédio
+	var piso := "concreto"
+	if mundo != null and mundo.has_method("tipo_piso"):
+		piso = mundo.tipo_piso(global_position.x, global_position.z)
+	var gravado: AudioStream = null
+	if piso == "madeira" and _piso_ant != "madeira" and _piso_ant != "":
+		Sons.tocar("mundo/rangido", -14.0)                 # entrou no prédio: o assoalho range
+	_piso_ant = piso
+	if piso == "madeira":
+		gravado = Sons.sortear("jogador/passo_madeira")
+		molhado = false                                   # dentro do prédio não chapinha
+	elif piso == "grama" and not molhado:
+		gravado = Sons.sortear("jogador/passo_grama")
+	if gravado == null:
+		gravado = SonsBaixados.sortear("jogador/passo")
 	_som_passo.stream = gravado if gravado != null and not molhado else SonsCorpo.passo(_n_passo, molhado)
 	_som_passo.pitch_scale = randf_range(0.9, 1.1)
 	_som_passo.volume_db = (-14.0 if agachado else (-3.0 if vel_horizontal > 5.0 else -8.0))
 	_som_passo.play()
 
 var _clima = null                   # mundo/clima.gd (guardado: antes procurava a cada passo)
+
+# ---------- coração e fôlego (0.49) ----------
+var _som_coracao: AudioStreamPlayer
+var _som_folego: AudioStreamPlayer
+var _piso_ant := ""                  # chão do último passo (som ao entrar em prédio)
+var fadiga := 0.0                   # 0..1: sobe correndo, desce parado/andando
+
+func _sons_corpo(delta: float) -> void:
+	if _som_coracao == null:
+		return
+	var correndo := vel_horizontal > 5.0 and is_on_floor() and not morto
+	fadiga = clampf(fadiga + (delta / 25.0 if correndo else -delta / 12.0), 0.0, 1.0)
+	var perigo := 0.0
+	if sobrevivencia != null and not morto:
+		perigo = maxf(1.0 - clampf((float(sobrevivencia.vida) - 10.0) / 30.0, 0.0, 1.0),
+			1.0 - clampf((float(sobrevivencia.sangue) - 2500.0) / 1500.0, 0.0, 1.0))
+	_laco(_som_coracao, perigo, "jogador/coracao_rapido" if perigo > 0.6 else "jogador/coracao_lento", -26.0, -6.0, delta)
+	_laco(_som_folego, smoothstep(0.45, 0.9, fadiga) * (0.0 if morto else 1.0), "jogador/respiracao", -30.0, -12.0, delta)
+
+# liga/desliga um laço suave: f = 0..1 (0 = mudo)
+func _laco(p: AudioStreamPlayer, f: float, nome: String, vmin: float, vmax: float, delta: float) -> void:
+	if f <= 0.01:
+		if p.playing:
+			p.volume_db -= delta * 30.0
+			if p.volume_db < -60.0:
+				p.stop()
+		return
+	var alvo := lerpf(vmin, vmax, f)
+	if not p.playing or (p.stream != null and p.get_meta("som", "") != nome):
+		p.stream = Sons.stream(nome, true)
+		p.set_meta("som", nome)
+		if not p.playing:
+			p.volume_db = -50.0
+		p.play()
+	p.volume_db = move_toward(p.volume_db, alvo, delta * 20.0)
 
 func _doeu(dano: float) -> void:
 	if dano < 2.0 or _t_dor > 0.0 or _som_voz == null:
@@ -332,8 +392,11 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	if no_ar and is_on_floor() and sobrevivencia != null:
 		sobrevivencia.queda(vy_antes)    # dano de queda / perna quebrada
+		if vy_antes < -3.0:
+			Sons.tocar("jogador/aterrissar", clampf(-22.0 - vy_antes * 1.6, -18.0, -2.0))
 	vel_horizontal = Vector2(velocity.x, velocity.z).length()
 	_passos(delta)
+	_sons_corpo(delta)
 	atirando = armas.since < 1.6 or armas.aim > 0.5
 	if not morto:
 		if mirando or atirando:

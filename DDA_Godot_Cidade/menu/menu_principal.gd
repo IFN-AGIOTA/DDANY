@@ -231,6 +231,7 @@ class _BotaoPerfil extends Control:
 	func _gui_input(e: InputEvent) -> void:
 		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
 			accept_event()
+			UIp.Sons.ui("clique")
 			apertado.emit()
 	func _draw() -> void:
 		var v: float = UIp.vh(self)

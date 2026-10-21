@@ -12,6 +12,7 @@ signal mudou
 signal aviso(texto: String)
 signal animar(nome: String)          # pede uma animação ao corpo do jogador (pegar do chão, comer, curar...)
 
+const Sons := preload("res://audio/sons.gd")
 const Itens := preload("res://inventario/itens.gd")
 const ItemCls := preload("res://inventario/item.gd")
 const ItemMundo := preload("res://inventario/item_mundo.gd")
@@ -289,6 +290,7 @@ func mover_para_grade(it, g, cx: int, cy: int, girado: bool) -> bool:
 		return false
 	retirar(it)
 	g.colocar(it, cx, cy, girado)
+	Sons.tocar("inventario/pegar", -12.0)
 	_depois()
 	return true
 
@@ -317,6 +319,8 @@ func equipar(it, s: String) -> bool:
 	it.slot = s
 	if antigo != null:
 		_guardar_em_algum_lugar(antigo, orig)
+	if s != "maos":
+		Sons.tocar("inventario/vestir", -6.0)      # na mão: o som é o de sacar (armas/armas.gd)
 	_depois()
 	return true
 
@@ -334,6 +338,7 @@ func desequipar(it) -> bool:
 		it.slot = orig["slot"]
 		aviso.emit("SEM ESPAÇO")
 		return false
+	Sons.tocar("inventario/vestir", -9.0, 0.92)
 	_depois()
 	return true
 
@@ -342,6 +347,7 @@ func largar(it) -> bool:
 		return false
 	retirar(it)
 	_soltar_no_chao(it)
+	Sons.tocar("inventario/largar", -6.0)
 	_depois()
 	return true
 
@@ -350,6 +356,7 @@ func pegar(it) -> bool:
 	if it == null or do_jogador(it):
 		return false
 	animar.emit("pegar_chao" if it.no_mundo != null else "pegar")
+	Sons.tocar("inventario/pegar", -5.0)
 	var pref: String = it.def().get("slot", "")
 	if pref != "" and slots.get(pref) == null:
 		retirar(it)
@@ -418,6 +425,13 @@ func usar(it) -> void:
 				aviso.emit(r)           # ex.: "NADA PARA CONSERTAR" (o item não é gasto)
 				return
 		aviso.emit(String(d.get("usar", "Usou " + it.nome())).to_upper())
+		match String(d.get("cat", "")):
+			"comida":
+				Sons.tocar("inventario/comer", -4.0)
+			"bebida":
+				Sons.tocar("inventario/beber", -5.0)
+			_:
+				Sons.tocar("inventario/atadura" if it.id in ["bandagem", "trapos", "kit_medico", "tala"] else "inventario/pegar", -5.0)
 		if d.has("vira") and it.qtd <= 1:
 			it.id = d["vira"]           # a garrafa fica vazia no mesmo lugar
 			it.estado = maxf(it.estado, 0.5)
@@ -600,6 +614,7 @@ func encher_pente(p) -> bool:
 		aviso.emit("SEM MUNIÇÃO " + String(Itens.def(p.def()["pente_de"]).get("sigla", "")))
 		return false
 	p.municao += n
+	Sons.tocar("armas/bala_pente", -4.0)
 	aviso.emit("PENTE %d/%d" % [p.municao, p.capacidade()])
 	_depois()
 	return true
