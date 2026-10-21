@@ -9,3 +9,4 @@ chaves_privadas/
 chaves_*.zip
 # servidor do PC: vai só o servidor_windows.zip (os arquivos soltos são grandes)
 servidor_windows/
+DDA_Godot_Cidade/rede/turn.cfg

@@ -20,6 +20,7 @@ const VALIDADE := 60.0                        # host: oferta mais velha que isso
 const CANAIS := [MultiplayerPeer.TRANSFER_MODE_UNRELIABLE_ORDERED, MultiplayerPeer.TRANSFER_MODE_RELIABLE]  # canais 1 e 2 das RPCs
 
 var _ice := {}
+var tem_turn := false                         # tem retransmissor configurado (rede/turn.cfg)
 # host
 var _peer_host: WebRTCMultiplayerPeer = null
 var _clientes := {}                           # uid do amigo -> {"sessao", "id", "conn", "h": {...}, "lidos": int, "t_ok": float}
@@ -39,12 +40,28 @@ var _pendente := {}                           # caminho -> último valor que fal
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	var servidores: Array = [{"urls": STUN}]
+	# RETRANSMISSOR (TURN), 0.52: rede/turn.cfg [turn] urls (várias, separadas por vírgula), usuario, senha.
+	# Sem ele, 4G e redes com CGNAT dos dois lados não conectam (o WebRTC não consegue "furar" os dois roteadores).
+	# Fica fora do git (.gitignore) mas vai dentro do APK, do servidor do PC e dos pacotes. Modelo: rede/turn_exemplo.cfg
 	var cf := ConfigFile.new()
-	if cf.load("res://rede/firebase_config.cfg") == OK:
-		var turn := str(cf.get_value("webrtc", "turn", "")).strip_edges()
-		if turn != "":
-			servidores.append({"urls": [turn], "username": str(cf.get_value("webrtc", "turn_usuario", "")),
-				"credential": str(cf.get_value("webrtc", "turn_senha", ""))})
+	var urls := ""
+	var usuario := ""
+	var senha := ""
+	if cf.load("res://rede/turn.cfg") == OK:
+		urls = str(cf.get_value("turn", "urls", ""))
+		usuario = str(cf.get_value("turn", "usuario", ""))
+		senha = str(cf.get_value("turn", "senha", ""))
+	elif cf.load("res://rede/firebase_config.cfg") == OK:        # jeito antigo (um endereço só)
+		urls = str(cf.get_value("webrtc", "turn", ""))
+		usuario = str(cf.get_value("webrtc", "turn_usuario", ""))
+		senha = str(cf.get_value("webrtc", "turn_senha", ""))
+	var lista := PackedStringArray()
+	for u in urls.split(",", false):
+		if u.strip_edges() != "":
+			lista.append(u.strip_edges())
+	if not lista.is_empty() and usuario.strip_edges() != "":
+		servidores.append({"urls": lista, "username": usuario.strip_edges(), "credential": senha.strip_edges()})
+		tem_turn = true
 	_ice = {"iceServers": servidores}
 
 # o WebRTC existe nesta plataforma? (addons/webrtc_native: Android arm64, Linux e Windows x86_64)
@@ -193,7 +210,8 @@ func _process(dt: float) -> void:
 			return
 		if _t_cli > DESISTIR:
 			parar()
-			cliente_falhou.emit("Não deu para conectar pela internet (a rede de um de vocês bloqueia).")
+			cliente_falhou.emit("Não deu para conectar pela internet (a rede de um de vocês bloqueia)." if tem_turn else
+				"Não deu para conectar pela internet: no 4G e em algumas redes precisa do RETRANSMISSOR (rede/turn.cfg), que este jogo ainda não tem.")
 			return
 		if _t_olhar <= 0.0:
 			_t_olhar = OLHAR_A_CADA

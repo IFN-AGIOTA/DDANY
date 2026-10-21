@@ -151,6 +151,9 @@ func _montar(caminho: String, lista: PackedStringArray) -> int:
 		else:
 			# script/cena/dados em texto + ".remap" apontando para ele (o APK tem o .gdc/.scn e um .remap antigo)
 			pk.add_file(res, ProjectSettings.globalize_path(res))
+			if not rel.get_extension() in ["gd", "tscn", "tres", "scn", "res"]:
+				n += 1                           # arquivo comum (ex.: rede/turn.cfg): vai como está, sem .remap
+				continue
 			var rm := tmp.path_join(rel.replace("/", "__") + ".remap")
 			var f := FileAccess.open(rm, FileAccess.WRITE)
 			f.store_string("[remap]\n\npath=\"%s\"\n" % res)
