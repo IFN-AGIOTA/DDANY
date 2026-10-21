@@ -12,6 +12,7 @@ extends Node
 # (regras em rede/firebase_regras.json). Mexa AQUI para: tempos, servidores STUN/TURN.
 
 signal cliente_falhou(motivo: String)
+signal diagnostico(texto: String)              # 0.53: o que aconteceu na conexão (o servidor do PC escreve no console)
 
 const STUN := ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"]
 const OLHAR_A_CADA := 1.2                     # segundos entre consultas ao banco
@@ -21,6 +22,19 @@ const CANAIS := [MultiplayerPeer.TRANSFER_MODE_UNRELIABLE_ORDERED, MultiplayerPe
 
 var _ice := {}
 var tem_turn := false                         # tem retransmissor configurado (rede/turn.cfg)
+var _tipos := {}                              # amigo: caminhos achados por mim {"host": n, "srflx": n, "relay": n}
+
+# tipo do caminho de um candidato ICE: host (rede local), srflx (internet direta), relay (retransmissor)
+static func tipo_cand(n: String) -> String:
+	var i := n.find(" typ ")
+	return n.substr(i + 5).get_slice(" ", 0) if i >= 0 else "?"
+
+static func resumo_tipos(lista: Array) -> String:
+	var c := {"host": 0, "srflx": 0, "relay": 0}
+	for x in lista:
+		var t := tipo_cand(str(x[2]) if x is Array and x.size() == 3 else str(x))
+		c[t] = int(c.get(t, 0)) + 1
+	return "rede local %d · internet %d · retransmissor %d" % [c["host"], c["srflx"], c["relay"]]
 # host
 var _peer_host: WebRTCMultiplayerPeer = null
 var _clientes := {}                           # uid do amigo -> {"sessao", "id", "conn", "h": {...}, "lidos": int, "t_ok": float}
@@ -55,7 +69,7 @@ func _ready() -> void:
 		urls = str(cf.get_value("webrtc", "turn", ""))
 		usuario = str(cf.get_value("webrtc", "turn_usuario", ""))
 		senha = str(cf.get_value("webrtc", "turn_senha", ""))
-	var lista := PackedStringArray()
+	var lista: Array = []                     # lista COMUM: o WebRTC recusa PackedStringArray (initialize dá erro)
 	for u in urls.split(",", false):
 		if u.strip_edges() != "":
 			lista.append(u.strip_edges())
@@ -73,7 +87,11 @@ static func disponivel() -> bool:
 
 func _nova_conexao() -> WebRTCPeerConnection:
 	var c := WebRTCPeerConnection.new()
-	c.initialize(_ice)
+	var e := c.initialize(_ice)
+	if e != OK:                                  # configuração recusada: tenta só com o STUN (melhor que nada)
+		push_warning("WebRTC: configuração ICE recusada (%d); seguindo sem retransmissor" % e)
+		c = WebRTCPeerConnection.new()
+		c.initialize({"iceServers": [{"urls": STUN}]})
 	return c
 
 # ---------------- HOST ----------------
@@ -134,6 +152,8 @@ func _atender(cli: String, c: Dictionary) -> void:
 		_gravar(caminho, k["h"]))
 	_peer_host.add_peer(conn, id)
 	conn.set_remote_description("offer", str(c.get("sdp", "")))
+	k["estado"] = -1
+	diagnostico.emit("WebRTC: pedido de conexão de %s (caminhos dele até agora: %s)" % [cli.left(6), resumo_tipos(c.get("cand", []) if c.get("cand") is Array else [])])
 
 # ---------------- AMIGO ----------------
 func conectar(host_uid: String) -> WebRTCMultiplayerPeer:
@@ -153,8 +173,11 @@ func conectar(host_uid: String) -> WebRTCMultiplayerPeer:
 		_conn.set_local_description(tipo, sdp)
 		_c["sdp"] = sdp
 		_gravar(caminho, _c))
+	_tipos = {}
 	_conn.ice_candidate_created.connect(func(m: String, i: int, n: String):
 		_c["cand"].append([m, i, n])
+		var t := tipo_cand(n)
+		_tipos[t] = int(_tipos.get(t, 0)) + 1
 		_gravar(caminho, _c))
 	_peer_cli.add_peer(_conn, 1)
 	_conn.create_offer()
@@ -195,7 +218,12 @@ func _process(dt: float) -> void:
 		for cli in _clientes.keys():
 			var k: Dictionary = _clientes[cli]
 			var conn: WebRTCPeerConnection = k["conn"]
-			if conn.get_connection_state() == WebRTCPeerConnection.STATE_CONNECTED and k["t_ok"] < 0.0:
+			var est := conn.get_connection_state()
+			if est != int(k.get("estado", -1)):
+				k["estado"] = est
+				var nomes := ["novo", "conectando", "CONECTADO", "desconectou", "FALHOU", "fechado"]
+				diagnostico.emit("WebRTC %s: %s · meus caminhos: %s" % [cli.left(6), nomes[clampi(est, 0, 5)], resumo_tipos(k["h"]["cand"])])
+			if est == WebRTCPeerConnection.STATE_CONNECTED and k["t_ok"] < 0.0:
 				k["t_ok"] = 0.0
 				Conta.db_del("sinal/%s/%s" % [Conta.uid, cli])
 		if _t_olhar <= 0.0:
@@ -209,9 +237,16 @@ func _process(dt: float) -> void:
 				_host_uid = ""
 			return
 		if _t_cli > DESISTIR:
+			var resp := _resposta
 			parar()
-			cliente_falhou.emit("Não deu para conectar pela internet (a rede de um de vocês bloqueia)." if tem_turn else
-				"Não deu para conectar pela internet: no 4G e em algumas redes precisa do RETRANSMISSOR (rede/turn.cfg), que este jogo ainda não tem.")
+			var d := "[%s · resposta do servidor: %s · retransmissor configurado: %s]" % [resumo_tipos(_c.get("cand", [])),
+				"sim" if resp else "NÃO", "sim" if tem_turn else "não"]
+			var motivo := "Não deu para conectar pela internet."
+			if not resp:
+				motivo = "O servidor não respondeu (está ligado? na mesma versão?)."
+			elif tem_turn and int(_tipos.get("relay", 0)) == 0:
+				motivo = "Não deu para usar o retransmissor nesta rede (a senha mudou ou a rede bloqueia)."
+			cliente_falhou.emit(motivo + " " + d)
 			return
 		if _t_olhar <= 0.0:
 			_t_olhar = OLHAR_A_CADA

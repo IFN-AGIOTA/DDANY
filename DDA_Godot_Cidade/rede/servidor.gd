@@ -58,6 +58,8 @@ func iniciar(m: Node) -> void:
 	Rede.jogador_entrou.connect(func(id, nm): _log("ENTROU: %s (id %d) · %d na partida" % [nm, id, Rede.jogadores.size()]))
 	Rede.jogador_saiu.connect(func(id): _log("SAIU: id %d · %d na partida" % [id, Rede.jogadores.size()]))
 	Rede.falhou.connect(func(motivo): _log("ERRO: " + motivo))
+	Rede.rtc.diagnostico.connect(_log)          # 0.53: cada tentativa de conexão pela internet aparece aqui
+	_log("retransmissor (TURN): %s" % ("configurado" if Rede.rtc.tem_turn else "NÃO configurado (rede/turn.cfg)"))
 	await _entrar_na_conta(nome)
 	Rede.criar_partida(nome, randi())
 	if not Rede.ligado:

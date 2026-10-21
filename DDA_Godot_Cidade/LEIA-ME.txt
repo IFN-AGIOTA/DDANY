@@ -39,6 +39,15 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.53 · CONSERTO: CONEXÃO PELA INTERNET (WebRTC) QUEBRADA NA 0.52 + DIAGNÓSTICO
+  · Defeito da 0.52: a lista de endereços do retransmissor ia como PackedStringArray e a biblioteca do WebRTC só
+    aceita Array: a conexão falhava ANTES de começar (nem no Wi-Fi conectava pela internet). Agora é Array, e se a
+    configuração for recusada mesmo assim o jogo segue só com o STUN (rede/rtc.gd _nova_conexao).
+  · DIAGNÓSTICO: o servidor do PC escreve cada tentativa ("pedido de conexão", "conectando", "CONECTADO"/"FALHOU" e
+    os caminhos achados: rede local · internet · retransmissor). No celular, a falha diz se o servidor respondeu e
+    se o retransmissor funcionou nesta rede.
+  · Testado: com o retransmissor configurado, o celular de teste acha o servidor na lista e conecta por WebRTC.
+
 ATUALIZAÇÃO 0.52 · MULTIJOGADOR PELA INTERNET NO 4G (RETRANSMISSOR TURN)
   · No 4G (e com CGNAT dos dois lados) o WebRTC não consegue "furar" os roteadores: agora, quando a ligação direta
     não dá, os dados passam por um RETRANSMISSOR (TURN) da Metered (plano grátis, conta do dono do jogo).
