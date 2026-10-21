@@ -12,11 +12,16 @@ extends Node
 #     Consertos, ajustes, coisas novas e remoções (trocando o arquivo por outro) chegam assim, sem reinstalar.
 #   · "pacote": null (ou de outro APK) com um pacote instalado -> o pacote é tirado na próxima abertura.
 # Os pacotes e o manifesto são feitos pela ferramenta ferramentas/gerar_pacote.gd (ver LEIA-ME).
+#   · DENTRO DA PARTIDA (0.57): uma notificação curta no alto da tela (alguns segundos, não atrapalha) avisa que
+#     tem atualização; o aviso completo (com o botão) aparece quando voltar ao menu. Com o jogo aberto, procura de
+#     novo a cada PROCURAR_A_CADA segundos (partidas longas também ficam sabendo).
 # Mexa AQUI para: endereço do manifesto, textos e o visual do aviso.
 
 const UI := preload("res://menu/ui.gd")
 const RAMO := "claude/dayz-inventory-system-pckjpx"
 const MANIFESTO := "https://raw.githubusercontent.com/IFN-AGIOTA/DDANY/refs/heads/" + RAMO + "/atualizacoes/atualizacao.json"
+const PROCURAR_A_CADA := 600.0               # com o jogo aberto, procura de novo a cada 10 min
+const NOTIF_DURA := 6.0                       # segundos da notificação dentro da partida
 const ESPERA := 3.0                           # segundos depois de abrir para procurar (não atrapalha o carregamento)
 
 var boot: Node                                # rede/atualizador.gd
@@ -26,6 +31,10 @@ var _baixando := {}                           # o pacote sendo baixado
 var _ui: CanvasLayer
 var _caixa: PanelContainer
 var _pendente := {}                           # aviso esperando o menu aparecer: {"tipo", ...}
+var _url := ""
+var _t_procurar := PROCURAR_A_CADA
+var _notificados := {}                        # "tipo:versão" já avisados dentro da partida (não repete)
+var _ja_avisado := {}                         # "tipo:versão" já mostrados (a nova busca não repete o aviso)
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -38,7 +47,8 @@ func _ready() -> void:
 	await get_tree().create_timer(ESPERA).timeout
 	if boot.aviso != "":
 		_mostrar({"tipo": "info", "texto": boot.aviso})
-	_buscar(url if url != "" else MANIFESTO)
+	_url = url if url != "" else MANIFESTO
+	_buscar(_url)
 
 func _buscar(url: String) -> void:
 	_http = HTTPRequest.new()
@@ -51,6 +61,7 @@ func _buscar(url: String) -> void:
 
 func _manifesto_chegou(res: int, codigo: int, _h: PackedStringArray, corpo: PackedByteArray) -> void:
 	_http.queue_free()
+	_http = null
 	if res != HTTPRequest.RESULT_SUCCESS or codigo != 200:
 		return                                # sem internet: tenta na próxima abertura
 	var bruto = JSON.parse_string(corpo.get_string_from_utf8())
@@ -115,9 +126,91 @@ func progresso() -> float:
 
 # ---------- aviso na tela (só no menu; no meio do jogo espera) ----------
 func _mostrar(a: Dictionary) -> void:
+	var chave := "%s:%s" % [a.get("tipo", ""), a.get("versao", "")]
+	if a.get("tipo", "") != "info" and _ja_avisado.has(chave):
+		return                                # a busca de 10 em 10 min achou a mesma coisa: não repete
+	_ja_avisado[chave] = true
 	_pendente = a
+	_notificar_na_partida(a)
 
-func _process(_dt: float) -> void:
+# ---------- notificação curta DENTRO DA PARTIDA (0.57) ----------
+func _em_partida() -> bool:
+	var c := get_tree().current_scene
+	return c != null and c.get("jogo") != null and is_instance_valid(c.jogo)
+
+func _notificar_na_partida(a: Dictionary) -> void:
+	var tipo := str(a.get("tipo", ""))
+	if tipo == "info" or not _em_partida():
+		return
+	var chave := "%s:%s" % [tipo, a.get("versao", "")]
+	if _notificados.has(chave):
+		return
+	_notificados[chave] = true
+	var titulo := "NOVA ATUALIZAÇÃO %s" % a.get("versao", "")
+	var texto := "Baixando agora · entra quando você abrir o jogo de novo."
+	if tipo == "apk":
+		titulo = "NOVA VERSÃO %s DISPONÍVEL" % a.get("versao", "")
+		texto = "Volte ao menu para baixar."
+	var camada := CanvasLayer.new()
+	camada.layer = 64
+	add_child(camada)
+	var v := UI.vh(camada)
+	var caixa := PanelContainer.new()
+	caixa.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.1, 0.04, 0.015, 0.9)
+	sb.border_color = Color("#ff8a35")
+	sb.set_border_width_all(0)
+	sb.border_width_left = int(maxf(3.0, 0.7 * v))
+	sb.set_corner_radius_all(int(1.2 * v))
+	sb.content_margin_left = 2.0 * v
+	sb.content_margin_right = 2.4 * v
+	sb.content_margin_top = 1.0 * v
+	sb.content_margin_bottom = 1.1 * v
+	caixa.add_theme_stylebox_override("panel", sb)
+	caixa.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	caixa.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	caixa.offset_top = 13.0 * v                 # embaixo da bússola
+	camada.add_child(caixa)
+	var col := VBoxContainer.new()
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", int(0.3 * v))
+	caixa.add_child(col)
+	var t1: Label = UI.rotulo(titulo, 2.8 * v, UI.AMBAR, 900)
+	var t2: Label = UI.rotulo(texto, 2.1 * v, Color(1, 0.93, 0.85, 0.9), 500)
+	for t in [t1, t2]:
+		t.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		col.add_child(t)
+	var notas := str(a.get("notas", ""))
+	if notas != "":
+		var t3: Label = UI.rotulo(notas, 1.9 * v, Color(1, 0.91, 0.82, 0.65), 400)
+		t3.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		t3.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		col.add_child(t3)
+	caixa.modulate.a = 0.0
+	preload("res://audio/sons.gd").ui("aviso", -4.0)
+	var tw := camada.create_tween()
+	tw.tween_property(caixa, "modulate:a", 1.0, 0.35)
+	tw.tween_interval(NOTIF_DURA)
+	tw.tween_property(caixa, "modulate:a", 0.0, 0.8)
+	tw.tween_callback(camada.queue_free)
+
+func _process(dt: float) -> void:
+	# procura de novo de tempos em tempos (não no meio de um download)
+	if _url != "":
+		_t_procurar -= dt
+		if _t_procurar <= 0.0:
+			_t_procurar = PROCURAR_A_CADA
+			if _baixando.is_empty() and (_http == null or not is_instance_valid(_http)):
+				_buscar(_url)
+	var cena := get_tree().current_scene
+	var no_menu: bool = cena != null and cena.get("menu") != null and is_instance_valid(cena.menu)
+	if _caixa != null and not no_menu:
+		# o aviso grande é do MENU: começou a partida com ele aberto -> fecha e volta a mostrar no menu
+		_pendente = _aberto
+		_fechar()
+		return
 	if _pendente.is_empty() or _caixa != null:
 		return
 	var c := get_tree().current_scene
@@ -126,7 +219,10 @@ func _process(_dt: float) -> void:
 	_abrir(_pendente)
 	_pendente = {}
 
+var _aberto := {}                             # o aviso que está na tela
+
 func _abrir(a: Dictionary) -> void:
+	_aberto = a
 	_ui = CanvasLayer.new()
 	_ui.layer = 65
 	add_child(_ui)

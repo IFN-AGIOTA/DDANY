@@ -39,6 +39,16 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.57 · AVISO DE ATUALIZAÇÃO DENTRO DA PARTIDA
+  · rede/atualizacoes.gd: chegou atualização com você jogando -> notificação curta no alto da tela (embaixo da
+    bússola, ~6 s, com som, não atrapalha os toques): "NOVA ATUALIZAÇÃO X · baixando agora · entra quando você
+    abrir o jogo de novo" (ou "NOVA VERSÃO X DISPONÍVEL · volte ao menu para baixar" para APK novo). O aviso
+    completo com o botão continua aparecendo no menu.
+  · Com o jogo aberto, procura atualização de novo a cada 10 min (partidas longas também ficam sabendo); não
+    repete o mesmo aviso.
+  · Conserto: o aviso grande do menu ficava na tela no meio da partida se você começasse a jogar sem fechá-lo;
+    agora ele fecha e volta a aparecer no menu.
+
 ATUALIZAÇÃO 0.56 · RODA DE ARMAS (botão ARMA)
   · hud/roda_armas.gd (NOVO): o botão ARMA abre uma RODA com as ARMAS do INVENTÁRIO RÁPIDO (atalhos 1..8; o que
     não é arma fica de fora). No meio: GUARDAR (mãos livres).
