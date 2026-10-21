@@ -1,13 +1,14 @@
 extends CanvasLayer
-# RODA DE ARMAS (0.56): o botão ARMA abre uma roda com as ARMAS do INVENTÁRIO RÁPIDO (atalhos 1..8 do
-# inventario/inventario.gd; o que não é arma fica de fora). No meio: GUARDAR (mãos livres).
+# RODA DO INVENTÁRIO RÁPIDO (0.56; 0.58: QUALQUER item, roda transparente): o botão ARMA abre uma roda com
+# TODOS os itens do INVENTÁRIO RÁPIDO (atalhos 1..8 do inventario/inventario.gd). Escolher um item faz o mesmo
+# que o atalho dele: arma/ferramenta vai para a mão, comida/remédio/atadura é USADO. No meio: GUARDAR (mãos livres).
 #   · SEGURAR e ARRASTAR: segure ARMA, arraste o dedo na direção da arma e solte = troca.
 #   · TOCAR: toque rápido em ARMA = a roda fica aberta; toque na arma (ou no meio para guardar). Fora fecha.
 #   · PC: tecla Q abre/fecha (clique escolhe). A rodinha do mouse continua trocando direto.
 # Jogando sozinho o tempo fica mais lento enquanto a roda está aberta (em rede não: os outros continuam).
-# Cada fatia mostra a foto da arma (inventario/visual.gd), o nome, as balas (pente + reserva) e o número do
-# atalho; a arma que está na mão fica marcada.
-# Mexa AQUI para: tamanho da roda, lentidão, zona morta do arraste.
+# Cada fatia mostra a foto do item (inventario/visual.gd), o nome, as balas (pente + reserva) ou a quantidade e
+# o número do atalho; o que está na mão fica marcado. A roda é transparente: dá para ver o jogo por trás.
+# Mexa AQUI para: tamanho da roda, lentidão, zona morta do arraste, transparência (constantes COR_*).
 
 const UI := preload("res://menu/ui.gd")
 const Visual := preload("res://inventario/visual.gd")
@@ -16,6 +17,13 @@ const RAIO := 30.0                 # vh (raio da roda)
 const MIOLO := 0.34                # fração do raio: círculo do meio (GUARDAR)
 const ZONA_MORTA := 3.5            # vh de arraste até começar a escolher
 const LENTO := 0.3                 # velocidade do jogo com a roda aberta (sozinho)
+# transparência (0.58): o alfa de cada parte da roda
+const COR_FUNDO := Color(0, 0, 0, 0.12)                # tela atrás da roda
+const COR_DISCO := Color(0.06, 0.03, 0.02, 0.22)       # disco de fundo
+const COR_FATIA := Color(0.22, 0.10, 0.04, 0.30)
+const COR_FATIA_SEL := Color(1.0, 0.48, 0.1, 0.50)
+const COR_MEIO := Color(0.12, 0.05, 0.02, 0.40)
+const COR_MEIO_SEL := Color(1.0, 0.48, 0.1, 0.55)
 
 signal aviso(texto: String)
 
@@ -51,10 +59,10 @@ func abrir(modo: String, pos: Vector2) -> void:
 	_itens.clear()
 	for i in inv.atalhos.size():
 		var it = inv.atalhos[i]
-		if it != null and it.eh_arma() and inv.do_jogador(it):
+		if it != null and inv.do_jogador(it):
 			_itens.append({"i": i, "it": it})
 	if _itens.is_empty():
-		aviso.emit("NENHUMA ARMA NO INVENTÁRIO RÁPIDO")
+		aviso.emit("INVENTÁRIO RÁPIDO VAZIO")
 		return
 	aberta = true
 	visible = true
@@ -89,7 +97,7 @@ func _confirmar() -> void:
 	elif s >= 0 and s < _itens.size():
 		var it = _itens[s]["it"]
 		if it != na_mao:
-			inv.equipar(it, "maos")
+			inv.usar_atalho(int(_itens[s]["i"]))   # igual ao atalho: arma/ferramenta na mão, consumível é usado
 
 # ---------- entrada ----------
 # dedo no botão ARMA (controles.gd): começa no modo arraste
@@ -187,8 +195,8 @@ func _desenhar() -> void:
 	var r := RAIO * v
 	var rm := r * MIOLO
 	var n := _itens.size()
-	_tela.draw_rect(Rect2(Vector2.ZERO, _tela.size), Color(0, 0, 0, 0.35))
-	UI.circulo(_tela, c, r * 1.04, Color(0.06, 0.03, 0.02, 0.82))
+	_tela.draw_rect(Rect2(Vector2.ZERO, _tela.size), COR_FUNDO)
+	UI.circulo(_tela, c, r * 1.04, COR_DISCO)
 	var f := UI.fonte(800)
 	var na_mao = inv.slots.get("maos")
 	for k in n:
@@ -203,7 +211,7 @@ func _desenhar() -> void:
 		for s in range(passos, -1, -1):
 			var a := lerpf(a0, a1, float(s) / passos)
 			pts.append(c + Vector2(cos(a), sin(a)) * (rm + 0.4 * v))
-		var cor := Color(1.0, 0.48, 0.1, 0.78) if sel else Color(0.22, 0.10, 0.04, 0.70)
+		var cor := COR_FATIA_SEL if sel else COR_FATIA
 		_tela.draw_colored_polygon(pts, cor)
 		_tela.draw_polyline(pts, Color(1.0, 0.67, 0.35, 0.55 if sel else 0.25), maxf(1.0, 0.25 * v), true)
 		# conteúdo da fatia: foto, nome, balas, número do atalho
@@ -226,6 +234,11 @@ func _desenhar() -> void:
 			var tb := int(2.0 * v)
 			var wb := f.get_string_size(balas, HORIZONTAL_ALIGNMENT_LEFT, -1, tb).x
 			Visual.texto(_tela, f, balas, meio + Vector2(-wb * 0.5, lado * 0.42 + 3.0 * v), tb, UI.AMBAR)
+		elif it.rotulo() != "":                  # quantidade (ataduras, comida...) ou pente cheio/vazio
+			var q: String = it.rotulo()
+			var tq := int(2.0 * v)
+			var wq := f.get_string_size(q, HORIZONTAL_ALIGNMENT_LEFT, -1, tq).x
+			Visual.texto(_tela, f, q, meio + Vector2(-wq * 0.5, lado * 0.42 + 3.0 * v), tq, UI.AMBAR)
 		var num := str(int(_itens[k]["i"]) + 1)
 		var pn := c + Vector2(cos(am), sin(am)) * (r - 2.2 * v)
 		Visual.texto(_tela, f, num, pn - Vector2(0.6 * v, -0.8 * v), int(2.0 * v), Color(1, 1, 1, 0.55))
@@ -234,12 +247,12 @@ func _desenhar() -> void:
 			UI.circulo(_tela, pm, 0.8 * v, Color("#7dff8a"))
 	# meio: GUARDAR
 	var sm := _sel == -1
-	UI.circulo(_tela, c, rm, Color(1.0, 0.48, 0.1, 0.85) if sm else Color(0.12, 0.05, 0.02, 0.9))
+	UI.circulo(_tela, c, rm, COR_MEIO_SEL if sm else COR_MEIO)
 	var tg := int(2.4 * v)
 	var t1 := "GUARDAR" if na_mao != null else "MÃOS"
 	var w1 := f.get_string_size(t1, HORIZONTAL_ALIGNMENT_LEFT, -1, tg).x
 	Visual.texto(_tela, f, t1, c + Vector2(-w1 * 0.5, 0.8 * v), tg, Color.WHITE)
-	var dica := "arraste e solte" if _modo == "arraste" else "toque na arma · fora fecha"
+	var dica := "arraste e solte" if _modo == "arraste" else "toque no item · fora fecha"
 	var td := int(2.0 * v)
 	var wd := f.get_string_size(dica, HORIZONTAL_ALIGNMENT_LEFT, -1, td).x
 	Visual.texto(_tela, f, dica, c + Vector2(-wd * 0.5, r * 1.04 + 3.2 * v), td, Color(1, 0.91, 0.82, 0.8))

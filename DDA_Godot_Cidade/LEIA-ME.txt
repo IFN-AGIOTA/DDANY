@@ -39,6 +39,14 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.58 · RODA DO INVENTÁRIO RÁPIDO (QUALQUER ITEM) E TRANSPARENTE
+  · hud/roda_armas.gd: a roda do botão ARMA agora mostra TODOS os itens do inventário rápido (atalhos 1..8), não
+    só armas. Escolher um item faz o mesmo que o atalho dele: arma/ferramenta vai para a mão; comida, bebida,
+    remédio e atadura são USADOS na hora. Itens com quantidade mostram o número (ex.: ATAD. 4).
+  · A roda ficou TRANSPARENTE: dá para ver o jogo por trás (fundo quase sem escurecer, fatias translúcidas).
+    A transparência de cada parte fica nas constantes COR_* no começo do arquivo.
+  · Testado: roda com todos os itens, arrastar/tocar troca a arma, tocar na atadura usa o item sem mexer na mão.
+
 ATUALIZAÇÃO 0.57 · AVISO DE ATUALIZAÇÃO DENTRO DA PARTIDA
   · rede/atualizacoes.gd: chegou atualização com você jogando -> notificação curta no alto da tela (embaixo da
     bússola, ~6 s, com som, não atrapalha os toques): "NOVA ATUALIZAÇÃO X · baixando agora · entra quando você
