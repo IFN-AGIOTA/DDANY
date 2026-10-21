@@ -17,4 +17,5 @@
 
 # Créditos
 
+- O usuário autorizou baixar da internet qualquer coisa útil para o jogo (modelos, texturas, sons, músicas, fontes, ferramentas, bibliotecas), sem precisar perguntar antes.
 - Tudo o que for baixado da internet (modelos, texturas, sons, músicas, fontes etc.) entra na tela de Créditos do menu principal: lista `RECURSOS` em `DDA_Godot_Cidade/menu/creditos.gd`, com o quê, autor, licença e endereço. Usar só recursos com licença livre (de preferência CC0) e guardar a licença junto dos arquivos.
