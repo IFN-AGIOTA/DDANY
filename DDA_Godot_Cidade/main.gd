@@ -10,6 +10,7 @@ const SPAWN := Vector2(6230.0, 590.0)       # onde o jogador nasce (virado para 
 
 const Sons := preload("res://audio/sons.gd")
 const ServidorCls := preload("res://rede/servidor.gd")
+const RodaArmasCls := preload("res://hud/roda_armas.gd")
 const CidadeCls := preload("res://mundo/cidade.gd")
 const ColisaoMundoCls := preload("res://mundo/colisao_mundo.gd")
 const ChunksCls := preload("res://mundo/chunks.gd")
@@ -75,6 +76,7 @@ var historia: CanvasLayer                   # historia/historia.gd (Ato 1)
 var vagos: Node                             # inimigos/vagos.gd (infectados)
 var companheiros: Node                      # npc/companheiros.gd (Greg e Mavie, depois do encontro)
 var mato: Node3D                            # mundo/mato.gd (mato perto do jogador + sombra dos prédios no chão)
+var roda_armas: CanvasLayer = null           # hud/roda_armas.gd (roda do botão ARMA)
 var sessao_rede: Node = null                # rede/sessao_rede.gd (só na partida multijogador)
 var tela_multi: CanvasLayer = null          # menu/tela_multijogador.gd
 var tela_login: CanvasLayer = null          # menu/tela_login.gd (pede o login ao abrir o jogo)
@@ -493,6 +495,11 @@ func _criar_jogo() -> void:
 	tela_inventario.name = "TelaInventario"
 	jogo.add_child(tela_inventario)
 	tela_inventario.ligar(jogador.inventario, controles)
+	roda_armas = RodaArmasCls.new()                   # 0.56: botão ARMA abre a roda (hud/roda_armas.gd)
+	roda_armas.name = "RodaArmas"
+	jogo.add_child(roda_armas)
+	roda_armas.ligar(controles, jogador.inventario)
+	roda_armas.aviso.connect(func(t): hud.mostrar_aviso(t))
 	LootCls.espalhar(jogo, mundo, SPAWN)
 	loot_mundo = LootMundoCls.new()
 	loot_mundo.semente = randi()                      # cada jogo novo tem o loot em lugares diferentes

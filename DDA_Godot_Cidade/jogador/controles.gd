@@ -10,7 +10,7 @@ extends CanvasLayer
 #  - INV (canto de cima): abre o inventário (estilo DayZ) · PEGAR aparece quando há um item no chão perto
 #  - II (canto de cima): pausa. Posições/tamanhos/opacidade vêm de Opções › HUD (aplicar_layout / modo de edição)
 # PC: WASD andar · Shift correr · Espaço pular · C/Ctrl agachar · F atirar · botão direito do mouse mirar
-#     R recarregar · 1..8 atalhos (1 = pistola, 2 = M4) · rodinha troca arma · Tab ou I inventário · E pegar
+#     R recarregar · 1..8 atalhos (1 = pistola, 2 = M4) · rodinha troca arma · Q roda de armas · Tab ou I inventário · E pegar
 #     mouse arrastando na metade direita = olhar · Q/E sobem/descem no voo
 # Com o inventário aberto (bloqueado = true) os controles ficam neutros: o jogador para e nada é desenhado.
 
@@ -19,7 +19,11 @@ signal vel_pedida
 signal agachar_pedido
 signal mirar_pedido
 signal recarregar_pedido
-signal trocar_arma_pedido
+signal trocar_arma_pedido          # rodinha do mouse: troca direto
+signal roda_inicio(pos: Vector2)   # 0.56: dedo apertou ARMA -> abre a RODA DE ARMAS (hud/roda_armas.gd)
+signal roda_arrasto(pos: Vector2)
+signal roda_fim(pos: Vector2)
+signal roda_tecla                  # PC: tecla Q
 signal atalho_pedido(indice: int)
 signal inventario_pedido
 signal pegar_pedido
@@ -210,7 +214,10 @@ func set_bloqueado(v: bool) -> void:
 	info.visible = mostrar_info and not v
 	_soltar_tudo()
 
+var _toque_roda := -1               # dedo que está segurando o ARMA (roda de armas)
+
 func _soltar_tudo() -> void:
+	_toque_roda = -1
 	mover = Vector2.ZERO
 	_olhar = Vector2.ZERO
 	_mouse_dir = false
@@ -235,7 +242,10 @@ func _unhandled_input(e: InputEvent) -> void:
 			for b in botoes:
 				if _visivel(b) and int(b["toque"]) == -1 and t.position.distance_to(_centro(b)) <= float(b["r"]) * 1.15:
 					b["toque"] = t.index
-					if b["modo"] == "tocar":
+					if b["id"] == "ARMA":
+						_toque_roda = t.index      # segurar e arrastar escolhe na roda de armas
+						roda_inicio.emit(t.position)
+					elif b["modo"] == "tocar":
 						_tocou(b["id"])
 					_visual.queue_redraw()
 					return
@@ -249,6 +259,9 @@ func _unhandled_input(e: InputEvent) -> void:
 			for b in botoes:
 				if int(b["toque"]) == t.index:
 					b["toque"] = -1
+			if t.index == _toque_roda:
+				_toque_roda = -1
+				roda_fim.emit(t.position)
 			if t.index == _toque_mover:
 				_toque_mover = -1
 				mover = Vector2.ZERO
@@ -257,7 +270,9 @@ func _unhandled_input(e: InputEvent) -> void:
 		_visual.queue_redraw()
 	elif e is InputEventScreenDrag:
 		var g: InputEventScreenDrag = e
-		if g.index == _toque_mover:
+		if g.index == _toque_roda:
+			roda_arrasto.emit(g.position)
+		elif g.index == _toque_mover:
 			_atual = g.position
 			var d := ((g.position - _origem) / RAIO_STICK).limit_length(1.0)
 			mover = Vector2(d.x, -d.y)
@@ -283,6 +298,9 @@ func _unhandled_input(e: InputEvent) -> void:
 				KEY_E:
 					if not modo_voo:
 						pegar_pedido.emit()
+				KEY_Q:
+					if not modo_voo:
+						roda_tecla.emit()
 				KEY_V: voo_pedido.emit()
 				KEY_ESCAPE, KEY_P: pausa_pedida.emit()
 	elif e is InputEventMouseButton:

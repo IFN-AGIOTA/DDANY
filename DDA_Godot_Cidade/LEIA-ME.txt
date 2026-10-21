@@ -39,6 +39,19 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.56 · RODA DE ARMAS (botão ARMA)
+  · hud/roda_armas.gd (NOVO): o botão ARMA abre uma RODA com as ARMAS do INVENTÁRIO RÁPIDO (atalhos 1..8; o que
+    não é arma fica de fora). No meio: GUARDAR (mãos livres).
+      - SEGURAR e ARRASTAR: segure ARMA, arraste o dedo na direção da arma e solte.
+      - TOQUE RÁPIDO: a roda fica aberta; toque na arma (ou no meio). Tocar fora fecha sem trocar.
+      - PC: tecla Q abre/fecha (o mouse aponta e clica). A rodinha do mouse continua trocando direto.
+  · Cada fatia: foto da arma, nome, balas (pente / reserva, igual à HUD), número do atalho e uma bolinha verde
+    na que está na mão. Jogando sozinho o tempo fica lento (30%) com a roda aberta; em rede não.
+  · jogador/controles.gd: o ARMA manda roda_inicio/roda_arrasto/roda_fim com o dedo; tecla Q (roda_tecla).
+    main.gd cria a roda. Fecha sozinha se pausar, abrir o inventário ou sair da partida.
+  · Testado com toques simulados: segurar-arrastar-soltar troca, toque rápido + toque na fatia troca, meio guarda,
+    fora fecha sem trocar, tempo volta ao normal.
+
 ATUALIZAÇÃO 0.55 · SERVIDOR DO PC POR TÚNEL (playit.gg): FUNCIONA NO 4G SEM WebRTC
   · Teste 0.54 no celular (Wi-Fi e 4G): o WebRTC do Android NÃO cria a oferta (estado 0, nenhum caminho): a
     biblioteca nativa não inicia no aparelho. Enquanto isso é investigado, o servidor ganhou o caminho por TÚNEL.
@@ -930,6 +943,7 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   nas fachadas ........................ mundo/fachadas.gd
 - oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd
 - chunks de 500 m (o que fica na cena, raio) ....... mundo/chunks.gd (+ Opções › Gráficos › Raio de chunks)
+- roda de armas (botão ARMA, tecla Q) .............. hud/roda_armas.gd (+ jogador/controles.gd)
 - servidor de teste no PC (Windows) ............... rede/servidor.gd + servidor_windows/ (preset "Servidor Windows")
 - atualizações pelo jogo (APK e pacotes) .......... rede/atualizador.gd, rede/atualizacoes.gd, ferramentas/gerar_pacote.gd
 - assinatura do APK (chave nova + rotação) ......... ferramentas/assinar_apk.sh (chaves em ../chaves_privadas, fora do git)
