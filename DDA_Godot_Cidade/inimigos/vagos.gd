@@ -1,5 +1,5 @@
 extends Node
-# VAGOS · gerente dos INFECTADOS (inimigos/vago.gd + modelo inimigos/modelo_vago.gd).
+# VAGOS · gerente dos INFECTADOS (inimigos/vago.gd + modelo inimigos/modelo_infectado.gd).
 # Nome: os arquivos ficaram "vago/vagos" (vem do HTML), mas na LORE "Vagos" é a GANGUE de Edy e V;
 # no jogo (textos da tela) eles são chamados de INFECTADOS.
 # - Mantém até max_ativos Vagos vivos em volta do jogador: nascem a 55-120 m, na rua/calçada ou em terreno
@@ -59,7 +59,6 @@ var mundo = null
 var jogador: Node3D = null
 var armas = null
 var vivos: Array = []
-var companheiros: Array = []             # npc/companheiro.gd (Greg, Mavie): também viram alvo
 var corpos: Array = []
 
 var _fila: Array = []                   # [posição, destino do grupo] esperando para nascer
@@ -138,12 +137,12 @@ func escuridao() -> float:
 		return clampf(float(clima.escuridao()), 0.0, 1.0)
 	return 0.0
 
-# quem este infectado vai caçar: o jogador ou um companheiro (o mais perto, de pé)
+# quem este infectado vai caçar: o jogador ou outro jogador da partida (o mais perto, de pé)
 func alvo_para(v: Node3D) -> Node3D:
 	var p := v.global_position
 	var melhor: Node3D = null if sem_jogador else jogador
 	var md := INF if sem_jogador else p.distance_squared_to(jogador.global_position)
-	for c in companheiros + remotos():
+	for c in remotos():
 		if not is_instance_valid(c) or c.morto or not c.visible:
 			continue
 		var d := p.distance_squared_to(c.global_position)

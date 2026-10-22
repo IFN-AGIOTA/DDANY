@@ -39,6 +39,32 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.63 · MODO HISTÓRIA APAGADO (vai ser refeito do zero)
+  · O modo história (Ato 1: abertura, prólogo, capítulos 1 a 3, cutscenes e os companheiros Greg e Mavie) foi
+    APAGADO por inteiro para ser refeito. No menu principal o botão "História" continua, apagadinho, com
+    "Em breve"; tocar nele só mostra o aviso "Modo história: em breve". "Jogar" (mundo livre) virou o botão
+    principal quando não há jogo salvo. Jogos salvos antigos continuam abrindo (os dados da história/companheiros
+    que estiverem neles são ignorados).
+  · A lore (pasta lore/ do repositório) continua: é a base do modo história novo.
+  · ARQUIVOS MEXIDOS:
+      main.gd ........................ não cria mais Historia nem Companheiros; _jogar() sem o modo história
+      menu/menu_principal.gd ......... botão "História · Em breve" (só avisa); sem o sinal "historia"
+      menu/salvamento.gd ............. não salva/carrega mais "historia" e "companheiros"
+      menu/config.gd ................. versão 0.63; tirada a opção "abertura_vista"
+      menu/creditos.gd ............... tirados os créditos da abertura (vozes do rádio, fontes Anton e Great Vibes)
+      inimigos/vagos.gd, inimigos/vago.gd ... infectados não procuram mais companheiros (só jogadores)
+      inimigos/modelo_infectado.gd ... só comentário (o modelo antigo foi apagado)
+      audio/ambiente.gd, mundo/missoes.gd ... não checam mais se a história está ativa
+      audio/musica_procedural.gd ..... tirado o suspender() (era da abertura)
+      mundo/clima.gd ................. tirados nevoa_extra e som_mudo (eram da abertura)
+      mundo/chunks.gd, jogador/modelo_sobrevivente.gd, inventario/boneco_3d.gd ... só comentários
+  · APAGADOS: historia/ (historia.gd, cenas.gd, cutscene.gd, abertura.gd e as logos em historia/abertura/),
+    npc/ (companheiro.gd, companheiros.gd, modelo_humano.gd), inimigos/modelo_vago.gd, audio/abertura.ogg,
+    audio/LICENCA_ABERTURA.txt, ferramentas/compor_abertura.py, ferramentas/dominic/,
+    ferramentas/preparar_dominic.gd, menu/fontes/anton-400-normal.woff2, menu/fontes/great-vibes-400-normal.woff2,
+    menu/fontes/LICENSE_anton.txt, menu/fontes/LICENSE_great_vibes.txt.
+    (Ao extrair o .zip por cima do projeto, APAGUE esses arquivos/pastas à mão.)
+
 ATUALIZAÇÃO 0.62 · TECLADO E MOUSE (PC e celular com teclado/mouse)
   · MODO PC (jogador/controles.gd): com teclado ou mouse a HUD de TOQUE SOME (joystick, ATIRAR, CORRER...), o
     mouse fica preso na tela e controla a câmera, e o jogo usa as teclas. Vale no PC e no APK (teclado/mouse
@@ -838,17 +864,6 @@ INFECTADOS
   maior) · GRITADOR (quando te vê, grita e atrai os outros num raio de 55 m). Sons gravados (audio/sons).
 - Com alguém te perseguindo, a música aperta.
 
-COMPANHEIROS: GREG E MAVIE (depois do encontro no Capítulo 3 da história)
-- Andam com você com inteligência própria: Greg à sua direita, Mavie à esquerda, no seu ritmo (andam, trotam,
-  correm), desviam de paredes e, se ficarem presos ou longe, reaparecem atrás de você.
-- LUTAM sozinhos: vão para cima do infectado que está mais perto de VOCÊ (ou deles). Greg usa o TACO,
-  Mavie o CANO (como no livro). Não se afastam mais de ~22 m de você para brigar.
-- Os infectados também atacam os dois. Sem vida eles CAEM (não morrem): fique perto por 3 s para levantar
-  ("LEVANTANDO GREG... 60%"), ou eles levantam sozinhos depois de ~40 s sem infectado perto.
-- FALAM (frase em cima da cabeça): avisam infectado, comemoram, reclamam do golpe, pedem ajuda caídos,
-  avisam quando você está sangrando; a Mavie tosse de vez em quando (a febre da infecção, como no livro).
-- Seus tiros não acertam os dois (sem fogo amigo). Eles vão junto quando você renasce e ficam no jogo salvo.
-
 -----------------------------------------------------------------------------------------------------
 3. CONTROLES
 -----------------------------------------------------------------------------------------------------
@@ -858,7 +873,6 @@ TOQUE (vários dedos ao mesmo tempo)
 - ATIRAR / GOLPEAR (segurar; dá para arrastar o dedo em cima dele para mirar enquanto atira) · CORRER (segurar)
 - PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga) · RECARREGAR · ARMA (troca coldre/ombro) · PEGAR
   (aparece perto de um item) · INV · II (pausa) · VOO (câmera livre: SOBE / DESCE / VEL).
-- Nas falas da história: toque em qualquer lugar para continuar.
 PC
 - WASD andar · Shift correr · Espaço pular · C ou Ctrl agachar · F atirar/golpear · botão direito mirar ·
   R recarregar · 1..8 atalhos · rodinha troca arma · Tab ou I inventário · E pegar · M mapa · P/Esc pausa ·
@@ -923,7 +937,7 @@ LOOT (mundo/loot_mundo.gd; tabelas no topo, com raridade e quantidades)
 -----------------------------------------------------------------------------------------------------
 Baseada na BÍBLIA DA LORE e no Livro 1 "Dias de um Apocalipse" (Willian Ulguim e Gabriel Solla), que ficam
 na pasta lore/ do repositório (PDF e texto). A Bíblia vale acima de tudo: se o jogo contradisser, corrige-se o
-jogo. Falas em historia/historia.gd (tabela FALAS).
+jogo.
 
 PERSONAGENS: DOMINIC VAIDER (cabelo branco, óculos de aviador, ex-corredor clandestino, tem um jato),
 GREG (melhor amigo, gosta da Mavie), MAVIE (queria ser médica; infectada, mas não "vira": forma adaptativa),
@@ -934,32 +948,8 @@ O VÍRUS: Projeto Harbinger (EUA + laboratórios internacionais), mutação do v
 (variante aérea); todos carregam o vírus adormecido; ~1% é imune; forma comum (morre e reanima) e forma
 adaptativa (Mavie).
 
-NO JOGO (Menu > HISTÓRIA · ATO 1)
-- ABERTURA (0.23, só na PRIMEIRA vez, dá para PULAR): o teaser "Apocalipse" refeito dentro do jogo, ~74 s.
-  Logo INFINITY STUDIO sobre os prédios na neblina -> avenida vazia na hora azul -> clarão -> centro visto do
-  alto -> câmera caída, torta, no chão -> pausa e pancada -> pôr do sol rosa com a câmera tombando -> clarão
-  girando -> olhando para cima entre as torres -> clarão -> na chuva, um prédio tomba sobre a avenida ->
-  topo de um arranha-céu com antenas, a câmera sobe e aparece "DIAS DE UM / APOCALIPSE / Nova York" com a
-  mancha de tinta -> clarão -> preto. Cores frias e dessaturadas, grão de filme, faixas de cinema.
-  Música própria (audio/abertura.ogg, ~76 bpm em ré menor, "relógio" agudo a cada tempo, cordas graves,
-  pancadas nos clarões, subida antes do título) com um RÁDIO ao fundo (noticiário em inglês sobre os ataques
-  em Tóquio, Paris e Nova York + o alerta "Immediate evacuation. Head south..."). Para ver de novo: apague
-  "abertura_vista" de user://opcoes.cfg (ou reinstale).
-- PRÓLOGO "Antes do Fim" (tela preta).
-- CAPÍTULO 1 · A ÚLTIMA CORRIDA: noite, cidade ainda inteira (sem carros largados, sem infectados). No livro é
-  de carro; no jogo é A PÉ: 6 pontos de controle contra o relógio (+6 s por ponto) até "A MORTE DO MEDO".
-- CAPÍTULO 2 · PÂNICO MIDIÁTICO: o bar; Greg e a Mavie; a TV fala dos ataques em Tóquio, Paris e NY.
-- CAPÍTULO 3 · A MANHÃ SEM SOL (Greg e Mavie viram COMPANHEIROS a partir do encontro): três dias depois, manhã nublada do 4º dia; aviso do aeroporto (voos privados
-  até as 18h). Dominic sai com jaqueta, mochila e o revólver do pai; a cidade já trinca (carros largados,
-  poucos infectados). Objetivos: PRÉDIO DO GREG -> Mavie chega ferida, um vulto manca no fim da rua ->
-  CARRO DO GREG (infectados chegando) -> rádio "Evacuação imediata..." -> FIM DO ATO 1.
-- CUTSCENES (cenas de cinema, com faixas pretas, legendas e botão PULAR / Esc; toque = próxima fala):
-  a largada da corrida (Dominic, Greg e o garoto com a luz), a chegada e o abraço, o bar com a TV dando as
-  notícias, o encontro com Greg e a chegada da Mavie (e o vulto mancando no fim da rua) e a fuga no carro do Greg.
-  Nelas aparece o DOMINIC do livro (cabelo branco, óculos de aviador, jaqueta de couro).
-- Depois: mundo aberto na cidade caída (o livro segue com o jato: Nebraska, Califórnia, Los Angeles).
-- Para criar mais capítulos: veja o topo de historia/historia.gd (etapas, dizer(...), titulo(...),
-  mapa.definir_objetivo(...)).
+NO JOGO: o modo história foi APAGADO na 0.63 para ser refeito do zero. No menu, o botão "História" mostra
+"Em breve". (O Ato 1 antigo, com abertura, cutscenes e os companheiros Greg e Mavie, ficou no histórico do git.)
 
 -----------------------------------------------------------------------------------------------------
 7. MAPA DO PROJETO (cada sistema no seu arquivo · numa atualização, troque só os arquivos que mudaram)
@@ -1061,8 +1051,6 @@ INFECTADOS (pasta inimigos/; o nome "vagos" nos arquivos veio do HTML)
 - modelos 3D e animações .............. inimigos/infectados/homem_*.scn, mulher_*.scn e animacoes.res
                                         (créditos em LICENCA.txt)
 - converter/adicionar modelos do pacote ferramentas/preparar_infectados.gd (instruções no topo)
-- modelo antigo (caixas), só nas
-  cutscenes ........................... inimigos/modelo_vago.gd
 
 SOBREVIVENTE (jogador no modo livre)
 - corpo, roupa aparecendo no corpo,
@@ -1084,7 +1072,6 @@ SOBREVIVENTE (jogador no modo livre)
   animações no esqueleto dele) ........ ferramentas/preparar_personagem.gd (instruções no topo)
 - roupas no corpo (cascas) ............ jogador/modelo_sobrevivente.gd (ROUPAS, TIPO_CAMISA, CABELOS)
 - ação só na parte de cima do corpo ... jogador/camada_acao.gd
-- (cancelado) Dominic 3D .............. ferramentas/dominic/ e ferramentas/preparar_dominic.gd (só referência)
 - animações novas (KayKit -> jogo) .. ferramentas/retarget_kaykit.gd (tabelas CONVERTER e DIRETAS)
 - animações de captura real (CMU) .... ferramentas/retarget_cmu.gd (tabela CLIPES; .bvh de github.com/una-dinosauria/cmu-mocap)
 - como segura cada arma (posturas) .. ferramentas/gerar_portes.gd (PORTES) + jogador/camada_postura.gd + POSTURAS no animador
@@ -1127,22 +1114,8 @@ MULTIJOGADOR (pasta rede/ · modo livre)
 - liga ao jogo (semente do loot, nascer
   perto, pausa, sem salvar em rede) ... main.gd (_ligar_rede, _rede_caiu)
 
-COMPANHEIROS (pasta npc/)
-- inteligência (seguir, lutar, cair,
-  levantar, falas), vida e dano ....... npc/companheiro.gd (tabelas DADOS e FALAS no topo)
-- aparência e animação ................ npc/modelo_humano.gd (tabela VISUAIS)
-- quem está no grupo .................. npc/companheiros.gd
-
-HISTÓRIA (pasta historia/)
-- falas, etapas, corrida .............. historia/historia.gd
-- roteiro das cutscenes (câmera,
-  atores, falas de cada cena) ......... historia/cenas.gd
-- sistema de cutscene (faixas, legenda,
-  PULAR, atores, cenário do bar) ...... historia/cutscene.gd
-- ABERTURA (tomadas, câmera, cores,
-  clarões, título, antenas, prédio que
-  tomba) .............................. historia/abertura.gd (logo em historia/abertura/)
-- música da abertura (com o rádio) .... audio/abertura.ogg, refeita por ferramentas/compor_abertura.py
+HISTÓRIA
+- botão "História · Em breve" ......... menu/menu_principal.gd (o modo história será refeito)
 
 MÚSICA (pasta audio/)
 - compositor (escalas, andamento, quando
@@ -1166,7 +1139,7 @@ MÚSICA (pasta audio/)
 - Autoloads: Config (menu/config.gd) e Musica (audio/musica_procedural.gd).
 - Fluxo (main.gd): MENU -> _jogar() -> cidade.construir() (uma vez) -> _criar_jogo() cria o nó "Jogo" com:
   Controles, ColisaoMundo, Jogador (+ Inventario, Sobrevivencia, Armas), HudCombate, HudStatus, Mapa, Clima,
-  Historia, EstandeTiro, TelaInventario, Interiores, CameraVoo. Voltar ao menu apaga o nó "Jogo".
+  EstandeTiro, TelaInventario, Interiores, CameraVoo. Voltar ao menu apaga o nó "Jogo".
 - Coordenadas: x = leste, z = sul (NORTE = -Z). 1 unidade = 1 metro. Rua em y 0,6, calçada 0,55.
 - Camadas de física: 1 = mundo · 2 = jogador · 3 = inimigos/alvos. Quem leva tiro tem
   receber_tiro(dano, ponto, direcao, forma, atirador) -> {"cabeca", "morto"} (forma 1 = cabeça);
@@ -1237,16 +1210,13 @@ MÚSICA (pasta audio/)
 -----------------------------------------------------------------------------------------------------
 - O jogador é um sobrevivente genérico (Universal Base Characters); o Dominic do livro (jaqueta de couro, cabelo branco) não tem modelo próprio (o 3D dele foi cancelado na 0.27).
 - A gangue VAGOS (Edy, V), Alyce, Nick, Mônica e Carlos ainda não aparecem no jogo (são do Ato 2 em diante).
-- Companheiros ainda não recebem ordens (esperar/seguir) nem usam armas de fogo ou itens que você der.
 - Só abrem até o 3º andar; o telhado só nos prédios de até 3 andares (nos mais altos, o resto fica fechado).
-- História: Ato 1 = capítulos 1 a 3 do livro. O livro segue fora de Nova York (Nebraska, Califórnia, Los
-  Angeles), que ainda não existe no jogo.
+- História: apagada na 0.63, vai ser refeita do zero (menu mostra "Em breve").
 - Sem 1ª pessoa (o HTML tinha); o mar é "caminhável"; a base militar ainda não tem os prédios/pistas do HTML.
 - Transformação em carro e jato do HTML foi descartada: o jogo é só a pé.
 - Os blocos de cima das torres escalonadas também mostram "térreo" (vitrines/placas) na base deles.
 - Sobrevivente: rosto liso de manequim; fuzis também ficam só na mão direita (a animação é de pistola).
-- Infectados: os rostos são simples (manequim, olhos pintados); as cutscenes ainda usam o infectado
-  antigo, de caixas.
+- Infectados: os rostos são simples (manequim, olhos pintados).
 - MULTIJOGADOR (base da 0.28), falta: infectados iguais para todos (hoje cada aparelho tem os seus, que só
   caçam o próprio jogador), itens pegos/largados e caixas sincronizados (hoje dá para os dois pegarem o mesmo
   item), dano entre jogadores, jogadores sem colisão entre si, salvar a partida em rede (em rede não salva),
@@ -1254,7 +1224,7 @@ MÚSICA (pasta audio/)
   precisa de um servidor ligado 24h) e abrir o jogo direto por um link (precisa de plugin Android).
 - Ideias para depois: loot por região, lugares
   especiais (postos do exército, quarentena, metrô), helicópteros caídos, elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,
-  outros sobreviventes (NPCs), mais atos da história.
+  outros sobreviventes (NPCs), o modo história novo.
 
 -----------------------------------------------------------------------------------------------------
 11. CONTA (FIREBASE): COMO LIGAR O LOGIN COM GOOGLE E OS AMIGOS (uma vez só, grátis, ~10 min)

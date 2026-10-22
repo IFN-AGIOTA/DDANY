@@ -25,7 +25,7 @@ extends CharacterBody3D
 
 signal morreu(vago: Node, cabeca: bool)
 
-const ModeloCls := preload("res://inimigos/modelo_infectado.gd")   # manequins do Quaternius (o antigo, de caixas, ficou para as cutscenes)
+const ModeloCls := preload("res://inimigos/modelo_infectado.gd")   # manequins do Quaternius
 const ItemMundo := preload("res://inventario/item_mundo.gd")
 const ItemCls := preload("res://inventario/item.gd")
 const SonsCorpo := preload("res://audio/sons_corpo.gd")
@@ -132,7 +132,7 @@ var _vel_h := 0.0
 var _quadro := 0
 var _dt_anim := 0.0
 var _consulta: PhysicsRayQueryParameters3D
-var _alvo: Node3D = null              # jogador ou companheiro (gerente.alvo_para)
+var _alvo: Node3D = null              # jogador ou outro jogador da partida (gerente.alvo_para)
 # ----- multijogador (inimigos/vagos.gd + rede/sessao_rede.gd) -----
 # HOST: o Vago de verdade (IA, vida); avisa os outros de ataque/golpe/morte (gerente.rede_ani).
 # CLIENTE: "remoto" = cópia que só segue a posição que o host manda (sem IA); tiros e golpes daqui viram pedido
@@ -373,7 +373,7 @@ func _alertar(quem: Node) -> void:
 	if quem == null or not is_instance_valid(quem) or not (quem is Node3D):
 		return
 	var p: Vector3 = (quem as Node3D).global_position
-	if gerente != null and (quem == gerente.jogador or quem.is_in_group("companheiros") or quem.is_in_group("jogadores_remotos")):
+	if gerente != null and (quem == gerente.jogador or quem.is_in_group("jogadores_remotos")):
 		_alvo = quem as Node3D
 		_ultimo_visto = p
 		_t_sem_ver = 0.0

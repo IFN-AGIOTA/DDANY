@@ -34,8 +34,6 @@ func ligar(m) -> void:
 func _process(dt: float) -> void:
 	if main == null or main.jogador == null or bool(main.jogador.morto):
 		return
-	if main.get("historia") != null and bool(main.historia.ativa):
-		return
 	var j: Node3D = main.jogador
 	if _ativa:
 		_t_missao += dt

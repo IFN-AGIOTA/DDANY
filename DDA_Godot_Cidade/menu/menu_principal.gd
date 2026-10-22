@@ -1,11 +1,10 @@
 extends CanvasLayer
 # MENU PRINCIPAL (igual ao do HTML): "DIAS DE UM / APOCALIPSE / NOVA YORK", versão, botões
-# História · Ato 1 · Jogar (mundo livre) · Multijogador (menu/tela_multijogador.gd) · Opções · Créditos (menu/creditos.gd), e o ícone do PERFIL no canto. Fica por cima da cena_menu.gd.
+# Jogar (mundo livre) · História (em breve) · Multijogador (menu/tela_multijogador.gd) · Opções · Créditos (menu/creditos.gd), e o ícone do PERFIL no canto. Fica por cima da cena_menu.gd.
 # Mexa AQUI para: textos e botões do menu principal. (A cena 3D de fundo é menu/cena_menu.gd.)
 
 signal jogar
 signal continuar
-signal historia
 signal opcoes
 signal multijogador
 signal perfil                            # ícone de perfil no canto (menu/tela_perfil.gd)
@@ -103,16 +102,11 @@ func _montar() -> void:
 	var nav := VBoxContainer.new()
 	nav.add_theme_constant_override("separation", int(1.4 * v))
 	nav.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var b1 := UI.BotaoMenu.new("História · Ato 1", "Parte 1 · A Última Corrida", true, 3.8)
+	# modo história: sendo refeito do zero; o botão só avisa "em breve"
+	var b1 := UI.BotaoMenu.new("História", "Em breve", false, 3.8)
+	b1.modulate.a = 0.55
+	b1.apertado.connect(func(): avisar("Modo história: em breve"))
 	var salvo: String = Salvamento.resumo()
-	b1.apertado.connect(func():
-		if salvo != "" and not _confirmou_hist:
-			_confirmou_hist = true
-			b1.sub = "Toque de novo: o jogo salvo será apagado"
-			b1._medir()
-			b1.queue_redraw()
-			return
-		historia.emit())
 	var b2 := UI.BotaoMenu.new("Novo jogo" if salvo != "" else "Jogar", "Mundo livre", false, 3.8)
 	b2.apertado.connect(func():
 		# já existe jogo salvo: o 1º toque só avisa (o novo jogo grava por cima do salvo)
@@ -129,12 +123,13 @@ func _montar() -> void:
 	b3.apertado.connect(func(): opcoes.emit())
 	var b4 := UI.BotaoMenu.new("Créditos", "", false, 3.0, 26.0)
 	b4.apertado.connect(_abrir_creditos)
-	var botoes: Array = [b1, b2, bm, b3, b4]
+	var botoes: Array = [b2, b1, bm, b3, b4]
 	if salvo != "":
 		var b0 := UI.BotaoMenu.new("Continuar", salvo, true, 3.8)
 		b0.apertado.connect(func(): continuar.emit())
 		botoes.push_front(b0)
-		b1.primario = false
+	else:
+		b2.primario = true
 	for b in botoes:
 		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		nav.add_child(b)
@@ -184,7 +179,6 @@ func _titulo_grande(txt: String, tam: float, v: float) -> Control:
 	return m
 
 var _confirmou_novo := false
-var _confirmou_hist := false
 
 func avisar(t: String) -> void:
 	_aviso.text = t

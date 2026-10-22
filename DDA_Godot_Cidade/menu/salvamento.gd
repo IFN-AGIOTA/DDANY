@@ -1,6 +1,6 @@
 extends RefCounted
 # JOGO SALVO (user://save.json): onde o jogador está, vida/fome/sede..., tudo o que ele carrega, a hora e o tempo,
-# o que já foi saqueado nos prédios/carros (mundo/loot_mundo.gd), itens largados no chão e o progresso da história.
+# o que já foi saqueado nos prédios/carros (mundo/loot_mundo.gd) e os itens largados no chão.
 # Salva sozinho a cada 2 minutos, ao pausar, ao voltar ao menu e quando o celular sai do jogo.
 # No menu principal aparece "Continuar" quando existe um jogo salvo.
 # Mexa AQUI para: o que é salvo (e a versão do arquivo, se mudar o formato).
@@ -56,8 +56,6 @@ static func salvar(main, morto := false) -> bool:
 		"morto": morto,
 		"loot": main.loot_mundo.salvar(main.interiores.abertos if main.interiores != null else {}) if main.loot_mundo != null else {},
 		"clima": main.clima.salvar() if main.clima != null and main.clima.has_method("salvar") else {},
-		"historia": main.historia.salvar() if main.get("historia") != null and main.historia.has_method("salvar") else {},
-		"companheiros": main.companheiros.salvar() if main.get("companheiros") != null else {},
 		"missoes": main.missoes.salvar() if main.get("missoes") != null else {},
 		"chao": _chao(main, p),
 		"mapa_predios": MAPA_PREDIOS,
@@ -119,8 +117,6 @@ static func carregar(main, d: Dictionary) -> void:
 	j.sobrevivencia.carregar(d.get("sobrevivencia", {}))
 	if main.clima != null and main.clima.has_method("carregar") and d.has("clima"):
 		main.clima.carregar(d["clima"])
-	if main.get("historia") != null and main.historia.has_method("carregar") and d.has("historia"):
-		main.historia.carregar(d["historia"])
 	# tira o loot de teste da base (já foi pego/mexido no jogo salvo) e põe os itens largados
 	for n in main.jogo.get_children():
 		if n.is_in_group("itens_chao"):
@@ -140,5 +136,3 @@ static func carregar(main, d: Dictionary) -> void:
 		j.teleportar(pos + Vector3(0, 0.05, 0), float(jd.get("yaw", 0.0)))
 	if main.get("missoes") != null and d.has("missoes"):
 		main.missoes.carregar(d["missoes"])
-	if main.get("companheiros") != null and d.has("companheiros"):
-		main.companheiros.carregar(d["companheiros"])

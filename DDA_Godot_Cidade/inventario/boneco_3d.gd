@@ -5,8 +5,7 @@ extends SubViewportContainer
 #   Muda na hora em que você equipa/tira algo. Parado, respirando (animação "parado").
 #   ARRASTAR o dedo/mouse em cima dele = girar o personagem.
 #   SOLTAR um item em cima dele = vestir no lugar certo (ou pôr na mão, se for arma/ferramenta).
-# Só existe com a tela do inventário aberta (não gasta nada no jogo). No modo história (soldado antigo) a tela
-# continua com a silhueta.
+# Só existe com a tela do inventário aberta (não gasta nada no jogo).
 # Mexa AQUI para: câmera, luz e ângulo inicial do personagem.
 
 const Sob := preload("res://jogador/modelo_sobrevivente.gd")

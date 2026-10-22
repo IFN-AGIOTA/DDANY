@@ -15,8 +15,7 @@ const EQUIPE := [
 		["Willian Ulguim e Gabriel Solla", "Dias de um Apocalipse · Livro 1 e Bíblia da Lore"]]],
 	["JOGO", [
 		["Dias de um Apocalipse · Nova York", "Porte para a Godot do jogo original em HTML"],
-		["Cidade, prédios, interiores, carros, clima e música", "Feitos por código para o jogo (sem arquivos de terceiros)"],
-		["Abertura da história", "Refeita no jogo a partir do teaser \"Apocalipse\" e com a logo da Infinity Studio"]]],
+		["Cidade, prédios, interiores, carros, clima e música", "Feitos por código para o jogo (sem arquivos de terceiros)"]]],
 ]
 # [o quê, autor, licença, endereço]
 const RECURSOS := [
@@ -91,14 +90,6 @@ const RECURSOS := [
 		"CC0 1.0 (domínio público)", "kenney.nl/assets/impact-sounds"],
 	["Sirene ao longe", "aquinn · \"Sirens and Alarm Noise\"",
 		"CC0 1.0 (domínio público)", "opengameart.org/content/sirens-and-alarm-noise"],
-	["Voz do noticiário no rádio da abertura", "Piper TTS (Michael Hansen / Rhasspy) com a voz \"LJSpeech\" (Keith Ito)",
-		"Piper: MIT · voz LJSpeech: domínio público", "github.com/rhasspy/piper · keithito.com/LJ-Speech-Dataset"],
-	["Voz do alerta de emergência no rádio da abertura", "eSpeak NG (voz sintética)",
-		"GPL 3.0 (o programa; a voz gerada não é coberta)", "github.com/espeak-ng/espeak-ng"],
-	["Fonte Anton (título da abertura)", "Vernon Adams · The Anton Project Authors",
-		"SIL Open Font License 1.1", "fonts.google.com/specimen/Anton"],
-	["Fonte Great Vibes (\"Nova York\" na abertura)", "Robert Leuschke (TypeSETit)",
-		"SIL Open Font License 1.1", "fonts.google.com/specimen/Great+Vibes"],
 	["Fonte Roboto Condensed", "Christian Robertson · Google Fonts (Copyright 2011 Google Inc.)",
 		"SIL Open Font License 1.1", "fonts.google.com/specimen/Roboto+Condensed"],
 	["Motor do jogo: Godot Engine 4.3", "Juan Linietsky, Ariel Manzur e colaboradores da Godot",

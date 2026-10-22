@@ -8,7 +8,7 @@ extends Node3D
 # em inimigos/infectados/animacoes.res:
 #   andar / parado / ataque (arranhar) = animações de ZUMBI da biblioteca 2 · correr / morte / golpe = da 1.
 # Por cima da animação: cabeça torta e, correndo, braços para a frente (jeito de infectado).
-# Mesma interface do modelo antigo (inimigos/modelo_vago.gd, que continua nas cutscenes):
+# Mesma interface do modelo antigo (o antigo inimigos/modelo_vago.gd, apagado na 0.63):
 #   montar(semente) · atualizar(dt, vel) · atacar() · levar_golpe(forca, lado) · morrer(para_tras) · pos_cabeca()
 # A frente é -Z (igual à Godot). Altura ~1,75 m.
 # Mexa AQUI para: quais tipos aparecem e quanto (TIPOS), altura e velocidade das animações.

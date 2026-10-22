@@ -26,9 +26,7 @@ const ClimaCls := preload("res://mundo/clima.gd")
 const Salvamento := preload("res://menu/salvamento.gd")
 const MissoesCls := preload("res://mundo/missoes.gd")
 const AmbienteCls := preload("res://audio/ambiente.gd")
-const HistoriaCls := preload("res://historia/historia.gd")
 const VagosCls := preload("res://inimigos/vagos.gd")
-const CompanheirosCls := preload("res://npc/companheiros.gd")
 const AUTOSALVAR := 120.0                   # segundos entre salvamentos automáticos
 const TelaMorteCls := preload("res://menu/tela_morte.gd")
 const ItemMundoCls := preload("res://inventario/item_mundo.gd")
@@ -72,9 +70,7 @@ var hud_status: CanvasLayer                 # hud/hud_status.gd (vida, sangue, f
 var tela_morte: CanvasLayer
 var mapa: CanvasLayer                       # hud/mapa.gd (minimapa, mapa grande e bússola)
 var clima: Node                             # mundo/clima.gd (dia/noite, chuva, temperatura, lanterna)
-var historia: CanvasLayer                   # historia/historia.gd (Ato 1)
 var vagos: Node                             # inimigos/vagos.gd (infectados)
-var companheiros: Node                      # npc/companheiros.gd (Greg e Mavie, depois do encontro)
 var mato: Node3D                            # mundo/mato.gd (mato perto do jogador + sombra dos prédios no chão)
 var roda_armas: CanvasLayer = null           # hud/roda_armas.gd (roda do botão ARMA)
 var sessao_rede: Node = null                # rede/sessao_rede.gd (só na partida multijogador)
@@ -144,7 +140,6 @@ func _abrir_menu() -> void:
 	add_child(menu)
 	menu.jogar.connect(_jogar)
 	menu.continuar.connect(func(): _jogar(true))
-	menu.historia.connect(func(): _jogar(false, true))
 	menu.opcoes.connect(_abrir_opcoes)
 	menu.multijogador.connect(_abrir_multijogador)
 	menu.perfil.connect(_abrir_perfil)
@@ -214,7 +209,7 @@ func _aceitar_chamado(c: Dictionary) -> void:
 	_abrir_multijogador()
 	tela_multi.entrar_na_sala(c)
 
-func _jogar(carregar_salvo := false, modo_historia := false) -> void:
+func _jogar(carregar_salvo := false) -> void:
 	menu.mostrar_carregando()
 	await get_tree().process_frame          # deixa o "CARREGANDO" aparecer antes de montar a cidade
 	await get_tree().process_frame
@@ -233,11 +228,8 @@ func _jogar(carregar_salvo := false, modo_historia := false) -> void:
 			if d.get("morto", false):                # morreu e saiu: volta já renascido, longe das coisas
 				jogador.morto = true
 				_renascer()
-	elif modo_historia:
-		historia.iniciar(self)
-	if not modo_historia:
-		Sons.tocar("partida/entrada", -3.0)        # 0.49: entrada da partida (pancada grave + eco + coração)
-	jogador.usar_sobrevivente()             # o personagem do jogador (livre e história): jogador/modelo_sobrevivente.gd
+	Sons.tocar("partida/entrada", -3.0)        # 0.49: entrada da partida (pancada grave + eco + coração)
+	jogador.usar_sobrevivente()             # o personagem do jogador: jogador/modelo_sobrevivente.gd
 	_ligar_rede()
 
 # ---------- multijogador (rede/rede.gd) ----------
@@ -471,14 +463,6 @@ func _criar_jogo() -> void:
 	fumaca.montar(cidade)
 	vagos.abatido.connect(func(_c): abates += 1)
 	jogador.sobrevivencia.tossiu.connect(func(p): vagos.barulho(p, 18.0, true))   # tosse e vômito fazem barulho
-	companheiros = CompanheirosCls.new()
-	companheiros.name = "Companheiros"
-	jogo.add_child(companheiros)
-	companheiros.ligar(jogador, mundo, vagos)
-	historia = HistoriaCls.new()
-	historia.name = "Historia"
-	historia.main = self
-	jogo.add_child(historia)
 	jogador.sobrevivencia.morreu.connect(_morreu)
 	jogador.sobrevivencia.aviso.connect(func(t): hud.mostrar_aviso(t))
 	abates = 0
@@ -573,8 +557,6 @@ func _renascer() -> void:
 	jogador.teleportar(Vector3(p.x, mundo.altura(p.x, p.y) + 0.1, p.y), randf() * TAU)
 	controles.set_bloqueado(false)
 	abates = 0
-	if companheiros != null:
-		companheiros.reagrupar()
 	salvar_jogo()
 
 # ponto numa rua a 800-2500 m de onde morreu (como no DayZ: renasce longe das suas coisas)
@@ -611,10 +593,8 @@ func _fechar_jogo() -> void:
 	hud_status = null
 	mapa = null
 	clima = null
-	historia = null
 	vagos = null
 	missoes = null
-	companheiros = null
 	sessao_rede = null
 
 func _process(dt: float) -> void:

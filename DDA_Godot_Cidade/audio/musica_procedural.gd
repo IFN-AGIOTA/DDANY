@@ -170,22 +170,7 @@ func tocar_faixa(id: String) -> void:
 		var tw := create_tween()                     # o zumbido procedural sai (está em outro tom)
 		tw.tween_property(_drone[_drone_ativo], "volume_db", -40.0, 3.0)
 
-# a abertura da história toca a própria música (audio/abertura.ogg): a procedural fica em silêncio
-var suspensa := false
 var _lp: AudioEffectLowPassFilter = null
-func suspender(sim: bool) -> void:
-	suspensa = sim
-	if not pronto:
-		return
-	var tw := create_tween().set_parallel(true)
-	tw.tween_property(_drone[_drone_ativo], "volume_db", -80.0 if sim else VOL["drone"], 1.0)
-	tw.tween_property(_vento, "volume_db", -80.0 if sim else VOL["vento"], 1.0)
-	if sim:
-		faixa = ""
-		_eventos.clear()
-		for v in _vozes:
-			v.stop()
-
 func parar_faixa() -> void:
 	if faixa == "":
 		return
@@ -276,7 +261,7 @@ func _tocar(nome: String, semitons: float, extra_db: float, desliza := 0.0) -> v
 		tw.tween_property(p, "pitch_scale", p.pitch_scale * pow(2.0, desliza / 12.0), 2.5)
 
 func _process(dt: float) -> void:
-	if not pronto or suspensa:
+	if not pronto:
 		return
 	# tensão: piso do modo + o que veio do jogo, suavizada
 	_alvo_extra = maxf(0.0, _alvo_extra - dt * 0.035)

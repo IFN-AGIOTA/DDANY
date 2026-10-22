@@ -1,5 +1,5 @@
 extends Node3D
-# SOBREVIVENTE: o personagem do jogador (modo livre e história).
+# SOBREVIVENTE: o personagem do jogador.
 # Corpo: homem dos "Universal Base Characters" do Quaternius (CC0): pele com textura, olhos, sobrancelhas, cabelos e
 # barba, preparado por ferramentas/preparar_personagem.gd para jogador/sobrevivente/corpo.scn (as animações também
 # foram convertidas para o esqueleto dele).

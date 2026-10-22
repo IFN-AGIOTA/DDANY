@@ -9,10 +9,10 @@ extends Node
 # encosta e fica na cena enquanto QUALQUER um deles estiver carregado (contador). Coisas enormes (mar, céu, sol)
 # e nós que cobrem chunks demais ficam sempre.
 # O trabalho é espalhado: no máximo OPS_POR_QUADRO nós por quadro, os chunks mais perto primeiro. Se a câmera
-# pular longe (renascer, cutscene, carregar o jogo) carrega tudo na hora (forcar).
+# pular longe (renascer, carregar o jogo) carrega tudo na hora (forcar).
 # Raio: Opções › Gráficos › "Raio de chunks" (AUTO = segue a "Distância de visão"). A câmera não enxerga além
 # do raio (menu/aplicar_opcoes.gd ajusta o "far" e a neblina).
-# PAUSA FORA DOS CHUNKS: o que se mexe no mundo (infectados e corpos, fogueiras, companheiros, jogadores remotos:
+# PAUSA FORA DOS CHUNKS: o que se mexe no mundo (infectados e corpos, fogueiras, jogadores remotos:
 # grupo GRUPO_PAUSA) fica PAUSADO (process_mode desligado: não pensa, não anima, não toca som) quando está fora dos
 # chunks ativos. Ativo = a até RAIO chunks da câmera; no HOST do multijogador também em volta de cada amigo
 # (centros_extra), porque os infectados perto dele precisam continuar vivos. Quem tem pausar_por_chunk(bool)
@@ -90,7 +90,7 @@ func definir_raio(r: int) -> void:
 	_refazer_fila(_centro)
 
 func _ready() -> void:
-	process_mode = Node.PROCESS_MODE_ALWAYS     # segue a câmera também na pausa, no voo e nas cutscenes
+	process_mode = Node.PROCESS_MODE_ALWAYS     # segue a câmera também na pausa e no voo
 
 func _process(_dt: float) -> void:
 	if cidade == null:

@@ -5,7 +5,7 @@ extends Node
 # e o tempo todo (0.49), em laço, devagar entre um e outro:
 #   · PÁSSAROS de dia (somem com chuva), GRILOS à noite, VENTO forte na chuva/tempestade
 #   · dentro de prédio tudo fica mais baixo (mundo/clima.gd sabe se tem teto em cima)
-# Usa os sons gravados de audio/sons (audio/sons_baixados.gd). Fica mudo dentro de cutscene/história e com
+# Usa os sons gravados de audio/sons (audio/sons_baixados.gd). Fica mudo com
 # o jogador morto. Vai para o barramento "SFX" (volume dos efeitos nas Opções).
 # Mexa AQUI para: intervalos e volumes.
 
@@ -49,8 +49,6 @@ func ligar(m) -> void:
 func _process(dt: float) -> void:
 	_ambiente(dt)
 	if main == null or main.jogador == null or bool(main.jogador.morto):
-		return
-	if main.get("historia") != null and bool(main.historia.ativa):
 		return
 	_t_sirene -= dt
 	if _t_sirene <= 0.0:
