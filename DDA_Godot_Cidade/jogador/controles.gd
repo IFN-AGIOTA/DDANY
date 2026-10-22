@@ -9,9 +9,13 @@ extends CanvasLayer
 #  - VOO (canto de cima): câmera livre para inspecionar a cidade
 #  - INV (canto de cima): abre o inventário (estilo DayZ) · PEGAR aparece quando há um item no chão perto
 #  - II (canto de cima): pausa. Posições/tamanhos/opacidade vêm de Opções › HUD (aplicar_layout / modo de edição)
-# PC: WASD andar · Shift correr · Espaço pular · C/Ctrl agachar · F atirar · botão direito do mouse mirar
-#     R recarregar · 1..8 atalhos (1 = pistola, 2 = M4) · rodinha troca arma · Q roda de armas · Tab ou I inventário · E pegar
-#     mouse arrastando na metade direita = olhar · Q/E sobem/descem no voo
+# TECLADO E MOUSE (0.62): com teclado/mouse (PC, ou celular com teclado/mouse ligado) o jogo entra no MODO PC:
+#   a HUD de toque SOME, o mouse fica preso na tela (olhar), e as teclas são as de jogador/teclas.gd (trocáveis em
+#   Opções › Teclado e mouse). Padrão: WASD andar · Shift correr · Alt andar devagar · Espaço pular · C agachar ·
+#   mouse esquerdo atirar · mouse direito mirar · R recarregar · X trocar arma · rodinha troca arma · Q roda ·
+#   1..8 atalhos · E pegar · Tab inventário · M mapa · Esc pausa · V câmera livre (E/Q sobe/desce).
+#   "auto" (Config "entrada"): usou teclado/mouse -> modo PC; tocou na tela -> modo toque (HUD volta).
+#   O mouse se solta sozinho com inventário, mapa, pausa, roda e telas por cima (bloqueado / mouse_solto).
 # Com o inventário aberto (bloqueado = true) os controles ficam neutros: o jogador para e nada é desenhado.
 
 signal voo_pedido
@@ -29,8 +33,10 @@ signal inventario_pedido
 signal pegar_pedido
 signal pausa_pedida
 signal selecionou(id: String)      # modo de edição da HUD: botão tocado
+signal modo_mudou(pc: bool)        # 0.62: trocou entre teclado/mouse e toque
 
 const UI := preload("res://menu/ui.gd")
+const Teclas := preload("res://jogador/teclas.gd")
 const RAIO_STICK := 90.0
 
 # OTIMIZAÇÃO: botões = disco e anel em TEXTURA (menu/ui.gd circulo/aro): todos os discos = 1 chamada de desenho,
@@ -61,6 +67,19 @@ var _atual := Vector2.ZERO
 var _visual: Control
 var _mouse_dir := false
 var _fonte: Font
+# ---- teclado e mouse (0.62) ----
+var modo_pc := false               # true: HUD de toque escondida, mouse preso, teclas de jogador/teclas.gd
+var preferencia := "auto"          # Config "entrada": "auto", "pc" ou "toque"
+var mirar_modo := "segurar"        # mouse direito: "segurar" ou "alternar"
+var agachar_modo := "alternar"     # "alternar" ou "segurar"
+var correr_modo := "segurar"       # "segurar" ou "alternar"
+var roda_mouse := true             # rodinha troca de arma
+var dicas := true                  # dicas de tecla na tela ("E  PEGAR...")
+var mouse_solto := false           # alguém precisa do cursor (roda de armas aberta)
+var _capturado := false
+var _olhar_mouse := Vector2.ZERO
+var _correr_on := false
+var _dica: Label
 
 func _ready() -> void:
 	layer = 10
@@ -75,6 +94,20 @@ func _ready() -> void:
 	info.add_theme_font_size_override("font_size", 16)
 	info.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.8))
 	add_child(info)
+	_dica = Label.new()
+	_dica.add_theme_font_size_override("font_size", 18)
+	_dica.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.85))
+	_dica.add_theme_constant_override("shadow_offset_x", 2)
+	_dica.add_theme_constant_override("shadow_offset_y", 2)
+	_dica.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_dica.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	_dica.offset_top = -150.0
+	_dica.offset_bottom = -110.0
+	_dica.offset_left = -300.0
+	_dica.offset_right = 300.0
+	_dica.visible = false
+	add_child(_dica)
+	modo_pc = _comeca_no_pc()
 	#        id            texto          canto  distância do canto     raio  cor                         modo       olhar  só no voo
 	_bt("ATIRAR", "ATIRAR", "br", Vector2(215, 250), 70, Color(0.88, 0.02, 0.0), "segurar", true, false)
 	_bt("CORRER", "CORRER", "br", Vector2(90, 125), 60, Color(0.11, 0.56, 0.30), "segurar", false, false)
@@ -233,8 +266,11 @@ func _unhandled_input(e: InputEvent) -> void:
 		_editar(e)
 		return
 	if bloqueado:
-		if e is InputEventKey and e.pressed and not e.echo and (e.keycode == KEY_TAB or e.keycode == KEY_I):
+		if e is InputEventKey and e.pressed and not e.echo and (Teclas.casa(e, "inventario") or e.keycode == KEY_I):
 			inventario_pedido.emit()
+		return
+	# modo PC: o "toque" que o mouse imita não conta (o mouse é lido direto, preso na tela)
+	if modo_pc and (e is InputEventScreenTouch or e is InputEventScreenDrag) and e.device == InputEvent.DEVICE_ID_EMULATION:
 		return
 	if e is InputEventScreenTouch:
 		var t: InputEventScreenTouch = e
@@ -283,32 +319,156 @@ func _unhandled_input(e: InputEvent) -> void:
 			for b in botoes:
 				if int(b["toque"]) == g.index and b["olhar"]:
 					_olhar += g.relative
-	elif e is InputEventKey:
-		var k: InputEventKey = e
-		if k.pressed and not k.echo:
-			match k.keycode:
-				KEY_C, KEY_CTRL: agachar_pedido.emit()
-				KEY_R, KEY_T: recarregar_pedido.emit()
-				KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7, KEY_8:
-					if not modo_voo:
-						atalho_pedido.emit(k.keycode - KEY_1)
-				KEY_TAB, KEY_I:
-					if not modo_voo:
-						inventario_pedido.emit()
-				KEY_E:
-					if not modo_voo:
-						pegar_pedido.emit()
-				KEY_Q:
-					if not modo_voo:
-						roda_tecla.emit()
-				KEY_V: voo_pedido.emit()
-				KEY_ESCAPE, KEY_P: pausa_pedida.emit()
-	elif e is InputEventMouseButton:
+	elif e is InputEventKey or e is InputEventMouseButton:
+		_tecla(e)
+
+# teclado e botões do mouse (teclas de jogador/teclas.gd)
+func _tecla(e: InputEvent) -> void:
+	if e is InputEventMouseButton:
 		var mb: InputEventMouseButton = e
+		if mb.pressed and roda_mouse and (mb.button_index == MOUSE_BUTTON_WHEEL_UP or mb.button_index == MOUSE_BUTTON_WHEEL_DOWN):
+			if not modo_voo:
+				trocar_arma_pedido.emit()
+			return
+		if modo_pc and _capturado:
+			return                         # mouse preso: os botões são lidos em _ler_botoes_mouse (não se perdem na HUD)
 		if mb.button_index == MOUSE_BUTTON_RIGHT:
-			_mouse_dir = mb.pressed
-		elif mb.pressed and (mb.button_index == MOUSE_BUTTON_WHEEL_UP or mb.button_index == MOUSE_BUTTON_WHEEL_DOWN):
-			trocar_arma_pedido.emit()
+			_mouse_dir = mb.pressed        # toque/mouse livre: botão direito segura a mira (como antes)
+		return
+	var k: InputEventKey = e
+	if k.echo:
+		return
+	for a in Teclas.ACOES:
+		if Teclas.casa(k, a[0]):
+			_acao(a[0], k.pressed)
+	if k.pressed and k.keycode == KEY_P:
+		pausa_pedida.emit()
+	if k.pressed and k.keycode == KEY_F11:
+		var w := DisplayServer.window_get_mode()
+		var cheia := w == DisplayServer.WINDOW_MODE_FULLSCREEN or w == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if cheia else DisplayServer.WINDOW_MODE_FULLSCREEN)
+
+# botões do mouse com o mouse preso: lidos direto, para pegar o aperto e a soltura de cada um
+var _botoes_ant := {}
+
+func _ler_botoes_mouse() -> void:
+	for a in Teclas.ACOES:
+		var c := Teclas.codigo(a[0])
+		if not c.begins_with("m:"):
+			continue
+		var p := Input.is_mouse_button_pressed(int(c.substr(2)))
+		if p != bool(_botoes_ant.get(a[0], false)):
+			_botoes_ant[a[0]] = p
+			_acao(a[0], p)
+
+# o que cada ação faz ao apertar (apertou = true) ou soltar
+func _acao(acao: String, apertou: bool) -> void:
+	match acao:
+		"mirar":
+			if mirar_modo == "alternar":
+				if apertou:
+					mirar_pedido.emit()
+			else:
+				_mouse_dir = apertou
+			return
+		"correr":
+			if correr_modo == "alternar" and apertou and not modo_voo:
+				_correr_on = not _correr_on
+			return
+	if not apertou:
+		return
+	match acao:
+		"agachar":
+			if agachar_modo == "alternar":
+				agachar_pedido.emit()
+		"recarregar": recarregar_pedido.emit()
+		"trocar_arma":
+			if not modo_voo:
+				trocar_arma_pedido.emit()
+		"inventario":
+			if not modo_voo:
+				inventario_pedido.emit()
+		"pegar":
+			if not modo_voo:
+				pegar_pedido.emit()
+		"roda":
+			if not modo_voo:
+				roda_tecla.emit()
+		"voo": voo_pedido.emit()
+		"voo_vel":
+			if modo_voo:
+				vel_pedida.emit()
+		"pausa": pausa_pedida.emit()
+		_:
+			if acao.begins_with("atalho_") and not modo_voo:
+				atalho_pedido.emit(int(acao.substr(7)) - 1)
+
+# ---------- modo PC x toque (0.62) ----------
+func _comeca_no_pc() -> bool:
+	if preferencia == "pc":
+		return true
+	if preferencia == "toque":
+		return false
+	# automático: no PC (sem tela de toque) começa no teclado e mouse; no celular, no toque
+	return not OS.has_feature("mobile")   # (a Godot diz "tem toque" no PC porque o projeto imita toque com o mouse)
+
+# opções de Opções › Teclado e mouse (menu/aplicar_opcoes.gd)
+func configurar_teclado(o: Dictionary) -> void:
+	preferencia = str(o.get("entrada", "auto"))
+	mirar_modo = str(o.get("mirar_modo", "segurar"))
+	agachar_modo = str(o.get("agachar_modo", "alternar"))
+	correr_modo = str(o.get("correr_modo", "segurar"))
+	roda_mouse = bool(o.get("roda_mouse", true))
+	dicas = bool(o.get("dicas_teclas", true))
+	Teclas.carregar(o.get("teclas", {}))
+	if preferencia != "auto":
+		_definir_modo(preferencia == "pc")
+
+func _definir_modo(pc: bool) -> void:
+	if pc == modo_pc:
+		return
+	modo_pc = pc
+	_soltar_tudo()
+	_correr_on = false
+	modo_mudou.emit(pc)
+
+# descobre o que o jogador está usando: teclado/mouse de verdade -> PC · dedo na tela -> toque
+func _input(e: InputEvent) -> void:
+	if preferencia == "auto" and not editando:
+		if e is InputEventKey and e.pressed and not e.echo and e.keycode not in [KEY_BACK, KEY_VOLUMEUP, KEY_VOLUMEDOWN, KEY_UNKNOWN]:
+			# no celular, tecla só conta se for de jogo (o teclado da tela, digitando um nome, não vira "PC")
+			if not OS.has_feature("mobile") or _tecla_de_jogo(e):
+				_definir_modo(true)
+		elif (e is InputEventMouseMotion or e is InputEventMouseButton) and e.device != InputEvent.DEVICE_ID_EMULATION:
+			if not (e is InputEventMouseMotion) or (e as InputEventMouseMotion).relative.length() > 3.0:
+				_definir_modo(true)
+		elif e is InputEventScreenTouch and e.pressed and e.device != InputEvent.DEVICE_ID_EMULATION:
+			_definir_modo(false)
+	# mouse preso: o movimento é o olhar
+	if modo_pc and _capturado and e is InputEventMouseMotion and not bloqueado:
+		_olhar_mouse += (e as InputEventMouseMotion).relative
+
+func _tecla_de_jogo(e: InputEvent) -> bool:
+	for a in Teclas.ACOES:
+		if Teclas.casa(e, a[0]):
+			return true
+	return false
+
+func _quer_mouse_preso() -> bool:
+	return modo_pc and not bloqueado and not editando and not mouse_solto and is_inside_tree() \
+		and not get_tree().paused and DisplayServer.window_is_focused() and process_mode != Node.PROCESS_MODE_DISABLED
+
+# pausa (o jogo para e este nó também): solta o mouse na hora para clicar no menu
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_PAUSED and _capturado:
+		_capturado = false
+		_mouse_dir = false
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+
+func _exit_tree() -> void:
+	if _capturado:
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+		_capturado = false
 
 func _tocou(id: String) -> void:
 	match id:
@@ -327,6 +487,18 @@ func _tocou(id: String) -> void:
 var _assinatura := 0
 
 func _process(_dt: float) -> void:
+	var quer := _quer_mouse_preso()
+	if quer != _capturado:
+		_capturado = quer
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if quer else Input.MOUSE_MODE_VISIBLE
+		_olhar_mouse = Vector2.ZERO
+		_botoes_ant.clear()
+		if not quer:
+			_mouse_dir = false
+	if _capturado:
+		_ler_botoes_mouse()
+	_visual.visible = editando or not modo_pc
+	_atualizar_dica()
 	var a := indicadores.hash() ^ (textos.hash() * 31) ^ (ocultos.hash() * 17) ^ (1 if bloqueado else 0) ^ (2 if editando else 0)
 	if a != _assinatura:
 		_assinatura = a
@@ -386,36 +558,53 @@ func vetor_mover() -> Vector2:
 	if bloqueado:
 		return Vector2.ZERO
 	var k := Vector2.ZERO
-	if Input.is_key_pressed(KEY_W) or Input.is_key_pressed(KEY_UP): k.y += 1.0
-	if Input.is_key_pressed(KEY_S) or Input.is_key_pressed(KEY_DOWN): k.y -= 1.0
-	if Input.is_key_pressed(KEY_D) or Input.is_key_pressed(KEY_RIGHT): k.x += 1.0
-	if Input.is_key_pressed(KEY_A) or Input.is_key_pressed(KEY_LEFT): k.x -= 1.0
+	if Teclas.apertado("frente") or Input.is_key_pressed(KEY_UP): k.y += 1.0
+	if Teclas.apertado("tras") or Input.is_key_pressed(KEY_DOWN): k.y -= 1.0
+	if Teclas.apertado("direita") or Input.is_key_pressed(KEY_RIGHT): k.x += 1.0
+	if Teclas.apertado("esquerda") or Input.is_key_pressed(KEY_LEFT): k.x -= 1.0
 	if k != Vector2.ZERO:
 		return k.normalized()
+	_correr_on = false                     # parou: a corrida "alternar" desliga
 	return mover
 
-# PC: segurar ALT anda (caminhada) em vez de trotar
+# PC: segurar a tecla "andar" (Alt) anda (caminhada) em vez de trotar
 func andando_pc() -> bool:
-	return not bloqueado and Input.is_key_pressed(KEY_ALT)
+	return not bloqueado and Teclas.apertado("andar")
 
 func correndo() -> bool:
-	return not bloqueado and (segurando("CORRER") or Input.is_key_pressed(KEY_SHIFT))
+	if bloqueado:
+		return false
+	var tecla := _correr_on if correr_modo == "alternar" else Teclas.apertado("correr")
+	return segurando("CORRER") or (tecla and not modo_voo)
 
 func pulando() -> bool:
-	return not bloqueado and (segurando("PULAR") or Input.is_key_pressed(KEY_SPACE))
+	return not bloqueado and (segurando("PULAR") or Teclas.apertado("pular"))
 
 func atirando() -> bool:
-	return not bloqueado and (segurando("ATIRAR") or Input.is_key_pressed(KEY_F))
+	if bloqueado:
+		return false
+	if segurando("ATIRAR"):
+		return true
+	var c := Teclas.codigo("atirar")
+	if c.begins_with("m:"):
+		return modo_pc and _capturado and Teclas.apertado("atirar")     # clique só vale com o mouse preso no jogo
+	return Teclas.apertado("atirar")
 
 func mirando_segurado() -> bool:
 	return _mouse_dir and not bloqueado
+
+# agachar no modo "segurar": -1 = não está nesse modo · 0 = solto (em pé) · 1 = segurando (agachado)
+func agachar_segurado() -> int:
+	if agachar_modo != "segurar" or bloqueado or not modo_pc:
+		return -1
+	return 1 if Teclas.apertado("agachar") else 0
 
 func vertical() -> float:
 	var v := 0.0
 	if segurando("SOBE"): v = 1.0
 	if segurando("DESCE"): v = -1.0
-	if Input.is_key_pressed(KEY_E): v = 1.0
-	if Input.is_key_pressed(KEY_Q): v = -1.0
+	if Teclas.apertado("voo_sobe"): v = 1.0
+	if Teclas.apertado("voo_desce"): v = -1.0
 	return v
 
 # quanto o dedo arrastou para olhar desde a última chamada (pixels)
@@ -425,3 +614,21 @@ func consumir_olhar() -> Vector2:
 	var r := _olhar
 	_olhar = Vector2.ZERO
 	return r
+
+# quanto o MOUSE (preso) andou desde a última chamada (pixels); o jogador aplica a sensibilidade do mouse
+func consumir_olhar_mouse() -> Vector2:
+	var r := _olhar_mouse if not bloqueado else Vector2.ZERO
+	_olhar_mouse = Vector2.ZERO
+	return r
+
+# dica de tecla no modo PC (o botão PEGAR some com a HUD de toque)
+var _dica_txt := ""
+
+func _atualizar_dica() -> void:
+	var t := ""
+	if modo_pc and dicas and not bloqueado and not editando and not modo_voo and not ocultos.get("PEGAR", false):
+		t = "[%s]  %s" % [Teclas.texto_de("pegar"), str(textos.get("PEGAR", "PEGAR")).replace("\n", " ")]
+	if t != _dica_txt:
+		_dica_txt = t
+		_dica.text = t
+		_dica.visible = t != ""

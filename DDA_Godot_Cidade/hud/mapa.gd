@@ -18,6 +18,7 @@ extends CanvasLayer
 # Quem usa: main.gd (cria e chama ligar) e menu/aplicar_opcoes.gd (aplicar_estilo).
 
 const UI := preload("res://menu/ui.gd")
+const Teclas := preload("res://jogador/teclas.gd")
 
 const RAIO_MINI := 250.0            # metros do centro até a borda do minimapa
 const TAM_MINI := 22.0              # diâmetro do minimapa (vh = 1% da altura da tela)
@@ -453,7 +454,7 @@ func _input(e: InputEvent) -> void:
 		return
 	if e is InputEventKey:
 		var k := e as InputEventKey
-		if k.pressed and not k.echo and k.keycode == KEY_M and _pode_abrir():
+		if k.pressed and not k.echo and Teclas.casa(k, "mapa") and _pode_abrir():
 			abrir_mapa()
 			get_viewport().set_input_as_handled()
 	elif e is InputEventScreenTouch:
@@ -469,12 +470,14 @@ func _entrada_mapa(e: InputEvent) -> void:
 		var k := e as InputEventKey
 		if not k.pressed or k.echo:
 			return
+		if Teclas.casa(k, "mapa") or k.keycode == KEY_ESCAPE:
+			fechar_mapa()
+			get_viewport().set_input_as_handled()
+			return
+		if Teclas.casa(k, "inventario") or k.keycode == KEY_I:
+			fechar_mapa()               # deixa a tecla seguir: o inventário abre
+			return
 		match k.keycode:
-			KEY_M, KEY_ESCAPE:
-				fechar_mapa()
-				get_viewport().set_input_as_handled()
-			KEY_TAB, KEY_I:
-				fechar_mapa()           # deixa a tecla seguir: o inventário abre
 			KEY_EQUAL, KEY_PLUS, KEY_KP_ADD:
 				_zoom_em(vs * 0.5, 1.0 / 1.6)
 				get_viewport().set_input_as_handled()

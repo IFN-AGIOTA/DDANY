@@ -78,6 +78,9 @@ func aplicar() -> void:
 		j.lateral_camera = LADO.get(o["pos"], 0.32)
 		j.fov_camera = float(o["fov"])
 		j.armas.vibrar = bool(o["vib"])
+		j.sens_mouse = float(o.get("msens", 100)) / 100.0
+		j.sens_mouse_mira = float(o.get("msens_mira", 70)) / 100.0
+		j.inverter_y_mouse = bool(o.get("minv", false))
 		j.camera.far = alcance_visao()
 		var sf = j.find_child("SombraFalsa", true, false)
 		if sf != null:
@@ -86,6 +89,7 @@ func aplicar() -> void:
 	if c != null and is_instance_valid(c):
 		c.aplicar_layout(Config.hud_pos, float(o["sc"]) / 100.0, float(o["op"]) / 100.0)
 		c.set_info(bool(o["fps"]))
+		c.configurar_teclado(o)
 	var h = main.get("hud")
 	if h != null and is_instance_valid(h):
 		h.aplicar_estilo(float(o["sc"]) / 100.0, float(o["op"]) / 100.0)

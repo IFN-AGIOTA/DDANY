@@ -39,6 +39,27 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.62 · TECLADO E MOUSE (PC e celular com teclado/mouse)
+  · MODO PC (jogador/controles.gd): com teclado ou mouse a HUD de TOQUE SOME (joystick, ATIRAR, CORRER...), o
+    mouse fica preso na tela e controla a câmera, e o jogo usa as teclas. Vale no PC e no APK (teclado/mouse
+    ligado no celular). Opções › Teclado e mouse › Tipo de controle: Automático (padrão: no PC começa no teclado
+    e mouse; no celular, no toque; usou teclado/mouse -> PC; tocou na tela -> toque) · Teclado e mouse · Toque.
+    O mouse se solta sozinho no inventário, mapa, pausa, roda de itens, tela de morte e quando a janela perde o foco.
+  · TECLAS (jogador/teclas.gd, NOVO; todas trocáveis em Opções › Teclado e mouse: clique e aperte a nova):
+      WASD/setas andar · Shift correr · Alt andar devagar · Espaço pular · C agachar · mouse esquerdo atirar/golpear
+      · mouse direito mirar · R recarregar · X ou rodinha trocar arma · Q roda do inventário rápido (o mouse aparece
+      no meio dela: aponte e clique) · 1..8 atalhos · E pegar · Tab inventário · M mapa · Esc pausa · V câmera livre
+      (E sobe, Q desce, Shift velocidade) · F11 tela cheia. Trocar uma tecla que outra ação já usava troca as duas.
+  · OPÇÕES › TECLADO E MOUSE (menu/opcoes.gd, aba nova): tipo de controle · sensibilidade do mouse · sensibilidade
+    mirando · eixo vertical do mouse · mirar segurando ou apertar liga/desliga · agachar e correr idem · rodinha do
+    mouse troca arma ou não · dicas de teclas na tela ("[E]  PEGAR ...", já que o botão PEGAR some) · lista de
+    teclas por grupo · restaurar teclas padrão. Salvo em user://opcoes.cfg (Config: entrada, msens, msens_mira,
+    minv, mirar_modo, agachar_modo, correr_modo, roda_mouse, dicas_teclas, teclas).
+  · hud/mapa.gd e a tecla do inventário usam as teclas configuradas; Ajuda atualizada.
+  · VERSÃO DE PC: preset de exportação "Windows" (jogo, sem console) -> ../jogo_windows/DiasDeUmApocalipse.exe,
+    entregue como jogo_windows.zip (extrair e dar dois cliques no .exe). Gerar de novo: Projeto > Exportar >
+    "Windows" (ou godot --headless --export-release "Windows").
+
 ATUALIZAÇÃO 0.61 · MIRA PARA CIMA/BAIXO, ITEM NA MÃO, PÉS NO CHÃO, INFECTADOS VARIADOS E MP5
   · MIRA ACOMPANHA A CÂMERA (jogador/camada_mira.gd, NOVO): mirando com arma de fogo, o tronco inclina para cima
     ou para baixo junto com a câmera (pistola, MP5 e fuzis; os fuzis giram no ombro em jogador/ik_fuzil.gd).
@@ -1069,6 +1090,9 @@ SOBREVIVENTE (jogador no modo livre)
 - como segura cada arma (posturas) .. ferramentas/gerar_portes.gd (PORTES) + jogador/camada_postura.gd + POSTURAS no animador
 - velocidade das caminhadas .......... jogador/jogador.gd (VEL_DEVAGAR, VEL_ANDAR, VEL_TROTE) e REF no animador
   (medir de novo: ferramentas/medir_passos.gd)
+- teclas do teclado e mouse ........... jogador/teclas.gd (ACOES: ações, nomes e teclas padrão)
+- modo PC x toque, mouse preso ........ jogador/controles.gd (_input, _quer_mouse_preso, _acao)
+- aba Opções › Teclado e mouse ........ menu/opcoes.gd (_pagina_teclado)
 - mira para cima/baixo ................ jogador/camada_mira.gd (FRACAO por vértebra) + MIRA_NEUTRA em jogador.gd
 - jeitos de andar dos infectados ...... inimigos/modelo_infectado.gd (ESTILOS) + ferramentas/retarget_cmu.gd
 - quais animações cada ação usa ....... jogador/animador_modelo.gd (8 direções, acao()), armas/armas.gd (GOLPES),

@@ -70,7 +70,10 @@ var mirando := false                # mira (aproxima a câmera); ligada pelo bot
 var atirando := false               # atirou há pouco / arma erguida (o corpo vira para a mira)
 var cam_yaw := 0.0                  # 0 = olhando para -Z
 var cam_pit := 0.05                 # positivo = câmera acima olhando para baixo (-0,35 a 1,15)
-var mira_pitch := 0.0                # 0.61: para onde a arma aponta (+ = para cima), a partir da câmera (camada_mira.gd)
+var mira_pitch := 0.0
+var sens_mouse := 1.0                # 0.62: Opções › Teclado e mouse (menu/aplicar_opcoes.gd)
+var sens_mouse_mira := 0.7
+var inverter_y_mouse := false                # 0.61: para onde a arma aponta (+ = para cima), a partir da câmera (camada_mira.gd)
 var vel_horizontal := 0.0
 var fator_agachado := 0.0           # 0 em pé · 1 agachado (suavizado, para a câmera)
 var fator_mira := 0.0
@@ -344,6 +347,10 @@ func _physics_process(delta: float) -> void:
 		sprint = controles.correndo()
 		quer_pular = controles.pulando()
 		armas.gatilho = controles.atirando()
+		# agachar no modo "segurar" (Opções › Teclado e mouse): segue a tecla
+		var seg: int = controles.agachar_segurado()
+		if seg >= 0 and (seg == 1) != agachado and not morto:
+			alternar_agachar()
 	if morto or (sobrevivencia != null and (sobrevivencia.desmaiado > 0.0 or sobrevivencia.parado > 0.0)):
 		ix = 0.0
 		iy = 0.0
@@ -427,6 +434,12 @@ func _process(delta: float) -> void:
 		var s := sensibilidade * (0.6 if mirando else 1.0)     # mirando: olhar mais preciso
 		cam_yaw -= r.x * 0.006 * s
 		cam_pit = clampf(cam_pit + r.y * 0.004 * s * (-1.0 if inverter_y else 1.0), -0.35, 1.15)
+		# 0.62: mouse preso (modo PC) com sensibilidade, sensibilidade mirando e eixo próprios (Opções › Teclado e mouse)
+		var rm: Vector2 = controles.consumir_olhar_mouse()
+		if rm != Vector2.ZERO:
+			var sm := sens_mouse * (sens_mouse_mira if mirando else 1.0)
+			cam_yaw -= rm.x * 0.0022 * sm
+			cam_pit = clampf(cam_pit + rm.y * 0.0018 * sm * (-1.0 if inverter_y_mouse else 1.0), -0.35, 1.15)
 		if giroscopio:
 			# celular deitado (paisagem): girar em pé = olhar para os lados, inclinar = olhar para cima/baixo
 			var gv := Input.get_gyroscope() - giro_zero

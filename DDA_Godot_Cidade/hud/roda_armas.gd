@@ -4,7 +4,7 @@ extends CanvasLayer
 # que o atalho dele: arma/ferramenta vai para a mão, comida/remédio/atadura é USADO. No meio: GUARDAR (mãos livres).
 #   · SEGURAR e ARRASTAR: segure ARMA, arraste o dedo na direção da arma e solte = troca.
 #   · TOCAR: toque rápido em ARMA = a roda fica aberta; toque na arma (ou no meio para guardar). Fora fecha.
-#   · PC: tecla Q abre/fecha (clique escolhe). A rodinha do mouse continua trocando direto.
+#   · PC: tecla Q abre/fecha (o mouse aparece no meio da roda; aponte e clique). A rodinha troca direto.
 # Jogando sozinho o tempo fica mais lento enquanto a roda está aberta (em rede não: os outros continuam).
 # Cada fatia mostra a foto do item (inventario/visual.gd), o nome, as balas (pente + reserva) ou a quantidade e
 # o número do atalho; o que está na mão fica marcado. A roda é transparente: dá para ver o jogo por trás.
@@ -79,12 +79,22 @@ func abrir(modo: String, pos: Vector2) -> void:
 		Engine.time_scale = LENTO
 	Sons.ui("abrir", -6.0)
 	_tela.queue_redraw()
+	if controles != null and controles.modo_pc:
+		# 0.62 · teclado e mouse: solta o mouse no meio da roda (aponte e clique)
+		controles.mouse_solto = true
+		_centralizar_mouse.call_deferred()
+
+func _centralizar_mouse() -> void:
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	get_viewport().warp_mouse(_centro())
 
 func fechar() -> void:
 	if not aberta:
 		return
 	aberta = false
 	visible = false
+	if controles != null:
+		controles.mouse_solto = false
 	Engine.time_scale = _tempo_antes if _tempo_antes > 0.0 else 1.0
 
 func _confirmar() -> void:

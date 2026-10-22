@@ -5,12 +5,20 @@ extends Node
 
 signal mudou(chave: String)          # "gfx" quando os gráficos foram aplicados; "hud" quando a HUD foi editada
 
-const VERSAO := "0.61"
+const VERSAO := "0.62"
 const ARQUIVO := "user://opcoes.cfg"
 
 const PADRAO := {
 	"ctrl": "touch", "gsens": 25, "gyro_inv": false, "gyro_zero": Vector3.ZERO,
 	"sens": 100, "inv": false, "gas": "manual", "vib": true,
+	# 0.62 · TECLADO E MOUSE (Opções › Teclado e mouse; jogador/teclas.gd e jogador/controles.gd)
+	"entrada": "auto",                    # "auto" (troca sozinho), "pc" (teclado e mouse) ou "toque"
+	"msens": 100, "msens_mira": 70,       # sensibilidade do mouse (%) e mirando (% dela)
+	"minv": false,                        # eixo vertical do mouse invertido
+	"mirar_modo": "segurar", "agachar_modo": "alternar", "correr_modo": "segurar",
+	"roda_mouse": true,                   # rodinha do mouse troca de arma
+	"dicas_teclas": true,                 # mostra "E  PEGAR" etc. na tela
+	"teclas": {},                         # teclas trocadas: ação -> código (jogador/teclas.gd)
 	"cam": 0, "dist": "near", "pos": "left", "fov": 42,
 	"map": true, "op": 100, "sc": 100,
 	"fps": false, "som": true, "vol": 100, "awake": false, "mus": true, "mvol": 70,

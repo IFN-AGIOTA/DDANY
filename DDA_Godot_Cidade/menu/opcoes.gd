@@ -1,5 +1,7 @@
 extends CanvasLayer
-# TELA DE OPÇÕES (igual à do HTML): abas Controles · Câmera · HUD · Gráficos · Vídeo e som · Ajuda.
+# TELA DE OPÇÕES (igual à do HTML): abas Controles · Teclado e mouse · Câmera · HUD · Gráficos · Vídeo e som · Ajuda.
+# 0.62: aba "Teclado e mouse": tipo de controle, mouse (sensibilidade, eixo), jeito de mirar/agachar/correr e a
+# tecla de cada ação (clique e aperte a tecla nova; jogador/teclas.gd).
 # Tudo é salvo na hora em Config (menu/config.gd) e aplicado no jogo por menu/aplicar_opcoes.gd.
 # Na aba Gráficos as mudanças só valem ao tocar APLICAR (como no HTML).
 # Opções marcadas "(em breve)" ficam salvas, mas ainda não têm efeito na versão Godot (não existe carro,
@@ -10,7 +12,8 @@ signal fechar
 signal editar_hud
 
 const UI := preload("res://menu/ui.gd")
-const ABAS := ["Controles", "Câmera", "HUD", "Gráficos", "Vídeo e som", "Ajuda"]
+const Teclas := preload("res://jogador/teclas.gd")
+const ABAS := ["Controles", "Teclado e mouse", "Câmera", "HUD", "Gráficos", "Vídeo e som", "Ajuda"]
 const NIVEIS := [[0, "MUITO BAIXO"], [1, "BAIXO"], [2, "MÉDIO"], [3, "ALTO"]]
 const EM_BREVE := "  (em breve)"
 
@@ -99,10 +102,11 @@ func _montar() -> void:
 		var p: Control
 		match i:
 			0: p = _pagina_controles(v)
-			1: p = _pagina_camera(v)
-			2: p = _pagina_hud(v)
-			3: p = _pagina_graficos(v)
-			4: p = _pagina_video(v)
+			1: p = _pagina_teclado(v)
+			2: p = _pagina_camera(v)
+			3: p = _pagina_hud(v)
+			4: p = _pagina_graficos(v)
+			5: p = _pagina_video(v)
 			_: p = _pagina_ajuda(v)
 		p.set_anchors_preset(Control.PRESET_FULL_RECT)
 		p.visible = i == aba
@@ -131,6 +135,8 @@ func _process(dt: float) -> void:
 		_msg_t -= dt
 		if _msg_t <= 0.0 and _msg != null:
 			_msg.text = ""
+	if _esperando_t > 0.0:
+		_esperando_t -= dt
 	if _confirmar_t > 0.0:
 		_confirmar_t -= dt
 		if _confirmar_t <= 0.0 and is_instance_valid(_bt_restaurar):
@@ -224,6 +230,109 @@ func _pagina_controles(v: float) -> Control:
 	_secao(g, "Vibração", _seg("vib", [[true, "Ligada"], [false, "Desligada"]]))
 	return _rolavel(g)
 
+# ---------- teclado e mouse (0.62) ----------
+var _bt_teclas := {}           # ação -> BotaoMenu com a tecla
+var _esperando := ""           # ação esperando a tecla nova
+var _esperando_t := 0.0
+
+func _pagina_teclado(v: float) -> Control:
+	Teclas.carregar(Config.valor("teclas"))
+	_bt_teclas.clear()
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", int(1.6 * v))
+	var g := _grade(v)
+	_secao(g, "Tipo de controle", _seg("entrada", [["auto", "Automático"], ["pc", "Teclado e mouse"], ["toque", "Toque"]]))
+	_secao(g, "Rodinha do mouse", _seg("roda_mouse", [[true, "Troca de arma"], [false, "Desligada"]]))
+	_deslizante("msens", 20, 300, 5, "%", g, "Sensibilidade do mouse")
+	_deslizante("msens_mira", 20, 150, 5, "%", g, "Sensibilidade mirando")
+	_secao(g, "Eixo vertical do mouse", _seg("minv", [[false, "Normal"], [true, "Invertido"]]))
+	_secao(g, "Mirar", _seg("mirar_modo", [["segurar", "Segurar"], ["alternar", "Apertar liga/desliga"]]))
+	_secao(g, "Agachar", _seg("agachar_modo", [["alternar", "Apertar liga/desliga"], ["segurar", "Segurar"]]))
+	_secao(g, "Correr", _seg("correr_modo", [["segurar", "Segurar"], ["alternar", "Apertar liga/desliga"]]))
+	_secao(g, "Dicas de teclas na tela", _seg("dicas_teclas", [[true, "Mostrar"], [false, "Esconder"]]))
+	col.add_child(g)
+	var nota := UI.rotulo("Automático: usou teclado ou mouse, a HUD de toque some e o mouse controla a câmera; tocou na tela, ela volta. "
+		+ "Clique numa tecla abaixo e aperte a nova (Esc cancela).", 2.4 * v, UI.TEXTO, 400)
+	nota.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(nota)
+	# teclas, por grupo, em duas colunas
+	var grupo := ""
+	var tg: GridContainer = null
+	for a in Teclas.ACOES:
+		if a[3] != grupo:
+			grupo = a[3]
+			col.add_child(UI.rotulo(grupo, 3.0 * v, UI.TITULO_SECAO, 700))
+			tg = _grade(v)
+			tg.add_theme_constant_override("v_separation", int(0.8 * v))
+			col.add_child(tg)
+		var linha := HBoxContainer.new()
+		linha.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		linha.add_theme_constant_override("separation", int(1.0 * v))
+		var nome := UI.rotulo(a[1], 2.6 * v, UI.TEXTO, 600)
+		nome.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		linha.add_child(nome)
+		var acao: String = a[0]
+		var bt := UI.BotaoMenu.new(Teclas.texto_de(acao), "", false, 2.8, 0.0)
+		bt.custom_minimum_size.x = 26.0 * v
+		bt.apertado.connect(func(): _esperar_tecla(acao))
+		linha.add_child(bt)
+		_bt_teclas[acao] = bt
+		tg.add_child(linha)
+	var rest := UI.BotaoMenu.new("Restaurar teclas padrão", "", false, 3.4, 0.0)
+	rest.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rest.apertado.connect(func():
+		_esperando = ""
+		Teclas.carregar({})
+		Config.definir("teclas", {})
+		_mostrar_teclas()
+		mensagem("Teclas voltaram ao padrão."))
+	col.add_child(rest)
+	return _rolavel(col)
+
+func _esperar_tecla(acao: String) -> void:
+	_mostrar_teclas()
+	_esperando = acao
+	_esperando_t = 0.2                 # o próprio clique que abriu não conta
+	var bt = _bt_teclas.get(acao)
+	if bt != null:
+		bt.titulo = "Aperte a tecla..."
+		bt.queue_redraw()
+
+func _mostrar_teclas() -> void:
+	for acao in _bt_teclas:
+		var bt = _bt_teclas[acao]
+		bt.titulo = Teclas.texto_de(acao)
+		bt.queue_redraw()
+
+func _input(e: InputEvent) -> void:
+	if _esperando == "" or _esperando_t > 0.0:
+		return
+	var c := ""
+	if e is InputEventKey and e.pressed and not e.echo:
+		if e.keycode == KEY_ESCAPE:
+			_esperando = ""
+			_mostrar_teclas()
+			get_viewport().set_input_as_handled()
+			return
+		c = Teclas.codigo_do_evento(e)
+	elif e is InputEventMouseButton and e.pressed and e.device != InputEvent.DEVICE_ID_EMULATION:
+		c = Teclas.codigo_do_evento(e)
+	if c == "":
+		return
+	get_viewport().set_input_as_handled()
+	var acao := _esperando
+	_esperando = ""
+	Config.definir("teclas", Teclas.definir(acao, c))
+	_mostrar_teclas()
+	mensagem("%s: %s" % [_nome_acao(acao), Teclas.texto(c)])
+
+func _nome_acao(acao: String) -> String:
+	for a in Teclas.ACOES:
+		if a[0] == acao:
+			return a[1]
+	return acao
+
 func _atualizar_gyro() -> void:
 	var on: bool = Config.valor("ctrl") == "gyro"
 	if _sec_gsens != null:
@@ -301,7 +410,7 @@ func _pagina_ajuda(v: float) -> Control:
 	txt.add_theme_color_override("default_color", Color(UI.TEXTO.r, UI.TEXTO.g, UI.TEXTO.b, 0.92))
 	var a := "[color=#ffb400][b]%s[/b][/color] "
 	txt.text = (a % "Toque:") + "metade esquerda = joystick · metade direita = olhar · ATIRAR (segure; dá para mirar arrastando) · CORRER · PULAR · AGACHAR · MIRAR · RECARREGAR · ARMA (coldre/ombro) · PEGAR · INV (inventário) · II (pausa) · VOO.\n\n" \
-		+ (a % "Teclado:") + "WASD/setas mover · Shift correr · Espaço pular · C/Ctrl agachar · F atirar · botão direito mirar · R recarregar · 1..8 atalhos · rodinha troca arma · Tab/I inventário · E pegar · V voo · P/Esc pausa.\n\n" \
+		+ (a % "Teclado e mouse:") + "com teclado ou mouse a HUD de toque some e o mouse controla a câmera. Padrão: WASD/setas mover · Shift correr · Alt andar devagar · Espaço pular · C agachar · mouse esquerdo atirar · mouse direito mirar · R recarregar · X ou rodinha troca arma · Q roda · 1..8 atalhos · E pegar · Tab inventário · M mapa · V voo · Esc pausa. Troque as teclas em Opções › Teclado e mouse.\n\n" \
 		+ (a % "Inventário:") + "arraste itens entre o chão (esquerda), o corpo (meio) e a mochila (direita); R ou um 2º dedo gira; duplo toque = ação rápida.\n\n" \
 		+ (a % "HUD:") + "em Opções › HUD toque em Personalizar HUD, arraste cada botão e ajuste o tamanho; Concluir salva."
 	col.add_child(txt)
