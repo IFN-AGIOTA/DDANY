@@ -288,6 +288,7 @@ func _criar(k: Vector2i) -> Node3D:
 		listas[tipo].append([x, y, z, r.randf() * TAU, esc, t, r.randf()])
 		if tipo == 1 and r.randf() < 0.5:            # parque: capim bem fechado
 			listas[1].append([x + r.randf_range(-0.8, 0.8), y, z + r.randf_range(-0.8, 0.8), r.randf() * TAU, esc, t, r.randf()])
+	var arbusto_baixado: bool = _mats[2].get_shader_parameter("com_textura") > 0.5
 	for tipo in 3:
 		var l: Array = listas[tipo]
 		if l.is_empty():
@@ -300,7 +301,7 @@ func _criar(k: Vector2i) -> Node3D:
 		mm.instance_count = l.size()
 		for i in l.size():
 			var e: Array = l[i]
-			var esc_t: float = e[4] * (0.7 if tipo == 2 and _mats[2].get_shader_parameter("com_textura") > 0.5 else 1.0)
+			var esc_t: float = e[4] * (0.7 if tipo == 2 and arbusto_baixado else 1.0)
 			var b := Basis(Vector3.UP, e[3]).scaled(Vector3(esc_t, esc_t * (0.8 + 0.4 * e[6]), esc_t))
 			mm.set_instance_transform(i, Transform3D(b, Vector3(e[0], e[1], e[2])))
 			var tc: Color = e[5]

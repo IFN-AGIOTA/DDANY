@@ -1312,8 +1312,7 @@ func _montar_veg(veg: Dictionary) -> void:
 			mi.multimesh = mm
 			mi.visibility_range_end = alcance
 			mi.set_meta("alcance", alcance)
-			if not grupo in ["arvore", "pinheiro", "arvore_seca", "arvore_grande"]:
-				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF      # como as árvores de antes (sombra pesa no celular)
 			_adopt(mi)
 			detalhes_veg.append(mi)
 	print("Vegetação baixada: ", total, " (", veg.size(), " modelos)")

@@ -39,6 +39,26 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.70 · REVISÃO: CONSERTOS DO MULTIJOGADOR, COLISÃO E DESEMPENHO
+  · MULTIJOGADOR (conserto): no aparelho do AMIGO (cliente), os prédios infestados, os locais especiais, as
+    missões do rádio e os eventos criavam infectados próprios, que só ele via; eles ganhavam números de rede
+    repetidos com os do host e o dano podia ir para o infectado errado. Agora só o host cria infectados
+    (o cliente vê as cópias que o host manda, como já era com os da rua).
+  · COLISÃO: placas de trânsito e hidrantes (0.69) agora bloqueiam a passagem (antes dava para atravessar).
+  · DESEMPENHO: as árvores e plantas baixadas dos parques não fazem mais sombra (como as árvores de antes;
+    sombra de muita árvore pesa no celular). O mato decide uma vez só se o arbusto usa o modelo baixado
+    (antes perguntava ao material a cada planta).
+  · LEIA-ME: seção 10 (limitações) atualizada (infectados e itens já são iguais para todos desde a 0.44; os
+    fuzis já usam as duas mãos).
+  · ARQUIVOS MEXIDOS:
+      inimigos/vagos.gd ...... _criar: no cliente (espelho) não cria infectado
+      mundo/abandono.gd ...... colisão das placas e do hidrante
+      mundo/cidade.gd ........ vegetação dos parques sem sombra
+      mundo/mato.gd .......... arbusto: decide uma vez (arbusto_baixado)
+      menu/config.gd ......... versão 0.70
+  · PUBLICADA: atualizacoes/pacote_0.70.pck (acumulado desde o APK 0.48) + manifesto; os celulares baixam
+    sozinhos. servidor_windows.zip (raiz) refeito na 0.70.
+
 ATUALIZAÇÃO 0.69 · CENÁRIO COM MODELOS BAIXADOS: POSTES, PLACAS, SEMÁFOROS, LIXO DE RUA E VEGETAÇÃO
   · Modelos 3D baixados (todos CC0, créditos na tela de Créditos e em mundo/cenario/LICENCA.txt) no lugar das
     peças feitas por código, e coisas novas espalhadas pela cidade:
@@ -1498,15 +1518,18 @@ MÚSICA (pasta audio/)
 - A gangue VAGOS (Edy, V), Alyce, Nick, Mônica e Carlos ainda não aparecem no jogo (são do Ato 2 em diante).
 - Só abrem até o 3º andar; o telhado só nos prédios de até 3 andares (nos mais altos, o resto fica fechado).
 - História: apagada na 0.63, vai ser refeita do zero (menu mostra "Em breve").
-- O mar é "caminhável"; a base militar ainda não tem os prédios/pistas do HTML.
+- O mar é "caminhável" (dá para andar na água como se fosse chão); a base militar ainda não tem os
+  prédios/pistas do HTML.
+- Locais especiais (0.68): de longe (mais de 140 m) a casca não tem colisão (tiro de longe atravessa); o loot e os
+  infectados deles não voltam (só uma vez por partida).
 - Transformação em carro e jato do HTML foi descartada: o jogo é só a pé.
 - Os blocos de cima das torres escalonadas também mostram "térreo" (vitrines/placas) na base deles.
-- Sobrevivente: rosto liso de manequim; fuzis também ficam só na mão direita (a animação é de pistola).
+- Sobrevivente: rosto liso de manequim.
 - Infectados: os rostos são simples (manequim, olhos pintados).
-- MULTIJOGADOR (base da 0.28), falta: infectados iguais para todos (hoje cada aparelho tem os seus, que só
-  caçam o próprio jogador), itens pegos/largados e caixas sincronizados (hoje dá para os dois pegarem o mesmo
-  item), dano entre jogadores, jogadores sem colisão entre si, salvar a partida em rede (em rede não salva),
-  outros jogadores no mapa/minimapa, chat. Internet sem roteador/VPN (servidor próprio de "ponte"/relay, que
+- MULTIJOGADOR: infectados, itens e caixas já são iguais para todos (0.44). Falta: dano entre jogadores (PvP:
+  os locais especiais da 0.68 já estão prontos para ele), jogadores sem colisão entre si, salvar a partida em
+  rede (em rede não salva), outros jogadores no mapa/minimapa, chat, infectados nos prédios/locais perto só do
+  amigo (só o host cria; quando o host está longe, o prédio do amigo fica vazio). Internet sem roteador/VPN (servidor próprio de "ponte"/relay, que
   precisa de um servidor ligado 24h) e abrir o jogo direto por um link (precisa de plugin Android).
 - Ideias para depois: loot por região, lugares
   especiais (postos do exército, quarentena, metrô), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,

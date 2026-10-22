@@ -470,6 +470,7 @@ func _mobiliario_urbano() -> void:
 					var q2: Vector2 = a + dir * (t + 7.0) + nrm * lado * (hw + 1.4)
 					if r < 0.12:
 						_por("hidrante", Transform3D(Basis(Vector3.UP, rng.randf() * TAU), Vector3(q2.x, Y - 0.05, q2.y)), Color.WHITE)
+						_obstaculo(Vector3(q2.x, Y, q2.y), 0.0, Vector3(0.35, 0.8, 0.35))
 					elif r < 0.2:
 						var q3: Vector2 = a + dir * (t + 7.0) + nrm * lado * (hw + 3.8)
 						_por("banco", Transform3D(Basis(Vector3.UP, _giro(dir) + (PI if lado > 0.0 else 0.0)), Vector3(q3.x, Y - 0.05, q3.y)), Color.WHITE)
@@ -480,6 +481,7 @@ func _mobiliario_urbano() -> void:
 						var gp := _giro(dir * lado) + rng.randf_range(-0.08, 0.08)      # a face da placa é o eixo X do modelo
 						var torta := Basis(Vector3.FORWARD, rng.randf_range(-0.12, 0.12)) if rng.randf() < 0.3 else Basis.IDENTITY
 						_por(tipo_p, Transform3D(Basis(Vector3.UP, gp) * torta, Vector3(qp.x, Y - 0.05, qp.y)), Color.WHITE * rng.randf_range(0.75, 1.0))
+						_obstaculo(Vector3(qp.x, Y, qp.y), 0.0, Vector3(0.2, 2.7, 0.2))
 					elif r < 0.36 and baixados:
 						var ql: Vector2 = a + dir * (t + 9.0) + nrm * lado * (hw + 1.3)
 						if rng.randf() < 0.25:
@@ -512,6 +514,7 @@ func _mobiliario_urbano() -> void:
 				var ang := PI * 0.25 + (canto * 2 + rng.randi() % 2) * PI * 0.5
 				var p := Vector2(kk) + Vector2(cos(ang), sin(ang)) * r * 1.414
 				_por("placa_pare", Transform3D(Basis(Vector3.UP, _giro(Vector2(cos(ang), sin(ang))) + rng.randf_range(-0.2, 0.2)), Vector3(p.x, Y - 0.05, p.y)), Color.WHITE * rng.randf_range(0.8, 1.0))
+				_obstaculo(Vector3(p.x, Y, p.y), 0.0, Vector3(0.2, 2.7, 0.2))
 	# semáforos: um em cada canto dos cruzamentos grandes
 	for kk in cid._nos:
 		var e = cid._nos[kk]

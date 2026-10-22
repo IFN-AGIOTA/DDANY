@@ -461,6 +461,8 @@ func _planejar(pj: Vector3) -> void:
 		_fila.append([p, Vector3.INF])
 
 func _criar(p: Vector3, destino: Vector3) -> void:
+	if espelho:
+		return            # 0.70: no cliente quem cria é o host (prédio infestado, local, missão e evento chamam aqui)
 	var v = VagoCls.new()
 	v.gerente = self
 	v.position = p + Vector3(0, 0.02, 0)
