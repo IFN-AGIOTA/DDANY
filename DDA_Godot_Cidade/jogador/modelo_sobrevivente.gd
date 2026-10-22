@@ -29,6 +29,8 @@ const ModelosArmas := preload("res://armas/modelos_armas.gd")
 const IkFuzil := preload("res://jogador/ik_fuzil.gd")
 const CamadaAcao := preload("res://jogador/camada_acao.gd")
 const CamadaPostura := preload("res://jogador/camada_postura.gd")
+const CamadaMira := preload("res://jogador/camada_mira.gd")
+const ModelosItens := preload("res://inventario/modelos_itens.gd")
 const PASTA := "res://jogador/sobrevivente/"
 const NOMES_ANIM := {"parado": "parado", "andar": "andar", "correr": "correr", "pular": "pular", "cair": "cair",
 	"mirar": "mirar", "atirar": "atirar", "morrer": "morrer", "agachado": "agachado", "andar_agachado": "andar_agachado"}
@@ -84,12 +86,15 @@ var _cores: Array = []
 var _ponto_arma: Node3D
 # FUZIS (m4, ak, espingarda, rifle de caça) são segurados com as DUAS mãos: o fuzil fica preso ao peito e
 # as mãos vão até ele por IK (cinemática inversa, jogador/ik_fuzil.gd). Arma baixa (diagonal na frente do corpo) ou no ombro mirando.
-const FUZIS := ["m4", "ak", "espingarda", "rifle_caca"]
+const FUZIS := ["mp5", "m4", "ak", "espingarda", "rifle_caca"]
 var _ponto_fuzil: Node3D
 var camada                             # jogador/camada_acao.gd: ações só na parte de cima (recarregar andando...)
 var postura                            # jogador/camada_postura.gd: como segura a arma (pistola, faca, taco...)
+var mira_camada                        # jogador/camada_mira.gd: tronco inclina com a câmera ao mirar
 var _ik: IkFuzil
 var _mira := 0.0
+var _item_mao: Node3D = null            # 0.61: item na mão durante comer/beber/remédio/curativo (segurar_item)
+var _t_item := 0.0
 var _pecas := {}                       # chave ("cabeca", "mochila", "cinto", "ombro", "coldre") -> [id, nó]
 var _colete: MeshInstance3D
 var _colete_id := ""
@@ -440,6 +445,10 @@ func _criar_ponto_fuzil() -> void:
 	camada.name = "CamadaAcao"
 	esqueleto.add_child(camada)
 	camada.preparar(esqueleto)
+	mira_camada = CamadaMira.new()
+	mira_camada.name = "CamadaMira"
+	esqueleto.add_child(mira_camada)
+	mira_camada.preparar(esqueleto)
 	# preso ao ESQUELETO (sempre de frente), não ao peito: a animação de mirar (de pistola) gira o tronco para o
 	# lado e o fuzil ficaria atravessado. jogador/ik_fuzil.gd põe o fuzil no lugar e leva as mãos até ele.
 	_ponto_fuzil = Node3D.new()
@@ -453,23 +462,67 @@ func _criar_ponto_fuzil() -> void:
 	_ik.active = false
 
 func _process(dt: float) -> void:
-	# IK só com um fuzil visível na mão
+	var j = get_parent().get_parent() if get_parent() != null else null
+	# mira para cima/baixo junto com a câmera (jogador/camada_mira.gd): só com arma de fogo erguida
+	var arma_fogo := false
+	var erguida := false
+	if j != null and j.get("armas") != null:
+		arma_fogo = not (j.armas.eh_corpo() if j.armas.has_method("eh_corpo") else true) and str(j.armas.atual) != ""
+		erguida = bool(j.get("mirando")) or float(j.armas.aim) > 0.6
+	var pitch = j.get("mira_pitch") if j != null else null
+	mira_camada.ligado = arma_fogo and erguida and pitch != null and not bool(j.get("morto"))
+	mira_camada.angulo = float(pitch) if pitch != null else 0.0
+	if _t_item > 0.0:
+		_t_item -= dt
+		if _t_item <= 0.0:
+			_soltar_item()
+	# IK só com um fuzil visível na mão (e não segurando um item)
 	var arma: Node3D = null
 	for c in _ponto_fuzil.get_children():
 		if c is Node3D and c.visible:
 			arma = c
+	if _t_item > 0.0:
+		arma = null
 	_ik.active = arma != null
 	if arma == null:
 		return
 	# a mão esquerda segura mais ou menos no meio do caminho entre a empunhadura e a boca do cano
 	var cano := arma.get_node_or_null("Cano") as Node3D
 	_ik.mao_esq_z = clampf(cano.position.z * 0.5, 0.22, 0.38) if cano != null else 0.25
-	var j = get_parent().get_parent() if get_parent() != null else null
 	var alvo := 0.0
 	if j != null and j.get("armas") != null:
 		alvo = clampf(float(j.armas.aim), 0.0, 1.0)
 	_mira = move_toward(_mira, alvo, dt * 5.0)
 	_ik.mira = _mira
+	_ik.pitch = mira_camada.aplicado
+
+# ITEM NA MÃO direita (lata, garrafa, remédio, atadura) por "duracao" segundos; a arma some enquanto isso
+func segurar_item(id: String, duracao: float) -> void:
+	if _item_mao != null and is_instance_valid(_item_mao):
+		_item_mao.queue_free()
+	_item_mao = null
+	var n := ModelosItens.instancia(id, false)
+	if n != null:
+		# origem embaixo: o meio do item fica na palma (no lugar da empunhadura da arma)
+		var ab: AABB = ModelosItens._aabb(n)
+		var suporte := Node3D.new()
+		suporte.name = "ItemNaMao"
+		_ponto_arma.get_parent().add_child(suporte)
+		suporte.transform = _ponto_arma.transform
+		suporte.add_child(n)
+		n.position = Vector3(0, -minf(ab.size.y * 0.5, 0.12), 0)
+		_item_mao = suporte
+	_t_item = duracao
+	_ponto_arma.visible = false
+	_ponto_fuzil.visible = false
+
+func _soltar_item() -> void:
+	if _item_mao != null and is_instance_valid(_item_mao):
+		_item_mao.queue_free()
+	_item_mao = null
+	_t_item = 0.0
+	_ponto_arma.visible = true
+	_ponto_fuzil.visible = true
 
 func pegar_ponto_arma() -> Node3D:
 	return _ponto_arma

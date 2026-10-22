@@ -11,7 +11,7 @@ const AnimadorCls := preload("res://jogador/animador_modelo.gd")
 const ModelosArmas := preload("res://armas/modelos_armas.gd")
 const ItemCls := preload("res://inventario/item.gd")
 const ATRASO := 0.12                           # segundos (2 pacotes a 15/s)
-const FUZIS := ["m4", "ak", "espingarda", "rifle_caca"]
+const FUZIS := ["mp5", "m4", "ak", "espingarda", "rifle_caca"]
 
 var id := 0
 var nome := ""
@@ -21,6 +21,7 @@ var vel_horizontal := 0.0
 var mirando := false
 var agachado := false
 var mancando := false
+var mira_pitch := 0.0
 var morto := false
 var armas := _Armas.new()
 var _no_chao := true
@@ -93,6 +94,7 @@ func receber_estado(d: Array) -> void:
 	mancando = b & 16 != 0
 	armas.aim = float(d[5])
 	armas.since = float(d[6])
+	mira_pitch = float(d[7]) if d.size() > 7 else 0.0
 	_mostrar_arma(str(d[4]))
 
 # roupa: slot -> id do item ("" = vazio)

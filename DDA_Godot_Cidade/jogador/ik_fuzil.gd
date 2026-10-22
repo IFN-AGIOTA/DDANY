@@ -11,6 +11,7 @@ extends SkeletonModifier3D
 
 var ponto: Node3D                      # onde o fuzil fica pendurado (filho do esqueleto)
 var mira := 0.0
+var pitch := 0.0                       # 0.61: inclinação da mira (+ = para cima), igual à do tronco (camada_mira.gd)
 var mao_esq_z := 0.25                  # onde a mão esquerda segura (distância da empunhadura, no cano)
 # posições (relativas ao peito/ombro na pose atual da animação)
 var baixo := Transform3D.IDENTITY      # relativo ao osso do peito (spine_03)
@@ -69,7 +70,8 @@ func _process_modification() -> void:
 	var peito := sk.get_bone_global_pose(_i["spine_03"]).origin
 	var ombro := sk.get_bone_global_pose(_i["upperarm_r"]).origin
 	var tb := Transform3D(baixo.basis, peito + baixo.origin)
-	var tm := Transform3D(mirando.basis, ombro + mirando.origin)
+	var giro := Basis(Vector3.RIGHT, -pitch)          # o fuzil gira em volta do ombro junto com o tronco
+	var tm := Transform3D(giro * mirando.basis, ombro + giro * mirando.origin)
 	var t := tb.interpolate_with(tm, smoothstep(0.0, 1.0, mira))
 	ponto.transform = t
 	if mira > 0.01:

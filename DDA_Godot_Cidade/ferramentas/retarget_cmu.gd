@@ -9,7 +9,9 @@ extends SceneTree
 # Locomoção: acha sozinha o trecho que fecha um ciclo de passos (começo ~ fim), vira o movimento para a frente do
 # personagem, tira o avanço (a animação fica no lugar) e distribui o pequeno erro do laço para não "pular".
 # NÃO roda dentro do jogo. Como usar (na pasta do jogo):
-#   BVH=<pasta com os .bvh> SAIDA=<arquivo .res> godot --headless -s ferramentas/retarget_cmu.gd
+#   BVH=<pasta com os .bvh> [SAIDA=<arquivo .res>] godot --headless -s ferramentas/retarget_cmu.gd
+#   ALVO=infectados BVH=<pasta> godot --headless -s ferramentas/retarget_cmu.gd   (jeitos de andar dos infectados)
+#   SO=nome1,nome2 converte só essas
 #   MODO=analise BVH=<pasta> godot --headless -s ferramentas/retarget_cmu.gd   (só mostra duração e velocidade)
 # Os .bvh: https://github.com/una-dinosauria/cmu-mocap (data/007/07_04.bvh ...) · índice: cmu-mocap-index-text.txt
 const FPS := 30.0
@@ -22,7 +24,8 @@ const MAPA := {"Hips": "pelvis", "LowerBack": "spine_01", "Spine": "spine_02", "
 	"LeftUpLeg": "thigh_l", "LeftLeg": "calf_l", "LeftFoot": "foot_l", "LeftToeBase": "ball_l",
 	"RightUpLeg": "thigh_r", "RightLeg": "calf_r", "RightFoot": "foot_r", "RightToeBase": "ball_r"}
 
-# [arquivo, nome no jogo, laço, de (s), até (s), ciclo mín (s), ciclo máx (s), base dos dedos, volta (s)]
+# [arquivo, nome no jogo, laço, de (s), até (s), ciclo mín (s), ciclo máx (s), base dos dedos, volta (s), "pes"?]
+# "pes" no fim: o corpo fica virado para onde os PÉS apontam (andar de lado), não para onde ele anda.
 # laço = true: procura dentro de [de, até] o melhor ciclo com duração entre mín e máx.
 # laço = false: usa exatamente [de, até] e, se volta > 0, acrescenta esse tempo voltando à pose do começo.
 const CLIPES := [
@@ -32,10 +35,24 @@ const CLIPES := [
 	["07_12", "andar_rapido", true, 0.3, 3.5, 0.8, 1.3, "parado", 0.0],         # apressado ~1,9 m/s
 	["77_30", "andar_espreita", true, 0.5, 9.0, 1.4, 3.2, "parado", 0.0],       # agachado, com cuidado
 	["77_19", "mancar", true, 0.5, 8.0, 1.1, 2.4, "parado", 0.0],               # perna machucada
+	["09_01", "trote", true, 0.1, 1.2, 0.5, 0.9, "parado", 0.0],                # 0.61: corrida leve ~3,4 m/s
+	["69_38", "andar_tras", true, 0.3, 6.0, 0.8, 1.8, "parado", 0.0, "pes"],                  # de costas
+	["69_43", "andar_lado_esq", true, 1.0, 14.0, 0.9, 2.6, "parado", 0.0, "pes"],          # passos de lado
+	["69_43", "andar_lado_dir", true, 1.0, 14.0, 0.9, 2.6, "parado", 0.0, "pes,espelho"],  # (espelhado)
 	# ações (uma vez; o último número = segundos para voltar à pose do começo)
 	["79_15", "comer", false, 0.4, 3.3, 0.0, 0.0, "parado", 0.5],
 	["80_40", "beber", false, 1.4, 3.9, 0.0, 0.0, "parado", 0.35],
 	["79_15", "tomar_remedio", false, 0.4, 1.7, 0.0, 0.0, "parado", 0.45],
+]
+
+# 0.61 · JEITOS DE ANDAR DOS INFECTADOS (inimigos/modelo_infectado.gd sorteia um por infectado)
+const CLIPES_INFECTADOS := [
+	["104_41", "andar_zumbi", true, 2.5, 12.5, 1.0, 2.8, "parado", 0.0],          # "ZombieWalk"
+	["120_22", "andar_zumbi_b", true, 2.5, 10.5, 1.0, 2.8, "parado", 0.0],        # "Zombie"
+	["20_08", "andar_marcha", true, 0.2, 1.7, 0.8, 1.5, "parado", 0.0],           # "zombie march"
+	["104_03", "andar_frank", true, 3.0, 13.0, 1.0, 2.8, "parado", 0.0],          # "Frankenstein walk"
+	["139_19", "andar_ferido", true, 0.5, 7.8, 1.0, 2.6, "parado", 0.0],          # "Walk Wounded Leg"
+	["137_33", "andar_velho", true, 2.0, 20.0, 1.0, 2.8, "parado", 0.0],          # "Old Man Walk"
 ]
 
 var sk_u: Skeleton3D
@@ -45,12 +62,14 @@ var rest_u: Array = []
 
 func _initialize():
 	var pasta := OS.get_environment("BVH")
-	var nu: Node = load("res://jogador/sobrevivente/corpo.scn").instantiate()
+	# ALVO=infectados: converte para o esqueleto dos infectados (tabela CLIPES_INFECTADOS)
+	var infect := OS.get_environment("ALVO") == "infectados"
+	var nu: Node = load("res://inimigos/infectados/homem_0.scn" if infect else "res://jogador/sobrevivente/corpo.scn").instantiate()
 	sk_u = nu.find_children("*", "Skeleton3D", true, false)[0]
 	for b in sk_u.get_bone_count():
 		rest_u.append(sk_u.get_bone_rest(b))
 	gu_t = globais(sk_u.get_bone_count(), func(b): return sk_u.get_bone_parent(b), rest_u)
-	base = load("res://jogador/sobrevivente/animacoes.res")
+	base = load("res://inimigos/infectados/animacoes.res" if infect else "res://jogador/sobrevivente/animacoes.res")
 	if OS.get_environment("MODO") == "analise":
 		for f in DirAccess.get_files_at(pasta):
 			if f.ends_with(".bvh"):
@@ -59,7 +78,7 @@ func _initialize():
 		return
 	var lib := base.duplicate(true) as AnimationLibrary
 	var so := OS.get_environment("SO")
-	for c in CLIPES:
+	for c in (CLIPES_INFECTADOS if infect else CLIPES):
 		if so != "" and not (c[1] in so.split(",")):
 			continue
 		var bvh := ler_bvh(pasta.path_join(c[0] + ".bvh"))
@@ -70,6 +89,8 @@ func _initialize():
 			lib.remove_animation(c[1])
 		lib.add_animation(c[1], a)
 	var saida := OS.get_environment("SAIDA")
+	if saida == "":
+		saida = "res://inimigos/infectados/animacoes.res" if infect else "res://jogador/sobrevivente/animacoes.res"
 	print("salvou ", ResourceSaver.save(lib, saida, ResourceSaver.FLAG_COMPRESS), " ", lib.get_animation_list().size(), " animações -> ", saida)
 	quit()
 
@@ -249,7 +270,15 @@ func converter(bvh: Dictionary, c: Array) -> Animation:
 	# direção do movimento (locomoção) ou dos pés no começo (ações no lugar)
 	var desl: Vector3 = (amostras[ib][h] as Transform3D).origin - (amostras[ia][h] as Transform3D).origin
 	desl.y = 0.0
-	var r := girar_para_frente(desl.normalized() if laco and desl.length() > 0.2 else frente_pes(amostras[ia], pe_e, pt_e, pe_d, pt_d))
+	var pelos_pes: bool = c.size() > 9 and String(c[9]).contains("pes")
+	var frente := frente_pes(amostras[ia], pe_e, pt_e, pe_d, pt_d)
+	if pelos_pes:
+		# média dos pés no trecho todo (a cada passo de lado eles giram um pouco)
+		frente = Vector3.ZERO
+		for f in range(ia, ib + 1):
+			frente += frente_pes(amostras[f], pe_e, pt_e, pe_d, pt_d)
+		frente = frente.normalized()
+	var r := girar_para_frente(desl.normalized() if laco and desl.length() > 0.2 and not pelos_pes else frente)
 	# altura do quadril -> escala
 	var chao := minf((g_t[pt_e] as Transform3D).origin.y, (g_t[pt_d] as Transform3D).origin.y)
 	# chão da animação: o ponto mais baixo das pontas dos pés no trecho (alguns arquivos têm a raiz deslocada no quadro 0)
@@ -272,6 +301,18 @@ func converter(bvh: Dictionary, c: Array) -> Animation:
 		var jk := idx(bvh, k)
 		if jk >= 0:
 			por_u[sk_u.find_bone(MAPA[k])] = jk
+	# "espelho": a mesma captura com esquerda <-> direita (ex.: andar de lado para a direita a partir do da esquerda)
+	var espelho: bool = c.size() > 9 and String(c[9]).contains("espelho")
+	if espelho:
+		var troca := {}
+		for b in por_u:
+			var nome := sk_u.get_bone_name(b)
+			var par := nome.trim_suffix("_l") + "_r" if nome.ends_with("_l") else (nome.trim_suffix("_r") + "_l" if nome.ends_with("_r") else nome)
+			var bp := sk_u.find_bone(par)
+			if bp >= 0 and por_u.has(bp):
+				troca[b] = por_u[bp]
+		por_u = troca
+	var S := Basis(Vector3(-1, 0, 0), Vector3(0, 1, 0), Vector3(0, 0, 1))
 	var n := ib - ia + 1
 	var dur: float = tempos[ib] - tempos[ia]
 	# quadril: centro horizontal médio do trecho (sem o avanço)
@@ -295,6 +336,8 @@ func converter(bvh: Dictionary, c: Array) -> Animation:
 				var ga: Basis = r * (g[jk] as Transform3D).basis.orthonormalized()
 				var gt: Basis = a_t * (g_t[jk] as Transform3D).basis.orthonormalized()
 				var delta: Basis = ga * gt.inverse()
+				if espelho:
+					delta = S * delta * S
 				bas = a_u.inverse() * delta * a_u * (gu_t[b] as Transform3D).basis.orthonormalized()
 			else:
 				bas = gpai * Basis(local_base[b] as Quaternion)
@@ -304,7 +347,7 @@ func converter(bvh: Dictionary, c: Array) -> Animation:
 		var dk: Vector3 = (g[h] as Transform3D).origin - p_ini - avanco * (float(f) / maxf(n - 1, 1))
 		dk = r * dk
 		var y := ((g[h] as Transform3D).origin.y - chao_anim) - ((g_t[h] as Transform3D).origin.y - chao)
-		var p := Vector3(dk.x, 0.0, dk.z) * escala
+		var p := Vector3(-dk.x if espelho else dk.x, 0.0, dk.z) * escala
 		media += p
 		pos_q.append(Vector3(p.x, y * escala, p.z))
 	media /= float(n)
@@ -351,7 +394,9 @@ func converter(bvh: Dictionary, c: Array) -> Animation:
 		if pai_p >= 0:
 			pos_u = (gu_t[pai_p] as Transform3D).affine_inverse() * pos_u
 		novo.position_track_insert_key(tp, tt, pos_u)
-	print("%s <- %s (%.2f s, %d quadros)" % [c[1], c[0], dur, ultimo])
+	var desl_r: Vector3 = r * desl
+	print("%s <- %s (%.2f s, %d quadros) · anda %.2f m/s (x %.2f, z %.2f)" % [c[1], c[0], dur, ultimo,
+		desl.length() * escala / maxf(dur, 0.01), (-desl_r.x if espelho else desl_r.x) * escala / maxf(dur, 0.01), desl_r.z * escala / maxf(dur, 0.01)])
 	return novo
 
 # quanto duas poses (e o jeito que estão se mexendo) diferem: rotações locais das pernas, braços e tronco

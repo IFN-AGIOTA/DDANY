@@ -33,6 +33,9 @@ const WDEF := {
 	"m4": {"nome": "M4", "mag": 30, "rate": 0.085, "auto": true, "range": 260.0, "spread": 0.007,
 		"kick": 0.014, "ky": 0.007, "rel": 1.9, "v": 520.0, "tl": 7.0, "fl": 0.8, "dano": 21.0, "ruido": 75.0, "vibra": 8,
 		"pose": "m4", "desgaste": 0.0004},
+	"mp5": {"nome": "MP5", "mag": 30, "rate": 0.075, "auto": true, "range": 170.0, "spread": 0.0085,
+		"kick": 0.011, "ky": 0.006, "rel": 1.7, "v": 400.0, "tl": 5.0, "fl": 0.6, "dano": 22.0, "ruido": 45.0, "vibra": 7,
+		"pose": "m4", "desgaste": 0.0005},
 	"ak": {"nome": "AKM", "mag": 30, "rate": 0.1, "auto": true, "range": 240.0, "spread": 0.0085,
 		"kick": 0.021, "ky": 0.01, "rel": 2.1, "v": 500.0, "tl": 7.0, "fl": 0.95, "dano": 29.0, "ruido": 85.0, "vibra": 10,
 		"pose": "m4", "desgaste": 0.0004},
@@ -52,7 +55,7 @@ const WDEF := {
 	"pe_de_cabra": {"nome": "PÉ DE CABRA", "corpo": true, "dano": 48.0, "alcance": 2.0, "rate": 0.9, "ruido": 5.0, "vibra": 18, "pose": "branca", "desgaste": 0.001},
 	"punhos": {"nome": "PUNHOS", "corpo": true, "dano": 13.0, "alcance": 1.45, "rate": 0.5, "ruido": 2.0, "vibra": 8, "pose": "punhos", "desgaste": 0.0},
 }
-const ORDEM := ["pistola", "m4", "ak", "espingarda", "rifle_caca", "faca", "facao", "taco", "machado", "cano", "pe_de_cabra", "lanca"]
+const ORDEM := ["pistola", "mp5", "m4", "ak", "espingarda", "rifle_caca", "faca", "facao", "taco", "machado", "cano", "pe_de_cabra", "lanca"]
 const MASCARA_TIRO := 1 | 4           # camadas 1 (mundo) e 3 (inimigos)
 
 var atual := ""                       # tipo da arma nas mãos ("" = mãos vazias ou outro item)
@@ -259,7 +262,7 @@ func recarregar() -> void:
 	rel_s = 0
 	_rel_bala = 0
 	_som_recarga("inicio")
-	_animar(("recarregar_fuzil" if atual in ["m4", "ak", "espingarda", "rifle_caca"] else "recarregar_pistola"), rel, false)
+	_animar(("recarregar_fuzil" if atual in ["mp5", "m4", "ak", "espingarda", "rifle_caca"] else "recarregar_pistola"), rel, false)
 	_vibrar(10)
 	mudou.emit()
 
@@ -282,7 +285,7 @@ func _fim_recarga() -> void:
 var _rel_bala := 0                     # balas soltas que já fizeram som nesta recarga
 
 func _tipo_recarga() -> String:
-	if atual in ["m4", "ak"]:
+	if atual in ["mp5", "m4", "ak"]:
 		return "fuzil"
 	return atual                        # pistola, espingarda, rifle_caca
 

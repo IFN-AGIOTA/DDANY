@@ -23,6 +23,11 @@ const ALTURA := 1.75
 const VEL_ANDAR_ANIM := 0.9            # m/s em que a animação de andar (zumbi) não "patina"
 const VEL_CORRER_ANIM := 5.0           # idem para a de correr
 const DUR_ATAQUE := 0.95
+# 0.61 · JEITO DE ANDAR de cada infectado (captura real da CMU, ferramentas/retarget_cmu.gd ALVO=infectados):
+# [animação, velocidade em que os pés casam com o chão (m/s), peso no sorteio]. O infectado anda à toa mais devagar
+# ou mais depressa conforme o jeito dele (fator_vel(), usado em inimigos/vago.gd).
+const ESTILOS := [["andar", VEL_ANDAR_ANIM, 2.0], ["andar_zumbi", 0.42, 1.5], ["andar_zumbi_b", 0.57, 1.5],
+	["andar_marcha", 0.87, 1.0], ["andar_frank", 0.5, 1.0], ["andar_ferido", 0.52, 1.0], ["andar_velho", 0.38, 0.7]]
 
 static var _cenas := {}
 static var _anims: AnimationLibrary = null
@@ -42,6 +47,8 @@ var _fl := 0.0
 var _corr := 0.0
 var _cab_incl := 0.0
 var _mt := 0.0
+var _andar := "andar"                  # animação de andar deste infectado (ESTILOS)
+var _ref_andar := VEL_ANDAR_ANIM
 
 func montar(semente: int) -> void:
 	var r := RandomNumberGenerator.new()
@@ -79,6 +86,19 @@ func montar(semente: int) -> void:
 	anim.add_animation_library("", _anims)
 	anim.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
 	_cab_incl = r.randf_range(-0.3, 0.3)
+	var tot := 0.0
+	for e in ESTILOS:
+		if _anims.has_animation(e[0]):
+			tot += float(e[2])
+	var sorteio := r.randf() * tot
+	for e in ESTILOS:
+		if not _anims.has_animation(e[0]):
+			continue
+		sorteio -= float(e[2])
+		if sorteio <= 0.0:
+			_andar = e[0]
+			_ref_andar = float(e[1])
+			break
 	_tocar("parado", 0.0)
 	anim.seek(r.randf() * 3.0, true)
 	# sombra falsa (barata, ajuda a "assentar" o corpo no chão)
@@ -108,6 +128,10 @@ func montar(semente: int) -> void:
 	sombra.visibility_range_end = 60.0
 	add_child(sombra)
 	atualizar(0.0, 0.0)
+
+# quanto este infectado anda à toa em relação ao normal (jeito de andar mais lento ou mais rápido)
+func fator_vel() -> float:
+	return clampf(_ref_andar / 0.7, 0.6, 1.2)
 
 # posição (global) do centro da cabeça: a colisão da cabeça (tiro x3) acompanha a animação
 func pos_cabeca() -> Vector3:
@@ -166,13 +190,15 @@ func atualizar(dt: float, vel: float) -> void:
 		if vel > 2.2:
 			_tocar("correr", 0.25)
 		elif vel > 0.15:
-			_tocar("andar", 0.3)
+			_tocar(_andar, 0.3)
 		else:
 			_tocar("parado", 0.35)
-	match _atual:
-		"andar": anim.speed_scale = clampf(vel / VEL_ANDAR_ANIM, 0.6, 1.8)
-		"correr": anim.speed_scale = clampf(vel / VEL_CORRER_ANIM, 0.75, 1.3)
-		_: anim.speed_scale = 1.0
+	if _atual == _andar:
+		anim.speed_scale = clampf(vel / _ref_andar, 0.5, 2.0)
+	elif _atual == "correr":
+		anim.speed_scale = clampf(vel / VEL_CORRER_ANIM, 0.75, 1.3)
+	else:
+		anim.speed_scale = 1.0
 	_cabeca_ok = false
 	anim.advance(dt)
 	_postura()

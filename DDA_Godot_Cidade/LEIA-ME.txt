@@ -39,6 +39,26 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.61 · MIRA PARA CIMA/BAIXO, ITEM NA MÃO, PÉS NO CHÃO, INFECTADOS VARIADOS E MP5
+  · MIRA ACOMPANHA A CÂMERA (jogador/camada_mira.gd, NOVO): mirando com arma de fogo, o tronco inclina para cima
+    ou para baixo junto com a câmera (pistola, MP5 e fuzis; os fuzis giram no ombro em jogador/ik_fuzil.gd).
+    O ângulo (mira_pitch, jogador/jogador.gd; MIRA_NEUTRA = câmera em que a arma fica reta) vai pela rede.
+  · ITEM NA MÃO: comendo, bebendo, tomando remédio ou fazendo curativo, o item aparece na mão direita (lata,
+    garrafa, frasco, fita) e a arma some enquanto isso (jogador/modelo_sobrevivente.gd segurar_item). Também vai
+    pela rede ("comer:feijao"). Conserto: com arma na mão, a postura da arma prendia os braços durante a ação.
+  · PÉS SEM "PATINAR": ferramentas/medir_passos.gd (NOVO) mede a velocidade real de cada animação (pé apoiado);
+    a tabela REF do animador usa esses números em TODAS as caminhadas/corridas. Animações novas da CMU (corrida
+    leve real para o trote, passos de lado para a direita/esquerda, andar de costas). Mirando, andar de lado ou de
+    costas é mais devagar (VEL_MIRANDO_LADO, passo lateral); mancando, no máximo 0,9 m/s.
+  · INFECTADOS COM JEITOS DE ANDAR (inimigos/modelo_infectado.gd ESTILOS): cada um sorteia um: o de antes, zumbi
+    arrastado, zumbi cambaleante, marcha de braços esticados, "Frankenstein", perna ferida, velho curvado (captura
+    real da CMU, ferramentas/retarget_cmu.gd ALVO=infectados). Os mais lentos vagam mais devagar (fator_vel).
+  · SUBMETRALHADORA MP5 (nova arma): 9 mm (mesma munição da pistola), pente de 30, rajada rápida e pouco coice,
+    aceita silenciador; vai no ombro e é segurada com as duas mãos como os fuzis. Aparece nos armários da
+    polícia e em lugares militares (com o PENTE DE MP5). Modelo realista "MP5 A2" de Gintoki1234 (CC BY 4.0,
+    crédito nos Créditos e em armas/modelos/LICENCA.txt), preparado por ferramentas/preparar_itens_realistas.py.
+    Som: as gravações de 9 mm da pistola, mais agudas (armas/sons_armas.gd).
+
 ATUALIZAÇÃO 0.60 · MIRA ANDANDO CONSERTADA + LIMPEZA
   · Conserto (relatado no teste): mirando e ANDANDO (qualquer toque no joystick) os braços voltavam a balançar e a
     pistola descia, parecendo que "a mira parava de funcionar". Agora, mirando com a pistola andando (de frente, de
@@ -1048,6 +1068,9 @@ SOBREVIVENTE (jogador no modo livre)
 - animações de captura real (CMU) .... ferramentas/retarget_cmu.gd (tabela CLIPES; .bvh de github.com/una-dinosauria/cmu-mocap)
 - como segura cada arma (posturas) .. ferramentas/gerar_portes.gd (PORTES) + jogador/camada_postura.gd + POSTURAS no animador
 - velocidade das caminhadas .......... jogador/jogador.gd (VEL_DEVAGAR, VEL_ANDAR, VEL_TROTE) e REF no animador
+  (medir de novo: ferramentas/medir_passos.gd)
+- mira para cima/baixo ................ jogador/camada_mira.gd (FRACAO por vértebra) + MIRA_NEUTRA em jogador.gd
+- jeitos de andar dos infectados ...... inimigos/modelo_infectado.gd (ESTILOS) + ferramentas/retarget_cmu.gd
 - quais animações cada ação usa ....... jogador/animador_modelo.gd (8 direções, acao()), armas/armas.gd (GOLPES),
   inventario/inventario.gd (_anim_de_uso: comer, beber, tomar remédio)
 - quando usa (modo livre) ............. main.gd (_jogar) e jogador/jogador.gd (usar_sobrevivente)

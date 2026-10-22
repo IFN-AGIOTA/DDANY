@@ -101,6 +101,7 @@ var _destino := Vector3.ZERO
 var _vel_alvo := 0.0
 var _vel_vagar := 0.8
 var _vel_correr := VEL_CORRER
+var _fator_andar := 1.0                # jeito de andar do modelo (inimigos/modelo_infectado.gd fator_vel)
 var _espera := 0.0
 var _olhando := false
 var _t_sentidos := 0.0
@@ -203,7 +204,8 @@ func _ready() -> void:
 	add_child(som2)
 	_consulta = PhysicsRayQueryParameters3D.new()
 	_consulta.collision_mask = 1
-	_vel_vagar = randf_range(VEL_VAGAR_MIN, VEL_VAGAR_MAX)
+	_fator_andar = modelo.fator_vel() if modelo.has_method("fator_vel") else 1.0
+	_vel_vagar = randf_range(VEL_VAGAR_MIN, VEL_VAGAR_MAX) * _fator_andar
 	_vel_correr = VEL_CORRER * randf_range(0.88, 1.04) * float(TIPOS[tipo][2])
 	_vel_vagar *= float(TIPOS[tipo][2])
 	_t_grunhido = randf_range(1.0, 10.0)
@@ -583,7 +585,7 @@ func _decidir(dt: float, j: Node3D) -> void:
 				_espera = randf_range(3.0, 6.0)
 				_vel_alvo = 0.0
 			else:
-				_vel_alvo = VEL_INVESTIGAR
+				_vel_alvo = VEL_INVESTIGAR * _fator_andar
 		PERSEGUINDO:
 			if bool(j.get("morto")):
 				vagar()

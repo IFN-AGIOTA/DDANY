@@ -427,7 +427,7 @@ func usar(it) -> void:
 		_depois()
 		return
 	if d.get("consome", false):
-		animar.emit(_anim_de_uso(it))
+		animar.emit(_anim_de_uso(it) + ":" + it.id)          # o corpo mostra o item na mão (animador acao())
 		var sv = jogador.get("sobrevivencia")
 		if sv != null and d.has("efeito"):
 			var r: String = sv.aplicar(d["efeito"], it.id, it.estado)

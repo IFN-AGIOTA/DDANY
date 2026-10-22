@@ -49,7 +49,7 @@ static var _cenas := {}
 static var _acess := {}
 # quais acessórios cada arma de fogo aceita (o mesmo que "acess" em inventario/itens.gd)
 const Malhas := preload("res://mundo/malhas.gd")
-const SILENCIADOR := ["pistola", "m4", "ak", "rifle_caca"]
+const SILENCIADOR := ["pistola", "mp5", "m4", "ak", "rifle_caca"]
 const MIRA := {"m4": "mira_acog", "ak": "mira_acog", "rifle_caca": "luneta"}
 
 static func construir(tipo: String) -> Node3D:

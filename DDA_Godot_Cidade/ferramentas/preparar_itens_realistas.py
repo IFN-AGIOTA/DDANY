@@ -5,6 +5,7 @@
 #   m4a1_0/M4A1/M4A1.fbx (+ png) ..... M4A1 (nisu, OpenGameArt)
 #   akm/akm54.blend .................. AKM (LonesomeDucky, OpenGameArt)
 #   Shotgun_2/Shotgun.blend .......... Remington 870 (MikeMoon, OpenGameArt)
+#   mp5/MP5 A2.fbx (+ "MP5 A2 Textures/") MP5 A2 (Gintoki1234, itch.io, CC BY 4.0)
 # O que faz com cada modelo: escolhe as peças, gira, junta numa malha só ("Malha"), simplifica se tiver
 # triângulos demais, reduz as texturas e põe no tamanho real e na convenção do jogo:
 #   ARMA DE FOGO: cano para +Z da Godot, origem na empunhadura, nós vazios "Cano" (boca do cano) e "Mira"
@@ -30,6 +31,10 @@ MODELOS = {
 	"ak": dict(tipo="fogo", arq="akm/akm54.blend", giros=[], medida=0.88, emp=0.34, tris=8000, tex=1024),
 	"espingarda": dict(tipo="fogo", arq="Shotgun_2/Shotgun.blend", giros=[], medida=1.05, emp=0.3, tris=8000, tex=512,
 		cores={"Synthetic": ((0.035, 0.035, 0.038), 0.7, 0.42), "Wood": ((0.22, 0.1, 0.04), 0.0, 0.5)}),
+	"mp5": dict(tipo="fogo", arq="mp5/MP5 A2.fbx", pecas=["MP5 Mag", "MP5 A2"], giros=[], medida=0.68, emp=0.4,
+		tris=9000, tex=512, mat_texturas={n: "mp5/MP5 A2 Textures/" + n + "_" for n in
+		["MP5 Part 1", "MP5 Part 2", "MP5 Part 3", "MP5 Part 4", "MP5 Mag"]},
+		nomes_tex=("Base_color", "Metallic", "Roughness", "Normal_OpenGL")),
 	"rifle_caca": dict(tipo="fogo", arq=PH("bolt_action_rifle_7_62"), giros=[("Z", -90)], medida=1.1, emp=0.3,
 		tris=8000, tex=512),
 	# ---- armas brancas (comprimento total) ----
@@ -75,8 +80,8 @@ def carregar(arq):
 		elif ext == "fbx":
 			bpy.ops.import_scene.fbx(filepath=arq)
 
-def material_com_texturas(prefixo):
-	m = bpy.data.materials.new("M4A1")
+def material_com_texturas(prefixo, nomes=("Base_Color", "Metallic", "Roughness", "Normal"), nome_mat="M4A1"):
+	m = bpy.data.materials.new(nome_mat)
 	m.use_nodes = True
 	nt = m.node_tree
 	p = nt.nodes["Principled BSDF"]
@@ -86,11 +91,11 @@ def material_com_texturas(prefixo):
 		if not cor:
 			n.image.colorspace_settings.name = "Non-Color"
 		return n
-	nt.links.new(tex("Base_Color", True).outputs["Color"], p.inputs["Base Color"])
-	nt.links.new(tex("Metallic", False).outputs["Color"], p.inputs["Metallic"])
-	nt.links.new(tex("Roughness", False).outputs["Color"], p.inputs["Roughness"])
+	nt.links.new(tex(nomes[0], True).outputs["Color"], p.inputs["Base Color"])
+	nt.links.new(tex(nomes[1], False).outputs["Color"], p.inputs["Metallic"])
+	nt.links.new(tex(nomes[2], False).outputs["Color"], p.inputs["Roughness"])
 	nm = nt.nodes.new("ShaderNodeNormalMap")
-	nt.links.new(tex("Normal", False).outputs["Color"], nm.inputs["Color"])
+	nt.links.new(tex(nomes[3], False).outputs["Color"], nm.inputs["Color"])
 	nt.links.new(nm.outputs["Normal"], p.inputs["Normal"])
 	return m
 
@@ -116,6 +121,16 @@ def preparar(id, c):
 		for o in malhas:
 			o.data.materials.clear()
 			o.data.materials.append(m)
+	# um jogo de texturas para cada material (a MP5 tem 5 peças, cada uma com as suas)
+	for nome_mat, prefixo in c.get("mat_texturas", {}).items():
+		novo = material_com_texturas(os.path.join(ORIGEM, prefixo), c["nomes_tex"], nome_mat.replace(" ", "_"))
+		for o in malhas:
+			for i, ms in enumerate(o.data.materials):
+				if ms is not None and ms.name.split(".")[0] == nome_mat:
+					o.data.materials[i] = novo
+	for o in malhas:
+		for mod in list(o.modifiers):
+			o.modifiers.remove(mod)          # tira o "Armature" do modelo (fica só a malha parada)
 	for nome, (cor, metal, rug) in c.get("cores", {}).items():
 		m = bpy.data.materials.get(nome)
 		if m is None:

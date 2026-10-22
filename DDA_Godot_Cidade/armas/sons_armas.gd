@@ -10,6 +10,7 @@ const TAXA := 22050
 const N_CANAIS := 10
 
 var sons := {}
+var _mp5 := false
 var _canais: Array[AudioStreamPlayer] = []
 var _ci := 0
 var volume_db := 0.0
@@ -48,6 +49,11 @@ func _ready() -> void:
 		_canais.append(p)
 
 func tocar(nome: String, vol_db := 0.0) -> void:
+	if nome == "tiro_mp5":
+		nome = "tiro_pistola"             # 9 mm: as gravações da pistola, mais agudas (abaixo)
+		_mp5 = true
+	else:
+		_mp5 = false
 	var gravado := Sons.sortear("armas/" + nome) if nome.begins_with("tiro_") else null
 	if gravado == null and not sons.has(nome):
 		return
@@ -56,6 +62,8 @@ func tocar(nome: String, vol_db := 0.0) -> void:
 	p.stream = gravado if gravado != null else sons[nome]
 	p.volume_db = volume_db + vol_db + (VOL_GRAVADO.get(nome, 0.0) if gravado != null else 0.0)
 	p.pitch_scale = randf_range(0.96, 1.04) if gravado != null else float(TOM.get(nome, 1.0))
+	if _mp5:
+		p.pitch_scale *= 1.12
 	if nome == "impacto":                 # golpe corpo a corpo acertando: um dos sons gravados de impacto
 		var b := SonsBaixados.sortear("impactos/soco")
 		if b != null:

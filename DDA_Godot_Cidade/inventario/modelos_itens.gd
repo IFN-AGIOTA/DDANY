@@ -32,6 +32,7 @@ const ITENS := {
 	"mun_12": ["municao", 0.7, false],
 	"mun_308": ["municao", 0.7, false],
 	"pente_pistola": ["pente_pistola", 1.0, true],
+	"pente_mp5": ["pente_pistola", 1.6, true],
 	"kit_armas": ["caixa_ferramentas", 0.75, false],
 	"kit_costura": ["pote_plastico", 0.8, false],
 	"galho": ["galho", 0.85, false],

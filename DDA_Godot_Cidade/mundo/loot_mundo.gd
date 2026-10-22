@@ -46,7 +46,7 @@ const TABELAS := {
 	"escritorio": [["revista", 4, 1, 1], ["celular", 3, 1, 1], ["dinheiro", 3, 2, 10], ["barra", 2, 1, 2], ["fita", 2, 1, 1],
 		["lanterna", 2, 1, 1], ["radio", 1, 1, 1], ["analgesico", 1, 1, 1], ["refrigerante", 2, 1, 1]],
 	"armas_policia": [["pistola", 4, 1, 1], ["pente_pistola", 5, 1, 1], ["mun_9mm", 6, 10, 40], ["espingarda", 2, 1, 1],
-		["mun_12", 4, 4, 16], ["m4", 1, 1, 1], ["pente_stanag", 2, 1, 1], ["mun_556", 2, 10, 40], ["colete_policia", 2, 1, 1],
+		["mun_12", 4, 4, 16], ["m4", 1, 1, 1], ["mp5", 1, 1, 1], ["pente_mp5", 2, 1, 1], ["pente_stanag", 2, 1, 1], ["mun_556", 2, 10, 40], ["colete_policia", 2, 1, 1],
 		["capacete", 1, 1, 1], ["lanterna", 2, 1, 1], ["kit_armas", 2, 1, 1], ["bandagem", 2, 1, 2], ["silenciador", 1, 1, 1],
 		["ak", 1, 1, 1], ["pente_ak", 1, 1, 1], ["mun_762", 1, 8, 30], ["mira_acog", 1, 1, 1]],
 	"deposito": [["corda", 3, 1, 1], ["fita", 3, 1, 1], ["cano", 3, 1, 1], ["pe_de_cabra", 2, 1, 1], ["machado", 2, 1, 1], ["facao", 2, 1, 1],
@@ -59,7 +59,7 @@ const TABELAS := {
 		["mun_12", 1, 4, 10], ["rifle_caca", 1, 1, 1], ["mun_308", 1, 3, 8], ["kit_armas", 1, 1, 1], ["dinheiro", 1, 2, 10],
 		["ak", 1, 1, 1], ["pente_ak", 1, 1, 1], ["mun_762", 1, 5, 20], ["mochila_trilha", 1, 1, 1]],
 	# caixa de SUPRIMENTO MILITAR (missões do rádio no modo livre)
-	"militar": [["m4", 3, 1, 1], ["ak", 3, 1, 1], ["pente_stanag", 4, 1, 1], ["pente_ak", 4, 1, 1], ["mun_556", 5, 20, 60],
+	"militar": [["m4", 3, 1, 1], ["ak", 3, 1, 1], ["mp5", 2, 1, 1], ["pente_mp5", 3, 1, 1], ["pente_stanag", 4, 1, 1], ["pente_ak", 4, 1, 1], ["mun_556", 5, 20, 60],
 		["mun_762", 5, 20, 50], ["colete", 3, 1, 1], ["colete_policia", 2, 1, 1], ["capacete", 3, 1, 1], ["mochila_combate", 2, 1, 1],
 		["kit_medico", 4, 1, 1], ["soro", 2, 1, 1], ["antibiotico", 3, 1, 1], ["mira_acog", 2, 1, 1], ["silenciador", 2, 1, 1],
 		["luneta", 1, 1, 1], ["rifle_caca", 1, 1, 1], ["mun_308", 2, 5, 15], ["kit_armas", 3, 1, 1], ["agua", 3, 1, 1], ["feijao", 3, 1, 1], ["facao", 2, 1, 1],

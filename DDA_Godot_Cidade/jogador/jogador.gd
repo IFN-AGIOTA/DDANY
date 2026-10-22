@@ -22,6 +22,8 @@ const VEL_CORRIDA := 7.2
 const VEL_AGACHADO := 1.0
 const VEL_AGACHADO_RAPIDO := 1.8
 const VEL_MIRANDO := 2.2
+const VEL_MIRANDO_LADO := 1.1         # 0.61: mirando e andando de lado (passos laterais) ou de costas
+const MIRA_NEUTRA := 0.12            # inclinação da câmera em que a arma fica reta (a câmera fica acima do ombro)
 const FORCA_PULO := 5.2
 const ALTURA_EM_PE := 1.8
 const ALTURA_AGACHADO := 1.3
@@ -68,6 +70,7 @@ var mirando := false                # mira (aproxima a câmera); ligada pelo bot
 var atirando := false               # atirou há pouco / arma erguida (o corpo vira para a mira)
 var cam_yaw := 0.0                  # 0 = olhando para -Z
 var cam_pit := 0.05                 # positivo = câmera acima olhando para baixo (-0,35 a 1,15)
+var mira_pitch := 0.0                # 0.61: para onde a arma aponta (+ = para cima), a partir da câmera (camada_mira.gd)
 var vel_horizontal := 0.0
 var fator_agachado := 0.0           # 0 em pé · 1 agachado (suavizado, para a câmera)
 var fator_mira := 0.0
@@ -376,9 +379,12 @@ func _physics_process(delta: float) -> void:
 			if controles != null and controles.andando_pc() and mag > 0.35:
 				vmax = VEL_ANDAR
 		if mirando:
-			vmax = minf(vmax, VEL_MIRANDO)
+			# mirando: de lado (passo lateral) e de costas é mais devagar; de frente até VEL_MIRANDO
+			var de_lado := absf(ix) / maxf(mag, 0.001)
+			var de_costas := maxf(-iy, 0.0) / maxf(mag, 0.001)
+			vmax = minf(vmax, lerpf(VEL_MIRANDO, VEL_MIRANDO_LADO, smoothstep(0.4, 0.9, maxf(de_lado, de_costas))))
 		if perna:
-			vmax = minf(vmax, 1.2)          # mancando
+			vmax = minf(vmax, 0.9)          # mancando
 	var no_chao := is_on_floor()
 	var k := minf(1.0, delta * (9.0 if no_chao else 2.5))
 	velocity.x += (dir.x * vmax - velocity.x) * k
@@ -437,6 +443,7 @@ func _process(delta: float) -> void:
 	var alvo_y := lerpf(altura_alvo, altura_alvo_agachado, fator_agachado) + 0.1 * fator_mira
 	_pivo.global_position = Vector3(global_position.x, _y_cam + alvo_y, global_position.z)
 	_pivo.rotation = Vector3(-(cam_pit - armas.kick), cam_yaw + armas.ky, 0.0)
+	mira_pitch = clampf(MIRA_NEUTRA - cam_pit, -0.8, 0.6)
 	var fov_base := lerpf(fov_camera, fov_mirando / armas.zoom_mira(), fator_mira)
 	var fov_alvo := fov_base + 5.0 * clampf((vel_horizontal - 3.0) / 4.0, 0.0, 1.0)
 	camera.fov = lerpf(camera.fov, fov_alvo, minf(1.0, delta * 4.0 + 0.02))

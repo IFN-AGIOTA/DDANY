@@ -61,7 +61,7 @@ func _process(dt: float) -> void:
 		_t_tiros = randf_range(INTERVALO_TIROS.x, INTERVALO_TIROS.y)
 		_rajada = randi_range(1, 5)
 		_t_rajada = 0.0
-		_arma_rajada = ["ak", "m4", "pistola", "espingarda", "rifle_caca"][randi() % 5]
+		_arma_rajada = ["ak", "m4", "pistola", "espingarda", "rifle_caca"][randi() % 5]   # (a MP5 usa os da pistola)
 	if _rajada > 0:
 		_t_rajada -= dt
 		if _t_rajada <= 0.0:

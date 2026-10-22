@@ -6,7 +6,7 @@ extends SceneTree
 # Saída: inventario/icones/<id>.png, já no formato do item na grade (w x h células). O inventário
 # (inventario/visual.gd) usa a imagem quando ela existe; os outros itens continuam desenhados por código.
 # Rodar (precisa de tela; no servidor use xvfb-run), dentro da pasta DDA_Godot_Cidade:
-#   godot --rendering-driver opengl3 -s ferramentas/gerar_icones.gd
+#   godot --rendering-driver opengl3 -s ferramentas/gerar_icones.gd      (SO=mp5,pente_mp5 refaz só esses)
 #   godot --headless --import          (para a Godot importar os PNG novos)
 # Esta pasta (ferramentas/) não vai para o APK.
 
@@ -35,7 +35,7 @@ func _rodar() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(PASTA))
 	_montar_estudio()
 	# armas de fogo: de lado, cano para a direita
-	for id in ["pistola", "m4", "ak", "espingarda", "rifle_caca"]:
+	for id in ["pistola", "mp5", "m4", "ak", "espingarda", "rifle_caca"]:
 		var acess: Array = Itens.def(id).get("acess", [])
 		var combos: Array = [[]]
 		for a in acess:
@@ -237,6 +237,12 @@ func _detalhe(id: String, p: Vector3, c: Color, yt: Vector2, yp: Vector2) -> Col
 
 # ---------- foto ----------
 func _foto(nome: String, d: Dictionary, n: Node3D, vista: String) -> void:
+	# SO=mp5,pente_mp5: refaz só os ícones cujo nome começa com um desses
+	var so := OS.get_environment("SO")
+	if so != "" and not Array(so.split(",")).any(func(x): return nome == x or nome.begins_with(x + "_")):
+		if n != null:
+			n.free()
+		return
 	if n == null:
 		push_warning("sem modelo: " + nome)
 		return

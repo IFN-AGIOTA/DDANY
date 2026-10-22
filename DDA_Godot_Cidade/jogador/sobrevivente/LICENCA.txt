@@ -23,7 +23,8 @@ Animações extras (0.26), em animacoes.res, convertidas para este esqueleto por
 
 Animações de captura de movimento real (0.59), em animacoes.res, convertidas para este esqueleto por
 ferramentas/retarget_cmu.gd: andar_lento (07_04), andar_normal (08_01), andar_rapido (07_12), andar_espreita (77_30),
-mancar (77_19), comer (79_15), beber (80_40), tomar_remedio (79_15):
+mancar (77_19), comer (79_15), beber (80_40), tomar_remedio (79_15); 0.61: trote (09_01), andar_tras (69_38),
+andar_lado_esq / andar_lado_dir (69_43, a da direita espelhada):
   Carnegie Mellon University, "CMU Graphics Lab Motion Capture Database" - http://mocap.cs.cmu.edu
   (dados criados com recursos da NSF EIA-0196217). Conversão para BVH: Bruce Hahne (cgspeed), cópia em
   https://github.com/una-dinosauria/cmu-mocap
@@ -31,5 +32,5 @@ mancar (77_19), comer (79_15), beber (80_40), tomar_remedio (79_15):
   (Bruce) place no additional restrictions on the use of this particular BVH conversion." e, do site da CMU:
   "This data is free for use in research and commercial projects worldwide." Agradecimento pedido: "The data used
   in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217."
-Posturas de segurar as armas (porte_pistola, porte_branca, porte_2m): geradas por ferramentas/gerar_portes.gd a
+Posturas de segurar as armas (porte_pistola, porte_branca, porte_2m, mira_pistola): geradas por ferramentas/gerar_portes.gd a
 partir da animação "parado" (sem arquivos de terceiros).
