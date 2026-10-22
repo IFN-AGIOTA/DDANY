@@ -14,6 +14,12 @@ extends Node
 #   · AÇÕES (acao()): recarregar, golpes, pegar do chão, comer/beber, curar, levar golpe. Parado = corpo todo;
 #     andando = só a parte de cima (jogador/camada_acao.gd), as pernas continuam;
 #   · morte com 3 variações.
+#   · 0.59 · CAMINHADAS por velocidade (captura de movimento real da CMU, ferramentas/retarget_cmu.gd):
+#     devagar (andar_lento) · normal (andar_normal) · apressada (andar_rapido) · trote · corrida; agachado devagar =
+#     andar_agachado, agachado rápido = andar_espreita; perna quebrada = mancar. Cada uma com a velocidade de
+#     referência em REF (a animação acompanha o chão sem "patinar").
+#   · 0.59 · POSTURA DA ARMA (jogador/camada_postura.gd): com pistola, faca/facão/pé de cabra ou taco/machado/
+#     cano/lança na mão, os braços seguram a arma do jeito dela por cima de qualquer caminhada (POSTURAS).
 
 signal tocou_acao(nome: String, velocidade: float, corpo_todo: bool)   # multijogador repassa (rede/sessao_rede.gd)
 
@@ -55,6 +61,16 @@ var _morte := ""
 var _vel_h := 0.0
 var _no_chao := true
 const FUZIS := ["m4", "ak", "espingarda", "rifle_caca"]
+# velocidade (m/s) em que cada animação de andar acompanha o chão
+const REF := {"andar_lento": 0.95, "andar_normal": 1.6, "andar_rapido": 1.9, "trote": 3.4, "andar_espreita": 1.2,
+	"mancar": 0.7}
+# arma na mão -> postura dos braços (jogador/camada_postura.gd); fuzis ficam com o IK (jogador/ik_fuzil.gd)
+const POSTURAS := {"pistola": "porte_pistola", "faca": "porte_branca", "facao": "porte_branca",
+	"pe_de_cabra": "porte_branca", "taco": "porte_2m", "machado": "porte_2m", "cano": "porte_2m", "lanca": "porte_2m"}
+var _postura = null           # jogador/camada_postura.gd do modelo
+var _mancando := false
+var _arma := ""
+var _arma_ocupada := false    # golpeando, recarregando ou sacando: a postura sai
 
 func configurar(modelo: Node3D) -> void:
 	_modelo = modelo
@@ -71,6 +87,7 @@ func configurar(modelo: Node3D) -> void:
 	if sks.size() > 0:
 		_esqueleto = sks[0] as Skeleton3D
 	_camada = modelo.get("camada")
+	_postura = modelo.get("postura")
 	_nome_atual = ""
 	_t_acao = 0.0
 	_morte = ""
@@ -187,6 +204,14 @@ func atualizar(dt: float, j) -> void:
 	var lado := Vector3(cos(yaw), 0, -sin(yaw))
 	_dir = Vector2(v.dot(lado), v.dot(frente))
 	_fuzil = j.armas != null and str(j.armas.atual) in FUZIS
+	_arma = str(j.armas.atual) if j.armas != null else ""
+	_mancando = bool(j.get("mancando")) if "mancando" in j else false
+	_arma_ocupada = false
+	if j.armas != null:
+		for campo in ["golpe", "rel", "draw"]:
+			var valor = j.armas.get(campo)
+			if valor != null and float(valor) > 0.0:
+				_arma_ocupada = true
 	atualizar_estado(dt, j.vel_horizontal, j.is_on_floor(), j.velocity.y, mira, tiro_recente, j.morto, j.agachado)
 
 var _dir := Vector2.ZERO      # (lado, frente) da velocidade em relação ao corpo
@@ -214,11 +239,23 @@ func atualizar_estado(dt: float, vel_h: float, no_chao: bool, vel_v: float, mira
 	match e:
 		Estado.ANDAR:
 			escala = clampf(vel_h / 1.7, 0.7, 1.5)
+			var n_andar := _andar_por_velocidade(vel_h)
+			if n_andar != "":
+				nome = n_andar
+				escala = clampf(vel_h / float(REF[n_andar]), 0.6, 1.6)
 		Estado.ANDAR_AGACHADO:
 			escala = clampf(vel_h / 1.0, 0.7, 1.6)
+			if vel_h > 1.4 and _tem("andar_espreita"):
+				nome = "andar_espreita"
+				escala = clampf(vel_h / float(REF["andar_espreita"]), 0.7, 1.6)
 		Estado.CORRER:
 			escala = clampf(vel_h / 5.5, 0.8, 1.5)
-			if _fuzil and _tem("correr_fuzil"):
+			if vel_h < 5.0:
+				var n_trote := _andar_por_velocidade(vel_h)
+				if n_trote != "":
+					nome = n_trote
+					escala = clampf(vel_h / float(REF[n_trote]), 0.6, 1.6)
+			if _fuzil and _tem("correr_fuzil") and vel_h >= 5.0:
 				nome = "correr_fuzil"
 				escala = clampf(vel_h / 4.5, 0.8, 1.4)
 		Estado.MIRAR, Estado.PARADO:
@@ -250,6 +287,31 @@ func atualizar_estado(dt: float, vel_h: float, no_chao: bool, vel_v: float, mira
 		_nome_atual = nome
 		_ap.play(nome, 0.1 if e == Estado.MORRER else mistura)
 	_ap.speed_scale = escala
+	_atualizar_postura(e, vel_h, mirando, atirando)
+
+# caminhada pela velocidade (devagar, normal, apressada, trote); perna quebrada = mancar
+func _andar_por_velocidade(v: float) -> String:
+	var op := ""
+	if _mancando:
+		op = "mancar"
+	elif v < 1.3:
+		op = "andar_lento"
+	elif v < 1.8:
+		op = "andar_normal"
+	elif v < 2.8:
+		op = "andar_rapido"
+	elif v < 5.0:
+		op = "trote"
+	return op if _tem(op) and REF.has(op) else ""
+
+# braços segurando a arma do jeito dela (some ao mirar, atirar, golpear, recarregar, correr ou numa ação)
+func _atualizar_postura(e: int, vel_h: float, mirando: bool, atirando: bool) -> void:
+	if _postura == null:
+		return
+	var nome: String = POSTURAS.get(_arma, "")
+	var ligado := nome != "" and not mirando and not atirando and not _arma_ocupada and not tocando_acao() \
+		and e in [Estado.PARADO, Estado.ANDAR, Estado.CORRER, Estado.AGACHADO, Estado.ANDAR_AGACHADO] and vel_h < 5.0
+	_postura.usar(nome, ligado)
 
 # AÇÃO por cima do estado: recarregar, golpe, pegar, comer... (nome da animação, velocidade).
 # corpo_todo: parado usa o corpo todo; andando/correndo vira camada só na parte de cima.

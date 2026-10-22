@@ -409,6 +409,16 @@ func acao_rapida(it) -> void:
 		else:
 			equipar(it, "maos")
 
+# 0.59: animação de usar cada item (jogador/animador_modelo.gd acao()): comer, beber, tomar remédio, curativo
+const COMPRIMIDOS := ["analgesico", "vitaminas", "antibiotico", "carvao"]
+func _anim_de_uso(it) -> String:
+	match String(it.def().get("cat", "")):
+		"comida": return "comer"
+		"bebida": return "beber"
+	if it.id in COMPRIMIDOS:
+		return "tomar_remedio"
+	return "usar_item"
+
 func usar(it) -> void:
 	var d: Dictionary = it.def()
 	if it.id == "agua_suja" and perto_do_fogo():
@@ -417,7 +427,7 @@ func usar(it) -> void:
 		_depois()
 		return
 	if d.get("consome", false):
-		animar.emit("consumir" if d.get("cat", "") in ["comida", "bebida"] else "usar_item")
+		animar.emit(_anim_de_uso(it))
 		var sv = jogador.get("sobrevivencia")
 		if sv != null and d.has("efeito"):
 			var r: String = sv.aplicar(d["efeito"], it.id, it.estado)

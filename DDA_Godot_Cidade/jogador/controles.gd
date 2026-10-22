@@ -394,6 +394,10 @@ func vetor_mover() -> Vector2:
 		return k.normalized()
 	return mover
 
+# PC: segurar ALT anda (caminhada) em vez de trotar
+func andando_pc() -> bool:
+	return not bloqueado and Input.is_key_pressed(KEY_ALT)
+
 func correndo() -> bool:
 	return not bloqueado and (segurando("CORRER") or Input.is_key_pressed(KEY_SHIFT))
 

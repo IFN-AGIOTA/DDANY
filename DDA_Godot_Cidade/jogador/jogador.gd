@@ -15,7 +15,8 @@ extends CharacterBody3D
 signal pulou
 
 const GRAVIDADE := 15.0
-const VEL_ANDAR := 1.7
+const VEL_DEVAGAR := 1.0             # 0.59: joystick bem de leve (caminhada devagar)
+const VEL_ANDAR := 2.0               # joystick até a metade (caminhada apressada) · PC: segurar ALT
 const VEL_TROTE := 3.9
 const VEL_CORRIDA := 7.2
 const VEL_AGACHADO := 1.0
@@ -62,6 +63,7 @@ var _n_passo := 0
 var _t_dor := 0.0
 var morto := false
 var agachado := false
+var mancando := false                # perna quebrada (o animador troca a caminhada por "mancar")
 var mirando := false                # mira (aproxima a câmera); ligada pelo botão MIRAR ou botão direito do mouse
 var atirando := false               # atirou há pouco / arma erguida (o corpo vira para a mira)
 var cam_yaw := 0.0                  # 0 = olhando para -Z
@@ -348,6 +350,7 @@ func _physics_process(delta: float) -> void:
 	if sobrevivencia != null and not sobrevivencia.pode_correr():
 		sprint = false                   # sem estamina ou perna quebrada
 	var perna: bool = sobrevivencia != null and sobrevivencia.perna_quebrada
+	mancando = perna
 	if perna:
 		quer_pular = false
 	var mag := minf(1.0, Vector2(ix, iy).length())
@@ -369,7 +372,9 @@ func _physics_process(delta: float) -> void:
 		elif sprint:
 			vmax = VEL_CORRIDA
 		else:
-			vmax = VEL_TROTE if mag > 0.55 else VEL_ANDAR
+			vmax = VEL_TROTE if mag > 0.72 else (VEL_ANDAR if mag > 0.35 else VEL_DEVAGAR)
+			if controles != null and controles.andando_pc() and mag > 0.35:
+				vmax = VEL_ANDAR
 		if mirando:
 			vmax = minf(vmax, VEL_MIRANDO)
 		if perna:

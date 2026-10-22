@@ -39,6 +39,31 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.59 · ANIMAÇÕES NOVAS: CAMINHADAS, ARMAS NA MÃO, COMER/BEBER/REMÉDIO
+  · Fontes: o Mixamo exige conta da Adobe e a licença dele não deixa publicar os arquivos de animação (o projeto
+    fica no GitHub público), então usei CAPTURA DE MOVIMENTO REAL da Carnegie Mellon University (CMU Graphics Lab
+    Motion Capture Database, uso livre inclusive comercial). Os pacotes CC0 que já usamos (Quaternius, KayKit) não
+    tinham mais animações novas no plano grátis.
+  · ferramentas/retarget_cmu.gd (NOVO): lê os .bvh da CMU e converte para o esqueleto do personagem (pose T -> pose
+    T, osso a osso), acha sozinho o ciclo de passos que fecha o laço, deixa a animação no lugar. Tabela CLIPES.
+  · CAMINHADAS por velocidade (jogador/animador_modelo.gd, tabela REF):
+      - joystick bem de leve = caminhada DEVAGAR (1 m/s, andar_lento)
+      - joystick até a metade = caminhada APRESSADA (2 m/s, andar_rapido) · no PC: segurar ALT
+      - joystick no fundo = trote (3,9 m/s) · CORRER = corrida
+      - agachado devagar = andar_agachado · agachado rápido = andar_espreita (curvado, com cuidado)
+      - perna quebrada = mancar (todo mundo vê, vai pela rede)
+  · ARMA NA MÃO (jogador/camada_postura.gd, NOVO): os braços seguram cada arma do jeito dela por cima de qualquer
+    caminhada, parado ou agachado: PISTOLA baixa nas duas mãos (posição de pronto) · FACA/FACÃO/PÉ DE CABRA na mão
+    direita, ponta para a frente · TACO/MACHADO/CANO/LANÇA nas duas mãos, pronto para bater · fuzis/espingarda/
+    rifle continuam com o IK das duas mãos (jogador/ik_fuzil.gd). Some ao mirar, atirar, golpear, recarregar,
+    correr ou usar um item. As posturas são geradas por ferramentas/gerar_portes.gd (NOVO, tabela PORTES).
+  · USAR ITEM (inventario/inventario.gd _anim_de_uso): comida = COMER (leva à boca e morde) · bebida = BEBER
+    (ergue a garrafa e inclina a cabeça) · analgésico/vitaminas/antibiótico/carvão = TOMAR REMÉDIO · atadura,
+    trapos, kit, tala, soro = curativo (usar_item). Andando, só a parte de cima faz a ação.
+  · jogador/sobrevivente/animacoes.res: +11 animações (99 no total). Licença em jogador/sobrevivente/LICENCA.txt e
+    nos Créditos.
+  · Submetralhadora: o jogo ainda não tem; quando entrar, usa a mesma pegada dos fuzis.
+
 ATUALIZAÇÃO 0.58 · RODA DO INVENTÁRIO RÁPIDO (QUALQUER ITEM) E TRANSPARENTE
   · hud/roda_armas.gd: a roda do botão ARMA agora mostra TODOS os itens do inventário rápido (atalhos 1..8), não
     só armas. Escolher um item faz o mesmo que o atalho dele: arma/ferramenta vai para a mão; comida, bebida,
@@ -1003,7 +1028,11 @@ SOBREVIVENTE (jogador no modo livre)
 - ação só na parte de cima do corpo ... jogador/camada_acao.gd
 - (cancelado) Dominic 3D .............. ferramentas/dominic/ e ferramentas/preparar_dominic.gd (só referência)
 - animações novas (KayKit -> jogo) .. ferramentas/retarget_kaykit.gd (tabelas CONVERTER e DIRETAS)
-- quais animações cada ação usa ....... jogador/animador_modelo.gd (8 direções, acao()), armas/armas.gd (GOLPES)
+- animações de captura real (CMU) .... ferramentas/retarget_cmu.gd (tabela CLIPES; .bvh de github.com/una-dinosauria/cmu-mocap)
+- como segura cada arma (posturas) .. ferramentas/gerar_portes.gd (PORTES) + jogador/camada_postura.gd + POSTURAS no animador
+- velocidade das caminhadas .......... jogador/jogador.gd (VEL_DEVAGAR, VEL_ANDAR, VEL_TROTE) e REF no animador
+- quais animações cada ação usa ....... jogador/animador_modelo.gd (8 direções, acao()), armas/armas.gd (GOLPES),
+  inventario/inventario.gd (_anim_de_uso: comer, beber, tomar remédio)
 - quando usa (modo livre) ............. main.gd (_jogar) e jogador/jogador.gd (usar_sobrevivente)
 - quantos aparecem e onde ............. inimigos/vagos.gd
 

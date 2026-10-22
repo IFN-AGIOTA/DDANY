@@ -127,7 +127,8 @@ func _physics_process(dt: float) -> void:
 # [pos, yaw, vel, bits, arma, aim, since]  (o jogador_remoto.gd lê nesta ordem)
 func estado_local() -> Array:
 	var j = jogador
-	var bits := (1 if j.agachado else 0) | (2 if j.mirando else 0) | (4 if j.morto else 0) | (0 if j.is_on_floor() else 8)
+	var bits := (1 if j.agachado else 0) | (2 if j.mirando else 0) | (4 if j.morto else 0) | (0 if j.is_on_floor() else 8) \
+		| (16 if j.mancando else 0)
 	return [j.global_position, j.rotation.y, j.velocity, bits, str(j.armas.atual), snappedf(j.armas.aim, 0.01), minf(j.armas.since, 9.0)]
 
 func _mandar_roupa(para := 0) -> void:

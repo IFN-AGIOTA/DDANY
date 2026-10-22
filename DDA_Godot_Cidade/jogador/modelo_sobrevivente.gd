@@ -28,6 +28,7 @@ const Equip := preload("res://equipamentos/modelos_equip.gd")
 const ModelosArmas := preload("res://armas/modelos_armas.gd")
 const IkFuzil := preload("res://jogador/ik_fuzil.gd")
 const CamadaAcao := preload("res://jogador/camada_acao.gd")
+const CamadaPostura := preload("res://jogador/camada_postura.gd")
 const PASTA := "res://jogador/sobrevivente/"
 const NOMES_ANIM := {"parado": "parado", "andar": "andar", "correr": "correr", "pular": "pular", "cair": "cair",
 	"mirar": "mirar", "atirar": "atirar", "morrer": "morrer", "agachado": "agachado", "andar_agachado": "andar_agachado"}
@@ -86,6 +87,7 @@ var _ponto_arma: Node3D
 const FUZIS := ["m4", "ak", "espingarda", "rifle_caca"]
 var _ponto_fuzil: Node3D
 var camada                             # jogador/camada_acao.gd: ações só na parte de cima (recarregar andando...)
+var postura                            # jogador/camada_postura.gd: como segura a arma (pistola, faca, taco...)
 var _ik: IkFuzil
 var _mira := 0.0
 var _pecas := {}                       # chave ("cabeca", "mochila", "cinto", "ombro", "coldre") -> [id, nó]
@@ -432,7 +434,11 @@ func segurar_arma(tipo: String, no: Node3D) -> void:
 		_ponto_arma.add_child(no)
 
 func _criar_ponto_fuzil() -> void:
-	# camada de ação ANTES do IK do fuzil (os modificadores rodam na ordem dos filhos do esqueleto)
+	# postura da arma, depois camada de ação, depois IK do fuzil (os modificadores rodam na ordem dos filhos)
+	postura = CamadaPostura.new()
+	postura.name = "CamadaPostura"
+	esqueleto.add_child(postura)
+	postura.preparar(esqueleto, anim)
 	camada = CamadaAcao.new()
 	camada.name = "CamadaAcao"
 	esqueleto.add_child(camada)

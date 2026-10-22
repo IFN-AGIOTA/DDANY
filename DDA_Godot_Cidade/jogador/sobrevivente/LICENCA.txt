@@ -20,3 +20,16 @@ Animações extras (0.26), em animacoes.res, convertidas para este esqueleto por
 - consumir, abrir_bau, soco_gancho, golpe_1m_a/b, machadada, empurrado, levantar_do_chao, braços cruzados, falar no
   rádio, segurar lanterna, andar carregando, arremesso, sim/não, deslizar:
   Quaternius, "Universal Animation Library 2" (UAL2) - CC0 1.0 - https://quaternius.itch.io/universal-animation-library-2
+
+Animações de captura de movimento real (0.59), em animacoes.res, convertidas para este esqueleto por
+ferramentas/retarget_cmu.gd: andar_lento (07_04), andar_normal (08_01), andar_rapido (07_12), andar_espreita (77_30),
+mancar (77_19), comer (79_15), beber (80_40), tomar_remedio (79_15):
+  Carnegie Mellon University, "CMU Graphics Lab Motion Capture Database" - http://mocap.cs.cmu.edu
+  (dados criados com recursos da NSF EIA-0196217). Conversão para BVH: Bruce Hahne (cgspeed), cópia em
+  https://github.com/una-dinosauria/cmu-mocap
+  Termos (READMEFIRST.txt da conversão): "CMU places no restrictions on the use of the original dataset, and I
+  (Bruce) place no additional restrictions on the use of this particular BVH conversion." e, do site da CMU:
+  "This data is free for use in research and commercial projects worldwide." Agradecimento pedido: "The data used
+  in this project was obtained from mocap.cs.cmu.edu. The database was created with funding from NSF EIA-0196217."
+Posturas de segurar as armas (porte_pistola, porte_branca, porte_2m): geradas por ferramentas/gerar_portes.gd a
+partir da animação "parado" (sem arquivos de terceiros).

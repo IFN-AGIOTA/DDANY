@@ -20,6 +20,7 @@ var velocity := Vector3.ZERO
 var vel_horizontal := 0.0
 var mirando := false
 var agachado := false
+var mancando := false
 var morto := false
 var armas := _Armas.new()
 var _no_chao := true
@@ -89,6 +90,7 @@ func receber_estado(d: Array) -> void:
 	mirando = b & 2 != 0
 	morto = b & 4 != 0
 	_no_chao = b & 8 == 0
+	mancando = b & 16 != 0
 	armas.aim = float(d[5])
 	armas.since = float(d[6])
 	_mostrar_arma(str(d[4]))
