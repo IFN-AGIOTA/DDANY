@@ -11,6 +11,7 @@ extends Node3D
 # Opções › Gráficos: "Distância dos detalhes" = até onde o mato aparece · "Densidade do cenário" = quanto mato.
 # Mexa AQUI para: quantidade, tamanho e cores do mato, alcance e sombra no chão.
 
+const Locais := preload("res://mundo/locais.gd")
 const Col := preload("res://mundo/colisao_mundo.gd")
 const Cid := preload("res://mundo/cidade.gd")
 const TAM := 32.0                                   # tamanho de cada pedaço (m)
@@ -258,7 +259,7 @@ func _criar(k: Vector2i) -> Node3D:
 						continue
 			else:
 				continue                             # mar, lago
-		if mundo.dentro_de_obstaculo(x, z, 0.1):
+		if mundo.dentro_de_obstaculo(x, z, 0.1) or _no_local(x, z):
 			continue
 		var t := Color(1, 1, 1)
 		var cor := r.randf()
@@ -334,3 +335,15 @@ func _atualizar_sombra(p: Vector2) -> void:
 	for m in cidade.mats_chao:
 		m.set_shader_parameter("ao_caixas", caixas)
 		m.set_shader_parameter("ao_n", n)
+
+# 0.68: nada de mato no terreno dos locais especiais (posto, hospital, mercado, armazém: chão de asfalto/concreto)
+static var _rets_locais: Array[Rect2] = []
+
+static func _no_local(x: float, z: float) -> bool:
+	if _rets_locais.is_empty():
+		for i in Locais.LOCAIS.size():
+			_rets_locais.append(Locais.retangulo(i, 0.5))
+	for rl in _rets_locais:
+		if rl.has_point(Vector2(x, z)):
+			return true
+	return false

@@ -24,6 +24,7 @@ extends Node
 signal abatido(cabeca: bool)            # um Vago morreu (cabeca = tiro na cabeça)
 signal atacou_jogador(dano: float)      # um Vago acertou o jogador (útil para HUD, tremer a tela e testes)
 
+const Locais := preload("res://mundo/locais.gd")
 const VagoCls := preload("res://inimigos/vago.gd")
 
 const MAX_ATIVOS_PADRAO := 14
@@ -276,7 +277,7 @@ func _livre(x: float, z: float) -> bool:
 	var h: float = mundo.altura(x, z)
 	if h < 0.0 or absf(h - 0.2) < 0.01:      # mar ou lago
 		return false
-	if mundo.dentro_de_predio(x, z, 1.5) or mundo.dentro_de_obstaculo(x, z, 0.6):
+	if mundo.dentro_de_predio(x, z, 1.5) or mundo.dentro_de_obstaculo(x, z, 0.6) or Locais.em_construcao(Vector2(x, z), 1.5):
 		return false
 	return true
 

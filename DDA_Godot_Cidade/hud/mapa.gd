@@ -19,6 +19,7 @@ extends CanvasLayer
 
 const UI := preload("res://menu/ui.gd")
 const Teclas := preload("res://jogador/teclas.gd")
+const Locais := preload("res://mundo/locais.gd")
 
 const RAIO_MINI := 250.0            # metros do centro até a borda do minimapa
 const TAM_MINI := 22.0              # diâmetro do minimapa (vh = 1% da altura da tela)
@@ -315,6 +316,18 @@ func _desenhar_cidade(ci: CanvasItem, dados) -> void:
 	for i in pr.size() / 5:
 		var k := i * 5
 		ci.draw_rect(Rect2(pr[k] - pr[k + 2] * 0.5, pr[k + 1] - pr[k + 3] * 0.5, pr[k + 2], pr[k + 3]), _cor_predio(i, pr[k + 4]))
+	# 0.68: locais especiais (terreno + prédios na cor do tipo)
+	for i in Locais.LOCAIS.size():
+		var e: Array = Locais.LOCAIS[i]
+		var cor: Color = Locais.CORES_MAPA[e[0]]
+		ci.draw_rect(Locais.retangulo(i), COR_CALCADA.lerp(cor, 0.18))
+		for v in Locais.casca(e[0]):
+			var c3: Vector3 = v[0]
+			var t3: Vector3 = v[1]
+			var pts := PackedVector2Array()
+			for q in [Vector2(-1, -1), Vector2(1, -1), Vector2(1, 1), Vector2(-1, 1)]:
+				pts.append(Locais.local_para_mundo(i, Vector2(c3.x, c3.z) + Vector2(t3.x, t3.z) * 0.5 * q))
+			ci.draw_colored_polygon(pts, COR_PREDIO.lerp(cor, 0.45))
 
 func _poligono(rid: RID, p: PackedVector2Array, cor: Color) -> void:
 	var idx := Geometry2D.triangulate_polygon(p)
@@ -621,6 +634,13 @@ func _seta(ci: CanvasItem, c: Vector2, ang: float, tam: float, cor: Color) -> vo
 	ci.draw_polyline(contorno, Color(0, 0, 0, 0.85), maxf(3.0, tam * 0.28), true)
 	ci.draw_colored_polygon(pts, cor)
 
+# local especial: círculo escuro, aro na cor do tipo e a letra (P, H, S, A)
+func _icone_local(ci: CanvasItem, c: Vector2, r: float, tipo: String) -> void:
+	var cor: Color = Locais.CORES_MAPA[tipo]
+	UI.circulo(ci, c, r, Color(0.03, 0.05, 0.08, 0.9))
+	UI.aro(ci, c, r + 1.0, maxf(2.0, r * 0.22), cor)
+	_texto(ci, Locais.SIGLAS[tipo], c, int(r * 1.25), cor)
+
 # losango do objetivo
 func _losango(ci: CanvasItem, c: Vector2, tam: float, cor: Color) -> void:
 	var pts := PackedVector2Array([c + Vector2(0, -tam), c + Vector2(tam * 0.75, 0), c + Vector2(0, tam), c + Vector2(-tam * 0.75, 0)])
@@ -664,6 +684,15 @@ func _desenhar_minimapa(vh: float) -> void:
 			cont.append(tri[0])
 			ci.draw_polyline(cont, Color(0, 0, 0, 0.8), maxf(2.0, 0.3 * vh), true)
 			ci.draw_colored_polygon(tri, COR_OBJETIVO)
+	# locais especiais perto (zonas de PvP)
+	for i in Locais.LOCAIS.size():
+		var e: Array = Locais.LOCAIS[i]
+		var d := Vector2(e[1], e[2]) - _pos
+		if d.length() > RAIO_MINI * 1.4:
+			continue
+		var p := Vector2(d.dot(direita), -d.dot(frente)) * esc
+		if p.length() <= r - 1.2 * vh:
+			_icone_local(ci, c + p, 1.1 * vh, e[0])
 	# jogador no centro (frente = para cima)
 	_seta(ci, c, 0.0, 1.5 * vh, COR_JOGADOR)
 	# "N" na borda, onde fica o norte
@@ -825,6 +854,16 @@ func _desenhar_mapa() -> void:
 			ci.draw_colored_polygon(tri, COR_OBJETIVO)
 			var pt := pb - dir * 4.5 * vh
 			_texto(ci, rot, Vector2(clampf(pt.x, meia_txt, vs.x - 16.0 * vh - meia_txt), pt.y), tr, COR_OBJETIVO)
+	# locais especiais (zonas de PvP): bolinha com a letra e, com zoom, o nome
+	var tl := int(1.8 * vh)
+	for i in Locais.LOCAIS.size():
+		var e: Array = Locais.LOCAIS[i]
+		var pl := _mundo_para_tela(Vector2(e[1], e[2]))
+		if not Rect2(Vector2.ZERO, vs).grow(3.0 * vh).has_point(pl):
+			continue
+		_icone_local(ci, pl, 1.5 * vh, e[0])
+		if _mpp < 9.0:
+			_texto(ci, Locais.NOMES[e[0]], pl + Vector2(0, 2.8 * vh), tl, Locais.CORES_MAPA[e[0]])
 	# jogador
 	var pj := _mundo_para_tela(_pos)
 	ci.draw_circle(pj, 3.4 * vh, Color(COR_JOGADOR.r, COR_JOGADOR.g, COR_JOGADOR.b, 0.15))

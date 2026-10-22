@@ -6,6 +6,7 @@ extends Node
 # A missão some se você não for em 20 min (alguém pegou antes).
 # Mexa AQUI para: de quanto em quanto tempo vem um aviso, distância, tamanho da horda e quantos itens.
 
+const Locais := preload("res://mundo/locais.gd")
 const CaixaMundoCls := preload("res://inventario/caixa_mundo.gd")
 
 const PRIMEIRA := 120.0                    # segundos até o primeiro aviso (se tiver rádio)
@@ -66,7 +67,7 @@ func _nova() -> void:
 		var l := int((p.y + cid.WORLD.y) / cid.CELL)
 		if c < 0 or c >= cid.W or l < 0 or l >= cid.H or cid.road[l * cid.W + c] != 1:
 			continue
-		if main.mundo.dentro_de_predio(p.x, p.y, 2.0, true) or main.mundo.dentro_de_obstaculo(p.x, p.y, 1.5):
+		if main.mundo.dentro_de_predio(p.x, p.y, 2.0, true) or main.mundo.dentro_de_obstaculo(p.x, p.y, 1.5) or Locais.em_construcao(p, 3.0):
 			continue
 		_pos = Vector3(p.x, main.mundo.altura(p.x, p.y), p.y)
 		_ativa = true

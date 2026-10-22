@@ -18,6 +18,7 @@ const EstandeCls := preload("res://mundo/estande_tiro.gd")
 const LootCls := preload("res://mundo/loot.gd")
 const LootMundoCls := preload("res://mundo/loot_mundo.gd")
 const InterioresCls := preload("res://mundo/interiores.gd")
+const LocaisCls := preload("res://mundo/locais.gd")
 const MatoCls := preload("res://mundo/mato.gd")
 const FumacaCls := preload("res://mundo/fumaca.gd")
 const HudStatusCls := preload("res://hud/hud_status.gd")
@@ -65,6 +66,7 @@ var pausa: CanvasLayer
 var aplicador: Node
 var loot_mundo                              # mundo/loot_mundo.gd (o que tem em cada móvel/carro, guardado)
 var interiores: Node                        # mundo/interiores.gd (prédios por dentro perto do jogador)
+var locais: Node                            # mundo/locais.gd (postos, hospitais, supermercados e armazéns: zonas de PvP)
 var _t_info := 0.0
 var missoes: Node = null                    # mundo/missoes.gd (suprimentos militares avisados pelo rádio)
 var eventos: Node = null                    # mundo/eventos.gd (0.65: helicóptero caído, comboio, zona contaminada)
@@ -494,6 +496,12 @@ func _criar_jogo() -> void:
 	jogo.add_child(interiores)
 	interiores.ligar(cidade, mundo, jogador, loot_mundo)
 	interiores.vagos = vagos
+	locais = LocaisCls.new()
+	locais.name = "Locais"
+	jogo.add_child(locais)
+	locais.ligar(cidade, jogador, loot_mundo)
+	locais.vagos = vagos
+	locais.hud = hud
 	missoes = MissoesCls.new()
 	missoes.name = "Missoes"
 	jogo.add_child(missoes)
@@ -585,6 +593,9 @@ func _fechar_jogo() -> void:
 	if interiores != null and is_instance_valid(interiores):
 		interiores.fechar_todos()           # devolve os blocos dos prédios para a cidade
 	interiores = null
+	if locais != null and is_instance_valid(locais):
+		locais.fechar_todos()               # a casca de longe volta para a cidade
+	locais = null
 	if jogo != null:
 		jogo.queue_free()
 	jogo = null

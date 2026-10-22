@@ -17,6 +17,7 @@ const Mat := preload("res://mundo/materiais_cidade.gd")
 const AbandonoCls := preload("res://mundo/abandono.gd")
 const FachadasCls := preload("res://mundo/fachadas.gd")
 const OclusaoCls := preload("res://mundo/oclusao.gd")
+const LocaisCls := preload("res://mundo/locais.gd")
 
 const CELL := 20.0                          # resolução das máscaras (m)
 const WORLD := Vector2(11000.0, 8600.0)     # metade do mundo (m)
@@ -557,6 +558,8 @@ var predio_info: Array = []                 # um Dictionary por prédio (mesma o
 var _mm_predios := {}                       # Vector2i -> MultiMesh dos prédios daquele bloco
 var ruinas: Array = []                      # [x, z, tam_x, tam_z, altura] dos prédios destruídos
 var abandono                                # mundo/abandono.gd (carros, obstáculos)
+var locais_casca: Array = []                # 0.68: casca de longe de cada local especial (mundo/locais.gd), mesma ordem de LOCAIS
+var remapa_v2 := PackedInt32Array()         # número do prédio na 0.43..0.67 -> 0.68 (-1 = saiu para dar lugar a um local especial)
 
 func _sortear_uso(r: RandomNumberGenerator, h: float) -> String:
 	if h > 70.0:
@@ -588,8 +591,12 @@ func _buildings() -> void:
 	var n_entra := 0
 	_preparar_filtro(dados_cidade)
 	remapa_predios = PackedInt32Array()
-	removidos = {"agua": 0, "rua": 0}
+	removidos = {"agua": 0, "rua": 0, "local": 0}
 	pos_removidos = PackedVector2Array()
+	remapa_v2 = PackedInt32Array()
+	var rets_locais: Array[Rect2] = []
+	for i in LocaisCls.LOCAIS.size():
+		rets_locais.append(LocaisCls.retangulo(i, 3.0))
 	for lr in range(0, H - 1, 2):
 		for lc in range(0, W - 1, 2):
 			var n_land := 0
@@ -616,6 +623,17 @@ func _buildings() -> void:
 			var bz := z + rng.randf_range(-3.0, 3.0)
 			# em cima/perto da água ou da rua/calçada? (os sorteios continuam iguais para os outros prédios não mudarem)
 			var fora := _predio_ruim(bx, bz, sx, sz)
+			if fora == "":
+				# 0.68: no terreno de um local especial (posto, hospital, mercado, armazém) o prédio comum sai
+				var planta := Rect2(bx - sx * 0.5, bz - sz * 0.5, sx, sz)
+				var no_local := false
+				for rl in rets_locais:
+					if rl.intersects(planta):
+						no_local = true
+						break
+				remapa_v2.append(-1 if no_local else predio_info.size())
+				if no_local:
+					fora = "local"
 			remapa_predios.append(-1 if fora != "" else predio_info.size())
 			if fora != "":
 				removidos[fora] += 1
@@ -680,6 +698,7 @@ func _buildings() -> void:
 				if info["entra"]:
 					n_entra += 1
 				predio_info.append(info)
+	_locais()
 	mat_predio = Mat.material(Mat.PREDIO, {"detalhe": 1.0})
 	var caixa := BoxMesh.new()
 	caixa.material = mat_predio
@@ -720,7 +739,27 @@ func _buildings() -> void:
 		_adopt(mi)
 		detalhes.append(mi)
 	print("Prédios: ", predios.size() / 5, " (", n, " blocos de malha) · com entrada: ", n_entra, " · em ruína: ", ruinas.size(),
-		" · removidos: ", removidos["agua"], " na/perto da água, ", removidos["rua"], " em cima da rua/calçada")
+		" · removidos: ", removidos["agua"], " na/perto da água, ", removidos["rua"], " em cima da rua/calçada, ",
+		removidos["local"], " para os locais especiais")
+
+# 0.68: LOCAIS ESPECIAIS (mundo/locais.gd): o terreno vira lote (chão na altura da calçada) e ganha a casca de longe
+func _locais() -> void:
+	locais_casca.clear()
+	for i in LocaisCls.LOCAIS.size():
+		var rt := LocaisCls.retangulo(i, 1.0)
+		var c0 := int(floor((rt.position.x + WORLD.x) / CELL))
+		var c1 := int(floor((rt.end.x + WORLD.x) / CELL))
+		var r0 := int(floor((rt.position.y + WORLD.y) / CELL))
+		var r1 := int(floor((rt.end.y + WORLD.y) / CELL))
+		for rr in range(maxi(r0, 0), mini(r1, H - 1) + 1):
+			for cc in range(maxi(c0, 0), mini(c1, W - 1) + 1):
+				var k := rr * W + cc
+				if land[k] == 1 and lote[k] == 0:             # na máscara de rua (grossa) também: a rua de verdade fica por cima
+					lote[k] = 1
+					_lote_idx.append(k)
+		var casca := LocaisCls.montar_casca(i, Y_CALCADA)
+		_adopt(casca)
+		locais_casca.append(casca)
 
 # ---------- prédios fora do lugar: água e rua ----------
 # A grade de 20 m (máscaras land/road) é grossa: um prédio de até 34 m (+3 m sorteados) podia invadir a calçada,

@@ -565,6 +565,8 @@ uniform vec4 caixa = vec4(0.0, 0.0, 10.0, 10.0);   // centro x, z e meia-largura
 uniform float padrao = 0.0;
 uniform float sol_dentro = 0.12;
 uniform float semente = 0.0;                  // a mesma do prédio (hera do lado de fora parecida com a de longe)
+uniform float sujeira = 1.0;                  // 0.68: força das manchas/sujeira (locais especiais usam menos)
+uniform float forca_hera = 1.0;               // 0.68: quanto de hera pode subir pelas paredes de fora
 global uniform float molhado;
 varying vec3 wp;
 varying float dentro;
@@ -608,9 +610,9 @@ void fragment() {
 		c *= mix(1.0, 0.93 + 0.07 * faixa, dentro);
 		c *= 1.0 - dentro * 0.25 * smoothstep(0.6, 0.9, ruido(u * vec2(0.8, 0.5)));          // papel descascando / umidade
 	} else if (padrao > 3.5) {
-		c *= 0.85 + 0.25 * ruido(u * 2.0);
+		c *= mix(1.0, 0.85 + 0.25 * ruido(u * 2.0), sujeira);
 	}
-	c *= 0.78 + 0.3 * ruido(u * 1.3 + wp.xz * 0.05);                                        // sujeira
+	c *= mix(1.0, 0.78 + 0.3 * ruido(u * 1.3 + wp.xz * 0.05), sujeira);                    // sujeira
 	if (padrao > 2.5 && padrao < 3.5) {
 		// lado de FORA das paredes: hera e chuva (igual ao prédio visto de longe)
 		float fora = 1.0 - dentro;
@@ -618,7 +620,7 @@ void fragment() {
 		float tem_hera = step(hash(vec2(semente * 37.0, 5.1)), 0.4);
 		float alt_hera = 2.0 + 10.0 * ruido(vec2(u.x * 0.16, semente * 31.0));
 		float hera = (1.0 - smoothstep(alt_hera - 2.0, alt_hera, v)) * smoothstep(0.42, 0.6, ruido(vec2(u.x, v) * 1.6 + semente * 9.0) + 0.3 * (1.0 - v / alt_hera));
-		hera *= tem_hera * fora * smoothstep(0.3, 0.6, ruido(vec2(u.x * 0.09, semente * 3.0)));
+		hera *= tem_hera * fora * smoothstep(0.3, 0.6, ruido(vec2(u.x * 0.09, semente * 3.0))) * forca_hera;
 		c = mix(c, mix(vec3(0.07, 0.13, 0.04), vec3(0.20, 0.28, 0.09), ruido(vec2(u.x, v) * 5.0)), hera);
 		c = mix(c, grafite(c, u.x, v, semente, 1.0 - smoothstep(50.0, 110.0, length(wp - CAMERA_POSITION_WORLD))), fora * step(v, 3.5));
 		c *= mix(1.0, (0.6 + 0.4 * smoothstep(0.0, 2.2, v)) * mix(1.0, 0.72, molhado), fora);

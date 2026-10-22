@@ -12,6 +12,7 @@ extends Node
 # Não vão no jogo salvo (ao carregar, nascem de novo). Cada jogador da partida tem os seus.
 # Mexa AQUI para: quantos de cada, distâncias, raio do gás, quantidade de loot e de infectados.
 
+const Locais := preload("res://mundo/locais.gd")
 const CaixaMundoCls := preload("res://inventario/caixa_mundo.gd")
 const ItemMundo := preload("res://inventario/item_mundo.gd")
 const Sons := preload("res://audio/sons.gd")
@@ -93,7 +94,7 @@ func _ponto_na_rua(pj: Vector3) -> Vector2:
 		var l := int((p.y + cid.WORLD.y) / cid.CELL)
 		if c < 1 or c >= cid.W - 1 or l < 1 or l >= cid.H - 1 or cid.road[l * cid.W + c] != 1:
 			continue
-		if main.mundo.dentro_de_predio(p.x, p.y, 4.0, true) or main.mundo.dentro_de_obstaculo(p.x, p.y, 3.0):
+		if main.mundo.dentro_de_predio(p.x, p.y, 4.0, true) or main.mundo.dentro_de_obstaculo(p.x, p.y, 3.0) or Locais.em_construcao(p, 6.0):
 			continue
 		var longe := true
 		for e in eventos:

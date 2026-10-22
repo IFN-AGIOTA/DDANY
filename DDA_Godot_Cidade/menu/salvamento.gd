@@ -54,7 +54,8 @@ static func salvar(main, morto := false) -> bool:
 		"sobrevivencia": j.sobrevivencia.salvar(),
 		"inventario": j.inventario.salvar(),
 		"morto": morto,
-		"loot": main.loot_mundo.salvar(main.interiores.abertos if main.interiores != null else {}) if main.loot_mundo != null else {},
+		"loot": main.loot_mundo.salvar(main.interiores.abertos if main.interiores != null else {},
+			main.locais.abertos if main.get("locais") != null else {}) if main.loot_mundo != null else {},
 		"clima": main.clima.salvar() if main.clima != null and main.clima.has_method("salvar") else {},
 		"missoes": main.missoes.salvar() if main.get("missoes") != null else {},
 		"chao": _chao(main, p),
@@ -69,7 +70,9 @@ static func salvar(main, morto := false) -> bool:
 # NUMERAÇÃO DOS PRÉDIOS: a 0.43 tirou os prédios em cima da água/rua (mundo/cidade.gd _predio_ruim) e os
 # números mudaram. O loot dos prédios é salvo por número ("p12" = chão do prédio 12, "p12_3" = móvel 3 dele):
 # save de antes (sem "mapa_predios") é convertido com cidade.remapa_predios (número antigo -> novo; -1 = sumiu).
-const MAPA_PREDIOS := 2
+# A 0.68 tirou os prédios que ficavam nos terrenos dos locais especiais (mundo/locais.gd): save da 0.43..0.67
+# ("mapa_predios" = 2) é convertido com cidade.remapa_v2.
+const MAPA_PREDIOS := 3
 
 static func _remapear_loot(loot: Dictionary, remapa: PackedInt32Array) -> Dictionary:
 	var o := loot.duplicate(true)
@@ -110,8 +113,11 @@ static func carregar(main, d: Dictionary) -> void:
 	main.abates = int(d.get("abates", 0))
 	if main.loot_mundo != null:
 		var loot: Dictionary = d.get("loot", {})
-		if int(d.get("mapa_predios", 1)) < MAPA_PREDIOS:
+		var versao_mapa := int(d.get("mapa_predios", 1))
+		if versao_mapa < 2:
 			loot = _remapear_loot(loot, main.cidade.remapa_predios)
+		elif versao_mapa < MAPA_PREDIOS:
+			loot = _remapear_loot(loot, main.cidade.remapa_v2)
 		main.loot_mundo.carregar(loot)
 	j.inventario.carregar(d.get("inventario", {}))
 	j.sobrevivencia.carregar(d.get("sobrevivencia", {}))
@@ -133,6 +139,8 @@ static func carregar(main, d: Dictionary) -> void:
 		main.mundo.forcar(Vector2(pos.x, pos.z))
 		if main.interiores != null:
 			main.interiores.abrir_agora(Vector2(pos.x, pos.z))     # se salvou dentro de um prédio
+		if main.get("locais") != null:
+			main.locais.abrir_agora(Vector2(pos.x, pos.z))         # ou dentro de um local especial (0.68)
 		j.teleportar(pos + Vector3(0, 0.05, 0), float(jd.get("yaw", 0.0)))
 	if main.get("missoes") != null and d.has("missoes"):
 		main.missoes.carregar(d["missoes"])

@@ -39,6 +39,64 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.68 · LOCAIS ESPECIAIS: POSTOS DE GASOLINA, HOSPITAIS, SUPERMERCADOS E ARMAZÉNS (ZONAS DE PvP)
+  · 28 prédios novos, grandes e montados peça por peça, espalhados por Nova York: 12 POSTOS DE GASOLINA,
+    4 HOSPITAIS, 6 SUPERMERCADOS e 6 ARMAZÉNS. Um de cada fica perto da base onde você nasce (o mais perto, o
+    posto, a ~660 m). No MAPA e no MINIMAPA cada um aparece com uma bolinha colorida e a letra (P laranja,
+    H vermelho, S verde, A azul) e, com zoom, o nome. Ao entrar no terreno aparece o aviso
+    "... · ZONA DE PvP · loot raro, cuidado com outros sobreviventes".
+  · São pensados para tiroteio: várias entradas, coisas para se esconder atrás e lugares altos para vigiar:
+      - POSTO DE GASOLINA: pátio com cobertura e 2 ilhas de bombas, carros abandonados (um tombado), loja de
+        conveniência (caixa, gôndolas, geladeiras, café, banheiro, estoque, porta lateral e dos fundos),
+        OFICINA com carro no elevador, bancadas e armário de ferramentas, totem de preços, caçamba, botijões,
+        gerador, e uma ESCADA DE FERRO até o TELHADO (com mureta: dá para vigiar o pátio todo);
+      - HOSPITAL: prédio de 2 andares + telhado. Térreo: recepção, farmácia (com balcão para a recepção),
+        EMERGÊNCIA (6 macas com cortinas e carrinhos), consultório, laboratório, raio-x, depósito médico,
+        necrotério e refeitório. 1º andar: 4 enfermarias, UTI, escritório dos médicos, CENTRO CIRÚRGICO e
+        esterilização. Telhado: HELIPONTO, caixas militares e ninho de sacos de areia virado para a praça.
+        Na frente: marquise, cobertura com 2 AMBULÂNCIAS, estacionamento e um POSTO MILITAR abandonado
+        (sacos de areia, chicane de barreiras, 2 barracas com caixas militares, caminhão do exército);
+      - SUPERMERCADO: fachada de vidro com entrada e saída, 6 caixas, 8 corredores de gôndolas (mercearia,
+        enlatados, bebidas, utilidades, higiene e farmácia), hortifrúti, açougue, freezers, paredão de
+        geladeiras, ESTOQUE com porta-paletes, escritório do gerente com COFRE, 2 portas de carga com carreta
+        nos fundos, ESCADA DE FERRO até o TELHADO e estacionamento com carros e carrinhos largados;
+      - ARMAZÉM: galpão de 9 m de altura, 3 portas de doca (aberta, meia e fechada), 3 fileiras de
+        PORTA-PALETES altos (corredores para tiroteio), empilhadeira, paletes, ESCRITÓRIO de 2 andares com
+        janelões vigiando o galpão (escada por fora), armário do segurança, vestiário, pátio com CONTÊINERES
+        empilhados e escadas até em cima (torre de vigia a 5 m), carreta na doca, cerca e guarita no portão.
+  · LOOT PRÓPRIO de cada lugar e mais farto (só 15% dos móveis vazios, contra 35% nos prédios comuns):
+    posto (lanches, isqueiro, pilhas, ferramentas e às vezes espingarda na oficina), hospital (remédios,
+    antibióticos, soro, kit médico; militar nas barracas, no caminhão e no heliponto), supermercado (comida,
+    bebida, utilidades, higiene, cofre com dinheiro e pistola), armazém (roupas, mochilas, ferramentas,
+    CONTÊINERES com rifle, espingarda, AK, coletes e luneta, armário do segurança com pistola/MP5).
+    Também há loot nos porta-malas, nas ambulâncias, na carreta e nas caçambas.
+  · Cada local tem seus infectados (4 no posto, 9 no hospital, 7 no supermercado, 6 no armazém) quando você chega.
+  · De longe aparece uma versão simples do prédio; a 140 m o local é montado inteiro (numa thread, sem travar)
+    e a 200 m é desmontado (o que ficou no chão é guardado). No máximo 2 montados ao mesmo tempo.
+  · Para dar lugar aos locais, 32 prédios comuns saíram do mapa. Jogo salvo antes da 0.68 continua valendo
+    (o loot dos prédios é renumerado sozinho; o dos que saíram some).
+  · Ainda não existe dano entre jogadores no multijogador: os locais já estão prontos para quando o PvP chegar.
+  · ARQUIVOS MEXIDOS:
+      mundo/locais.gd ............. NOVO (onde ficam os 28 locais, casca de longe, monta/desmonta perto do
+                                    jogador, infectados, aviso de zona de PvP)
+      mundo/local.gd .............. NOVO (monta cada local: posto, hospital, supermercado e armazém)
+      ferramentas/escolher_locais.gd NOVO (escolhe os terrenos livres com rua na frente; gera a lista LOCAIS)
+      mundo/cidade.gd ............. tira os prédios comuns dos terrenos, chão (lote) e casca dos locais,
+                                    remapa_v2 (numeração dos prédios da 0.67 -> 0.68)
+      mundo/loot_mundo.gd ......... tabelas novas (posto_*, hospital_*, super_*, armazem_*, militar_med,
+                                    ambulancia, cofre, lixo, chão de cada local), CHANCE_VAZIO_LOCAL e salvar o
+                                    chão dos locais
+      mundo/materiais_cidade.gd ... shader INTERIOR: "sujeira" e "forca_hera" (paredes dos locais mais limpas)
+      mundo/mato.gd ............... sem mato no terreno dos locais
+      hud/mapa.gd ................. locais no mapa (terreno + prédios na cor do tipo), ícones e nomes, e no
+                                    minimapa
+      inimigos/vagos.gd, mundo/missoes.gd, mundo/eventos.gd ... não nascem infectados/caixas dentro dos locais
+      main.gd ..................... cria o nó "Locais"
+      menu/salvamento.gd .......... salva/carrega dentro dos locais e converte saves antigos (mapa_predios 3)
+      menu/config.gd .............. versão 0.68
+  · PUBLICADA: atualizacoes/pacote_0.68.pck (acumulado desde o APK 0.48) + manifesto; os celulares baixam
+    sozinhos. servidor_windows.zip (raiz) refeito na 0.68.
+
 ATUALIZAÇÃO 0.67 · ÍCONES NOS BOTÕES DE TOQUE (game-icons.net)
   · Os botões de toque trocaram o TEXTO por ÍCONES do pacote game-icons.net (CC BY 3.0, crédito na tela de
     Créditos e em hud/icones/LICENCA.txt), com uma sombra leve para ler em cima de qualquer fundo:
@@ -1101,6 +1159,12 @@ LOOT (mundo/loot_mundo.gd; tabelas no topo, com raridade e quantidades)
   banheiro (remédios), mercado, farmácia, loja, loja de roupas, balcão (dinheiro, às vezes pistola), escritório,
   ARMÁRIO DE ARMAS da delegacia (pistolas, espingarda, M4, coletes, silenciador), depósito (ferramentas, rifle).
 - PORTA-MALAS dos carros (atrás do carro, a até 14 m aparece na lista "PERTO DE VOCÊ").
+- LOCAIS ESPECIAIS (0.68: posto, hospital, supermercado, armazém): tabelas próprias "posto_loja", "posto_bebidas",
+  "posto_deposito", "posto_oficina", "hospital_farmacia", "hospital_enfermaria", "hospital_lab",
+  "hospital_cirurgia", "hospital_deposito", "ambulancia", "militar_med", "super_mercearia", "super_bebidas",
+  "super_hortifruti", "super_congelados", "super_utilidades", "super_higiene", "super_estoque", "cofre",
+  "armazem_carga", "armazem_conteiner", "armazem_escritorio", "armazem_seguranca", "lixo" (caçambas) e o chão
+  de cada um ("chao_posto", "chao_hospital", "chao_super", "chao_armazem"). Só 15% dos móveis vazios.
 - ITENS SOLTOS no chão dos prédios (até 4 por prédio, conforme o uso).
 - 35% dos móveis já foram saqueados. Armas vêm com pente pela metade (ou sem pente). Itens vêm gastos.
 - O conteúdo é sorteado na 1ª visita e fica guardado (e salvo): o que você pega não volta.
@@ -1198,6 +1262,10 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   janelas, interiores (shaders) ....... mundo/materiais_cidade.gd
 - colisão com chão/prédios/carros e tiros mundo/colisao_mundo.gd
 - cidade abandonada (carros, entulho) . mundo/abandono.gd
+- LOCAIS ESPECIAIS (zonas de PvP): onde ficam, casca de longe,
+  monta/desmonta, infectados, aviso ...... mundo/locais.gd (lista LOCAIS: ferramentas/escolher_locais.gd)
+- posto, hospital, supermercado e armazém
+  por dentro e por fora (planta, móveis) . mundo/local.gd (loot: tabelas em mundo/loot_mundo.gd)
 - prédios por dentro (cômodos, portas,
   escadas, andares de cima, telhado) . mundo/interior.gd
 - móveis .............................. mundo/moveis.gd (tamanhos em TAM)

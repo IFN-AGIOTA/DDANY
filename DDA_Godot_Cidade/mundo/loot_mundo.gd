@@ -11,6 +11,7 @@ const ItemMundoCls := preload("res://inventario/item_mundo.gd")
 const Itens := preload("res://inventario/itens.gd")
 
 const CHANCE_VAZIO := 0.35            # móvel já saqueado
+const CHANCE_VAZIO_LOCAL := 0.15      # 0.68: locais especiais (posto, hospital, supermercado, armazém) têm mais coisa
 const CHANCE_CHAO := 0.45             # chance de cada ponto livre do chão ter alguma coisa
 const MAX_CHAO := 4                   # itens soltos por prédio
 
@@ -64,18 +65,80 @@ const TABELAS := {
 		["kit_medico", 4, 1, 1], ["soro", 2, 1, 1], ["antibiotico", 3, 1, 1], ["mira_acog", 2, 1, 1], ["silenciador", 2, 1, 1],
 		["luneta", 1, 1, 1], ["rifle_caca", 1, 1, 1], ["mun_308", 2, 5, 15], ["kit_armas", 3, 1, 1], ["agua", 3, 1, 1], ["feijao", 3, 1, 1], ["facao", 2, 1, 1],
 		["leite_condensado", 2, 1, 1]],
+	# ---- 0.68: LOCAIS ESPECIAIS (zonas de PvP: mundo/local.gd) ----
+	"posto_loja": [["isqueiro", 5, 1, 1], ["barra", 5, 1, 3], ["salgadinho", 5, 1, 1], ["biscoito", 4, 1, 1], ["refrigerante", 4, 1, 1],
+		["agua", 3, 1, 1], ["fita", 3, 1, 1], ["pilha", 4, 1, 1], ["lanterna", 3, 1, 1], ["lanterna_cabeca", 1, 1, 1], ["corda", 2, 1, 1],
+		["kit_costura", 2, 1, 1], ["radio", 2, 1, 1], ["revista", 2, 1, 1], ["bone", 2, 1, 1], ["analgesico", 2, 1, 1], ["bandagem", 2, 1, 1],
+		["atum", 2, 1, 1], ["feijao", 2, 1, 1], ["dinheiro", 2, 2, 15]],
+	"posto_bebidas": [["agua", 6, 1, 1], ["refrigerante", 6, 1, 1], ["suco", 4, 1, 1], ["agua_suja", 1, 1, 1]],
+	"posto_deposito": [["fita", 3, 1, 1], ["corda", 3, 1, 1], ["trapos", 3, 1, 4], ["pilha", 3, 1, 1], ["agua", 3, 1, 1], ["barra", 2, 1, 3],
+		["lanterna", 2, 1, 1], ["isqueiro", 2, 1, 1], ["mochila_escolar", 1, 1, 1], ["refrigerante", 2, 1, 1]],
+	"posto_oficina": [["pe_de_cabra", 4, 1, 1], ["cano", 4, 1, 1], ["machado", 2, 1, 1], ["facao", 2, 1, 1], ["fita", 4, 1, 1], ["corda", 3, 1, 1],
+		["trapos", 4, 1, 4], ["lanterna", 3, 1, 1], ["lanterna_cabeca", 2, 1, 1], ["isqueiro", 2, 1, 1], ["mascara_gas", 1, 1, 1],
+		["kit_armas", 1, 1, 1], ["calca", 2, 1, 1], ["jaqueta", 1, 1, 1], ["espingarda", 1, 1, 1], ["mun_12", 1, 4, 10]],
+	"lixo": [["garrafa_vazia", 5, 1, 1], ["trapos", 4, 1, 3], ["revista", 3, 1, 1], ["celular", 2, 1, 1], ["galho", 2, 1, 2],
+		["agua_suja", 2, 1, 1], ["cano", 1, 1, 1], ["ursinho", 1, 1, 1], ["mun_9mm", 1, 2, 6]],
+	"hospital_farmacia": [["analgesico", 6, 1, 1], ["antibiotico", 5, 1, 1], ["vitaminas", 5, 1, 1], ["soro", 4, 1, 1], ["kit_medico", 3, 1, 1],
+		["bandagem", 6, 1, 4], ["tala", 3, 1, 1], ["carvao", 4, 1, 1], ["pastilha", 4, 2, 8], ["agua", 1, 1, 1]],
+	"hospital_enfermaria": [["bandagem", 6, 1, 3], ["trapos", 4, 1, 3], ["analgesico", 4, 1, 1], ["soro", 3, 1, 1], ["tala", 2, 1, 1],
+		["kit_medico", 1, 1, 1], ["vitaminas", 2, 1, 1], ["camiseta", 2, 1, 1], ["agua", 2, 1, 1], ["ursinho", 1, 1, 1], ["revista", 1, 1, 1]],
+	"hospital_lab": [["antibiotico", 5, 1, 1], ["carvao", 4, 1, 1], ["pastilha", 4, 2, 8], ["vitaminas", 3, 1, 1], ["soro", 3, 1, 1],
+		["mascara_gas", 1, 1, 1], ["analgesico", 2, 1, 1]],
+	"hospital_cirurgia": [["kit_medico", 6, 1, 1], ["soro", 5, 1, 1], ["antibiotico", 4, 1, 1], ["tala", 4, 1, 1], ["bandagem", 4, 2, 4],
+		["analgesico", 3, 1, 1], ["faca", 1, 1, 1]],
+	"hospital_deposito": [["soro", 4, 1, 1], ["bandagem", 5, 2, 4], ["kit_medico", 2, 1, 1], ["mascara_gas", 2, 1, 1], ["trapos", 3, 1, 4],
+		["pastilha", 3, 2, 8], ["carvao", 3, 1, 1], ["agua", 3, 1, 1], ["tala", 2, 1, 1], ["lanterna", 1, 1, 1]],
+	"ambulancia": [["kit_medico", 5, 1, 1], ["bandagem", 5, 1, 4], ["soro", 4, 1, 1], ["tala", 4, 1, 1], ["analgesico", 3, 1, 1],
+		["antibiotico", 2, 1, 1], ["lanterna", 2, 1, 1], ["radio", 1, 1, 1]],
+	"militar_med": [["kit_medico", 5, 1, 1], ["soro", 4, 1, 1], ["antibiotico", 4, 1, 1], ["bandagem", 4, 2, 4], ["mascara_gas", 3, 1, 1],
+		["m4", 2, 1, 1], ["pente_stanag", 3, 1, 1], ["mun_556", 4, 15, 45], ["mp5", 2, 1, 1], ["pente_mp5", 3, 1, 1], ["mun_9mm", 4, 15, 40],
+		["colete", 2, 1, 1], ["capacete", 2, 1, 1], ["mochila_combate", 1, 1, 1], ["agua", 2, 1, 1], ["feijao", 2, 1, 1]],
+	"super_mercearia": [["feijao", 6, 1, 1], ["atum", 5, 1, 1], ["sardinha", 5, 1, 1], ["pessego", 5, 1, 1], ["biscoito", 5, 1, 1],
+		["leite_condensado", 4, 1, 1], ["barra", 4, 1, 3], ["salgadinho", 4, 1, 1], ["suco", 2, 1, 1]],
+	"super_bebidas": [["agua", 7, 1, 1], ["refrigerante", 6, 1, 1], ["suco", 5, 1, 1]],
+	"super_hortifruti": [["maca", 6, 1, 1], ["pessego", 3, 1, 1], ["agua", 1, 1, 1]],
+	"super_congelados": [["atum", 3, 1, 1], ["sardinha", 3, 1, 1], ["suco", 3, 1, 1], ["agua", 3, 1, 1], ["refrigerante", 2, 1, 1]],
+	"super_utilidades": [["pilha", 5, 1, 1], ["lanterna", 4, 1, 1], ["lanterna_cabeca", 2, 1, 1], ["isqueiro", 4, 1, 1], ["fita", 4, 1, 1],
+		["corda", 3, 1, 1], ["kit_costura", 3, 1, 1], ["radio", 2, 1, 1], ["faca", 2, 1, 1], ["taco", 2, 1, 1], ["mochila_escolar", 2, 1, 1],
+		["pochete", 2, 1, 1], ["capa_chuva", 2, 1, 1], ["gorro", 2, 1, 1], ["camiseta", 2, 1, 1], ["moletom", 1, 1, 1]],
+	"super_higiene": [["bandagem", 5, 1, 3], ["analgesico", 4, 1, 1], ["vitaminas", 4, 1, 1], ["trapos", 3, 1, 3], ["pastilha", 3, 2, 6],
+		["carvao", 3, 1, 1], ["antibiotico", 1, 1, 1], ["kit_medico", 1, 1, 1]],
+	"super_estoque": [["feijao", 5, 1, 1], ["atum", 4, 1, 1], ["agua", 5, 1, 1], ["refrigerante", 3, 1, 1], ["biscoito", 3, 1, 1],
+		["leite_condensado", 3, 1, 1], ["barra", 3, 2, 4], ["fita", 2, 1, 1], ["corda", 2, 1, 1], ["pilha", 2, 1, 1], ["mochila_trilha", 1, 1, 1],
+		["lanterna", 1, 1, 1], ["pe_de_cabra", 1, 1, 1]],
+	"cofre": [["dinheiro", 8, 10, 60], ["pistola", 3, 1, 1], ["pente_pistola", 3, 1, 1], ["mun_9mm", 4, 8, 24], ["celular", 2, 1, 1],
+		["radio", 2, 1, 1], ["lanterna", 1, 1, 1]],
+	"armazem_carga": [["jaqueta", 3, 1, 1], ["calca", 3, 1, 1], ["capa_chuva", 3, 1, 1], ["moletom", 3, 1, 1], ["gorro", 2, 1, 1],
+		["mochila_trilha", 2, 1, 1], ["mochila_escolar", 2, 1, 1], ["pochete", 2, 1, 1], ["corda", 4, 1, 1], ["fita", 4, 1, 1], ["lanterna", 3, 1, 1],
+		["pilha", 3, 1, 1], ["radio", 2, 1, 1], ["kit_costura", 2, 1, 1], ["feijao", 3, 1, 1], ["agua", 3, 1, 1], ["atum", 2, 1, 1],
+		["pe_de_cabra", 2, 1, 1], ["machado", 1, 1, 1], ["facao", 1, 1, 1], ["mascara_gas", 1, 1, 1], ["lanterna_cabeca", 1, 1, 1]],
+	"armazem_conteiner": [["rifle_caca", 3, 1, 1], ["mun_308", 4, 4, 15], ["luneta", 2, 1, 1], ["espingarda", 3, 1, 1], ["mun_12", 4, 6, 18],
+		["ak", 2, 1, 1], ["pente_ak", 2, 1, 1], ["mun_762", 3, 10, 30], ["colete", 2, 1, 1], ["mochila_combate", 2, 1, 1], ["kit_armas", 3, 1, 1],
+		["mira_acog", 1, 1, 1], ["silenciador", 1, 1, 1], ["capacete", 1, 1, 1], ["jaqueta", 2, 1, 1], ["calca", 2, 1, 1]],
+	"armazem_escritorio": [["dinheiro", 3, 2, 15], ["revista", 2, 1, 1], ["celular", 2, 1, 1], ["radio", 2, 1, 1], ["lanterna", 2, 1, 1],
+		["pilha", 2, 1, 1], ["mun_9mm", 2, 4, 12], ["pente_pistola", 1, 1, 1], ["refrigerante", 2, 1, 1], ["barra", 2, 1, 2]],
+	"armazem_seguranca": [["pistola", 4, 1, 1], ["pente_pistola", 4, 1, 1], ["mun_9mm", 5, 10, 30], ["espingarda", 2, 1, 1], ["mun_12", 3, 6, 16],
+		["colete_policia", 2, 1, 1], ["lanterna", 3, 1, 1], ["radio", 2, 1, 1], ["mp5", 1, 1, 1], ["pente_mp5", 1, 1, 1]],
 	# itens soltos no chão dos prédios, por uso do prédio
 	"chao_residencial": [["galho", 2, 1, 3], ["garrafa_vazia", 2, 1, 1], ["revista", 3, 1, 1], ["trapos", 3, 1, 2], ["barra", 2, 1, 1], ["refrigerante", 2, 1, 1], ["agua", 1, 1, 1],
 		["cano", 1, 1, 1], ["faca", 1, 1, 1], ["mun_9mm", 1, 3, 8], ["celular", 2, 1, 1], ["ursinho", 1, 1, 1]],
 	"chao_comercio": [["garrafa_vazia", 3, 1, 1], ["galho", 1, 1, 2], ["refrigerante", 3, 1, 1], ["salgadinho", 3, 1, 1], ["biscoito", 2, 1, 1], ["dinheiro", 3, 1, 8],
 		["revista", 2, 1, 1], ["cano", 2, 1, 1], ["trapos", 2, 1, 2], ["agua", 1, 1, 1]],
 	"chao_saude": [["bandagem", 4, 1, 2], ["trapos", 3, 1, 2], ["analgesico", 2, 1, 1], ["soro", 1, 1, 1], ["agua", 1, 1, 1]],
+	"chao_posto": [["garrafa_vazia", 3, 1, 1], ["refrigerante", 3, 1, 1], ["salgadinho", 2, 1, 1], ["trapos", 3, 1, 2], ["cano", 2, 1, 1],
+		["isqueiro", 2, 1, 1], ["fita", 1, 1, 1], ["dinheiro", 2, 1, 6], ["mun_9mm", 1, 3, 8], ["pe_de_cabra", 1, 1, 1]],
+	"chao_hospital": [["bandagem", 5, 1, 2], ["trapos", 3, 1, 2], ["analgesico", 3, 1, 1], ["soro", 2, 1, 1], ["antibiotico", 1, 1, 1],
+		["tala", 1, 1, 1], ["mun_556", 1, 5, 15], ["mun_9mm", 1, 4, 10], ["agua", 1, 1, 1]],
+	"chao_super": [["garrafa_vazia", 2, 1, 1], ["refrigerante", 3, 1, 1], ["biscoito", 3, 1, 1], ["salgadinho", 3, 1, 1], ["feijao", 2, 1, 1],
+		["agua", 2, 1, 1], ["dinheiro", 2, 1, 8], ["trapos", 2, 1, 2], ["taco", 1, 1, 1]],
+	"chao_armazem": [["trapos", 3, 1, 3], ["corda", 2, 1, 1], ["fita", 2, 1, 1], ["cano", 3, 1, 1], ["pe_de_cabra", 1, 1, 1], ["galho", 2, 1, 2],
+		["agua", 1, 1, 1], ["mun_762", 1, 4, 12], ["mun_12", 1, 3, 8]],
 	"chao_policia": [["mun_9mm", 4, 3, 12], ["mun_12", 2, 2, 6], ["pente_pistola", 1, 1, 1], ["bandagem", 2, 1, 1],
 		["lanterna", 2, 1, 1], ["cano", 1, 1, 1]],
 }
 const CHAO_DO_USO := {"residencial": "chao_residencial", "loja": "chao_comercio", "mercado": "chao_comercio",
 	"restaurante": "chao_comercio", "escritorio": "chao_comercio", "farmacia": "chao_saude", "clinica": "chao_saude",
-	"delegacia": "chao_policia"}
+	"delegacia": "chao_policia", "posto": "chao_posto", "hospital": "chao_hospital", "supermercado": "chao_super", "armazem": "chao_armazem"}
 
 var semente := 1234                   # muda o loot do mundo inteiro (salvo junto com o jogo)
 var _grades := {}                     # id do lugar -> grade (já sorteada; o que o jogador mexeu fica aqui)
@@ -86,7 +149,7 @@ var pegos := {}
 var grade_criada := Callable()
 
 # grade de um móvel / porta-malas (sorteada na 1ª vez, depois a mesma)
-func grade(id: String, tabela: String, nome: String, tam: Vector2i):
+func grade(id: String, tabela: String, nome: String, tam: Vector2i, vazio := CHANCE_VAZIO):
 	if _grades.has(id):
 		var g0 = _grades[id]
 		g0.nome = nome
@@ -94,7 +157,7 @@ func grade(id: String, tabela: String, nome: String, tam: Vector2i):
 	var g = GradeCls.new(tam.x, tam.y, nome, null)
 	var r := RandomNumberGenerator.new()
 	r.seed = hash(id) ^ semente
-	if r.randf() >= CHANCE_VAZIO:
+	if r.randf() >= vazio:
 		var n := r.randi_range(1, clampi(tam.x * tam.y / 5, 1, 4))
 		for k in n:
 			# só sorteia o que cabe no móvel; se a grade já estiver cheia, tenta outro item (até 3 vezes)
@@ -215,7 +278,7 @@ func _estado_inicial(it, r: RandomNumberGenerator) -> void:
 # ---------- salvar ----------
 # abertos = interiores.abertos (índice -> nó): o que está no chão dos prédios abertos AGORA também é salvo
 # (sem mexer nos itens, que continuam no mundo)
-func salvar(abertos := {}) -> Dictionary:
+func salvar(abertos := {}, locais_abertos := {}) -> Dictionary:
 	var g := {}
 	for id in _grades:
 		var lista := []
@@ -239,6 +302,16 @@ func salvar(abertos := {}) -> Dictionary:
 				var p: Vector3 = no.global_transform.affine_inverse() * n.global_position
 				lista.append([n.item.para_dict(), p.x, p.y, p.z])
 		c["p%d" % i] = lista
+	for i in locais_abertos:                   # 0.68: chão dos locais especiais abertos ("L3")
+		var no: Node3D = locais_abertos[i]
+		if not is_instance_valid(no):
+			continue
+		var lista := []
+		for n in no.get_children():
+			if n.is_in_group("itens_chao") and not n.is_queued_for_deletion() and n.item != null:
+				var p: Vector3 = no.global_transform.affine_inverse() * n.global_position
+				lista.append([n.item.para_dict(), p.x, p.y, p.z])
+		c["L%d" % i] = lista
 	return {"semente": semente, "grades": g, "chao": c}
 
 func carregar(d: Dictionary) -> void:
