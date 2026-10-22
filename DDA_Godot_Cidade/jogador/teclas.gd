@@ -132,6 +132,15 @@ static func definir(acao: String, novo: String) -> Dictionary:
 	_mapa[acao] = novo
 	return trocadas()
 
+# qual ação usa este código ("" se nenhuma)
+static func acao_da_tecla(c: String) -> String:
+	if _mapa.is_empty():
+		carregar({})
+	for a in ACOES:
+		if _mapa.get(a[0]) == c:
+			return a[0]
+	return ""
+
 static func trocadas() -> Dictionary:
 	var d := {}
 	for a in ACOES:

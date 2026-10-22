@@ -58,6 +58,8 @@ var inventario: Node = null         # inventario/inventario.gd
 var sobrevivencia: Node = null      # jogador/sobrevivencia.gd (vida, sangue, fome, sede, temperatura)
 var mundo = null                    # colisao_mundo.gd (altura do chão e raio dos tiros)
 var ativo := true
+var _agachar_ant := -1               # 0.64: agachar "segurar": último estado da tecla (só age quando muda)
+var _t_agachar := 0.0
 var _som_passo: AudioStreamPlayer
 var _som_voz: AudioStreamPlayer
 var _dist_passo := 0.0
@@ -70,10 +72,10 @@ var mirando := false                # mira (aproxima a câmera); ligada pelo bot
 var atirando := false               # atirou há pouco / arma erguida (o corpo vira para a mira)
 var cam_yaw := 0.0                  # 0 = olhando para -Z
 var cam_pit := 0.05                 # positivo = câmera acima olhando para baixo (-0,35 a 1,15)
-var mira_pitch := 0.0
+var mira_pitch := 0.0                # 0.61: para onde a arma aponta (+ = para cima), a partir da câmera (camada_mira.gd)
 var sens_mouse := 1.0                # 0.62: Opções › Teclado e mouse (menu/aplicar_opcoes.gd)
 var sens_mouse_mira := 0.7
-var inverter_y_mouse := false                # 0.61: para onde a arma aponta (+ = para cima), a partir da câmera (camada_mira.gd)
+var inverter_y_mouse := false       # 0.62: eixo vertical do mouse invertido
 var vel_horizontal := 0.0
 var fator_agachado := 0.0           # 0 em pé · 1 agachado (suavizado, para a câmera)
 var fator_mira := 0.0
@@ -348,9 +350,13 @@ func _physics_process(delta: float) -> void:
 		quer_pular = controles.pulando()
 		armas.gatilho = controles.atirando()
 		# agachar no modo "segurar" (Opções › Teclado e mouse): segue a tecla
+		# (embaixo de teto baixo não dá para levantar: tenta de novo a cada 0,25 s, não todo quadro)
 		var seg: int = controles.agachar_segurado()
-		if seg >= 0 and (seg == 1) != agachado and not morto:
+		_t_agachar -= delta
+		if seg >= 0 and (seg == 1) != agachado and not morto and (seg != _agachar_ant or _t_agachar <= 0.0):
+			_t_agachar = 0.25
 			alternar_agachar()
+		_agachar_ant = seg
 	if morto or (sobrevivencia != null and (sobrevivencia.desmaiado > 0.0 or sobrevivencia.parado > 0.0)):
 		ix = 0.0
 		iy = 0.0

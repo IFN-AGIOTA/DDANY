@@ -50,7 +50,10 @@ func alternar() -> void:
 func _process(delta: float) -> void:
 	if not ativo or controles == null:
 		return
-	var olhar: Vector2 = controles.consumir_olhar() + controles.consumir_olhar_mouse() * 0.6   # mouse preso (modo PC)
+	var rm: Vector2 = controles.consumir_olhar_mouse() * 0.6 * float(jogador.sens_mouse)   # mouse preso (modo PC)
+	if jogador.inverter_y_mouse:
+		rm.y = -rm.y                         # 0.64: sensibilidade e eixo invertido do mouse valem no voo também
+	var olhar: Vector2 = controles.consumir_olhar() + rm
 	yaw -= olhar.x * 0.004
 	pitch = clampf(pitch - olhar.y * 0.004, -1.5, 1.5)
 	var mv: Vector2 = controles.vetor_mover()

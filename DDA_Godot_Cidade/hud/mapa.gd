@@ -474,7 +474,7 @@ func _entrada_mapa(e: InputEvent) -> void:
 			fechar_mapa()
 			get_viewport().set_input_as_handled()
 			return
-		if Teclas.casa(k, "inventario") or k.keycode == KEY_I:
+		if Teclas.casa(k, "inventario"):
 			fechar_mapa()               # deixa a tecla seguir: o inventário abre
 			return
 		match k.keycode:

@@ -33,7 +33,6 @@ signal inventario_pedido
 signal pegar_pedido
 signal pausa_pedida
 signal selecionou(id: String)      # modo de edição da HUD: botão tocado
-signal modo_mudou(pc: bool)        # 0.62: trocou entre teclado/mouse e toque
 
 const UI := preload("res://menu/ui.gd")
 const Teclas := preload("res://jogador/teclas.gd")
@@ -79,6 +78,7 @@ var mouse_solto := false           # alguém precisa do cursor (roda de armas ab
 var _capturado := false
 var _olhar_mouse := Vector2.ZERO
 var _correr_on := false
+var _moveu := false                # 0.64: andou desde que ligou a corrida "alternar" (parar desliga)
 var _dica: Label
 
 func _ready() -> void:
@@ -246,6 +246,8 @@ func set_bloqueado(v: bool) -> void:
 	bloqueado = v
 	info.visible = mostrar_info and not v
 	_soltar_tudo()
+	_correr_on = false                     # 0.64: fechar o inventário não volta correndo sozinho
+	_moveu = false
 
 var _toque_roda := -1               # dedo que está segurando o ARMA (roda de armas)
 
@@ -266,7 +268,7 @@ func _unhandled_input(e: InputEvent) -> void:
 		_editar(e)
 		return
 	if bloqueado:
-		if e is InputEventKey and e.pressed and not e.echo and (Teclas.casa(e, "inventario") or e.keycode == KEY_I):
+		if e is InputEventKey and e.pressed and not e.echo and Teclas.casa(e, "inventario"):
 			inventario_pedido.emit()
 		return
 	# modo PC: o "toque" que o mouse imita não conta (o mouse é lido direto, preso na tela)
@@ -341,9 +343,10 @@ func _tecla(e: InputEvent) -> void:
 	for a in Teclas.ACOES:
 		if Teclas.casa(k, a[0]):
 			_acao(a[0], k.pressed)
-	if k.pressed and k.keycode == KEY_P:
+	# P (pausa) e F11 (tela cheia) são fixos, mas só valem se nenhuma ação usa a tecla (0.64)
+	if k.pressed and k.keycode == KEY_P and Teclas.acao_da_tecla("k:%d" % KEY_P) == "":
 		pausa_pedida.emit()
-	if k.pressed and k.keycode == KEY_F11:
+	if k.pressed and k.keycode == KEY_F11 and Teclas.acao_da_tecla("k:%d" % KEY_F11) == "":
 		var w := DisplayServer.window_get_mode()
 		var cheia := w == DisplayServer.WINDOW_MODE_FULLSCREEN or w == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if cheia else DisplayServer.WINDOW_MODE_FULLSCREEN)
@@ -430,11 +433,10 @@ func _definir_modo(pc: bool) -> void:
 	modo_pc = pc
 	_soltar_tudo()
 	_correr_on = false
-	modo_mudou.emit(pc)
 
 # descobre o que o jogador está usando: teclado/mouse de verdade -> PC · dedo na tela -> toque
 func _input(e: InputEvent) -> void:
-	if preferencia == "auto" and not editando:
+	if preferencia == "auto" and not editando and not _digitando():
 		if e is InputEventKey and e.pressed and not e.echo and e.keycode not in [KEY_BACK, KEY_VOLUMEUP, KEY_VOLUMEDOWN, KEY_UNKNOWN]:
 			# no celular, tecla só conta se for de jogo (o teclado da tela, digitando um nome, não vira "PC")
 			if not OS.has_feature("mobile") or _tecla_de_jogo(e):
@@ -445,8 +447,13 @@ func _input(e: InputEvent) -> void:
 		elif e is InputEventScreenTouch and e.pressed and e.device != InputEvent.DEVICE_ID_EMULATION:
 			_definir_modo(false)
 	# mouse preso: o movimento é o olhar
-	if modo_pc and _capturado and e is InputEventMouseMotion and not bloqueado:
+	if modo_pc and _capturado and e is InputEventMouseMotion and not bloqueado and visible:
 		_olhar_mouse += (e as InputEventMouseMotion).relative
+
+# 0.64: digitando num campo de texto (nome, código da sala...): as letras não trocam o modo de controle
+func _digitando() -> bool:
+	var f := get_viewport().gui_get_focus_owner()
+	return f is LineEdit or f is TextEdit
 
 func _tecla_de_jogo(e: InputEvent) -> bool:
 	for a in Teclas.ACOES:
@@ -455,7 +462,8 @@ func _tecla_de_jogo(e: InputEvent) -> bool:
 	return false
 
 func _quer_mouse_preso() -> bool:
-	return modo_pc and not bloqueado and not editando and not mouse_solto and is_inside_tree() \
+	# 0.64: controles escondidos (cena de cinema etc.) soltam o mouse, para clicar nos botões da tela
+	return modo_pc and visible and not bloqueado and not editando and not mouse_solto and is_inside_tree() \
 		and not get_tree().paused and DisplayServer.window_is_focused() and process_mode != Node.PROCESS_MODE_DISABLED
 
 # pausa (o jogo para e este nó também): solta o mouse na hora para clicar no menu
@@ -558,14 +566,21 @@ func vetor_mover() -> Vector2:
 	if bloqueado:
 		return Vector2.ZERO
 	var k := Vector2.ZERO
-	if Teclas.apertado("frente") or Input.is_key_pressed(KEY_UP): k.y += 1.0
-	if Teclas.apertado("tras") or Input.is_key_pressed(KEY_DOWN): k.y -= 1.0
-	if Teclas.apertado("direita") or Input.is_key_pressed(KEY_RIGHT): k.x += 1.0
-	if Teclas.apertado("esquerda") or Input.is_key_pressed(KEY_LEFT): k.x -= 1.0
+	if Teclas.apertado("frente") or _seta(KEY_UP): k.y += 1.0
+	if Teclas.apertado("tras") or _seta(KEY_DOWN): k.y -= 1.0
+	if Teclas.apertado("direita") or _seta(KEY_RIGHT): k.x += 1.0
+	if Teclas.apertado("esquerda") or _seta(KEY_LEFT): k.x -= 1.0
 	if k != Vector2.ZERO:
+		_moveu = true
 		return k.normalized()
-	_correr_on = false                     # parou: a corrida "alternar" desliga
+	if _moveu:                             # parou depois de andar: a corrida "alternar" desliga
+		_correr_on = false                 # (ligar parado e depois andar continua valendo)
+		_moveu = false
 	return mover
+
+# setas andam também, a não ser que a seta tenha virado tecla de outra ação (0.64)
+func _seta(tecla: Key) -> bool:
+	return Input.is_key_pressed(tecla) and Teclas.acao_da_tecla("k:%d" % tecla) == ""
 
 # PC: segurar a tecla "andar" (Alt) anda (caminhada) em vez de trotar
 func andando_pc() -> bool:

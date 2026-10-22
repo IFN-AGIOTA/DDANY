@@ -11,6 +11,7 @@ signal menu_principal
 signal chamar_amigos                 # host no multijogador: abre a sala (menu/tela_multijogador.gd)
 
 const UI := preload("res://menu/ui.gd")
+const Teclas := preload("res://jogador/teclas.gd")
 
 var estatisticas: Array = []          # [[rótulo, valor], ...] preenchido por quem abre (main.gd)
 var _raiz: Control
@@ -118,6 +119,8 @@ func atualizar(est: Array) -> void:
 	_montar()
 
 func _unhandled_input(e: InputEvent) -> void:
-	if visible and e is InputEventKey and e.pressed and not e.echo and (e.keycode == KEY_ESCAPE or e.keycode == KEY_P):
+	# fecha com Esc, com a tecla de pausa configurada ou com P (se o P não for de outra ação)
+	if visible and e is InputEventKey and e.pressed and not e.echo and (e.keycode == KEY_ESCAPE or Teclas.casa(e, "pausa") \
+			or (e.keycode == KEY_P and Teclas.acao_da_tecla("k:%d" % KEY_P) == "")):
 		get_viewport().set_input_as_handled()
 		continuar.emit()

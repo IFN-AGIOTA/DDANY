@@ -39,6 +39,30 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.64 · CONSERTOS DO TECLADO E MOUSE (revisão da 0.62)
+  · Digitando num campo de texto (nome, código da sala...) no celular, as letras não trocam mais para o modo PC
+    nem escondem os botões de toque.
+  · Controles escondidos (cenas de cinema, para a história nova) soltam o mouse e não acumulam o movimento dele:
+    a câmera não dá mais "pulo" ao voltar e dá para clicar nos botões da tela.
+  · P (pausa), F11 (tela cheia) e as SETAS continuam fixos, mas só valem se nenhuma ação estiver usando a tecla
+    (ex.: "pegar" no P não abre mais a pausa junto). A pausa fecha também com a tecla de pausa configurada.
+  · A tecla I não faz mais nada (o inventário é a tecla configurada, Tab por padrão): antes ela fechava o mapa
+    e o inventário mas não abria.
+  · Correr no modo "alternar": ligar parado e depois andar agora corre; abrir/fechar o inventário desliga a corrida.
+  · Agachar no modo "segurar" embaixo de teto baixo: tenta levantar a cada 0,25 s (antes era todo quadro).
+  · Câmera livre (V): usa a sensibilidade do mouse e o eixo vertical invertido das Opções.
+  · ARQUIVOS MEXIDOS:
+      jogador/controles.gd ...... _digitando(), mouse só preso com os controles visíveis, P/F11/setas só se livres
+                                  (_seta), corrida "alternar" (_moveu), sem o sinal modo_mudou (ninguém usava),
+                                  tecla I tirada do inventário
+      jogador/teclas.gd ......... acao_da_tecla() (qual ação usa uma tecla)
+      jogador/jogador.gd ........ agachar "segurar" só age quando a tecla muda (ou a cada 0,25 s); comentários de
+                                  mira_pitch e inverter_y_mouse no lugar certo
+      jogador/camera_voo.gd ..... sensibilidade e eixo invertido do mouse
+      menu/pausa.gd ............. fecha com a tecla de pausa configurada
+      hud/mapa.gd ............... tecla I tirada
+      menu/config.gd ............ versão 0.64
+
 ATUALIZAÇÃO 0.63 · MODO HISTÓRIA APAGADO (vai ser refeito do zero)
   · O modo história (Ato 1: abertura, prólogo, capítulos 1 a 3, cutscenes e os companheiros Greg e Mavie) foi
     APAGADO por inteiro para ser refeito. No menu principal o botão "História" continua, apagadinho, com
@@ -875,7 +899,7 @@ TOQUE (vários dedos ao mesmo tempo)
   (aparece perto de um item) · INV · II (pausa) · VOO (câmera livre: SOBE / DESCE / VEL).
 PC
 - WASD andar · Shift correr · Espaço pular · C ou Ctrl agachar · F atirar/golpear · botão direito mirar ·
-  R recarregar · 1..8 atalhos · rodinha troca arma · Tab ou I inventário · E pegar · M mapa · P/Esc pausa ·
+  R recarregar · 1..8 atalhos · rodinha troca arma · Tab inventário · E pegar · M mapa · P/Esc pausa ·
   V voo (Q/E sobem/descem) · mouse arrastando na metade direita = olhar · Enter/Espaço avança as falas.
 
 -----------------------------------------------------------------------------------------------------
