@@ -1,4 +1,4 @@
-ÍCONES DA HUD (hud/icones/*.png)
+ÍCONES DA HUD (hud/icones/*.png) E DOS BOTÕES DE TOQUE (hud/icones/botoes.png)
 
 Do pacote "Game-icons.net" (https://game-icons.net), licença Creative Commons Attribution 3.0 (CC BY 3.0,
 https://creativecommons.org/licenses/by/3.0/). Baixados em SVG branco com fundo transparente e convertidos para
@@ -22,4 +22,37 @@ perna.png         broken-bone                   Lorc
 pente.png         machine-gun-magazine          Delapouite
 emperrada.png     spanner                       Lorc
 
-Lorc: https://lorcblog.blogspot.com · Delapouite: https://delapouite.com
+BOTÕES DE TOQUE (0.67): hud/icones/botoes.png é uma folha com todos os ícones (8 colunas de 128 px, ícone de
+112 px no meio de cada quadro), feita por ferramentas/gerar_icones_botoes.gd a partir dos SVG brancos do pacote
+(sem outras mudanças; a seta do SOBE é a do DESCE girada).
+
+botão / arma      ícone original                autor
+PAUSA (II)        pause-button                  Guard13007
+INV               backpack                      Delapouite
+VOO               delivery-drone                Delapouite
+CAM               video-camera                  Delapouite
+MIRAR             crosshair                     Delapouite
+ATIRAR            bullets                       Lorc
+PULAR             jump-across                   Delapouite
+CORRER            run                           Lorc
+AGACHAR           kneeling                      Delapouite
+RECARREGAR        reload-gun-barrel             Delapouite
+PEGAR             open-palm                     Skoll
+SOBE / DESCE      plain-arrow                   Delapouite
+VEL               speedometer                   Delapouite
+pistola           pistol-gun                    John Colburn
+M4 e AKM          ak47                          Skoll
+MP5               uzi                           Delapouite
+espingarda        sawed-off-shotgun             Delapouite
+rifle de caça     winchester-rifle              Skoll
+faca              bowie-knife                   Lorc
+taco              baseball-bat                  Delapouite
+machado           sharp-axe                     Delapouite
+cano              lead-pipe                     Delapouite
+lança             stone-spear                   Lorc
+facão             machete                       Lorc
+pé de cabra       crowbar                       Delapouite
+punhos            fist                          Lorc
+
+Lorc: https://lorcblog.blogspot.com · Delapouite: https://delapouite.com · Skoll, John Colburn e Guard13007:
+autores listados em https://game-icons.net/about.html

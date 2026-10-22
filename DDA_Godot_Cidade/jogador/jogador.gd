@@ -494,6 +494,7 @@ func _process(delta: float) -> void:
 		controles.indicadores["AGACHAR"] = agachado
 		controles.indicadores["MIRAR"] = mirando
 		controles.textos["ARMA"] = armas.WDEF[armas.atual]["nome"] if armas.atual != "" else "ARMA"
+		controles.icones["ARMA"] = armas.atual                    # 0.67: ícone da arma no botão (faca, pistola...)
 	fator_agachado = lerpf(fator_agachado, 1.0 if agachado else 0.0, minf(1.0, delta * 10.0))
 	fator_mira = lerpf(fator_mira, 1.0 if mirando else 0.0, minf(1.0, delta * 12.0))
 	# câmera: pivô na altura do ombro, gira com a mira (+ recuo da arma); o braço (SpringArm3D) bate nos prédios

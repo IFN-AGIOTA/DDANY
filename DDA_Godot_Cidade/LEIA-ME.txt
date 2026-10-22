@@ -39,6 +39,29 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.67 · ÍCONES NOS BOTÕES DE TOQUE (game-icons.net)
+  · Os botões de toque trocaram o TEXTO por ÍCONES do pacote game-icons.net (CC BY 3.0, crédito na tela de
+    Créditos e em hud/icones/LICENCA.txt), com uma sombra leve para ler em cima de qualquer fundo:
+      - II = pausa · INV = mochila · VOO = drone · CAM = câmera de vídeo;
+      - MIRAR = mira · ATIRAR = balas · PULAR = pessoa pulando · CORRER = pessoa correndo ·
+        AGACHAR = pessoa ajoelhada · RECARREGAR = cano de arma sendo carregado;
+      - ARMA = o desenho da arma que está na mão (pistola, fuzil, MP5, espingarda, rifle, faca, taco,
+        machado, cano, lança, facão, pé de cabra ou punhos) com o nome pequeno embaixo;
+      - PEGAR = mão aberta com a sigla do item embaixo;
+      - câmera livre: SOBE = seta para cima · DESCE = seta para baixo · VEL = velocímetro.
+  · Cores, tamanhos, posições, editor da HUD e o modo teclado e mouse continuam iguais.
+  · Todos os ícones ficam numa imagem só (hud/icones/botoes.png): no celular continua sendo um desenho só.
+  · ARQUIVOS MEXIDOS:
+      hud/icones/botoes.png ............... NOVO (folha com os 28 ícones dos botões e armas)
+      ferramentas/gerar_icones_botoes.gd .. NOVO (gera a folha a partir dos SVG do game-icons.net)
+      jogador/controles.gd ................ desenha os ícones (ICONES, icones, FOLHA_ICONES em _desenhar)
+      jogador/jogador.gd .................. manda o id da arma na mão para o ícone do botão ARMA
+      hud/icones/LICENCA.txt .............. lista dos ícones dos botões e autores
+      menu/creditos.gd .................... crédito dos ícones dos botões
+      menu/config.gd ...................... versão 0.67
+  · PUBLICADA: atualizacoes/pacote_0.67.pck (acumulado desde o APK 0.48, 567 arquivos) + manifesto; os celulares
+    baixam sozinhos. servidor_windows.zip (raiz) refeito na 0.67 (o servidor precisa da mesma versão dos celulares).
+
 ATUALIZAÇÃO 0.66 · ÍCONES DA HUD BAIXADOS (game-icons.net)
   · A HUD agora usa ícones de verdade do pacote game-icons.net (Lorc e Delapouite, licença CC BY 3.0, crédito na
     tela de Créditos e em hud/icones/LICENCA.txt). São brancos e o jogo pinta com a cor do estado, como antes:
@@ -1021,6 +1044,8 @@ TOQUE (vários dedos ao mesmo tempo)
 - ATIRAR / GOLPEAR (segurar; dá para arrastar o dedo em cima dele para mirar enquanto atira) · CORRER (segurar)
 - PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga) · RECARREGAR · ARMA (troca coldre/ombro) · PEGAR
   (aparece perto de um item) · INV · II (pausa) · CAM (1ª/3ª pessoa) · VOO (câmera livre: SOBE / DESCE / VEL).
+- Desde a 0.67 os botões mostram ÍCONES (balas = atirar, mira = mirar, mochila = INV, drone = VOO...); o botão
+  ARMA mostra o desenho da arma na mão.
 PC (todas as teclas trocáveis em Opções › Teclado e mouse)
 - WASD/setas andar · Shift correr · Alt andar devagar · Espaço pular · C agachar · mouse esquerdo atirar/golpear ·
   mouse direito mirar · R recarregar · X ou rodinha trocar arma · Q roda do inventário rápido · 1..8 atalhos ·
@@ -1130,6 +1155,8 @@ PERSONAGEM (pasta jogador/)
 - aparência e animação do soldado ...... jogador/soldado.gd (poses das armas e do corpo a corpo)
 - modelo 3D próprio (.glb) e animações . jogador/animador_modelo.gd + modelos/LEIA-ME.txt
 - botões de toque, joystick, teclado ... jogador/controles.gd (posições e cores no _ready)
+- ícones dos botões de toque ........... hud/icones/botoes.png (feito por ferramentas/gerar_icones_botoes.gd;
+                                          a ordem é ICONES em jogador/controles.gd)
 - câmera livre (VOO) .................. jogador/camera_voo.gd
 
 ARMAS (pasta armas/)

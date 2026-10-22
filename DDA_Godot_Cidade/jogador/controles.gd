@@ -38,6 +38,12 @@ signal selecionou(id: String)      # modo de edição da HUD: botão tocado
 const UI := preload("res://menu/ui.gd")
 const Teclas := preload("res://jogador/teclas.gd")
 const RAIO_STICK := 90.0
+# 0.67: ÍCONES dos botões (game-icons.net, CC BY 3.0): todos numa folha só (hud/icones/botoes.png, 8 colunas de 128 px,
+# feita por ferramentas/gerar_icones_botoes.gd; a ordem aqui é a mesma de lá). Botão sem ícone mostra o texto.
+const FOLHA_ICONES := preload("res://hud/icones/botoes.png")
+const ICONES := ["PAUSA", "INV", "VOO", "CAM", "MIRAR", "ATIRAR", "PULAR", "CORRER", "AGACHAR", "RECARREGAR", "PEGAR",
+	"SOBE", "DESCE", "VEL", "pistola", "m4", "mp5", "ak", "espingarda", "rifle_caca", "faca", "taco", "machado", "cano",
+	"lanca", "facao", "pe_de_cabra", "punhos"]
 
 # OTIMIZAÇÃO: botões = disco e anel em TEXTURA (menu/ui.gd circulo/aro): todos os discos = 1 chamada de desenho,
 # todos os anéis = 1, textos = 1 (draw_circle/draw_arc eram 2 chamadas por botão).
@@ -48,6 +54,7 @@ var info: Label
 var indicadores := {}              # id -> bool (botão aceso: AGACHAR/MIRAR ligados)
 var textos := {}                   # id -> texto trocado em tempo real (ex.: nome da arma)
 var ocultos := {}                  # id -> true para esconder o botão (ex.: PEGAR sem item perto)
+var icones := {}                   # id -> ícone trocado em tempo real (ARMA: o id da arma na mão, ex.: "faca")
 var bloqueado := false             # inventário aberto
 var mostrar_info := true           # contador de FPS (Opções › Vídeo e som)
 var editando := false              # Opções › HUD › Personalizar HUD: arrastar os botões
@@ -88,6 +95,7 @@ func _ready() -> void:
 	_visual = Control.new()
 	_visual.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_visual.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_visual.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS    # ícones e círculos diminuídos sem serrilhar
 	_visual.draw.connect(_desenhar)
 	add_child(_visual)
 	info = Label.new()
@@ -513,7 +521,7 @@ func _process(_dt: float) -> void:
 		_ler_botoes_mouse()
 	_visual.visible = editando or not modo_pc
 	_atualizar_dica()
-	var a := indicadores.hash() ^ (textos.hash() * 31) ^ (ocultos.hash() * 17) ^ (1 if bloqueado else 0) ^ (2 if editando else 0)
+	var a := indicadores.hash() ^ (textos.hash() * 31) ^ (ocultos.hash() * 17) ^ (icones.hash() * 7) ^ (1 if bloqueado else 0) ^ (2 if editando else 0)
 	if a != _assinatura:
 		_assinatura = a
 		_visual.queue_redraw()
@@ -542,6 +550,21 @@ func _desenhar() -> void:
 		for e in textos_b:
 			var sel: bool = e[0]["id"] == selecionado
 			_visual.draw_arc(e[1], e[2] + 6.0, 0.0, TAU, 48, Color(1.0, 0.71, 0.0) if sel else Color(1, 1, 1, 0.75), 5.0 if sel else 2.0)
+	# ícones: sombra + ícone, todos da mesma folha (um lote só)
+	var com_icone := {}
+	for e in textos_b:
+		var b: Dictionary = e[0]
+		var i := ICONES.find(str(icones.get(b["id"], b["id"])))
+		if i < 0:
+			continue
+		com_icone[b["id"]] = true
+		var r: float = e[2]
+		var lado := r * (1.05 if b["id"] in ["ARMA", "PEGAR"] else (1.2 if r >= 36.0 else 1.35))   # ARMA/PEGAR têm o nome embaixo
+		var c: Vector2 = e[1] - Vector2(0.0, r * 0.12 if b["id"] in ["ARMA", "PEGAR"] else 0.0)
+		var orig := Rect2((i % 8) * 128.0, (i / 8) * 128.0, 128.0, 128.0)
+		var dest := Rect2(c - Vector2(lado, lado) * 0.5, Vector2(lado, lado))
+		_visual.draw_texture_rect_region(FOLHA_ICONES, Rect2(dest.position + Vector2(1.5, 1.5), dest.size), orig, Color(0, 0, 0, 0.55))
+		_visual.draw_texture_rect_region(FOLHA_ICONES, dest, orig, Color(1, 1, 1, 0.95))
 	if _toque_mover != -1:
 		var d := (_atual - _origem).limit_length(RAIO_STICK)
 		_visual.draw_circle(_origem, RAIO_STICK, Color(1, 1, 1, 0.10))
@@ -552,6 +575,18 @@ func _desenhar() -> void:
 		var c: Vector2 = e[1]
 		var r: float = e[2]
 		var txt: String = textos.get(b["id"], b["txt"])
+		if com_icone.has(b["id"]):
+			if b["id"] != "ARMA" and b["id"] != "PEGAR":
+				continue
+			# ARMA: nome da arma · PEGAR: sigla do item ("PEGAR\nM4A1" -> "M4A1"), pequeno embaixo do ícone
+			var nome: String = txt.split("\n")[-1]
+			var tn := 13 if r >= 40 else 11
+			var wn := _fonte.get_string_size(nome, HORIZONTAL_ALIGNMENT_LEFT, -1, tn).x
+			if wn > r * 1.6:
+				tn = maxi(8, int(tn * r * 1.6 / wn))
+				wn = _fonte.get_string_size(nome, HORIZONTAL_ALIGNMENT_LEFT, -1, tn).x
+			_visual.draw_string(_fonte, Vector2(c.x - wn * 0.5, c.y + r * 0.72), nome, HORIZONTAL_ALIGNMENT_LEFT, -1, tn, Color(1, 1, 1, 0.95))
+			continue
 		# texto em até 2 linhas, diminuindo até caber dentro do círculo (ex.: "RECARREGAR", "PEGAR\nM4A1")
 		var linhas := txt.split("\n")
 		var tam := 20 if r >= 55 else 17
