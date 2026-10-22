@@ -70,7 +70,7 @@ func _initialize():
 			lib.remove_animation(c[1])
 		lib.add_animation(c[1], a)
 	var saida := OS.get_environment("SAIDA")
-	print("salvou ", ResourceSaver.save(lib, saida), " ", lib.get_animation_list().size(), " animações -> ", saida)
+	print("salvou ", ResourceSaver.save(lib, saida, ResourceSaver.FLAG_COMPRESS), " ", lib.get_animation_list().size(), " animações -> ", saida)
 	quit()
 
 # ---------- BVH ----------

@@ -445,17 +445,6 @@ func _montar_locais() -> void:
 	neon.emission_energy_multiplier = 4.0
 	_caixa(Vector3(-1540.0, 72.0, -123.0), Vector3(9.0, 0.8, 0.3), neon)
 
-func _predio_perto(x: float, z: float) -> Array:
-	var P: PackedFloat32Array = main.cidade.predios
-	var melhor: Array = []
-	var dmin := 1e9
-	for idx in main.mundo.predios_perto(x, z, 60.0):
-		var d := Vector2(P[idx * 5] - x, P[idx * 5 + 1] - z).length()
-		if d < dmin:
-			dmin = d
-			melhor = [P[idx * 5], P[idx * 5 + 1], P[idx * 5 + 2], P[idx * 5 + 3], P[idx * 5 + 4]]
-	return melhor
-
 func _arvore(p: Vector3, folha: Material, tronco: Material, esc: float) -> void:
 	var t := MeshInstance3D.new()
 	var c := CylinderMesh.new()

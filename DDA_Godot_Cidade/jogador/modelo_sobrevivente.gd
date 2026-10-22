@@ -269,9 +269,6 @@ func _malha_roupa(tipo: String) -> ArrayMesh:
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS if nb == 8 else 0)
 	return m
 
-func cor_da_regiao(r: int) -> Color:
-	return _cores[r] if r < _cores.size() else Color.BLACK
-
 # ---------- peças 3D presas aos ossos ----------
 func _peca(chave: String, item) -> void:
 	var id: String = item.id if item != null else ""

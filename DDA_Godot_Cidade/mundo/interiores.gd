@@ -66,13 +66,6 @@ static func _dist_ret(p: Vector2, inf: Dictionary) -> float:
 	var dz := maxf(absf(p.y - float(inf["z"])) - float(inf["sz"]) * 0.5, 0.0)
 	return sqrt(dx * dx + dz * dz)
 
-# prédio i aberto e o ponto p (x, z) dentro dele? (usado por outros sistemas: chuva, infectados)
-func dentro_de_aberto(p: Vector2) -> bool:
-	for i in abertos:
-		if _dist_ret(p, cidade.predio_info[i]) <= 0.0:
-			return true
-	return false
-
 func _process(dt: float) -> void:
 	if not ativo or jogador == null or cidade == null:
 		return

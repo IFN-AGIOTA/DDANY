@@ -39,6 +39,23 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.60 · MIRA ANDANDO CONSERTADA + LIMPEZA
+  · Conserto (relatado no teste): mirando e ANDANDO (qualquer toque no joystick) os braços voltavam a balançar e a
+    pistola descia, parecendo que "a mira parava de funcionar". Agora, mirando com a pistola andando (de frente, de
+    lado, de costas, devagar) ou AGACHADO, os braços seguram a pistola esticada na frente, na altura dos olhos
+    (postura mira_pistola, gerada por ferramentas/gerar_portes.gd). Parado continua a animação "mirar".
+  · jogador/camada_postura.gd: troca de postura misturando uma na outra (porte -> mira sem os braços caírem no
+    meio); a mira fica na direção do corpo todo (não do peito), então aponta para a frente mesmo curvado.
+  · Limpeza:
+      - jogador/sobrevivente/animacoes.res: tiradas 46 animações que o jogo não usava (sobras dos pacotes KayKit/
+        Quaternius) e o arquivo agora é comprimido: 8,1 MB -> 1,9 MB (download e APK menores). Se um dia precisar
+        de alguma, ferramentas/retarget_kaykit.gd gera de novo.
+      - funções sem uso removidas: historia/abertura.gd (_predio_perto), hud/mapa.gd (tem_objetivo,
+        alternar_mapa), inimigos/vagos.gd (quantos_perseguindo, alvo_ativos), jogador/modelo_sobrevivente.gd
+        (cor_da_regiao), mundo/colisao_mundo.gd (predios_ativos), mundo/interiores.gd (dentro_de_aberto),
+        jogador/animador_modelo.gd (3 consultas que ninguém chamava).
+      - abrir_portas.zip (raiz) apagado: o abrir_portas.bat já vai dentro do servidor_windows.zip.
+
 ATUALIZAÇÃO 0.59 · ANIMAÇÕES NOVAS: CAMINHADAS, ARMAS NA MÃO, COMER/BEBER/REMÉDIO
   · Fontes: o Mixamo exige conta da Adobe e a licença dele não deixa publicar os arquivos de animação (o projeto
     fica no GitHub público), então usei CAPTURA DE MOVIMENTO REAL da Carnegie Mellon University (CMU Graphics Lab
@@ -60,7 +77,7 @@ ATUALIZAÇÃO 0.59 · ANIMAÇÕES NOVAS: CAMINHADAS, ARMAS NA MÃO, COMER/BEBER/
   · USAR ITEM (inventario/inventario.gd _anim_de_uso): comida = COMER (leva à boca e morde) · bebida = BEBER
     (ergue a garrafa e inclina a cabeça) · analgésico/vitaminas/antibiótico/carvão = TOMAR REMÉDIO · atadura,
     trapos, kit, tala, soro = curativo (usar_item). Andando, só a parte de cima faz a ação.
-  · jogador/sobrevivente/animacoes.res: +11 animações (99 no total). Licença em jogador/sobrevivente/LICENCA.txt e
+  · jogador/sobrevivente/animacoes.res: +11 animações. Licença em jogador/sobrevivente/LICENCA.txt e
     nos Créditos.
   · Submetralhadora: o jogo ainda não tem; quando entrar, usa a mesma pegada dos fuzis.
 

@@ -152,13 +152,6 @@ func alvo_para(v: Node3D) -> Node3D:
 			melhor = c
 	return melhor if melhor != null else jogador
 
-func quantos_perseguindo() -> int:
-	var n := 0
-	for v in vivos:
-		if v.esta_cacando():
-			n += 1
-	return n
-
 # barulho em qualquer lugar (tiros do jogador; outros sistemas podem chamar também: alarme de carro, etc.)
 func barulho(posicao: Vector3, raio: float, do_jogador := true) -> void:
 	for v in vivos:
@@ -226,12 +219,7 @@ func _process(dt: float) -> void:
 				_musica.adicionar_tensao(dt * 0.06)
 				break
 
-# quantos Vagos vivos queremos agora (mais perto do centro)
-func alvo_ativos() -> int:
-	if jogador == null:
-		return 0
-	return alvo_ativos_em(jogador.global_position)
-
+# quantos Vagos vivos queremos agora em volta de pj (mais perto do centro, mais deles)
 func alvo_ativos_em(pj: Vector3) -> int:
 	var dc: Vector2 = Vector2(pj.x, pj.z) - cidade.DOWNTOWN
 	var perto := clampf(1.0 - dc.length() / RAIO_CENTRO, 0.0, 1.0)

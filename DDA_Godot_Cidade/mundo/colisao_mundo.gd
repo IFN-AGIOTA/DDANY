@@ -415,9 +415,6 @@ func _atualizar_predios(p: Vector2, forcado: bool) -> void:
 		_pool[k].position = Vector3(0.0, -10000.0, 0.0)
 	_pool_uso = n
 
-func predios_ativos() -> int:
-	return _pool_uso
-
 # RAIO pelos dados da cidade (prédios e chão de qualquer distância, sem física). Usado pelos tiros:
 # a colisão de física só existe perto do jogador, mas a M4 alcança 260 m.
 # devolve {hit, pos, n, dist, predio}

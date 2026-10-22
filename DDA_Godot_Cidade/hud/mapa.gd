@@ -201,9 +201,6 @@ func limpar_objetivo() -> void:
 	_obj = false
 	_obj_nome = ""
 
-func tem_objetivo() -> bool:
-	return _obj
-
 func abrir_mapa() -> void:
 	if aberto or controles == null:
 		return
@@ -227,12 +224,6 @@ func fechar_mapa(restaurar := true) -> void:
 	_camada.visible = false
 	if restaurar and controles != null:
 		controles.set_bloqueado(false)
-
-func alternar_mapa() -> void:
-	if aberto:
-		fechar_mapa()
-	elif _pode_abrir():
-		abrir_mapa()
 
 func _pode_abrir() -> bool:
 	return controles != null and jogador != null and visivel_hud and not bool(controles.bloqueado) and not bool(controles.editando)

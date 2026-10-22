@@ -67,6 +67,8 @@ const REF := {"andar_lento": 0.95, "andar_normal": 1.6, "andar_rapido": 1.9, "tr
 # arma na mão -> postura dos braços (jogador/camada_postura.gd); fuzis ficam com o IK (jogador/ik_fuzil.gd)
 const POSTURAS := {"pistola": "porte_pistola", "faca": "porte_branca", "facao": "porte_branca",
 	"pe_de_cabra": "porte_branca", "taco": "porte_2m", "machado": "porte_2m", "cano": "porte_2m", "lanca": "porte_2m"}
+# 0.60: mirando ANDANDO (parado usa a animação "mirar" do corpo todo): os braços apontam a arma para a frente
+const POSTURAS_MIRA := {"pistola": "mira_pistola"}
 var _postura = null           # jogador/camada_postura.gd do modelo
 var _mancando := false
 var _arma := ""
@@ -96,17 +98,6 @@ func configurar(modelo: Node3D) -> void:
 # use depois de mudar nomes_exatos ou palavras
 func atualizar_mapa() -> void:
 	_resolver()
-
-func tem_animation_player() -> bool:
-	return _ap != null
-
-func animacoes_disponiveis() -> PackedStringArray:
-	if _ap == null:
-		return PackedStringArray()
-	return _ap.get_animation_list()
-
-func animacao_do_estado(e: int) -> String:
-	return str(_achadas.get(e, ""))
 
 # decide, para cada estado, qual animação do modelo usar
 func _resolver() -> void:
@@ -304,14 +295,22 @@ func _andar_por_velocidade(v: float) -> String:
 		op = "trote"
 	return op if _tem(op) and REF.has(op) else ""
 
-# braços segurando a arma do jeito dela (some ao mirar, atirar, golpear, recarregar, correr ou numa ação)
+# braços segurando a arma do jeito dela (porte) ou apontando (mira andando). Sem postura ao golpear, recarregar,
+# correr, no ar ou numa ação (comer, pegar...)
 func _atualizar_postura(e: int, vel_h: float, mirando: bool, atirando: bool) -> void:
 	if _postura == null:
 		return
-	var nome: String = POSTURAS.get(_arma, "")
-	var ligado := nome != "" and not mirando and not atirando and not _arma_ocupada and not tocando_acao() \
-		and e in [Estado.PARADO, Estado.ANDAR, Estado.CORRER, Estado.AGACHADO, Estado.ANDAR_AGACHADO] and vel_h < 5.0
-	_postura.usar(nome, ligado)
+	var nome := ""
+	var livre := not _arma_ocupada and not tocando_acao() and vel_h < 5.0 \
+		and e in [Estado.PARADO, Estado.ANDAR, Estado.CORRER, Estado.AGACHADO, Estado.ANDAR_AGACHADO, Estado.MIRAR, Estado.ATIRAR]
+	if livre:
+		if mirando or atirando:
+			# parado mirando, a animação "mirar"/"atirar" do corpo todo já aponta a arma
+			if vel_h > VEL_ANDAR or e in [Estado.AGACHADO, Estado.ANDAR_AGACHADO]:
+				nome = POSTURAS_MIRA.get(_arma, "")
+		else:
+			nome = POSTURAS.get(_arma, "")
+	_postura.usar(nome, nome != "")
 
 # AÇÃO por cima do estado: recarregar, golpe, pegar, comer... (nome da animação, velocidade).
 # corpo_todo: parado usa o corpo todo; andando/correndo vira camada só na parte de cima.

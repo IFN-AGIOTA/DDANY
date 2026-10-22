@@ -1,5 +1,5 @@
 extends SceneTree
-# GERA AS POSTURAS DE "PORTE" DAS ARMAS (como o personagem SEGURA cada tipo de arma andando/parado, sem mirar) e
+# GERA AS POSTURAS DE "PORTE" DAS ARMAS (como o personagem SEGURA cada tipo de arma andando/parado; e a mira andando) e
 # junta em jogador/sobrevivente/animacoes.res. O jogo toca essas posturas só nos BRAÇOS, por cima de qualquer
 # caminhada (jogador/camada_postura.gd), então valem para parado, andando, agachado e trotando.
 # Cada postura parte da animação "parado" (respiração) e põe a ARMA num lugar do corpo (PORTES: empunhadura,
@@ -22,6 +22,10 @@ const PORTES := {
 	"porte_pistola": {"mao": Vector3(-0.05, 1.1, 0.24), "cano": Vector3(0.1, -0.6, 0.8), "cima": Vector3(0, 1, 0.3),
 		"polo_d": Vector3(-0.9, -0.6, -0.4), "esq": Vector3(0.0, 1.07, 0.21), "polo_e": Vector3(0.9, -0.7, -0.3),
 		"palma_esq": Vector3(-0.7, 0.5, 0.0), "dedos_esq": Vector3(-0.3, -0.5, 0.8)},
+	# 0.60 · pistola MIRANDO andando: nas duas mãos, esticada na frente, na altura dos olhos, cano reto para a frente
+	"mira_pistola": {"mao": Vector3(-0.05, 1.39, 0.33), "cano": Vector3(0.0, 0.0, 1.0), "cima": Vector3(0, 1, 0),
+		"polo_d": Vector3(-0.9, -0.7, -0.2), "esq": Vector3(-0.01, 1.37, 0.30), "polo_e": Vector3(0.9, -0.8, -0.2),
+		"palma_esq": Vector3(-0.7, 0.4, 0.0), "dedos_esq": Vector3(-0.3, -0.3, 0.9)},
 	# faca/facão/pé de cabra: uma mão, na frente do quadril direito, ponta para a frente e um pouco para cima
 	"porte_branca": {"mao": Vector3(-0.18, 1.02, 0.22), "cano": Vector3(0.15, 0.3, 0.94), "cima": Vector3(0, 1, 0),
 		"polo_d": Vector3(-0.9, -0.5, -0.3)},
@@ -128,7 +132,7 @@ func _initialize():
 		lib.add_animation(nome, novo)
 		print(nome, " (", snappedf(novo.length, 0.01), " s)")
 	var saida := OS.get_environment("SAIDA")
-	print("salvou ", ResourceSaver.save(lib, saida), " -> ", saida)
+	print("salvou ", ResourceSaver.save(lib, saida, ResourceSaver.FLAG_COMPRESS), " -> ", saida)
 	quit()
 
 func _rot_local(a: Animation, b: int, t: float) -> Quaternion:
