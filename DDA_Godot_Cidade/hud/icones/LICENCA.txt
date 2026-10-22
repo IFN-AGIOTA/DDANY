@@ -1,0 +1,25 @@
+ÍCONES DA HUD (hud/icones/*.png)
+
+Do pacote "Game-icons.net" (https://game-icons.net), licença Creative Commons Attribution 3.0 (CC BY 3.0,
+https://creativecommons.org/licenses/by/3.0/). Baixados em SVG branco com fundo transparente e convertidos para
+PNG de 128x128 (sem outras mudanças; a cor vem do jogo).
+
+arquivo           ícone original                autor
+vida.png          heart-beats                   Delapouite
+sangue.png        drop                          Lorc
+fome.png          knife-fork                    Lorc
+sede.png          water-bottle                  Delapouite
+temperatura.png   thermometer-scale             Lorc
+molhado.png       droplets                      Lorc
+estamina.png      lungs                         Delapouite
+gripe.png         virus                         Lorc
+colera.png        stomach                       Delapouite
+intoxicacao.png   vomiting                      Lorc
+gas.png           poison-gas                    Lorc
+infeccao.png      biohazard                     Lorc
+sangramento.png   bleeding-wound                Lorc
+perna.png         broken-bone                   Lorc
+pente.png         machine-gun-magazine          Delapouite
+emperrada.png     spanner                       Lorc
+
+Lorc: https://lorcblog.blogspot.com · Delapouite: https://delapouite.com

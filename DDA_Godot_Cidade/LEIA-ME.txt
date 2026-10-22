@@ -39,6 +39,24 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.66 · ÍCONES DA HUD BAIXADOS (game-icons.net)
+  · A HUD agora usa ícones de verdade do pacote game-icons.net (Lorc e Delapouite, licença CC BY 3.0, crédito na
+    tela de Créditos e em hud/icones/LICENCA.txt). São brancos e o jogo pinta com a cor do estado, como antes:
+      - vida = coração com batimento · sangue = gota · fome = garfo e faca · sede = garrafa · temperatura =
+        termômetro · molhado = gotas;
+      - estamina = pulmões;
+      - doenças: gripe = vírus · cólera = estômago · intoxicação = vômito · gás = nuvem de gás com caveira;
+      - infecção = símbolo de risco biológico · sangramento = ferida sangrando (um por sangramento, até 3) ·
+        perna quebrada = osso quebrado;
+      - munição = pente (apagado = sem pente) · emperrada = chave inglesa vermelha.
+  · Se faltar a imagem de algum ícone, o jogo usa o desenho antigo, feito por código.
+  · ARQUIVOS MEXIDOS:
+      hud/icones/*.png (16 ícones) e hud/icones/LICENCA.txt ... NOVOS
+      hud/hud_status.gd ........ desenha os ícones das imagens (_tex, _icone)
+      armas/hud_combate.gd ..... ícone do pente e da arma emperrada
+      menu/creditos.gd ......... crédito dos ícones
+      menu/config.gd ........... versão 0.66
+
 ATUALIZAÇÃO 0.65 · DAYZ DE VERDADE: HUD MÍNIMA, 1ª PESSOA, PILHAS, BOLSOS, INFECTADOS ESPERTOS E EVENTOS
   · HUD MÍNIMA (hud/hud_status.gd, armas/hud_combate.gd, hud/mapa.gd): sem números e sem barras. Só ícones que
     mudam de cor (branco bem · amarelo · laranja · vermelho piscando):
@@ -1140,6 +1158,7 @@ INVENTÁRIO / ITENS (pasta inventario/)
 
 HUD (pasta hud/)
 - ícones de status, tela vermelha ..... hud/hud_status.gd (0.65: só ícones, sem barras nem textos)
+- imagens dos ícones da HUD ........... hud/icones/*.png (game-icons.net, CC BY 3.0; trocar = mesmo nome de arquivo)
 - mira e ícone do pente ............... armas/hud_combate.gd
 - minimapa, mapa grande, bússola ...... hud/mapa.gd
 

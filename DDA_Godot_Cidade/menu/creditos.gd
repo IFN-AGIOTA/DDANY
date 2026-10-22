@@ -90,6 +90,8 @@ const RECURSOS := [
 		"CC0 1.0 (domínio público)", "kenney.nl/assets/impact-sounds"],
 	["Sirene ao longe", "aquinn · \"Sirens and Alarm Noise\"",
 		"CC0 1.0 (domínio público)", "opengameart.org/content/sirens-and-alarm-noise"],
+	["Ícones da HUD (vida, sangue, fome, sede, temperatura, pulmões, doenças, pente...)", "Lorc e Delapouite · game-icons.net",
+		"CC BY 3.0", "game-icons.net"],
 	["Fonte Roboto Condensed", "Christian Robertson · Google Fonts (Copyright 2011 Google Inc.)",
 		"SIL Open Font License 1.1", "fonts.google.com/specimen/Roboto+Condensed"],
 	["Motor do jogo: Godot Engine 4.3", "Juan Linietsky, Ariel Manzur e colaboradores da Godot",

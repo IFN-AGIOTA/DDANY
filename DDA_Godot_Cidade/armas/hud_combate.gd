@@ -5,6 +5,7 @@ extends CanvasLayer
 # Sem arma nas mãos o painel de munição some.
 # Tamanhos em "vh" (1% da altura da tela), como no HTML.
 
+const HudStatus := preload("res://hud/hud_status.gd")
 const AMBAR := Color(1.0, 0.71, 0.0)
 const VERMELHO := Color(0.88, 0.02, 0.0)
 
@@ -126,7 +127,7 @@ func _desenhar() -> void:
 		_texto(a[0], c.x, vs.y * 0.3 + k * 5.0 * vh, int(4.0 * vh), Color(1, 1, 1, minf(1.0, float(a[1]) * 3.0)))
 	# ----- munição (0.65 · HUD mínima): um ícone de PENTE que muda de cor, sem números nem barra -----
 	# branco = cheio · amarelo · laranja · vermelho piscando = vazio · âmbar pulsando = recarregando
-	# X vermelho = TRAVADA · contorno tracejado = SEM PENTE
+	# chave inglesa vermelha (ou X) = EMPERRADA · pente apagado (ou só contorno) = SEM PENTE
 	if armas.atual == "" or armas.eh_corpo():
 		return
 	var A: Dictionary = armas.estado()
@@ -145,6 +146,16 @@ func _desenhar() -> void:
 	var r := Rect2(c.x - lado * 0.5, vs.y - 3.0 * vh - lado, lado, lado)
 	_tela.draw_rect(r, Color(0, 0, 0, 0.42))
 	var sem_pente: bool = armas.item_arma != null and armas.item_arma.usa_pente() != "" and armas.item_arma.pente_id == ""
+	var tp := HudStatus._tex("pente")                  # 0.66: ícone do pacote game-icons.net (hud/icones)
+	if tp != null:
+		var ai := r.grow(-lado * 0.14)
+		var c_i := Color(cor, 0.3) if sem_pente else cor
+		_tela.draw_texture_rect(tp, Rect2(ai.position + Vector2(1.5, 1.5), ai.size), false, Color(0, 0, 0, 0.6))
+		_tela.draw_texture_rect(tp, ai, false, c_i)
+		var te := HudStatus._tex("emperrada")
+		if armas.travada and te != null:
+			_tela.draw_texture_rect(te, Rect2(r.position + r.size * 0.45, r.size * 0.6), false, VERMELHO)
+		return
 	var pr := Rect2(r.position.x + lado * 0.36, r.position.y + lado * 0.14, lado * 0.28, lado * 0.72)
 	if sem_pente:
 		_tela.draw_rect(pr, cor, false, maxf(1.0, 0.25 * vh))

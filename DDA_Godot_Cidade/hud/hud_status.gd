@@ -224,33 +224,43 @@ func _desenhar() -> void:
 			continue
 		var r := Rect2(x, y, lado, lado)
 		_tela.draw_rect(r, Color(0, 0, 0, 0.42))
-		_icone("doenca", r.grow(-lado * 0.2), Color(d[2], pisca))
+		_icone(d[0] if _tex(d[0]) != null else "doenca", r.grow(-lado * 0.16), Color(d[2], pisca))
 		x += lado + 0.8 * u
+	# perna quebrada, sangramentos (um ícone por sangramento, até 3) e infecção: ícones soltos, sem fundo
+	var extras: Array = []
 	if sv.perna_quebrada:
-		var c0 := Vector2(x + lado * 0.45, y + lado * 0.5)
-		var oss := Color(0.95, 0.9, 0.8, pisca)
-		_tela.draw_line(c0 + Vector2(-lado * 0.25, lado * 0.25), c0 + Vector2(lado * 0.25, -lado * 0.25), oss, maxf(3.0, lado * 0.12))
-		_tela.draw_circle(c0 + Vector2(-lado * 0.28, lado * 0.2), lado * 0.08, oss)
-		_tela.draw_circle(c0 + Vector2(lado * 0.2, -lado * 0.28), lado * 0.08, oss)
-		x += lado * 0.9
-	# sangramentos e infecção
-	for k in mini(sv.sangramentos, 5):
-		_gota(Vector2(x + lado * 0.3 + k * lado * 0.42, y + lado * 0.5), lado * 0.22, Color(VERMELHO, pisca))
-	if sv.sangramentos > 0:
-		x += lado * 0.42 * mini(sv.sangramentos, 5) + lado * 0.4
+		extras.append(["perna", Color(0.95, 0.9, 0.8, pisca)])
+	for k in mini(sv.sangramentos, 3):
+		extras.append(["sangramento", Color(VERMELHO, pisca)])
 	if sv.infeccao > 0.0:
-		var c := Vector2(x + lado * 0.4, y + lado * 0.5)
-		var s2 := lado * 0.28
-		var verde := Color(0.4, 0.9, 0.35)
-		_tela.draw_rect(Rect2(c.x - s2 * 0.3, c.y - s2, s2 * 0.6, s2 * 2.0), verde)
-		_tela.draw_rect(Rect2(c.x - s2, c.y - s2 * 0.3, s2 * 2.0, s2 * 0.6), verde)
+		extras.append(["infeccao", Color(0.4, 0.9, 0.35)])
+	for e in extras:
+		var r := Rect2(x, y, lado, lado)
+		_tela.draw_rect(r, Color(0, 0, 0, 0.42))
+		_icone(e[0], r.grow(-lado * 0.16), e[1])
+		x += lado + 0.8 * u
 
 func _gota(c: Vector2, r: float, cor: Color) -> void:
 	_tela.draw_circle(c + Vector2(0, r * 0.3), r * 0.75, cor)
 	_tela.draw_colored_polygon(PackedVector2Array([c + Vector2(-r * 0.7, r * 0.1), c + Vector2(r * 0.7, r * 0.1), c + Vector2(0, -r * 1.1)]), cor)
 
-# ícones desenhados por código (área a)
+# ÍCONES (0.66): imagens do pacote game-icons.net (CC BY 3.0, créditos em hud/icones/LICENCA.txt e na tela de
+# Créditos), brancas, pintadas com a cor do estado. Sem a imagem, usa o desenho por código de antes.
+const PASTA_ICONES := "res://hud/icones/"
+static var _texturas := {}
+
+static func _tex(nome: String) -> Texture2D:
+	if not _texturas.has(nome):
+		var c := PASTA_ICONES + nome + ".png"
+		_texturas[nome] = load(c) if ResourceLoader.exists(c) else null
+	return _texturas[nome]
+
 func _icone(nome: String, a: Rect2, cor: Color) -> void:
+	var t := _tex(nome)
+	if t != null:
+		_tela.draw_texture_rect(t, Rect2(a.position + Vector2(1.5, 1.5), a.size), false, Color(0, 0, 0, 0.6 * cor.a))   # sombra
+		_tela.draw_texture_rect(t, a, false, cor)
+		return
 	var p := a.position
 	var w := a.size.x
 	var h := a.size.y
