@@ -52,6 +52,8 @@ var perto_fogo := false
 var _t_tosse := 20.0
 var _t_vomito := 40.0
 var parado := 0.0                    # segundos sem se mexer (vômito)
+var gas := 0.0                       # 0.65: 0..1 quanto gás tóxico tem aqui (mundo/eventos.gd: ZONA CONTAMINADA)
+var _t_gas := 0.0
 
 var jogador: CharacterBody3D
 var clima = null                     # mundo/clima.gd (temperatura do ar, chuva); pode ser null
@@ -246,9 +248,11 @@ func aplicar(efeito: Dictionary, _id: String, estado := 1.0) -> String:
 	if efeito.has("reparo_arma"):
 		var inv = inventario()
 		var arma = inv.slots.get("maos") if inv != null else null
-		if arma == null or not arma.eh_arma() or arma.estado >= 0.99:
-			return "SEGURE A ARMA NAS MÃOS"
-		arma.estado = minf(1.0, arma.estado + float(efeito["reparo_arma"]))
+		if arma == null or not arma.eh_arma():
+			return "SEGURE A ARMA NAS MÃOS (OU SOLTE O KIT EM CIMA DELA)"
+		if arma.estado >= 0.99 and not inv._arma_travada(arma):
+			return "A ARMA JÁ ESTÁ PERFEITA"
+		inv.limpar_arma(arma, false)          # 0.65: também destrava
 		return ""
 	if efeito.has("reparo_roupa"):
 		var inv = inventario()
@@ -288,7 +292,27 @@ func aplicar(efeito: Dictionary, _id: String, estado := 1.0) -> String:
 	return ""
 
 # ---------- estamina, perna, desmaio e doenças ----------
+# ZONA CONTAMINADA (0.65): sem MÁSCARA DE GÁS (slot ROSTO) o gás tira vida e faz tossir (os infectados ouvem).
+# Com a máscara, nada acontece, mas o FILTRO gasta (a máscara perde estado); arruinada não protege mais.
+func _gas(dt: float, p: Vector3) -> void:
+	if gas <= 0.0:
+		return
+	var inv = inventario()
+	var masc = inv.slots.get("rosto") if inv != null else null
+	if masc != null and masc.id == "mascara_gas" and masc.estado > 0.0:
+		masc.estado = maxf(0.0, masc.estado - dt * 0.0012 * gas)     # filtro novo dura ~14 min dentro do gás
+		if masc.estado <= 0.0:
+			aviso.emit("O FILTRO DA MÁSCARA ACABOU")
+		return
+	_dano(dt * 2.2 * gas, "gás tóxico")
+	_t_gas -= dt
+	if _t_gas <= 0.0:
+		_t_gas = randf_range(2.5, 5.0)
+		tossiu.emit(p)
+		aviso.emit("*TOSSE* · GÁS TÓXICO!")
+
 func _condicoes(dt: float, v: float, p: Vector3) -> void:
+	_gas(dt, p)
 	var peso: float = _peso()
 	estamina_max = clampf(100.0 - maxf(0.0, peso - 18.0) * 2.5, 35.0, 100.0)
 	if v > 5.0:
@@ -384,6 +408,7 @@ func reiniciar() -> void:
 	gripe = 0.0
 	colera = 0.0
 	intoxicacao = 0.0
+	gas = 0.0
 
 func salvar() -> Dictionary:
 	return {"vida": vida, "sangue": sangue, "fome": fome, "sede": sede, "temperatura": temperatura, "molhado": molhado,

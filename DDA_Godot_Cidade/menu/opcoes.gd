@@ -342,8 +342,8 @@ func _atualizar_gyro() -> void:
 
 func _pagina_camera(v: float) -> Control:
 	var g := _grade(v)
-	_secao(g, "Câmera", _seg("cam", [[0, "Traseira"], [1, "Cockpit"]],
-		{1: "A câmera cockpit (1ª pessoa) ainda não existe na versão Godot (fica salva)."}))
+	_secao(g, "Câmera", _seg("cam", [[0, "3ª pessoa"], [1, "1ª pessoa"]],
+		{1: "Câmera nos olhos: você vê os braços, a arma e as pernas. Troque no jogo com F ou o botão CAM."}))
 	_secao(g, "Distância (câmera traseira)", _seg("dist", [["near", "Perto"], ["mid", "Média"], ["far", "Longe"]]))
 	_secao(g, "Posição do personagem", _seg("pos", [["left", "Esquerda"], ["center", "Centro"], ["right", "Direita"]]))
 	var d := UI.Deslizante.new(36, 70, 1, int(Config.valor("fov")))

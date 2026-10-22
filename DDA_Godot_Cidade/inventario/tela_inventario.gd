@@ -16,7 +16,7 @@ const Visual := preload("res://inventario/visual.gd")
 const Boneco3D := preload("res://inventario/boneco_3d.gd")
 
 const AMBAR := Color(1.0, 0.71, 0.0)
-const SLOTS_ESQ := ["cabeca", "camisa", "colete", "cinto"]
+const SLOTS_ESQ := ["cabeca", "rosto", "camisa", "colete", "cinto"]   # 0.65: ROSTO (máscara de gás)
 const SLOTS_DIR := ["ombro", "coldre", "calca", "mochila"]
 
 var inv = null                 # inventario.gd
@@ -314,7 +314,7 @@ func _montar_meio() -> Control:
 	var corpo := HBoxContainer.new()
 	corpo.mouse_filter = Control.MOUSE_FILTER_PASS
 	corpo.add_theme_constant_override("separation", 6)
-	var tam_slot := Vector2(cel * 1.75, cel * 1.55)
+	var tam_slot := Vector2(cel * 1.75, cel * 1.24)       # 0.65: 5 encaixes na coluna da esquerda
 	var ve := VBoxContainer.new()
 	var vd := VBoxContainer.new()
 	for col in [[ve, SLOTS_ESQ], [vd, SLOTS_DIR]]:
@@ -416,14 +416,15 @@ func _montar_colunas() -> void:
 	for c in inv.conteineres_perto():
 		_secao(_col_esq, c.nome, c.grade)
 	for it in no_chao:
-		if it.conteudo != null:
-			_secao(_col_esq, it.nome() + " · NO CHÃO", it.conteudo)
+		for g in it.grades():                     # 0.65: um quadro por bolso
+			_secao(_col_esq, g.nome + " · NO CHÃO", g)
 	# direita: roupas e mochila vestidas
 	var n := 0
 	for s in inv.CONTEINERES_CORPO:
 		var it = inv.slots[s]
 		if it != null and it.conteudo != null:
-			_secao(_col_dir, it.nome(), it.conteudo)
+			for g in it.grades():                 # 0.65: cada bolso da roupa com a sua grade
+				_secao(_col_dir, g.nome, g)
 			n += 1
 	if n == 0:
 		_col_dir.add_child(_rotulo("Vista roupas ou uma mochila para carregar coisas.", 14, Color(1, 1, 1, 0.5)))
@@ -472,6 +473,11 @@ func _atualizar_meio() -> void:
 				linhas += "  ·  " + String(Itens.def(it.acessorios[k]).get("sigla", ""))
 		elif it.eh_pente():
 			linhas += "  ·  %d/%d balas" % [it.municao, it.capacidade()]
+		if d.get("pilha", false) or it.id == "pilha":      # 0.65: carga da pilha em palavras
+			var c: float = it.carga
+			linhas += "  ·  " + ("SEM PILHA" if c < 0.0 else ("PILHA VAZIA" if c <= 0.0 else ("PILHA FRACA" if c < 0.25 else ("PILHA PELA METADE" if c < 0.6 else "PILHA CHEIA"))))
+			if it.id == "radio" and it.ligado:
+				linhas += "  ·  LIGADO"
 		linhas += "  ·  %.2f kg  ·  " % it.peso()
 		_info.text = linhas
 		_info.text += Itens.nome_estado(it.estado) + "\n" + String(d.get("desc", ""))

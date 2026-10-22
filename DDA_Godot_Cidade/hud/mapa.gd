@@ -5,7 +5,7 @@ extends CanvasLayer
 #  - MAPA (tecla M ou tocar no minimapa): tela cheia. Arrastar = mover · pinça / rodinha / + − = zoom ·
 #    ⌖ = voltar para o jogador (e seguir) · X / M / Esc = fechar. O jogo NÃO pausa; os controles ficam
 #    bloqueados (controles.set_bloqueado) enquanto ele está aberto.
-#  - BÚSSOLA (faixa no alto, no meio): N, NE, L, SE, S, SO, O, NO, marcas a cada 15° e o rumo em graus.
+#  - BÚSSOLA (faixa no alto, no meio): N, NE, L, SE, S, SO, O, NO, marcas a cada 15° (0.65: sem o número dos graus).
 #  - OBJETIVO: definir_objetivo(Vector2(x, z), "nome") / limpar_objetivo(). Aparece no minimapa (seta na borda
 #    quando está fora do alcance), no mapa e na bússola, com a distância em metros.
 # A IMAGEM DO MAPA é desenhada UMA vez ao começar (SubViewport: água, terra, parques, calçadas, ruas e prédios
@@ -755,35 +755,19 @@ func _desenhar_bussola(vs: Vector2, vh: float) -> void:
 			ci.draw_rect(Rect2(pts[i].x - w * 0.5, pts[i].y, w, pts[i + 1].y - pts[i].y), _tr_cor[k][i / 2])
 		_tr_pts[k] = PackedVector2Array()
 		_tr_cor[k] = PackedColorArray()
-	# objetivo na bússola
-	var caixa_txt := Rect2()
-	var txt_rumo := "%d°" % (int(round(graus)) % 360)
-	var tr := int(2.1 * vh)
-	var wr := _largura(txt_rumo, tr) + 1.6 * vh
-	caixa_txt = Rect2(cx - wr * 0.5, y0 + alt + 0.4 * vh, wr, 2.9 * vh)
+	# objetivo na bússola (0.65 · HUD mínima: só o losango, sem graus nem distância)
 	if _obj:
 		var dg := wrapf(_rumo_para(_obj_pos) - graus, -180.0, 180.0)
-		var dist := _metros((_obj_pos - _pos).length())
-		var td := int(1.9 * vh)
 		if absf(dg) <= VAO_BUSSOLA * 0.92:
-			var x := cx + dg * ppg
-			_losango(ci, Vector2(x, y0 + alt * 0.12), 1.15 * vh, COR_OBJETIVO)
-			var wd := _largura(dist, td)
-			var px := x
-			if absf(px - cx) < (wr + wd) * 0.5 + 0.6 * vh:
-				px = cx + signf(dg if dg != 0.0 else 1.0) * ((wr + wd) * 0.5 + 0.6 * vh)
-			_texto(ci, dist, Vector2(px, caixa_txt.get_center().y), td, COR_OBJETIVO)
+			_losango(ci, Vector2(cx + dg * ppg, y0 + alt * 0.12), 1.15 * vh, COR_OBJETIVO)
 		else:
 			var lado := signf(dg)
 			var px := cx + lado * (meia + 1.4 * vh)
 			var tri := PackedVector2Array([Vector2(px + lado * 0.9 * vh, y0 + alt * 0.5), Vector2(px - lado * 0.5 * vh, y0 + alt * 0.5 - 1.1 * vh), Vector2(px - lado * 0.5 * vh, y0 + alt * 0.5 + 1.1 * vh)])
 			ci.draw_colored_polygon(tri, COR_OBJETIVO)
-			_texto(ci, dist, Vector2(cx + lado * (meia - 3.0 * vh), caixa_txt.get_center().y), td, COR_OBJETIVO)
-	# marcador do centro e rumo em graus
+	# marcador do centro
 	var tri_c := PackedVector2Array([Vector2(cx, y0 + alt * 0.62), Vector2(cx - 0.8 * vh, y0 + alt + 0.3 * vh), Vector2(cx + 0.8 * vh, y0 + alt + 0.3 * vh)])
 	ci.draw_colored_polygon(tri_c, COR_OBJETIVO)
-	UI.caixa_arredondada(ci, caixa_txt, COR_FUNDO, 0.6 * vh)
-	_texto(ci, txt_rumo, caixa_txt.get_center(), tr, Color(1, 1, 1, 0.95))
 
 # ---------- desenho: mapa aberto ----------
 # mover/zoom só mudam a transformação do nó _mundo; ele só é redesenhado quando o zoom alto precisa de

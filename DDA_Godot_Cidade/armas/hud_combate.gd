@@ -1,6 +1,6 @@
 extends CanvasLayer
-# HUD DE COMBATE (porte do HTML): mira no centro que abre com movimento/pulo/disparo,
-# painel de munição embaixo (nome da arma, pente / reserva, barra; fica vermelho com pouca bala),
+# HUD DE COMBATE (porte do HTML): mira no centro que abre com movimento/pulo/disparo (0.65: só no modo MIRA),
+# ícone de PENTE embaixo no meio que muda de cor (0.65 · HUD mínima, sem números nem barra),
 # marcador de acerto ✕ (vermelho = tiro na cabeça / abate) e avisos rápidos ("SEM MUNIÇÃO", nome da arma, itens pegos).
 # Sem arma nas mãos o painel de munição some.
 # Tamanhos em "vh" (1% da altura da tela), como no HTML.
@@ -69,10 +69,13 @@ func _process(dt: float) -> void:
 	_tela.visible = jogador == null or (bool(jogador.ativo) and not _inventario_aberto())
 	# OTIMIZAÇÃO: redesenha só quando algo na tela mudou (antes: todo quadro)
 	var anima: bool = _hit > 0.0 or not _avisos.is_empty() or (armas != null and armas.rel > 0.0)
+	var mirando := jogador == null or bool(jogador.get("mirando"))
 	var a := 0
 	if armas != null:
 		var A: Dictionary = armas.estado() if armas.atual != "" and not armas.eh_corpo() else {"mag": 0, "res": 0}
-		a = hash([armas.atual, A["mag"], A["res"], armas.travada, armas.item_arma.pente_id if armas.item_arma != null else "",
+		if armas.atual != "" and not armas.eh_corpo() and int(A["mag"]) <= 0:
+			anima = true                    # pente vazio pisca
+		a = hash([armas.atual, A["mag"], A["res"], armas.travada, mirando, armas.item_arma.pente_id if armas.item_arma != null else "",
 			roundi(_gap * 40.0), _tela.visible, _tela.get_viewport_rect().size])
 	if anima or a != _assinatura or _anima_antes:
 		_assinatura = a
@@ -97,18 +100,19 @@ func _desenhar() -> void:
 	var vs := _tela.get_viewport_rect().size
 	var vh := vs.y / 100.0 * escala
 	var c := vs * 0.5
-	# ----- mira -----
-	var g := _gap * vh
-	var comp := 1.5 * vh
+	# ----- mira (0.65: só no modo MIRA) -----
 	var esp := maxf(2.0, 0.36 * vh)
-	var sombra := Color(0, 0, 0, 0.6)
-	for d in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
-		var a: Vector2 = c + d * g
-		var b: Vector2 = c + d * (g + comp)
-		_tela.draw_line(a, b, sombra, esp + 2.0)
-		_tela.draw_line(a, b, Color.WHITE, esp)
-	_tela.draw_circle(c, esp * 0.6 + 1.0, sombra)
-	_tela.draw_circle(c, esp * 0.6, Color.WHITE)
+	if jogador == null or bool(jogador.get("mirando")):
+		var g := _gap * vh
+		var comp := 1.5 * vh
+		var sombra := Color(0, 0, 0, 0.6)
+		for d in [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT]:
+			var a: Vector2 = c + d * g
+			var b: Vector2 = c + d * (g + comp)
+			_tela.draw_line(a, b, sombra, esp + 2.0)
+			_tela.draw_line(a, b, Color.WHITE, esp)
+		_tela.draw_circle(c, esp * 0.6 + 1.0, sombra)
+		_tela.draw_circle(c, esp * 0.6, Color.WHITE)
 	if _hit > 0.0:
 		var s := 1.7 * vh
 		var cor := Color(_hit_cor.r, _hit_cor.g, _hit_cor.b, _hit)
@@ -120,36 +124,34 @@ func _desenhar() -> void:
 	for k in _avisos.size():
 		var a: Array = _avisos[k]
 		_texto(a[0], c.x, vs.y * 0.3 + k * 5.0 * vh, int(4.0 * vh), Color(1, 1, 1, minf(1.0, float(a[1]) * 3.0)))
-	# ----- painel de munição (só com arma nas mãos) -----
+	# ----- munição (0.65 · HUD mínima): um ícone de PENTE que muda de cor, sem números nem barra -----
+	# branco = cheio · amarelo · laranja · vermelho piscando = vazio · âmbar pulsando = recarregando
+	# X vermelho = TRAVADA · contorno tracejado = SEM PENTE
 	if armas.atual == "" or armas.eh_corpo():
 		return
-	var W: Dictionary = armas.WDEF[armas.atual]
 	var A: Dictionary = armas.estado()
 	var cap: int = maxi(1, armas.capacidade())
-	var pw := 26.0 * vh
-	var ph := 11.5 * vh
-	var px := c.x - pw * 0.5
-	var py := vs.y - 3.0 * vh - ph
-	var baixo: bool = int(A["mag"]) <= int(ceil(float(cap) * 0.25))
-	_tela.draw_rect(Rect2(px, py, pw, ph), Color(0.03, 0.05, 0.08, 0.58))
-	_tela.draw_rect(Rect2(px, py, 0.7 * vh, ph), AMBAR)
-	var nome: String = W["nome"]
+	var f := float(A["mag"]) / float(cap)
+	var cor := Color(0.95, 0.95, 0.92)
+	if f <= 0.0:
+		cor = Color(VERMELHO, 0.55 + 0.45 * sin(Time.get_ticks_msec() * 0.008))
+	elif f <= 0.25:
+		cor = Color(1.0, 0.55, 0.15)
+	elif f <= 0.5:
+		cor = Color(1.0, 0.85, 0.25)
 	if armas.rel > 0.0:
-		nome += " · DESTRAVANDO" if armas.travada else " · RECARREGANDO"
-	elif armas.travada:
-		nome += " · TRAVADA"
-	elif armas.item_arma != null and armas.item_arma.usa_pente() != "" and armas.item_arma.pente_id == "":
-		nome += " · SEM PENTE"
-	_texto(nome, c.x, py + 3.0 * vh, int(2.4 * vh), Color(1, 1, 1, 0.85))
-	var mag := str(A["mag"])
-	var res := "/ " + str(A["res"])
-	var tm := int(5.4 * vh)
-	var tr := int(2.8 * vh)
-	var wm := _fonte.get_string_size(mag, HORIZONTAL_ALIGNMENT_LEFT, -1, tm).x
-	var wr := _fonte.get_string_size(res, HORIZONTAL_ALIGNMENT_LEFT, -1, tr).x
-	var x0 := c.x - (wm + wr + vh) * 0.5
-	_tela.draw_string(_fonte, Vector2(x0, py + 8.4 * vh), mag, HORIZONTAL_ALIGNMENT_LEFT, -1, tm, VERMELHO if baixo else Color.WHITE)
-	_tela.draw_string(_fonte, Vector2(x0 + wm + vh, py + 8.4 * vh), res, HORIZONTAL_ALIGNMENT_LEFT, -1, tr, Color(1, 1, 1, 0.7))
-	var frac: float = (1.0 - armas.rel / armas.rel_tot) if armas.rel > 0.0 else float(A["mag"]) / float(cap)
-	_tela.draw_rect(Rect2(px + 1.5 * vh, py + ph - 1.6 * vh, pw - 3.0 * vh, 0.6 * vh), Color(1, 1, 1, 0.15))
-	_tela.draw_rect(Rect2(px + 1.5 * vh, py + ph - 1.6 * vh, (pw - 3.0 * vh) * clampf(frac, 0.0, 1.0), 0.6 * vh), VERMELHO if baixo else AMBAR)
+		cor = Color(AMBAR, 0.5 + 0.5 * sin(Time.get_ticks_msec() * 0.012))
+	var lado := 6.0 * vh
+	var r := Rect2(c.x - lado * 0.5, vs.y - 3.0 * vh - lado, lado, lado)
+	_tela.draw_rect(r, Color(0, 0, 0, 0.42))
+	var sem_pente: bool = armas.item_arma != null and armas.item_arma.usa_pente() != "" and armas.item_arma.pente_id == ""
+	var pr := Rect2(r.position.x + lado * 0.36, r.position.y + lado * 0.14, lado * 0.28, lado * 0.72)
+	if sem_pente:
+		_tela.draw_rect(pr, cor, false, maxf(1.0, 0.25 * vh))
+	else:
+		_tela.draw_rect(pr, cor)
+		_tela.draw_rect(Rect2(pr.position.x + pr.size.x * 0.2, pr.position.y - lado * 0.06, pr.size.x * 0.6, lado * 0.08), cor)
+	if armas.travada:
+		var m := lado * 0.22
+		_tela.draw_line(r.position + Vector2(m, m), r.end - Vector2(m, m), VERMELHO, maxf(2.0, 0.5 * vh))
+		_tela.draw_line(Vector2(r.end.x - m, r.position.y + m), Vector2(r.position.x + m, r.end.y - m), VERMELHO, maxf(2.0, 0.5 * vh))

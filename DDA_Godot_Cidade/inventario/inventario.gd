@@ -46,12 +46,13 @@ func equipamento_inicial() -> void:
 	_por(jaq.conteudo, ItemCls.novo("bandagem", 4))
 	_por(jaq.conteudo, ItemCls.novo("vitaminas"))
 	_por(jaq.conteudo, ItemCls.novo("fita"))
-	_por(jaq.conteudo, ItemCls.novo("lanterna"))
+	_por(jaq.conteudo, _com_pilha("lanterna", 1.0))
 	_por(calca.conteudo, ItemCls.novo("mun_9mm", 36))
 	_por(calca.conteudo, ItemCls.novo("pente_pistola"))
 	_por(calca.conteudo, ItemCls.novo("faca"))
 	_por(colete.conteudo, ItemCls.novo("bandagem", 2))
-	_por(colete.conteudo, ItemCls.novo("radio"))
+	_por(colete.conteudo, _com_pilha("radio", 0.8))
+	_por(pochete.conteudo, ItemCls.novo("pilha"))
 	_por(pochete.conteudo, ItemCls.novo("agua"))
 	# começa só com a pistola: fuzis, munição de fuzil e equipamento melhor são achados na cidade
 	# (armários da polícia, depósitos, carros e as caixas de SUPRIMENTO MILITAR que o rádio anuncia)
@@ -104,8 +105,11 @@ func _caminho(it) -> Array:
 		var g = a.onde
 		if g == null:
 			return []
-		c.push_front(g.itens.find(a))
+		var i: int = g.itens.find(a)
 		a = g.dono
+		# 0.65: item num bolso que não é o 1º: "bolso:índice"
+		var b: int = a.bolsos.find(g) if a is RefCounted and a.get("bolsos") != null else -1
+		c.push_front(i if b < 0 else "%d:%d" % [b, i])
 		if not (a is RefCounted):
 			return []
 	return []
@@ -117,10 +121,20 @@ func _achar_caminho(c) -> Variant:
 	for k in range(1, c.size()):
 		if it == null or it.conteudo == null:
 			return null
-		var i := int(c[k])
-		if i < 0 or i >= it.conteudo.itens.size():
+		var g = it.conteudo
+		var i := 0
+		if c[k] is String and String(c[k]).contains(":"):
+			var partes := String(c[k]).split(":")
+			var b := int(partes[0])
+			if b < 0 or b >= it.bolsos.size():
+				return null
+			g = it.bolsos[b]
+			i = int(partes[1])
+		else:
+			i = int(c[k])
+		if i < 0 or i >= g.itens.size():
 			return null
-		it = it.conteudo.itens[i]
+		it = g.itens[i]
 	return it
 
 # tira tudo do corpo (morte: vai tudo para o chão junto do corpo)
@@ -147,23 +161,36 @@ func equipamento_renascer() -> void:
 	slots["calca"] = jeans
 	jeans.slot = "calca"
 	_por(cam.conteudo, ItemCls.novo("trapos", 2))
-	_por(jeans.conteudo, ItemCls.novo("lanterna"))
+	_por(jeans.conteudo, _com_pilha("lanterna", 0.5))
 	_por(jeans.conteudo, ItemCls.novo("maca"))
 	atalhos[0] = cam.conteudo.itens[0] if not cam.conteudo.itens.is_empty() else null
 	mudou.emit()
+
+func _com_pilha(id: String, carga: float) -> RefCounted:
+	var it = ItemCls.novo(id)
+	it.carga = carga
+	return it
 
 func _por(g, it) -> void:
 	var v: Vector3i = g.achar_vaga(it)
 	if v.x >= 0:
 		g.colocar(it, v.x, v.y, v.z == 1)
+		return
+	var d = g.dono                       # 0.65: não coube neste bolso: tenta os outros bolsos da mesma roupa
+	if d is RefCounted and d.has_method("grades"):
+		for o in d.grades():
+			v = o.achar_vaga(it)
+			if v.x >= 0:
+				o.colocar(it, v.x, v.y, v.z == 1)
+				return
 
 # ---------- consultas ----------
 func grades_do_jogador() -> Array:
 	var r := []
 	for s in CONTEINERES_CORPO:
 		var it = slots[s]
-		if it != null and it.conteudo != null:
-			r.append(it.conteudo)
+		if it != null:
+			r.append_array(it.grades())     # 0.65: cada bolso da roupa é uma grade
 	return r
 
 # o item está com o jogador (vestido, na mão ou dentro de algo que ele veste)?
@@ -453,9 +480,20 @@ func usar(it) -> void:
 		_depois()
 	elif it.id == "garrafa_vazia":
 		encher_garrafa(it)
+	elif it.id == "radio":
+		if not it.ligado and not it.tem_energia():
+			aviso.emit("SEM PILHA" if it.carga < 0.0 else "PILHA DESCARREGADA")
+			return
+		it.ligado = not it.ligado
+		Sons.tocar("inventario/pegar", -6.0)
+		aviso.emit("RÁDIO LIGADO · SÓ CHIADO..." if it.ligado else "RÁDIO DESLIGADO")
+		_depois()
 
 	elif it.eh_pente():
-		encher_pente(it)
+		if carregando() and _carga["alvo"] == it:
+			cancelar_carga("PAROU DE ENCHER")
+		else:
+			encher_pente(it)
 	elif it.eh_arma_de_fogo() and (it.pente_id != "" or not it.acessorios.is_empty()) and it.slot == "maos":
 		desmontar(it)
 	elif it.slot != "maos":
@@ -468,12 +506,14 @@ func nome_acao(it) -> String:
 	var d: Dictionary = it.def()
 	if it.id == "garrafa_vazia":
 		return "ENCHER"
+	if it.id == "radio":
+		return "DESLIGAR" if it.ligado else "LIGAR"
 	if it.id == "agua_suja" and perto_do_fogo():
 		return "FERVER"
 	if d.get("consome", false):
 		return {"comida": "COMER", "bebida": "BEBER"}.get(d.get("cat", ""), "USAR")
 	if it.eh_pente():
-		return "ENCHER"
+		return "PARAR" if carregando() and _carga["alvo"] == it else "ENCHER"
 	if it.eh_arma_de_fogo() and (it.pente_id != "" or not it.acessorios.is_empty()) and it.slot == "maos":
 		return "DESMONTAR"
 	return "NA MÃO"
@@ -554,7 +594,7 @@ func _receita(it, alvo) -> String:
 	var a: String = it.id
 	var b: String = alvo.id
 	var corta := ["faca", "facao", "machado"]
-	if a in corta and alvo.def().get("cat", "") == "roupa" and not alvo.tem_conteudo() and alvo.slot == "":
+	if a in corta and alvo.def().get("cat", "") == "roupa" and alvo.id != "mascara_gas" and not alvo.tem_conteudo() and alvo.slot == "":
 		return "rasgar"
 	if a in corta and b == "galho":
 		return "lanca"
@@ -566,14 +606,24 @@ func _receita(it, alvo) -> String:
 		return "fogueira"
 	if a == "pastilha" and b == "agua_suja":
 		return "purificar"
+	if a == "pilha" and alvo.def().get("pilha", false):
+		return "pilha"
+	if a == "kit_armas" and alvo.eh_arma() and (alvo.estado < 0.99 or _arma_travada(alvo)):
+		return "limpar"
 	return ""
 
 func _fazer(receita: String, it, alvo) -> void:
 	match receita:
 		"rasgar":
-			var n := clampi(int(alvo.def()["w"]) * int(alvo.def()["h"]) / 3, 1, 4)
+			# 0.65: roupa grande dá mais trapos (até 6); roupa muito danificada dá menos; a faca gasta um pouco
+			var n := clampi(int(alvo.def()["w"]) * int(alvo.def()["h"]) / 2, 1, 6)
+			if alvo.estado <= 0.3:
+				n = maxi(1, n - 2)
 			var orig := _origem(alvo)
 			retirar(alvo)
+			it.estado = maxf(0.0, it.estado - 0.02)
+			Sons.tocar("inventario/atadura", -4.0)
+			animar.emit("usar_item:trapos")
 			var t = ItemCls.novo("trapos", n)
 			_guardar_em_algum_lugar(t, orig)
 			aviso.emit("RASGOU EM %d TRAPOS" % n)
@@ -605,7 +655,36 @@ func _fazer(receita: String, it, alvo) -> void:
 			alvo.id = "agua"
 			_gastar(it, 1)
 			aviso.emit("ÁGUA PURIFICADA")
+		"pilha":                            # 0.65: troca a pilha (a velha sai como item, se tinha)
+			var orig := _origem(it)
+			retirar(it)
+			var velha: float = alvo.carga
+			alvo.carga = it.carga
+			if velha >= 0.0:
+				var pv = ItemCls.novo("pilha")
+				pv.carga = velha
+				_guardar_em_algum_lugar(pv, orig)
+			Sons.tocar("armas/bala_pente", -6.0)
+			aviso.emit("PILHA COLOCADA" if alvo.carga > 0.0 else "PILHA DESCARREGADA")
+		"limpar":                           # 0.65: kit de limpeza em cima de QUALQUER arma (não só a da mão)
+			limpar_arma(alvo)
+			_gastar(it, 1)
 	_depois()
+
+# kit de limpeza: conserta e destrava (armas/armas.gd travada)
+func limpar_arma(arma, avisar := true) -> void:
+	arma.estado = minf(1.0, arma.estado + 0.4)
+	var a = jogador.get("armas")
+	if a != null and a.item_arma == arma:
+		a.travada = false
+	if avisar:                           # pelo USAR, o próprio usar() já avisa, anima e toca o som
+		Sons.tocar("inventario/pegar", -5.0)
+		animar.emit("usar_item:kit_armas")
+		aviso.emit("LIMPOU A ARMA")
+
+func _arma_travada(arma) -> bool:
+	var a = jogador.get("armas")
+	return a != null and a.item_arma == arma and bool(a.travada)
 
 func _gastar(it, n: int) -> void:
 	it.qtd -= n
@@ -613,21 +692,115 @@ func _gastar(it, n: int) -> void:
 		retirar(it)
 
 # ---------- pentes, munição e acessórios (estilo DayZ) ----------
-# enche o pente com a munição solta que o jogador carrega
-func encher_pente(p) -> bool:
-	var falta: int = p.capacidade() - p.municao
-	if falta <= 0:
-		aviso.emit("PENTE CHEIO")
+# ENCHER PENTE BALA POR BALA (0.65, DayZ): cada bala leva TEMPO_BALA segundos e faz o "clique". Vale para
+# USAR/ENCHER no pente, soltar munição em cima do pente e soltar munição em cima de espingarda/rifle (sem pente).
+# Para sozinho se o pente/arma ficar cheio, acabar a munição, o pente sair do inventário ou você morrer.
+# Sair andando não para (dá para encher com o inventário fechado). Abrir outro carregamento troca o atual.
+const TEMPO_BALA := 0.45
+var _carga := {}                       # {"alvo": pente/arma, "fonte": item de munição (ou null = qualquer), "t": s}
+
+func carregando() -> bool:
+	return not _carga.is_empty()
+
+func cancelar_carga(motivo := "") -> void:
+	if _carga.is_empty():
+		return
+	_carga.clear()
+	if motivo != "":
+		aviso.emit(motivo)
+	mudou.emit()
+
+func _municao_de(alvo) -> String:
+	return String(alvo.def()["pente_de"]) if alvo.eh_pente() else String(alvo.def().get("municao", ""))
+
+func iniciar_carga(alvo, fonte = null) -> bool:
+	if alvo.municao >= alvo.capacidade():
+		aviso.emit("PENTE CHEIO" if alvo.eh_pente() else "ARMA CARREGADA")
 		return false
-	var n := consumir(String(p.def()["pente_de"]), falta)
-	if n <= 0:
-		aviso.emit("SEM MUNIÇÃO " + String(Itens.def(p.def()["pente_de"]).get("sigla", "")))
+	var mid := _municao_de(alvo)
+	if (fonte == null or fonte.qtd <= 0) and contar(mid) <= 0:
+		aviso.emit("SEM MUNIÇÃO " + String(Itens.def(mid).get("sigla", "")))
 		return false
-	p.municao += n
-	Sons.tocar("armas/bala_pente", -4.0)
-	aviso.emit("PENTE %d/%d" % [p.municao, p.capacidade()])
-	_depois()
+	_carga = {"alvo": alvo, "fonte": fonte, "t": TEMPO_BALA}
+	aviso.emit("ENCHENDO..." if alvo.eh_pente() else "CARREGANDO...")
 	return true
+
+# PILHAS (0.65): lanterna acesa (mão ou cabeça) e rádio ligado gastam a pilha. Pilha cheia dura
+# DURA_LANTERNA / DURA_RADIO segundos. Com a pilha no fim a luz fica fraca (mundo/clima.gd).
+const DURA_LANTERNA := 35.0 * 60.0
+const DURA_RADIO := 60.0 * 60.0
+var _t_pilha := 0.0
+
+func _gastar_pilhas(dt: float) -> void:
+	_t_pilha += dt
+	if _t_pilha < 1.0:
+		return
+	var passo := _t_pilha
+	_t_pilha = 0.0
+	var sv = jogador.get("sobrevivencia")
+	var clima = sv.get("clima") if sv != null else null
+	var acesa: bool = clima != null and bool(clima.get("lanterna_acesa"))
+	for k in ["maos", "cabeca"]:
+		var l = slots.get(k)
+		if acesa and l != null and l.id in ["lanterna", "lanterna_cabeca"] and l.carga > 0.0:
+			l.carga = maxf(0.0, l.carga - passo / DURA_LANTERNA)
+			if l.carga <= 0.0:
+				aviso.emit("A PILHA DA LANTERNA ACABOU")
+	for g in grades_do_jogador():
+		for o in g.itens:
+			if o.id == "radio" and o.ligado:
+				o.carga = maxf(0.0, o.carga - passo / DURA_RADIO)
+				if o.carga <= 0.0:
+					o.ligado = false
+					aviso.emit("A PILHA DO RÁDIO ACABOU")
+	var mao = slots.get("maos")
+	if mao != null and mao.id == "radio" and mao.ligado:
+		mao.carga = maxf(0.0, mao.carga - passo / DURA_RADIO)
+		if mao.carga <= 0.0:
+			mao.ligado = false
+
+# algum rádio LIGADO com pilha no jogador? (mundo/missoes.gd: chamados de suprimento)
+func radio_ligado() -> bool:
+	var mao = slots.get("maos")
+	if mao != null and mao.id == "radio" and mao.ligado and mao.tem_energia():
+		return true
+	for g in grades_do_jogador():
+		for o in g.itens:
+			if o.id == "radio" and o.ligado and o.tem_energia():
+				return true
+	return false
+
+func _process(dt: float) -> void:
+	_gastar_pilhas(dt)
+	if _carga.is_empty():
+		return
+	var alvo = _carga["alvo"]
+	var fonte = _carga["fonte"]
+	if bool(jogador.get("morto")) or not (do_jogador(alvo) or alvo in itens_perto()):
+		cancelar_carga()
+		return
+	_carga["t"] -= dt
+	if _carga["t"] > 0.0:
+		return
+	_carga["t"] = TEMPO_BALA
+	var n := 0
+	if fonte != null and fonte.qtd > 0 and (do_jogador(fonte) or fonte in itens_perto()):
+		_gastar(fonte, 1)
+		n = 1
+	else:
+		n = consumir(_municao_de(alvo), 1)
+	if n <= 0:
+		cancelar_carga("ACABOU A MUNIÇÃO")
+		return
+	alvo.municao += 1
+	Sons.tocar("armas/cartucho_espingarda" if alvo.eh_arma_de_fogo() and alvo.id == "espingarda" else "armas/bala_pente", -6.0)
+	if alvo.municao >= alvo.capacidade():
+		_carga.clear()
+		aviso.emit("PENTE CHEIO" if alvo.eh_pente() else "ARMA CARREGADA")
+	mudou.emit()
+
+func encher_pente(p) -> bool:
+	return iniciar_carga(p)
 
 # tira o pente e os acessórios da arma (vão para o inventário ou para o chão)
 func desmontar(arma) -> void:
@@ -675,12 +848,7 @@ func combinar(it, alvo) -> bool:
 		_fazer(rec, it, alvo)
 		return true
 	if it.def().get("cat", "") == "municao":
-		var n := mini(it.qtd, alvo.capacidade() - alvo.municao)
-		alvo.municao += n
-		it.qtd -= n
-		if it.qtd <= 0:
-			retirar(it)
-		aviso.emit("%d/%d" % [alvo.municao, alvo.capacidade()])
+		iniciar_carga(alvo, it)            # 0.65: bala por bala, com tempo
 	elif it.eh_pente():
 		var orig := _origem(it)
 		retirar(it)
@@ -846,7 +1014,7 @@ func _guardar_auto(it) -> bool:
 	if it.tem_conteudo():
 		return false
 	for g in grades_do_jogador():
-		if g == it.conteudo:
+		if g in it.grades():
 			continue
 		var v: Vector3i = g.achar_vaga(it)
 		if v.x >= 0:

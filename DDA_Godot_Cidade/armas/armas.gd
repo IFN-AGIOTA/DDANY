@@ -237,8 +237,11 @@ func recarregar() -> void:
 	var it = item_arma
 	_pente_novo = null
 	_encher = 0
+	if inventario != null and inventario.carregando():
+		inventario.cancelar_carga()     # 0.65: recarregar para de encher pente no inventário
 	if travada:
-		rel = 1.0                     # destravar
+		# destravar (0.65): quanto pior a arma, mais demora; a bala presa é jogada fora
+		rel = 1.0 + (1.0 - clampf(it.estado, 0.0, 1.0)) * 1.6
 	elif it.usa_pente() != "":
 		var novo = inventario.pente_para_recarga(it)
 		var soltas: int = inventario.contar(it.def().get("municao", ""))
@@ -247,7 +250,7 @@ func recarregar() -> void:
 			rel = W["rel"]
 		elif it.pente_id != "" and soltas > 0 and it.municao < it.capacidade():
 			_encher = mini(soltas, it.capacidade() - it.municao)
-			rel = W["rel"] + 0.08 * _encher        # enchendo o pente bala por bala
+			rel = W["rel"] + 0.35 * _encher        # enchendo o pente bala por bala (0.65: mais demorado)
 		else:
 			aviso.emit("SEM PENTE" if it.pente_id == "" else "SEM MUNIÇÃO")
 			return
@@ -269,6 +272,8 @@ func recarregar() -> void:
 func _fim_recarga() -> void:
 	if travada:
 		travada = false
+		if item_arma != null and item_arma.municao > 0:
+			item_arma.municao -= 1          # a bala que emperrou sai fora
 		aviso.emit("DESTRAVADA")
 		return
 	if item_arma == null or inventario == null:
@@ -416,7 +421,7 @@ func _physics_process(dt: float) -> void:
 				dry = 0.5
 				_pend = false
 				Sons.tocar("armas/seco", -2.0)
-				aviso.emit("ARMA TRAVADA · RECARREGAR")
+				aviso.emit("ARMA EMPERRADA · RECARREGAR")
 		elif item_arma.estado <= 0.0:
 			if dry <= 0.0:
 				dry = 0.5
@@ -494,13 +499,22 @@ func _atirar(W: Dictionary) -> void:
 	_vibrar(int(W["vibra"]))
 	barulho.emit(jogador.global_position, float(W["ruido"]) * (0.22 if silenciada else 1.0))
 	disparou.emit(atual)
-	# desgaste e travamento (DayZ: arma gasta trava; muito danificada trava muito)
+	# desgaste e EMPERRAR (0.65, DayZ; nomes do estado em inventario/itens.gd nome_estado): PERFEITA nunca
+	# emperra · GASTA quase nunca (0,5%) · DANIFICADA às vezes (3,5%) · MUITO DANIFICADA muito (12% por tiro).
+	# KIT DE LIMPEZA conserta e destrava.
 	var e: float = item_arma.estado
 	item_arma.estado = maxf(0.0, e - float(W.get("desgaste", 0.0005)))
-	if e < 0.7 and randf() < (0.7 - e) * 0.09:
+	var chance := 0.0
+	if e <= 0.3:
+		chance = 0.12
+	elif e <= 0.5:
+		chance = 0.035
+	elif e <= 0.7:
+		chance = 0.005
+	if randf() < chance:
 		travada = true
 		Sons.tocar("armas/seco", 0.0, 0.9)
-		aviso.emit("ARMA TRAVOU · RECARREGAR")
+		aviso.emit("ARMA EMPERROU · RECARREGAR")
 	mudou.emit()
 
 # ---------- corpo a corpo ----------

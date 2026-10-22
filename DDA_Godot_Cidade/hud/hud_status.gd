@@ -3,7 +3,7 @@ extends CanvasLayer
 # (branco = bem · amarelo = atenção · laranja · vermelho = perigo) com setas ▲▼ mostrando se está subindo/caindo:
 #   VIDA (cruz) · SANGUE (gota) · FOME (talheres) · SEDE (copo) · TEMPERATURA (termômetro) · MOLHADO (nuvem)
 #   + gotas vermelhas = quantos SANGRAMENTOS · cruz verde = INFECÇÃO · osso = PERNA QUEBRADA
-#   + barra de ESTAMINA em cima dos ícones (encolhe com peso demais) e o nome das DOENÇAS
+#   + PULMÃO = estamina (0.65: ícone, sem barra) e um "vírus" colorido por DOENÇA (sem textos)
 #   + tela preta quando desmaia
 # Também: tela pisca em vermelho ao levar um golpe; com pouca vida/sangue a tela perde a cor e escurece nas bordas.
 # Mexa AQUI para: posição/tamanho dos ícones, cores e limites de cada estado.
@@ -207,21 +207,25 @@ func _desenhar() -> void:
 			var pts := PackedVector2Array([Vector2(cx - s, cy + s * 0.6 * t), Vector2(cx + s, cy + s * 0.6 * t), Vector2(cx, cy - s * 0.8 * t)])
 			_tela.draw_colored_polygon(pts, cor)
 		x += lado + 0.8 * u
-	# estamina (em cima dos ícones)
-	var larg := x - 2.0 * u - 0.8 * u
-	var by := y - 1.4 * u
-	_tela.draw_rect(Rect2(2.0 * u, by, larg, 0.7 * u), Color(0, 0, 0, 0.45))
-	_tela.draw_rect(Rect2(2.0 * u, by, larg * sv.estamina_max / 100.0, 0.7 * u), Color(1, 1, 1, 0.12))
-	var cor_e := Color(0.9, 0.9, 0.9) if sv.estamina > 25.0 else Color(1.0, 0.6, 0.2)
-	_tela.draw_rect(Rect2(2.0 * u, by, larg * sv.estamina / 100.0, 0.7 * u), cor_e)
-	# doenças (nome em cima da barra)
-	var txt := ", ".join(sv.doencas())
-	if sv.perna_quebrada:
-		txt = "PERNA QUEBRADA" + (" · " + txt if txt != "" else "")
-	if txt != "":
-		var tam := int(2.2 * u)
-		_tela.draw_string(_fonte, Vector2(2.0 * u + 1, by - 0.8 * u + 1), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, Color(0, 0, 0, 0.8))
-		_tela.draw_string(_fonte, Vector2(2.0 * u, by - 0.8 * u), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, Color(1.0, 0.75, 0.3, pisca))
+	# 0.65 · HUD MÍNIMA: sem barras nem textos, só ícones que mudam de cor
+	# estamina = ícone de pulmão (só aparece quando não está cheia)
+	if sv.estamina < sv.estamina_max - 1.0 or sv.estamina_max < 99.0:
+		var cor_e := _cor(sv.estamina, 60.0, 35.0, 12.0)
+		if cor_e == VERMELHO:
+			cor_e.a = pisca
+		var r := Rect2(x, y, lado, lado)
+		_tela.draw_rect(r, Color(0, 0, 0, 0.42))
+		_icone("estamina", r.grow(-lado * 0.18), cor_e)
+		x += lado + 0.8 * u
+	# doenças = um ícone de "vírus" cada (gripe azul, cólera marrom, intoxicação roxa)
+	for d in [["gripe", sv.gripe >= 1.0, Color(0.55, 0.75, 1.0)], ["colera", sv.colera > 0.0, Color(0.75, 0.55, 0.25)],
+			["intoxicacao", sv.intoxicacao > 0.0, Color(0.75, 0.45, 0.95)], ["gas", float(sv.get("gas")) > 0.0, Color(0.7, 0.95, 0.2)]]:
+		if not d[1]:
+			continue
+		var r := Rect2(x, y, lado, lado)
+		_tela.draw_rect(r, Color(0, 0, 0, 0.42))
+		_icone("doenca", r.grow(-lado * 0.2), Color(d[2], pisca))
+		x += lado + 0.8 * u
 	if sv.perna_quebrada:
 		var c0 := Vector2(x + lado * 0.45, y + lado * 0.5)
 		var oss := Color(0.95, 0.9, 0.8, pisca)
@@ -270,6 +274,18 @@ func _icone(nome: String, a: Rect2, cor: Color) -> void:
 			_tela.draw_circle(Vector2(p.x + w * 0.5, p.y + h * 0.78), w * 0.22, cor)
 			var nivel := clampf((sv.temperatura - 34.0) / 5.0, 0.0, 1.0)
 			_tela.draw_rect(Rect2(p.x + w * 0.45, p.y + h * 0.7 * (1.0 - nivel), w * 0.1, h * 0.7 * nivel), Color(0.9, 0.2, 0.15))
+		"estamina":                     # pulmões
+			_tela.draw_rect(Rect2(p.x + w * 0.46, p.y, w * 0.08, h * 0.45), cor)
+			_tela.draw_circle(Vector2(p.x + w * 0.28, p.y + h * 0.62), w * 0.22, cor)
+			_tela.draw_circle(Vector2(p.x + w * 0.72, p.y + h * 0.62), w * 0.22, cor)
+			_tela.draw_rect(Rect2(p.x + w * 0.08, p.y + h * 0.4, w * 0.36, h * 0.25), cor)
+			_tela.draw_rect(Rect2(p.x + w * 0.56, p.y + h * 0.4, w * 0.36, h * 0.25), cor)
+		"doenca":                       # "vírus": bolinha com espinhos
+			var c := a.get_center()
+			for k in 8:
+				var ang := TAU * k / 8.0
+				_tela.draw_line(c, c + Vector2(cos(ang), sin(ang)) * w * 0.5, cor, maxf(1.5, w * 0.09))
+			_tela.draw_circle(c, w * 0.3, cor)
 		"molhado":
 			_tela.draw_circle(p + Vector2(w * 0.35, h * 0.35), w * 0.22, cor)
 			_tela.draw_circle(p + Vector2(w * 0.62, h * 0.3), w * 0.26, cor)

@@ -80,8 +80,12 @@ static func desenhar_item(ci: CanvasItem, it, r: Rect2, f: Font, girado: bool, a
 		var raio := clampf(minf(caixa.size.x, caixa.size.y) * 0.09, 2.5, 5.0)
 		ci.draw_circle(caixa.position + Vector2(caixa.size.x - raio - 3, raio + 3), raio, Color(Itens.cor_estado(it.estado), alfa))
 	if it.conteudo != null:
-		var g = it.conteudo
-		var frac := float(g.celulas_usadas()) / float(maxi(1, g.largura * g.altura))
+		var usadas := 0
+		var total := 0
+		for g in it.grades():                     # 0.65: soma todos os bolsos
+			usadas += g.celulas_usadas()
+			total += g.largura * g.altura
+		var frac := float(usadas) / float(maxi(1, total))
 		ci.draw_rect(Rect2(caixa.position.x + 3, caixa.end.y - 5, (caixa.size.x - 6) * frac, 3), Color(0.9, 0.75, 0.3, alfa))
 
 static func _p(a: Rect2, x: float, y: float) -> Vector2:

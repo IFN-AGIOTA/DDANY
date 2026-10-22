@@ -1,10 +1,16 @@
 extends CharacterBody3D
 # VAGO = um INFECTADO (na lore, "Vagos" é a gangue; o nome do arquivo ficou do HTML). Criado e controlado pelo gerente inimigos/vagos.gd (não precisa de cena .tscn).
-# Estados: VAGANDO (anda devagar à toa) -> INVESTIGANDO (vai até um barulho ou algo que viu de relance)
-#          -> PERSEGUINDO (corre atrás do jogador) -> ATACANDO (prepara 0,4 s e golpeia) · MORTO.
+# Estados (0.65, estilo DayZ, com marcador em cima da cabeça):
+#   VAGANDO (anda devagar à toa)
+#   -> DESCONFIADO "hm?" (ouviu passos, viu um vulto ou movimento: PARA, vira para lá e fica olhando 1,5–3 s;
+#      se continuar vendo/ouvindo, a suspeita sobe até perseguir; se não, vai ver o que era)
+#   -> INVESTIGANDO "?" (anda até o lugar e olha em volta) -> PERSEGUINDO "!" (corre atrás do jogador)
+#   -> ATACANDO (prepara 0,4 s e golpeia) · MORTO.
+# Reage a SOM (passos conforme a velocidade, tiros, tosse, grito do gritador), LUZ (lanterna à noite) e
+# MOVIMENTO (parado você é visto bem mais perto; correndo, de mais longe e até de lado, fora do cone).
 # Sentidos: AUDIÇÃO (o gerente avisa tiros e passos do jogador) e VISÃO (cone de 110° à frente, 38 m de dia,
 # ~14 m à noite, menos se o jogador estiver agachado; o raio de visão bate nas paredes = camada 1).
-# Depois de ~8 s sem ver o jogador ele desiste, vai até o último lugar onde o viu e volta a vagar.
+# Fora de vista por ~TEMPO_ESQUECER ele PERDE você: vai até o último lugar onde te viu, olha em volta e volta a vagar.
 # Movimento (barato para o celular): anda "por conta" na altura do chão (mundo.altura), batendo e deslizando
 # nas plantas dos prédios e nos obstáculos (carros, barreiras) pelos dados do mapa, sem motor de física.
 # Só perto do jogador (~20 m) E perto de um prédio com interior aberto usa a física de verdade
@@ -70,7 +76,13 @@ const INVESTIGANDO := 1
 const PERSEGUINDO := 2
 const ATACANDO := 3
 const MORTO := 4
-const NOMES := ["vagando", "investigando", "perseguindo", "atacando", "morto"]
+const DESCONFIADO := 5                 # 0.65: parado, olhando para o que ouviu/viu ("hm?")
+const NOMES := ["vagando", "investigando", "perseguindo", "atacando", "morto", "desconfiado"]
+const TEMPO_DESCONFIAR := Vector2(1.5, 3.0)
+const VISAO_PARADO := 0.6              # jogador parado: visto só a 60% da distância
+const VISAO_CORRENDO := 1.25           # correndo: de mais longe
+const PERIFERIA_CORRENDO := 9.0        # correndo perto assim, é notado mesmo fora do cone de visão
+const RUIDO_INVESTIGAR := 28.0         # barulho deste raio para cima (tiro) faz ir ver direto, sem parar no "hm?"
 
 # sons (gerados uma vez; o gerente chama sintetizar_sons() numa thread e depois definir_sons())
 const TAXA_SOM := 16000
@@ -108,6 +120,10 @@ var _t_sentidos := 0.0
 var _t_sem_ver := 99.0
 var _ultimo_visto := Vector3.ZERO
 var _suspeita := 0.0
+var _foco := Vector3.ZERO               # 0.65: para onde ele está olhando desconfiado
+var _t_desconfiar := 0.0
+var _t_alerta := 0.0                    # mostra o "!" um pouco depois de começar a perseguir
+var _marca: Label3D = null              # "hm?" / "?" / "!" em cima da cabeça
 var _t_ataque := 0.0
 var _golpeou := false
 var _recarga := 0.0
@@ -279,7 +295,24 @@ func ouvir(pos: Vector3, raio: float, do_jogador: bool) -> void:
 		perseguir()
 	else:
 		var erro := minf(d * 0.12, 8.0)              # de longe ele só sabe mais ou menos de onde veio
-		investigar(pos + Vector3(randf_range(-erro, erro), 0.0, randf_range(-erro, erro)))
+		var onde := pos + Vector3(randf_range(-erro, erro), 0.0, randf_range(-erro, erro))
+		if raio >= RUIDO_INVESTIGAR or estado == INVESTIGANDO:
+			investigar(onde)                            # tiro/grito: vai ver direto
+		else:
+			desconfiar(onde)                            # passos: para e escuta ("hm?")
+
+# DESCONFIADO (0.65): para, vira para "pos" e escuta/olha um pouco antes de decidir
+func desconfiar(pos: Vector3) -> void:
+	if estado == MORTO or esta_cacando():
+		return
+	_foco = pos
+	if estado != DESCONFIADO:
+		estado = DESCONFIADO
+		_t_desconfiar = randf_range(TEMPO_DESCONFIAR.x, TEMPO_DESCONFIAR.y)
+		if dist_jogador < ALCANCE_SOM:
+			_tocar("gemido%d" % (randi() % 4), randf_range(1.3, 1.45), -3.0)    # "hm?"
+	else:
+		_t_desconfiar = maxf(_t_desconfiar, 1.0)       # mais um sinal: continua olhando
 
 func investigar(pos: Vector3) -> void:
 	if estado == MORTO:
@@ -294,6 +327,7 @@ func perseguir() -> void:
 		return
 	estado = PERSEGUINDO
 	_suspeita = 1.0
+	_t_alerta = 1.6
 	if tipo == "gritador" and not _gritou:
 		_gritou = true                                  # grita uma vez: os outros num raio grande vêm ver
 		_tocar("rosnado", 1.45, 6.0)
@@ -437,12 +471,43 @@ func _process(dt: float) -> void:
 			_cam = get_viewport().get_camera_3d()
 		if _cam != null and not _cam.is_position_in_frustum(global_position + Vector3(0, 1.0, 0)):
 			a_cada = 8
+	_atualizar_marca(dt)
 	if _quadro % a_cada != 0:
 		return
 	modelo.atualizar(_dt_anim, _vel_h)
 	_dt_anim = 0.0
 	if dist_jogador < 70.0:
 		_forma_cabeca.position = to_local(modelo.pos_cabeca())
+
+# ---------- marcador do estado em cima da cabeça (0.65) ----------
+# "hm?" desconfiado · "?" investigando · "!" começou a perseguir. Só perto (até 35 m).
+func _atualizar_marca(dt: float) -> void:
+	_t_alerta = maxf(0.0, _t_alerta - dt)
+	var txt := ""
+	if dist_jogador < 35.0:
+		match estado:
+			DESCONFIADO: txt = "hm?"
+			INVESTIGANDO: txt = "?"
+			PERSEGUINDO, ATACANDO:
+				if _t_alerta > 0.0:
+					txt = "!"
+	if txt == "":
+		if _marca != null:
+			_marca.visible = false
+		return
+	if _marca == null:
+		_marca = Label3D.new()
+		_marca.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+		_marca.no_depth_test = true
+		_marca.fixed_size = true
+		_marca.pixel_size = 0.0018
+		_marca.font_size = 34
+		_marca.outline_size = 10
+		_marca.position = Vector3(0, 2.15, 0)
+		add_child(_marca)
+	_marca.visible = true
+	_marca.text = txt
+	_marca.modulate = Color(1.0, 0.25, 0.15) if txt == "!" else (Color(1.0, 0.85, 0.3) if txt == "hm?" else Color(1, 1, 1, 0.85))
 
 # ---------- quadro a quadro ----------
 func _physics_process(dt: float) -> void:
@@ -531,6 +596,13 @@ func _olhar(j: Node3D) -> void:
 			alcance *= 0.5                              # escondido no capim alto dos parques
 	if j == gerente.jogador and gerente.clima != null and gerente.clima.lanterna_acesa and gerente.escuridao() > 0.5:
 		alcance = maxf(alcance, VISAO_LANTERNA)         # a luz da lanterna denuncia de longe
+	# 0.65 · MOVIMENTO: parado é difícil de notar; correndo chama atenção de longe
+	var vj := float(j.get("vel_horizontal")) if j.get("vel_horizontal") != null else 0.0
+	if not cacando:
+		if vj < 0.3:
+			alcance *= VISAO_PARADO
+		elif vj > 5.0:
+			alcance *= VISAO_CORRENDO
 	if cacando:
 		alcance *= 1.35                                 # já está de olho nele
 	var visto := false
@@ -540,10 +612,12 @@ func _olhar(j: Node3D) -> void:
 		if dist_jogador < 2.0:
 			visto = true                                # de tão perto sente mesmo sem ver
 		else:
-			var no_cone := cacando
+			var no_cone := cacando or estado == DESCONFIADO and dist_jogador < alcance * 0.7
 			if not no_cone:
 				var para := Vector3(pj.x - p.x, 0.0, pj.z - p.z) / dist_jogador
 				no_cone = (-global_basis.z).dot(para) >= cos(deg_to_rad(ANGULO_VISAO * 0.5))
+			if not no_cone and vj > 5.0 and dist_jogador < PERIFERIA_CORRENDO:
+				no_cone = true                          # movimento rápido com o canto do olho
 			if no_cone:
 				_consulta.from = p + Vector3(0, 1.55, 0)
 				_consulta.to = pj + Vector3(0, 0.8 if bool(j.get("agachado")) else 1.3, 0)
@@ -556,13 +630,18 @@ func _olhar(j: Node3D) -> void:
 			if _suspeita >= 1.0:
 				perseguir()
 			else:
-				investigar(_ultimo_visto)               # viu algo de relance: vai ver o que é
+				desconfiar(_ultimo_visto)               # viu algo de relance: "hm?"
 	else:
 		_suspeita = maxf(0.0, _suspeita - 0.08)
 
 func _decidir(dt: float, j: Node3D) -> void:
 	var p := global_position
 	match estado:
+		DESCONFIADO:
+			_vel_alvo = 0.0
+			_t_desconfiar -= dt
+			if _t_desconfiar <= 0.0:
+				investigar(_foco)                       # não viu mais nada: vai até lá ver
 		VAGANDO:
 			if _espera > 0.0:
 				_espera -= dt
@@ -591,7 +670,9 @@ func _decidir(dt: float, j: Node3D) -> void:
 				vagar()
 				return
 			if _t_sem_ver > TEMPO_ESQUECER:
-				investigar(_ultimo_visto)
+				investigar(_ultimo_visto)               # perdeu você de vista
+				if dist_jogador < ALCANCE_SOM:
+					_tocar("gemido%d" % (randi() % 4), randf_range(0.7, 0.8), -2.0)
 				return
 			# logo depois de perder de vista ainda "sabe" para onde ele foi
 			_destino = j.global_position if _t_sem_ver < 2.0 else _ultimo_visto
@@ -770,6 +851,8 @@ func _mover(dt: float) -> void:
 	if (estado == ATACANDO or (estado == PERSEGUINDO and dist_jogador < 2.5)) and _alvo != null:
 		var pj: Vector3 = _alvo.global_position
 		olha = Vector3(pj.x - p.x, 0.0, pj.z - p.z)
+	elif estado == DESCONFIADO:
+		olha = Vector3(_foco.x - p.x, 0.0, _foco.z - p.z)      # vira para o que chamou a atenção
 	elif _vel_h > 0.15:
 		olha = _vel_xz
 	if olha.length_squared() > 0.0001:

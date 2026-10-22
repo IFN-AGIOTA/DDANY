@@ -81,6 +81,9 @@ var fator_agachado := 0.0           # 0 em pé · 1 agachado (suavizado, para a 
 var fator_mira := 0.0
 
 var _mirar_ligado := false
+var primeira_pessoa := false          # 0.65: câmera nos olhos (Opções › Câmera, tecla F ou botão CAM)
+var _fp := 0.0                        # 0 = 3ª pessoa · 1 = 1ª pessoa (suavizado na troca)
+var _near_3p := 0.05
 var _pulo_ant := false
 var _y_cam := 0.0
 
@@ -95,6 +98,7 @@ var _y_cam := 0.0
 
 func _ready() -> void:
 	camera.fov = fov_camera
+	_near_3p = camera.near
 	_braco.add_excluded_object(get_rid())
 	_y_cam = global_position.y
 	_capsula = _capsula.duplicate()
@@ -147,6 +151,7 @@ func ligar_controles(c) -> void:
 	controles = c
 	c.agachar_pedido.connect(alternar_agachar)
 	c.mirar_pedido.connect(func(): _mirar_ligado = not _mirar_ligado)
+	c.camera_pedida.connect(alternar_camera)
 	c.recarregar_pedido.connect(func(): armas.recarregar())
 	c.trocar_arma_pedido.connect(func(): armas.proxima_arma())
 	c.atalho_pedido.connect(_usar_atalho)
@@ -429,8 +434,42 @@ func _physics_process(delta: float) -> void:
 	if not morto:
 		if mirando or atirando:
 			rotation.y = lerp_angle(rotation.y, cam_yaw + armas.ky, minf(1.0, delta * 14.0))   # corpo vira para a mira
-		elif vel_horizontal > 0.4:
+		elif vel_horizontal > 0.4 and not primeira_pessoa:    # 1ª pessoa: _camera_primeira_pessoa vira o corpo
 			rotation.y = lerp_angle(rotation.y, atan2(-velocity.x, -velocity.z), minf(1.0, delta * 10.0))
+
+# ---------- 1ª PESSOA (0.65) ----------
+# A câmera vai para os OLHOS do personagem (jogador/modelo_sobrevivente.gd pos_olhos) e a cabeça some
+# (jogador/cabeca_oculta.gd): você vê os próprios braços, mãos, arma e pernas, como no DayZ. O corpo sempre vira
+# para onde você olha. Dá para olhar mais para cima e para baixo. Mirando, o campo de visão fecha (zoom).
+func _pit_min() -> float:
+	return -1.25 if primeira_pessoa else -0.35
+
+func _pit_max() -> float:
+	return 1.3 if primeira_pessoa else 1.15
+
+func alternar_camera() -> void:
+	Config.definir("cam", 0 if primeira_pessoa else 1)     # menu/aplicar_opcoes.gd liga primeira_pessoa
+
+func _camera_primeira_pessoa(delta: float, fov_alvo: float) -> void:
+	_fp = move_toward(_fp, 1.0 if primeira_pessoa else 0.0, delta * 5.0)
+	var m = _slot.get_child(0) if _slot.get_child_count() > 0 else null
+	if m != null and m.has_method("primeira_pessoa"):
+		m.primeira_pessoa(_fp > 0.5)
+	if not primeira_pessoa:
+		cam_pit = clampf(cam_pit, -0.35, 1.15)
+	if _fp <= 0.0:
+		camera.near = _near_3p
+		return
+	var olhos: Vector3 = m.pos_olhos() if m != null and m.has_method("pos_olhos") else global_position + Vector3(0, 1.65, 0)
+	var k := smoothstep(0.0, 1.0, _fp)
+	_pivo.global_position = _pivo.global_position.lerp(olhos, k)
+	_braco.spring_length = lerpf(_braco.spring_length, 0.0, k)
+	camera.position.x = lerpf(camera.position.x, 0.0, k)
+	camera.near = lerpf(_near_3p, 0.03, k)
+	var fov_fp := lerpf(fov_camera + 18.0, (fov_camera + 18.0) * 0.55 / armas.zoom_mira(), fator_mira)
+	camera.fov = lerpf(camera.fov, lerpf(fov_alvo, fov_fp, k), minf(1.0, delta * 6.0 + 0.02))
+	if not morto:
+		rotation.y = lerp_angle(rotation.y, cam_yaw, minf(1.0, delta * 16.0))   # o corpo vira para onde você olha
 
 func _process(delta: float) -> void:
 	if not ativo:
@@ -439,19 +478,19 @@ func _process(delta: float) -> void:
 		var r: Vector2 = controles.consumir_olhar()
 		var s := sensibilidade * (0.6 if mirando else 1.0)     # mirando: olhar mais preciso
 		cam_yaw -= r.x * 0.006 * s
-		cam_pit = clampf(cam_pit + r.y * 0.004 * s * (-1.0 if inverter_y else 1.0), -0.35, 1.15)
+		cam_pit = clampf(cam_pit + r.y * 0.004 * s * (-1.0 if inverter_y else 1.0), _pit_min(), _pit_max())
 		# 0.62: mouse preso (modo PC) com sensibilidade, sensibilidade mirando e eixo próprios (Opções › Teclado e mouse)
 		var rm: Vector2 = controles.consumir_olhar_mouse()
 		if rm != Vector2.ZERO:
 			var sm := sens_mouse * (sens_mouse_mira if mirando else 1.0)
 			cam_yaw -= rm.x * 0.0022 * sm
-			cam_pit = clampf(cam_pit + rm.y * 0.0018 * sm * (-1.0 if inverter_y_mouse else 1.0), -0.35, 1.15)
+			cam_pit = clampf(cam_pit + rm.y * 0.0018 * sm * (-1.0 if inverter_y_mouse else 1.0), _pit_min(), _pit_max())
 		if giroscopio:
 			# celular deitado (paisagem): girar em pé = olhar para os lados, inclinar = olhar para cima/baixo
 			var gv := Input.get_gyroscope() - giro_zero
 			var gs := giro_sens * (-1.0 if giro_inv else 1.0)
 			cam_yaw += gv.x * delta * gs
-			cam_pit = clampf(cam_pit - gv.y * delta * gs * (-1.0 if inverter_y else 1.0), -0.35, 1.15)
+			cam_pit = clampf(cam_pit - gv.y * delta * gs * (-1.0 if inverter_y else 1.0), _pit_min(), _pit_max())
 		controles.indicadores["AGACHAR"] = agachado
 		controles.indicadores["MIRAR"] = mirando
 		controles.textos["ARMA"] = armas.WDEF[armas.atual]["nome"] if armas.atual != "" else "ARMA"
@@ -462,7 +501,7 @@ func _process(delta: float) -> void:
 	var alvo_y := lerpf(altura_alvo, altura_alvo_agachado, fator_agachado) + 0.1 * fator_mira
 	_pivo.global_position = Vector3(global_position.x, _y_cam + alvo_y, global_position.z)
 	_pivo.rotation = Vector3(-(cam_pit - armas.kick), cam_yaw + armas.ky, 0.0)
-	mira_pitch = clampf(MIRA_NEUTRA - cam_pit, -0.8, 0.6)
+	mira_pitch = clampf(MIRA_NEUTRA * (1.0 - _fp) - cam_pit, -0.8, 0.6)
 	var fov_base := lerpf(fov_camera, fov_mirando / armas.zoom_mira(), fator_mira)
 	var fov_alvo := fov_base + 5.0 * clampf((vel_horizontal - 3.0) / 4.0, 0.0, 1.0)
 	camera.fov = lerpf(camera.fov, fov_alvo, minf(1.0, delta * 4.0 + 0.02))
@@ -472,4 +511,5 @@ func _process(delta: float) -> void:
 	var meia_largura := tan(deg_to_rad(camera.fov) * 0.5) * asp
 	var frac := _braco.get_hit_length() / maxf(dist, 0.01)
 	camera.position.x = lerpf(dist * meia_largura * lateral_camera, ombro_mirando, fator_mira) * frac
+	_camera_primeira_pessoa(delta, fov_alvo)
 	animador.atualizar(delta, self)

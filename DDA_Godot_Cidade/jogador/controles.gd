@@ -19,6 +19,7 @@ extends CanvasLayer
 # Com o inventário aberto (bloqueado = true) os controles ficam neutros: o jogador para e nada é desenhado.
 
 signal voo_pedido
+signal camera_pedida               # 0.65: 1ª/3ª pessoa (botão CAM, tecla F)
 signal vel_pedida
 signal agachar_pedido
 signal mirar_pedido
@@ -120,6 +121,7 @@ func _ready() -> void:
 	_bt("VOO", "VOO", "tr", Vector2(56, 46), 30, Color(0.6, 0.6, 0.6), "tocar", false, false)
 	_bt("INV", "INV", "tr", Vector2(132, 46), 30, Color(1.0, 0.71, 0.0), "tocar", false, false)
 	_bt("PAUSA", "II", "tr", Vector2(208, 46), 30, Color(1.0, 0.54, 0.21), "tocar", false, false)
+	_bt("CAM", "CAM", "tr", Vector2(284, 46), 30, Color(0.75, 0.85, 1.0), "tocar", false, false)
 	ocultos["PEGAR"] = true
 	_bt("SOBE", "SOBE", "br", Vector2(80, 330), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
 	_bt("DESCE", "DESCE", "br", Vector2(80, 210), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
@@ -398,6 +400,9 @@ func _acao(acao: String, apertou: bool) -> void:
 			if not modo_voo:
 				roda_tecla.emit()
 		"voo": voo_pedido.emit()
+		"camera":
+			if not modo_voo:
+				camera_pedida.emit()
 		"voo_vel":
 			if modo_voo:
 				vel_pedida.emit()
@@ -489,6 +494,7 @@ func _tocou(id: String) -> void:
 		"INV": inventario_pedido.emit()
 		"PAUSA": pausa_pedida.emit()
 		"PEGAR": pegar_pedido.emit()
+		"CAM": camera_pedida.emit()
 
 # OTIMIZAÇÃO: redesenha só quando algo que aparece mudou (botão aceso, texto, botão escondido, bloqueio).
 # Os toques já pedem redesenho na hora (_input). Antes redesenhava todos os botões em todo quadro.

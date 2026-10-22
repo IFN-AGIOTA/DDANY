@@ -199,6 +199,7 @@ func atualizar(dt: float, j) -> void:
 	_fuzil = j.armas != null and str(j.armas.atual) in FUZIS
 	_arma = str(j.armas.atual) if j.armas != null else ""
 	_mancando = bool(j.get("mancando")) if "mancando" in j else false
+	_fp = bool(j.get("primeira_pessoa")) if "primeira_pessoa" in j else false
 	_arma_ocupada = false
 	if j.armas != null:
 		for campo in ["golpe", "rel", "draw"]:
@@ -208,6 +209,7 @@ func atualizar(dt: float, j) -> void:
 	atualizar_estado(dt, j.vel_horizontal, j.is_on_floor(), j.velocity.y, mira, tiro_recente, j.morto, j.agachado)
 
 var _dir := Vector2.ZERO      # (lado, frente) da velocidade em relação ao corpo
+var _fp := false             # 0.65: 1ª pessoa (o corpo fica virado para a câmera: pernas em 8 direções sempre)
 var _fuzil := false
 
 func _tem(n: String) -> bool:
@@ -257,7 +259,7 @@ func atualizar_estado(dt: float, vel_h: float, no_chao: bool, vel_v: float, mira
 		_morte = ""
 	# 8 direções: mirando/atirando e andando, as pernas seguem a direção em relação ao corpo (para trás, passos de
 	# lado para a direita/esquerda, ou a caminhada da velocidade)
-	if (mirando or atirando) and no_chao and not agachado and not morto and vel_h > VEL_ANDAR:
+	if (mirando or atirando or _fp) and no_chao and not agachado and not morto and vel_h > VEL_ANDAR:
 		var ang := atan2(_dir.x, _dir.y)               # 0 = frente, + = direita
 		if absf(ang) > 2.25 and _tem("andar_tras"):
 			nome = "andar_tras"

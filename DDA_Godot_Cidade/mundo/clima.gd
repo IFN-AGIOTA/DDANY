@@ -11,7 +11,7 @@ extends Node
 #    (tudo no shader, sem custo de CPU). Som de chuva e trovões sintetizados por código (sem arquivos).
 #    Na tempestade: relâmpago (luz extra piscando) e trovão depois (mais longe = mais atrasado e grave).
 #  - TEMPERATURA do ar (°C) pela hora e pela chuva · exposto(pos) diz se tem teto em cima (para molhar).
-#  - LANTERNA: "lanterna" nas MÃOS ou "lanterna_cabeca" na CABEÇA acende uma luz que aponta para onde a
+#  - LANTERNA: "lanterna" nas MÃOS ou "lanterna_cabeca" na CABEÇA (0.65: com PILHA) acende uma luz que aponta para onde a
 #    câmera olha (sem sombra, para o celular aguentar).
 #  - salvar() / carregar(d) para o save · restaurar() devolve sol e céu da cidade como estavam.
 # Uso (main.gd): clima = ClimaCls.new(); jogo.add_child(clima); clima.ligar(cidade, jogador).
@@ -762,10 +762,20 @@ func _atualizar_lanterna() -> void:
 			var s: Dictionary = inv.slots
 			var mao = s.get("maos")
 			var cab = s.get("cabeca")
-			if mao != null and mao.id == "lanterna":
+			var carga := 0.0
+			# 0.65: só acende com PILHA carregada (inventario/inventario.gd gasta a pilha)
+			if mao != null and mao.id == "lanterna" and mao.tem_energia():
 				_tipo_lanterna = "mao"
-			elif cab != null and cab.id == "lanterna_cabeca":
+				carga = mao.carga
+			elif cab != null and cab.id == "lanterna_cabeca" and cab.tem_energia():
 				_tipo_lanterna = "cabeca"
+				carga = cab.carga
+			# pilha no fim: luz fraca e piscando de vez em quando
+			var forca := 0.35 + 0.65 * clampf(carga / 0.25, 0.0, 1.0)
+			if carga < 0.1 and randf() < 0.15:
+				forca *= 0.3
+			_lanterna_mao.light_energy = LANTERNA_ENERGIA * forca
+			_lanterna_cabeca.light_energy = CABECA_ENERGIA * forca
 	_lanterna_mao.visible = _tipo_lanterna == "mao"
 	_lanterna_cabeca.visible = _tipo_lanterna == "cabeca"
 	lanterna_acesa = _tipo_lanterna != ""

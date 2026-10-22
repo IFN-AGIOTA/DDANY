@@ -30,6 +30,7 @@ const IkFuzil := preload("res://jogador/ik_fuzil.gd")
 const CamadaAcao := preload("res://jogador/camada_acao.gd")
 const CamadaPostura := preload("res://jogador/camada_postura.gd")
 const CamadaMira := preload("res://jogador/camada_mira.gd")
+const CabecaOculta := preload("res://jogador/cabeca_oculta.gd")
 const ModelosItens := preload("res://inventario/modelos_itens.gd")
 const PASTA := "res://jogador/sobrevivente/"
 const NOMES_ANIM := {"parado": "parado", "andar": "andar", "correr": "correr", "pular": "pular", "cair": "cair",
@@ -91,6 +92,8 @@ var _ponto_fuzil: Node3D
 var camada                             # jogador/camada_acao.gd: ações só na parte de cima (recarregar andando...)
 var postura                            # jogador/camada_postura.gd: como segura a arma (pistola, faca, taco...)
 var mira_camada                        # jogador/camada_mira.gd: tronco inclina com a câmera ao mirar
+var cabeca_oculta                      # 0.65: jogador/cabeca_oculta.gd (1ª pessoa: esconde a cabeça)
+var _osso_cabeca := -1
 var _ik: IkFuzil
 var _mira := 0.0
 var _item_mao: Node3D = null            # 0.61: item na mão durante comer/beber/remédio/curativo (segurar_item)
@@ -460,6 +463,11 @@ func _criar_ponto_fuzil() -> void:
 	esqueleto.add_child(_ik)
 	_ik.preparar(esqueleto, anim)
 	_ik.active = false
+	cabeca_oculta = CabecaOculta.new()
+	cabeca_oculta.name = "CabecaOculta"
+	esqueleto.add_child(cabeca_oculta)
+	cabeca_oculta.preparar(esqueleto)
+	_osso_cabeca = esqueleto.find_bone("Head")
 
 func _process(dt: float) -> void:
 	var j = get_parent().get_parent() if get_parent() != null else null
@@ -495,6 +503,19 @@ func _process(dt: float) -> void:
 	_mira = move_toward(_mira, alvo, dt * 5.0)
 	_ik.mira = _mira
 	_ik.pitch = mira_camada.aplicado
+
+# ---------- 1ª PESSOA (0.65) ----------
+# esconde a cabeça (jogador/cabeca_oculta.gd); o resto do corpo continua visível
+func primeira_pessoa(sim: bool) -> void:
+	if cabeca_oculta != null:
+		cabeca_oculta.ligado = sim
+
+# posição dos OLHOS no mundo (segue a animação: balanço ao andar, agachar, mirar)
+func pos_olhos() -> Vector3:
+	if esqueleto == null or _osso_cabeca < 0:
+		return global_position + Vector3(0, 1.65, 0)
+	var t := esqueleto.global_transform * esqueleto.get_bone_global_pose(_osso_cabeca)
+	return t.origin + esqueleto.global_basis * Vector3(0.0, 0.09, 0.11)
 
 # ITEM NA MÃO direita (lata, garrafa, remédio, atadura) por "duracao" segundos; a arma some enquanto isso
 func segurar_item(id: String, duracao: float) -> void:

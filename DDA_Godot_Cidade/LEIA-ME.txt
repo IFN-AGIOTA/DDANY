@@ -39,6 +39,103 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.65 · DAYZ DE VERDADE: HUD MÍNIMA, 1ª PESSOA, PILHAS, BOLSOS, INFECTADOS ESPERTOS E EVENTOS
+  · HUD MÍNIMA (hud/hud_status.gd, armas/hud_combate.gd, hud/mapa.gd): sem números e sem barras. Só ícones que
+    mudam de cor (branco bem · amarelo · laranja · vermelho piscando):
+      - vida, sangue, fome, sede, temperatura e molhado, como antes;
+      - ESTAMINA virou um ícone de PULMÃO, que só aparece quando não está cheia (a barra branca saiu);
+      - cada DOENÇA é um ícone de "vírus" colorido no lugar do nome: gripe azul, cólera marrom, intoxicação roxa
+        e gás tóxico verde;
+      - MUNIÇÃO virou um ícone de PENTE embaixo no meio, sem "12 / 30" e sem barra: branco cheio · amarelo
+        metade · laranja pouco · vermelho piscando vazio · âmbar pulsando recarregando · contorno vazio = sem
+        pente · X vermelho = EMPERRADA;
+      - BÚSSOLA sem o número dos graus e sem a distância do objetivo (só as letras e o losango).
+  · SEM MIRA NA TELA fora do modo MIRA: a cruz só aparece mirando (botão MIRAR / botão direito do mouse).
+  · 1ª PESSOA (jogador/jogador.gd, jogador/cabeca_oculta.gd NOVO, jogador/modelo_sobrevivente.gd):
+      - a câmera vai para os OLHOS do personagem e segue a animação (balança andando, abaixa agachado);
+      - a cabeça some só para você: você vê os próprios braços, mãos, arma, pernas e roupa, como no DayZ
+        (o mesmo corpo da 3ª pessoa, então não precisou baixar animações de 1ª pessoa);
+      - o corpo sempre vira para onde você olha e as pernas andam em 8 direções;
+      - dá para olhar mais para cima e para baixo, e mirando a visão aproxima;
+      - troca: tecla F (configurável), botão CAM (canto de cima, ao lado do II) ou Opções › Câmera ›
+        "3ª pessoa / 1ª pessoa" (a antiga opção "Cockpit" sem uso). A escolha fica salva.
+  · ENCHER PENTE BALA POR BALA (inventario/inventario.gd): USAR/ENCHER no pente, ou soltar munição em cima do
+    pente ou da espingarda/rifle, põe UMA bala a cada 0,45 s, com o "clique".
+      - continua com o inventário fechado;
+      - para quando enche, acaba a munição, o pente sai de perto ou você aperta PARAR (o mesmo botão);
+      - RECARREGAR também para;
+      - recarregar a arma com munição solta (sem outro pente) ficou mais demorado: 0,35 s por bala.
+  · EMPERRAR (armas/armas.gd): a arma PERFEITA nunca emperra. GASTA quase nunca (0,5% por tiro), DANIFICADA às
+    vezes (3,5%), MUITO DANIFICADA muito (12%). Desemperrar (RECARREGAR) demora mais quanto pior a arma, e a
+    bala presa é jogada fora.
+  · KIT DE LIMPEZA: além de USAR com a arma na mão, agora dá para ARRASTAR o kit em cima de qualquer arma
+    (inclusive guardada). Conserta 40% e DESEMPERRA.
+  · PILHAS (item novo PILHA 9V):
+      - LANTERNA, LANTERNA DE CABEÇA e RÁDIO têm pilha. A lanterna acesa gasta a pilha (cheia dura ~35 min) e
+        no fim fica fraca e pisca. Sem pilha, não acende;
+      - ARRASTE uma PILHA em cima do aparelho para trocar (a velha sai como item);
+      - o RÁDIO agora LIGA/DESLIGA (USAR). Ligado, gasta a pilha (~60 min) e só assim recebe os chamados de
+        suprimento militar;
+      - a carga aparece em palavras nas informações do item: CHEIA · PELA METADE · FRACA · VAZIA · SEM PILHA;
+      - pilhas no loot (casas, mercado, lojas, escritórios, depósitos, carros, polícia, militar). Começo:
+        lanterna e rádio com pilha e uma pilha reserva na pochete. Itens achados às vezes vêm sem pilha.
+  · CORTAR ROUPA EM TRAPOS (faca/facão/machado em cima da roupa): roupa grande dá mais trapos (até 6), roupa
+    muito danificada dá menos e a lâmina gasta um pouco.
+  · ROUPAS COM BOLSOS SEPARADOS (inventario/item.gd "bolsos", inventario/itens.gd): cada bolso é uma grade
+    própria na coluna da direita:
+      - JAQUETA: bolso esquerdo, direito e interno;
+      - CAPA DE CHUVA: esquerdo, direito e interno;
+      - CALÇA CARGO: laterais esquerdo e direito, bolsos da frente e de trás;
+      - JEANS: bolsos da frente e de trás;
+      - COLETE TÁTICO: porta-pentes e um bolso;
+      - MOLETOM: o bolso canguru.
+    Jogos salvos antigos se ajeitam sozinhos (o que não couber no 1º bolso vai para os outros).
+  · INFECTADOS MAIS "DAYZ" (inimigos/vago.gd):
+      - estado novo DESCONFIADO: ouviu passos ou viu um vulto, ele PARA, vira para lá, faz "hm?" e fica olhando
+        1,5–3 s. Se continuar vendo/ouvindo, persegue; se não, vai ver o que era (INVESTIGANDO) e depois volta
+        a vagar;
+      - tiros e gritos fazem ir ver direto;
+      - MARCADOR em cima da cabeça (até 35 m): "hm?" amarelo (desconfiado) · "?" (investigando) · "!" vermelho
+        (começou a perseguir);
+      - MOVIMENTO conta: parado você só é visto a 60% da distância; correndo, de 25% mais longe e até de lado
+        (fora do cone, a menos de 9 m);
+      - fora de vista por ~8 s ele te PERDE: geme, vai até o último lugar onde te viu, olha em volta e desiste.
+  · EVENTOS DINÂMICOS (mundo/eventos.gd, NOVO). Nascem a 0,4–1,6 km e trocam de lugar com o tempo:
+      - HELICÓPTERO CAÍDO: destroços pegando fogo, COLUNA DE FUMAÇA que se vê de longe, 2 caixas e itens no chão
+        com LOOT MILITAR, e infectados em volta. Com o rádio ligado você ouve a queda e a direção;
+      - COMBOIO DESTRUÍDO: 3–4 caminhões/jipes militares queimados numa rua, cada um para saquear;
+      - ZONA CONTAMINADA (2 ao mesmo tempo): névoa verde de gás, placas "PERIGO GÁS" e uma caixa da QUARENTENA
+        com loot militar no meio. Sem MÁSCARA DE GÁS você perde vida e tosse (os infectados ouvem).
+  · MÁSCARA DE GÁS (item novo, slot novo ROSTO no inventário, embaixo da CABEÇA): protege do gás, mas o FILTRO
+    gasta lá dentro (cai o estado; ~14 min). Aparece no loot militar, da polícia e de depósitos.
+  · ARQUIVOS MEXIDOS:
+      hud/hud_status.gd ............. ícones de pulmão (estamina) e de vírus (doenças, gás); sem barra e sem textos
+      armas/hud_combate.gd .......... mira só mirando; ícone de pente no lugar do painel de munição
+      hud/mapa.gd ................... bússola sem graus e sem distância
+      jogador/jogador.gd ............ 1ª pessoa (_camera_primeira_pessoa, alternar_camera, _pit_min/_pit_max)
+      jogador/cabeca_oculta.gd ...... NOVO: esconde a cabeça na 1ª pessoa
+      jogador/modelo_sobrevivente.gd  primeira_pessoa() e pos_olhos()
+      jogador/animador_modelo.gd .... pernas em 8 direções na 1ª pessoa
+      jogador/controles.gd .......... botão CAM e ação "camera" (sinal camera_pedida)
+      jogador/teclas.gd ............. ação nova "camera" (F)
+      jogador/sobrevivencia.gd ...... gás tóxico (gas, _gas), kit de limpeza também desemperra
+      menu/opcoes.gd ................ Câmera: 3ª pessoa / 1ª pessoa
+      menu/aplicar_opcoes.gd ........ liga a 1ª pessoa
+      menu/config.gd ................ versão 0.65
+      armas/armas.gd ................ emperrar por estado, desemperrar com tempo, recarga bala por bala mais lenta
+      inventario/inventario.gd ...... carregamento bala por bala, pilhas (troca, gasto, rádio), kit em cima da
+                                      arma, trapos, bolsos (grades_do_jogador, caminhos, _por)
+      inventario/item.gd ............ carga, ligado, bolsos (grades()), salvar/carregar
+      inventario/itens.gd ........... PILHA 9V, MÁSCARA DE GÁS, slot ROSTO, bolsos das roupas, pilha nos aparelhos
+      inventario/tela_inventario.gd . um quadro por bolso, slot ROSTO, carga da pilha nas informações
+      inventario/visual.gd .......... barrinha de ocupação somando todos os bolsos
+      inimigos/vago.gd .............. estado DESCONFIADO, marcador, movimento, perder de vista
+      mundo/clima.gd ................ lanterna só com pilha (fraca no fim)
+      mundo/missoes.gd .............. chamados só com o rádio LIGADO
+      mundo/loot_mundo.gd ........... pilhas e máscaras no loot
+      mundo/eventos.gd .............. NOVO: helicóptero caído, comboio destruído, zonas contaminadas
+      main.gd ....................... cria os eventos
+
 ATUALIZAÇÃO 0.64 · CONSERTOS DO TECLADO E MOUSE (revisão da 0.62)
   · Digitando num campo de texto (nome, código da sala...) no celular, as letras não trocam mais para o modo PC
     nem escondem os botões de toque.
@@ -783,11 +880,11 @@ SOBREVIVÊNCIA (estilo DayZ)
   perigo. Setas ▲▼ = subindo/caindo.
 - A tela pisca vermelho ao levar um golpe; com pouca vida/sangue perde a cor; no frio as bordas azulam e a
   mira treme.
-- ESTAMINA (barra branca em cima dos ícones): correr gasta, parado recupera. Carregar peso demais (mais de
+- ESTAMINA (0.65: ícone de PULMÃO que muda de cor; só aparece quando não está cheia): correr gasta, parado recupera. Carregar peso demais (mais de
   ~18 kg) diminui a barra. Zerou = não corre.
 - QUEDA: cair de alto machuca; muito alto QUEBRA A PERNA (só anda mancando, não corre nem pula) até usar uma TALA.
 - DESMAIO: com pouco sangue (< 2400 ml) você apaga por alguns segundos.
-- DOENÇAS (nome em laranja em cima da barra):
+- DOENÇAS (0.65: um ícone de "vírus" colorido para cada uma, sem texto):
     GRIPE ......... frio ou roupa molhada por muito tempo. Tosse de vez em quando, e os INFECTADOS OUVEM.
                     Cura: VITAMINAS.
     CÓLERA ........ beber ÁGUA SUJA (60% de chance). Sede em dobro e vômito. Cura: ANTIBIÓTICOS.
@@ -805,14 +902,18 @@ SOBREVIVÊNCIA (estilo DayZ)
     FACA + GALHO .................... LANÇA (arma branca de alcance longo)
     ISQUEIRO + 3 GALHOS ............. FOGUEIRA
     PASTILHA + ÁGUA SUJA ............ ÁGUA LIMPA
+    PILHA + LANTERNA/RÁDIO .......... troca a pilha (0.65)
+    KIT DE LIMPEZA + ARMA ........... conserta e desemperra (0.65)
+    MUNIÇÃO + PENTE ................. enche bala por bala, com tempo (0.65)
 - MORTE: tudo o que você carregava cai no chão, onde você caiu. Tela "VOCÊ MORREU" (causa, tempo vivo,
   abates) > RENASCER: você volta numa rua a 0,8–2,5 km dali, só com camiseta, jeans, trapos, lanterna e uma maçã.
 
-INVENTÁRIO ESTILO DAYZ · botão INV (canto de cima), Tab ou I
+INVENTÁRIO ESTILO DAYZ · botão INV (canto de cima) ou Tab
 - ESQUERDA = o que está PERTO (2,2 m): itens no CHÃO, móveis/porta-malas/caixas e mochilas jogadas.
-  MEIO = o personagem: CABEÇA, CAMISA, COLETE, CINTO, OMBRO, COLDRE, CALÇA, MOCHILA, as MÃOS e a barra de atalhos
+  MEIO = o personagem: CABEÇA, ROSTO (máscara de gás), CAMISA, COLETE, CINTO, OMBRO, COLDRE, CALÇA, MOCHILA, as MÃOS e a barra de atalhos
   1..8; embaixo, informações do item (peso, balas, ESTADO, descrição) e os botões USAR / PEGAR / LARGAR / DIVIDIR.
-  DIREITA = o que você carrega: bolsos das roupas e a mochila (ex.: "MOCHILA (12/56)").
+  DIREITA = o que você carrega: CADA BOLSO das roupas (0.65: jaqueta com bolso esquerdo/direito/interno, calça
+  cargo com laterais/frente/trás...) e a mochila (ex.: "MOCHILA (12/56)").
 - Cada item ocupa um retângulo de células. Arrastar e soltar entre grades/encaixes; durante o arraste,
   R / Espaço / botão direito / 2º dedo = GIRAR. Soltar em cima de uma pilha igual = juntar.
 - Soltar MUNIÇÃO em cima de um PENTE = enche · PENTE em cima da arma = encaixa (o antigo volta para o lugar) ·
@@ -831,12 +932,13 @@ ARMAS
   cheio, enche o pente encaixado com munição solta (mais demorado). Espingarda e rifle carregam munição solta.
 - ACESSÓRIOS: SILENCIADOR (pistola, M4, AKM: tiro baixo, sem clarão, os infectados só ouvem bem de perto),
   MIRA 4X (M4, AKM) e LUNETA (rifle): aproximam muito mais ao MIRAR. Aparecem no modelo da arma.
-- ESTADO: cada tiro/golpe gasta a arma. Abaixo de "PERFEITO" ela começa a TRAVAR (RECARREGAR destrava);
-  ARRUINADA não atira. KIT DE LIMPEZA conserta a arma das mãos.
+- ESTADO: cada tiro/golpe gasta a arma. GASTA quase nunca EMPERRA, DANIFICADA às vezes, MUITO DANIFICADA muito
+  (RECARREGAR desemperra e joga fora a bala presa); ARRUINADA não atira. KIT DE LIMPEZA (usar ou arrastar em cima
+  da arma) conserta e desemperra.
 - CORPO A CORPO no botão ATIRAR: FACA, TACO, MACHADO, CANO, PÉ DE CABRA e PUNHOS (mãos vazias). Golpe com
   animação (levanta e desce a arma); acerta o que estiver na frente.
-- HUD: mira que abre ao andar/correr/pular/atirar; painel de munição (balas no pente / reserva = munição solta
-  + balas dos outros pentes; vermelho com pouca bala); avisos "SEM PENTE", "TRAVADA", "RECARREGANDO";
+- HUD (0.65 mínima): a mira só aparece MIRANDO (abre ao andar/correr/pular/atirar); ícone de PENTE que muda de
+  cor (sem números); avisos "SEM PENTE", "EMPERRADA", "RECARREGANDO";
   marcador de acerto (vermelho = cabeça ou abate). Traçantes, clarão, faíscas, marcas de bala, sons sintetizados.
 
 MAPA E BÚSSOLA
@@ -873,8 +975,10 @@ INFECTADOS
   (Os arquivos em inimigos/ ainda se chamam vago/vagos, nome que veio do HTML.)
 - Vagam pelas ruas (mais no centro), às vezes em HORDAS de 4 a 7; nascem a 55-120 m, fora da sua vista.
 - OUVEM tiros (silenciador = bem menos) e passos (correr faz muito barulho, agachado quase nada).
-- ENXERGAM num cone à frente: ~38 m de dia, ~14 m à noite, menos com você agachado; perdem você de vista e vão
-  procurar no último lugar onde te viram.
+- ENXERGAM num cone à frente: ~38 m de dia, ~14 m à noite, menos com você agachado ou parado, mais com você
+  correndo; perdem você de vista e vão procurar no último lugar onde te viram.
+- ESTADOS (0.65): VAGANDO -> DESCONFIADO "hm?" (para e olha) -> INVESTIGANDO "?" -> PERSEGUINDO "!" (marcador em
+  cima da cabeça, até 35 m).
 - PERSEGUEM correndo (~5 m/s), cercam, MORDEM (8-14 de dano, podem abrir sangramento e, às vezes, infecção).
   Roupas com proteção seguram parte das mordidas e gastam no lugar.
 - Vida 100 · tiro na cabeça x3 · golpes corpo a corpo empurram e atordoam. Mortos ficam no chão e às vezes
@@ -896,11 +1000,12 @@ TOQUE (vários dedos ao mesmo tempo)
 - Metade DIREITA: arrastar = olhar. Minimapa: toque = mapa grande.
 - ATIRAR / GOLPEAR (segurar; dá para arrastar o dedo em cima dele para mirar enquanto atira) · CORRER (segurar)
 - PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga) · RECARREGAR · ARMA (troca coldre/ombro) · PEGAR
-  (aparece perto de um item) · INV · II (pausa) · VOO (câmera livre: SOBE / DESCE / VEL).
-PC
-- WASD andar · Shift correr · Espaço pular · C ou Ctrl agachar · F atirar/golpear · botão direito mirar ·
-  R recarregar · 1..8 atalhos · rodinha troca arma · Tab inventário · E pegar · M mapa · P/Esc pausa ·
-  V voo (Q/E sobem/descem) · mouse arrastando na metade direita = olhar · Enter/Espaço avança as falas.
+  (aparece perto de um item) · INV · II (pausa) · CAM (1ª/3ª pessoa) · VOO (câmera livre: SOBE / DESCE / VEL).
+PC (todas as teclas trocáveis em Opções › Teclado e mouse)
+- WASD/setas andar · Shift correr · Alt andar devagar · Espaço pular · C agachar · mouse esquerdo atirar/golpear ·
+  mouse direito mirar · R recarregar · X ou rodinha trocar arma · Q roda do inventário rápido · 1..8 atalhos ·
+  E pegar · Tab inventário · M mapa · Esc/P pausa · F 1ª/3ª pessoa · V câmera livre (E sobe, Q desce) ·
+  F11 tela cheia.
 
 -----------------------------------------------------------------------------------------------------
 4. NÚMEROS DO JOGO
@@ -1000,6 +1105,7 @@ MENUS E OPÇÕES (pasta menu/)
 
 PERSONAGEM (pasta jogador/)
 - andar, correr, agachar, pular, câmera . jogador/jogador.gd (ajustes no Inspetor da cena jogador.tscn)
+- 1ª pessoa (câmera nos olhos) ......... jogador/jogador.gd (_camera_primeira_pessoa) + jogador/cabeca_oculta.gd
 - vida, sangue, fome, sede, frio ....... jogador/sobrevivencia.gd
 - aparência e animação do soldado ...... jogador/soldado.gd (poses das armas e do corpo a corpo)
 - modelo 3D próprio (.glb) e animações . jogador/animador_modelo.gd + modelos/LEIA-ME.txt
@@ -1033,7 +1139,8 @@ INVENTÁRIO / ITENS (pasta inventario/)
 - equipamento inicial / ao renascer ... inventario/inventario.gd (equipamento_inicial / equipamento_renascer)
 
 HUD (pasta hud/)
-- ícones de status, tela vermelha ..... hud/hud_status.gd
+- ícones de status, tela vermelha ..... hud/hud_status.gd (0.65: só ícones, sem barras nem textos)
+- mira e ícone do pente ............... armas/hud_combate.gd
 - minimapa, mapa grande, bússola ...... hud/mapa.gd
 
 MUNDO / CONSTRUÇÕES (pasta mundo/)
@@ -1049,6 +1156,9 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - quais prédios abrem perto do jogador, porta-malas mundo/interiores.gd
 - loot de cada móvel/carro/chão ....... mundo/loot_mundo.gd (tabelas no topo)
 - loot de teste na base ............... mundo/loot.gd
+- helicóptero caído, comboio destruído,
+  zona contaminada (gás) .............. mundo/eventos.gd (quantos, distâncias, raio do gás, loot no topo)
+- efeito do gás / máscara de gás ...... jogador/sobrevivencia.gd (_gas)
 - dia/noite, chuva, frio, lanterna,
   neblina da manhã, chão molhado ...... mundo/clima.gd
 - mato, capim alto, arbustos e a
@@ -1070,7 +1180,9 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - dados do mapa ....................... data/city.json
 
 INFECTADOS (pasta inimigos/; o nome "vagos" nos arquivos veio do HTML)
-- comportamento, vida, velocidade ..... inimigos/vago.gd
+- comportamento, vida, velocidade,
+  estados (vagando, desconfiado "hm?",
+  investigando, perseguindo) e sentidos inimigos/vago.gd (constantes no topo)
 - aparência e animação ................ inimigos/modelo_infectado.gd (tipos e pesos em TIPOS)
 - modelos 3D e animações .............. inimigos/infectados/homem_*.scn, mulher_*.scn e animacoes.res
                                         (créditos em LICENCA.txt)
@@ -1236,7 +1348,7 @@ MÚSICA (pasta audio/)
 - A gangue VAGOS (Edy, V), Alyce, Nick, Mônica e Carlos ainda não aparecem no jogo (são do Ato 2 em diante).
 - Só abrem até o 3º andar; o telhado só nos prédios de até 3 andares (nos mais altos, o resto fica fechado).
 - História: apagada na 0.63, vai ser refeita do zero (menu mostra "Em breve").
-- Sem 1ª pessoa (o HTML tinha); o mar é "caminhável"; a base militar ainda não tem os prédios/pistas do HTML.
+- O mar é "caminhável"; a base militar ainda não tem os prédios/pistas do HTML.
 - Transformação em carro e jato do HTML foi descartada: o jogo é só a pé.
 - Os blocos de cima das torres escalonadas também mostram "térreo" (vitrines/placas) na base deles.
 - Sobrevivente: rosto liso de manequim; fuzis também ficam só na mão direita (a animação é de pistola).
@@ -1247,7 +1359,7 @@ MÚSICA (pasta audio/)
   outros jogadores no mapa/minimapa, chat. Internet sem roteador/VPN (servidor próprio de "ponte"/relay, que
   precisa de um servidor ligado 24h) e abrir o jogo direto por um link (precisa de plugin Android).
 - Ideias para depois: loot por região, lugares
-  especiais (postos do exército, quarentena, metrô), helicópteros caídos, elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,
+  especiais (postos do exército, quarentena, metrô), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,
   outros sobreviventes (NPCs), o modo história novo.
 
 -----------------------------------------------------------------------------------------------------

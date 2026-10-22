@@ -52,7 +52,7 @@ func _process(dt: float) -> void:
 	_t -= dt
 	if _t <= 0.0:
 		_t = _rng.randf_range(INTERVALO.x, INTERVALO.y)
-		if main.jogador.inventario.contar("radio") > 0:
+		if main.jogador.inventario.radio_ligado():      # 0.65: rádio LIGADO e com pilha
 			_nova()
 
 func _nova() -> void:

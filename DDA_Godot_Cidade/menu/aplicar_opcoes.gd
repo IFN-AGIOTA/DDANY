@@ -77,6 +77,7 @@ func aplicar() -> void:
 		j.distancia_camera = DIST_CAMERA.get(o["dist"], 2.35)
 		j.lateral_camera = LADO.get(o["pos"], 0.32)
 		j.fov_camera = float(o["fov"])
+		j.primeira_pessoa = int(o.get("cam", 0)) == 1     # 0.65: 1ª pessoa
 		j.armas.vibrar = bool(o["vib"])
 		j.sens_mouse = float(o.get("msens", 100)) / 100.0
 		j.sens_mouse_mira = float(o.get("msens_mira", 70)) / 100.0

@@ -32,6 +32,7 @@ const ACOES := [
 	["inventario", "Inventário", "k:%d" % KEY_TAB, "Interação"],
 	["mapa", "Mapa", "k:%d" % KEY_M, "Interação"],
 	["pausa", "Pausa", "k:%d" % KEY_ESCAPE, "Interação"],
+	["camera", "1ª / 3ª pessoa", "k:%d" % KEY_F, "Interação"],
 	["voo", "Câmera livre (voo)", "k:%d" % KEY_V, "Câmera livre"],
 	["voo_sobe", "Câmera livre: subir", "k:%d" % KEY_E, "Câmera livre"],
 	["voo_desce", "Câmera livre: descer", "k:%d" % KEY_Q, "Câmera livre"],

@@ -25,6 +25,7 @@ const MapaCls := preload("res://hud/mapa.gd")
 const ClimaCls := preload("res://mundo/clima.gd")
 const Salvamento := preload("res://menu/salvamento.gd")
 const MissoesCls := preload("res://mundo/missoes.gd")
+const EventosCls := preload("res://mundo/eventos.gd")
 const AmbienteCls := preload("res://audio/ambiente.gd")
 const VagosCls := preload("res://inimigos/vagos.gd")
 const AUTOSALVAR := 120.0                   # segundos entre salvamentos automáticos
@@ -66,6 +67,7 @@ var loot_mundo                              # mundo/loot_mundo.gd (o que tem em 
 var interiores: Node                        # mundo/interiores.gd (prédios por dentro perto do jogador)
 var _t_info := 0.0
 var missoes: Node = null                    # mundo/missoes.gd (suprimentos militares avisados pelo rádio)
+var eventos: Node = null                    # mundo/eventos.gd (0.65: helicóptero caído, comboio, zona contaminada)
 var hud_status: CanvasLayer                 # hud/hud_status.gd (vida, sangue, fome, sede, temperatura)
 var tela_morte: CanvasLayer
 var mapa: CanvasLayer                       # hud/mapa.gd (minimapa, mapa grande e bússola)
@@ -496,6 +498,10 @@ func _criar_jogo() -> void:
 	missoes.name = "Missoes"
 	jogo.add_child(missoes)
 	missoes.ligar(self)
+	eventos = EventosCls.new()
+	eventos.name = "Eventos"
+	jogo.add_child(eventos)
+	eventos.ligar(self)
 	var amb := AmbienteCls.new()
 	amb.name = "AmbienteCidade"
 	jogo.add_child(amb)
@@ -595,6 +601,7 @@ func _fechar_jogo() -> void:
 	clima = null
 	vagos = null
 	missoes = null
+	eventos = null
 	sessao_rede = null
 
 func _process(dt: float) -> void:
