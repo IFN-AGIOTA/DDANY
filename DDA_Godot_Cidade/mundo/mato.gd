@@ -12,6 +12,7 @@ extends Node3D
 # Mexa AQUI para: quantidade, tamanho e cores do mato, alcance e sombra no chão.
 
 const Locais := preload("res://mundo/locais.gd")
+const Cenario := preload("res://mundo/cenario.gd")
 const Col := preload("res://mundo/colisao_mundo.gd")
 const Cid := preload("res://mundo/cidade.gd")
 const TAM := 32.0                                   # tamanho de cada pedaço (m)
@@ -43,6 +44,8 @@ global uniform float vento;
 global uniform float molhado;
 uniform float alcance = 72.0;
 uniform float rigidez = 1.0;
+uniform sampler2D textura : source_color, filter_linear_mipmap;   // 0.69: arbusto baixado (folhas recortadas)
+uniform float com_textura = 0.0;
 void vertex() {
 	vec3 origem = MODEL_MATRIX[3].xyz;
 	vec3 w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
@@ -67,7 +70,11 @@ void vertex() {
 }
 void fragment() {
 	NORMAL = normalize((VIEW_MATRIX * vec4(0.0, 1.0, 0.0, 0.0)).xyz);   // luz igual dos dois lados da folha
-	ALBEDO = COLOR.rgb * mix(1.0, 0.72, molhado);
+	vec4 tx = com_textura > 0.5 ? texture(textura, UV) : vec4(1.0);
+	if (tx.a < 0.5) {
+		discard;
+	}
+	ALBEDO = COLOR.rgb * tx.rgb * mix(1.0, 0.72, molhado);
 	ROUGHNESS = mix(0.85, 0.45, molhado);
 	SPECULAR = 0.25;
 }
@@ -80,10 +87,21 @@ func ligar(c: Node3D, m: Node3D, j: Node3D) -> void:
 	var sh := Shader.new()
 	sh.code = SHADER
 	_malhas = [_malha_tufo(9, 0.22, Vector2(0.25, 0.5)), _malha_tufo(14, 0.45, Vector2(0.7, 1.25)), _malha_arbusto()]
+	# 0.69: o arbusto vira o modelo baixado (Quaternius), com a textura das folhas
+	var tex_arbusto: Texture2D = null
+	if Cenario.tem("arbusto") and Cenario.tem("arbusto_leve"):
+		# malha leve (240 triângulos; o mato tem muitos) com a textura das folhas do arbusto completo
+		var mat_b := Cenario.malha("arbusto").surface_get_material(0) as BaseMaterial3D
+		if mat_b != null and mat_b.albedo_texture != null:
+			_malhas[2] = Cenario.malha("arbusto_leve")
+			tex_arbusto = mat_b.albedo_texture
 	for i in 3:
 		var mt := ShaderMaterial.new()
 		mt.shader = sh
 		mt.set_shader_parameter("rigidez", 0.25 if i == 2 else 1.0)
+		if i == 2 and tex_arbusto != null:
+			mt.set_shader_parameter("textura", tex_arbusto)
+			mt.set_shader_parameter("com_textura", 1.0)
 		_mats.append(mt)
 
 # ---------- malhas (feitas uma vez) ----------
@@ -282,7 +300,8 @@ func _criar(k: Vector2i) -> Node3D:
 		mm.instance_count = l.size()
 		for i in l.size():
 			var e: Array = l[i]
-			var b := Basis(Vector3.UP, e[3]).scaled(Vector3(e[4], e[4] * (0.8 + 0.4 * e[6]), e[4]))
+			var esc_t: float = e[4] * (0.7 if tipo == 2 and _mats[2].get_shader_parameter("com_textura") > 0.5 else 1.0)
+			var b := Basis(Vector3.UP, e[3]).scaled(Vector3(esc_t, esc_t * (0.8 + 0.4 * e[6]), esc_t))
 			mm.set_instance_transform(i, Transform3D(b, Vector3(e[0], e[1], e[2])))
 			var tc: Color = e[5]
 			mm.set_instance_color(i, tc)

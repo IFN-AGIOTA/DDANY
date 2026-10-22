@@ -18,6 +18,7 @@ const AbandonoCls := preload("res://mundo/abandono.gd")
 const FachadasCls := preload("res://mundo/fachadas.gd")
 const OclusaoCls := preload("res://mundo/oclusao.gd")
 const LocaisCls := preload("res://mundo/locais.gd")
+const Cenario := preload("res://mundo/cenario.gd")
 
 const CELL := 20.0                          # resolução das máscaras (m)
 const WORLD := Vector2(11000.0, 8600.0)     # metade do mundo (m)
@@ -57,6 +58,7 @@ var mats_chao: Array[ShaderMaterial] = []   # terra, parque, calçada, asfalto (
 var detalhes: Array[GeometryInstance3D] = []   # árvores e caixas d'água (Opções › Distância dos detalhes)
 var detalhes_abandono: Array[GeometryInstance3D] = []   # carros, lixo, entulho
 var detalhes_fachada: Array[GeometryInstance3D] = []    # escadas de incêndio e ar-condicionado (mundo/fachadas.gd)
+var detalhes_veg: Array[GeometryInstance3D] = []        # 0.69: árvores/plantas baixadas de perto (meta "alcance" = no nível 2)
 var oclusao                                 # mundo/oclusao.gd (caixas oclusoras dos prédios)
 
 var _mascara: ImageTexture                  # terra (1) / água (0) para praias, mar raso e espuma
@@ -95,6 +97,7 @@ func limpar() -> void:
 	built.clear()
 	detalhes.clear()
 	detalhes_abandono.clear()
+	detalhes_veg.clear()
 	detalhes_fachada.clear()
 	oclusao = null
 	is_built = false
@@ -130,6 +133,10 @@ func aplicar_detalhes(nivel_shaders: int, nivel_distancia: int, agua_completa :=
 	for d in detalhes_fachada:
 		if is_instance_valid(d):
 			d.visibility_range_end = FachadasCls.ALCANCES[clampi(nivel_distancia, 0, 3)]
+	var fator: float = [0.6, 0.8, 1.0, 1.3][clampi(nivel_distancia, 0, 3)]
+	for d in detalhes_veg:
+		if is_instance_valid(d):
+			d.visibility_range_end = float(d.get_meta("alcance", 120.0)) * fator
 
 # ---------- ambiente ----------
 func _env() -> void:
@@ -1115,6 +1122,9 @@ func _arvores() -> void:
 		return
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 1984
+	var rv := RandomNumberGenerator.new()           # sorteios dos modelos baixados (0.69)
+	rv.seed = 6901
+	var veg := {}                                   # modelo -> {bloco: [[Transform3D, Color], ...]}
 	var chance := minf(0.6, float(MAX_ARVORES) / celulas.size())
 	var blocos := {}
 	for i in celulas:
@@ -1132,6 +1142,13 @@ func _arvores() -> void:
 		if not blocos.has(chave):
 			blocos[chave] = []
 		blocos[chave].append([t, verde])
+		# 0.69: de perto, um modelo baixado (sorteio à parte: as posições continuam as mesmas)
+		var tipo := _tipo_arvore(rv, verde)
+		var tom := Color(1, 1, 1) * rv.randf_range(0.78, 1.0)
+		if verde.r > verde.g and not tipo.begins_with("arvore_seca"):
+			tom = Color(1.0, 0.7, 0.4)                                    # outono
+		tom.a = 1.0
+		_veg(veg, tipo, t, tom)
 	var tronco := CylinderMesh.new()
 	tronco.top_radius = 0.18
 	tronco.bottom_radius = 0.3
@@ -1168,6 +1185,8 @@ func _arvores() -> void:
 		mi.multimesh = mm
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		mi.visibility_range_end = PERTO_ARVORE
+		if not veg.is_empty():
+			mi.visibility_range_begin = PERTO_MODELO_ARVORE           # de perto fica o modelo baixado
 		_adopt(mi)
 		var mm_l := mm.duplicate() as MultiMesh
 		mm_l.mesh = malha_longe
@@ -1180,3 +1199,121 @@ func _arvores() -> void:
 		_adopt(ml)
 		detalhes.append(ml)
 	print("Árvores: ", total)
+	_plantas(celulas, rv, veg)
+	_montar_veg(veg)
+
+# ---------- 0.69: VEGETAÇÃO BAIXADA (mundo/cenario.gd: Quaternius "Stylized Nature MegaKit") ----------
+const PERTO_MODELO_ARVORE := 110.0          # árvore baixada até aqui; depois, a árvore simples de código
+# alcance (m) de cada planta no nível 2 de "Distância dos detalhes"
+const ALCANCE_VEG := {"arvore": 110.0, "pinheiro": 110.0, "arvore_seca": 110.0, "arvore_grande": 130.0, "arbusto": 80.0,
+	"samambaia": 55.0, "planta": 55.0, "flores": 50.0, "capim": 50.0, "pedra": 90.0, "poste_jardim": 200.0}
+# plantas soltas: [modelo, peso, escala mínima, máxima]
+const PLANTAS_PARQUE := [["arbusto", 24, 0.7, 1.3], ["arbusto_flores", 6, 0.7, 1.1], ["samambaia", 16, 0.8, 1.4], ["planta", 12, 0.7, 1.2],
+	["flores", 8, 0.7, 1.1], ["capim_alto", 16, 0.8, 1.3], ["capim", 12, 0.8, 1.3], ["pedra_1", 3, 0.5, 1.2], ["pedra_3", 3, 0.5, 1.2], ["poste_jardim", 1, 1.0, 1.0]]
+const PLANTAS_TERRENO := [["capim_alto", 32, 0.8, 1.3], ["capim", 28, 0.8, 1.3], ["arbusto", 20, 0.6, 1.1], ["pedra_1", 6, 0.4, 0.9],
+	["pedra_3", 6, 0.4, 0.9], ["arvore_seca_1", 3, 0.6, 1.0], ["arvore_seca_2", 3, 0.6, 1.0]]
+
+func _tipo_arvore(r: RandomNumberGenerator, verde: Color) -> String:
+	var x := r.randf()
+	if verde.r > verde.g and x < 0.5:
+		return "arvore_seca_%d" % (r.randi() % 2 + 1)
+	if x < 0.62:
+		return ["arvore_1", "arvore_3", "arvore_4"][r.randi() % 3]
+	if x < 0.8:
+		return "pinheiro_%d" % (r.randi() % 2 + 1)
+	if x < 0.97:
+		return "arvore_seca_%d" % (r.randi() % 2 + 1)
+	return "arvore_grande"
+
+func _veg(veg: Dictionary, nome: String, t: Transform3D, cor: Color) -> void:
+	if not Cenario.tem(nome):
+		return
+	if not veg.has(nome):
+		veg[nome] = {}
+	var k := Vector2i(floori(t.origin.x / BLOCO_ARVORE), floori(t.origin.z / BLOCO_ARVORE))
+	if not veg[nome].has(k):
+		veg[nome][k] = []
+	veg[nome][k].append([t, cor])
+
+static func _sortear_planta(r: RandomNumberGenerator, tabela: Array) -> Array:
+	var total := 0.0
+	for e in tabela:
+		total += float(e[1])
+	var x := r.randf() * total
+	for e in tabela:
+		x -= float(e[1])
+		if x <= 0.0:
+			return e
+	return tabela[0]
+
+# arbustos, samambaias, flores, capim e pedras: em todo PARQUE e, poucos, nos TERRENOS VAZIOS (sem prédio, sem rua)
+func _plantas(celulas_parque: PackedInt32Array, r: RandomNumberGenerator, veg: Dictionary) -> void:
+	var n := 0
+	for i in celulas_parque:
+		for k in r.randi_range(0, 3):
+			var e := _sortear_planta(r, PLANTAS_PARQUE)
+			_planta(veg, e, i, r, Y_PARQUE)
+			n += 1
+	for i in range(0, W * H, 3):                       # 1 célula em 3 (mais rápido; a chance compensa)
+		if land[i] == 1 and park[i] == 0 and road[i] == 0 and lote[i] == 0 and r.randf() < 0.5:
+			var x := (i % W + 0.5) * CELL - WORLD.x
+			var z := (i / W + 0.5) * CELL - WORLD.y
+			if x > 5600.0 and z > -1600.0 and z < 2600.0:
+				continue                                  # aeroporto
+			var e := _sortear_planta(r, PLANTAS_TERRENO)
+			_planta(veg, e, i, r, Y_TERRA)
+			n += 1
+	print("Plantas baixadas: ", n)
+
+func _planta(veg: Dictionary, e: Array, celula: int, r: RandomNumberGenerator, y: float) -> void:
+	var x := (celula % W + r.randf()) * CELL - WORLD.x
+	var z := (celula / W + r.randf()) * CELL - WORLD.y
+	var s := r.randf_range(float(e[2]), float(e[3]))
+	var b := Basis(Vector3.UP, r.randf() * TAU).scaled(Vector3(s, s * r.randf_range(0.85, 1.15), s))
+	var nome: String = e[0]
+	var afunda := 0.15 * s if nome.begins_with("pedra") else 0.0
+	if nome == "poste_jardim":
+		b = Basis(Vector3.UP, r.randf() * TAU)                     # poste em pé, sem esticar
+	var cor := Color(1, 1, 1) * r.randf_range(0.7, 1.0)
+	if nome.begins_with("capim") and r.randf() < 0.4:
+		cor = Color(0.95, 0.85, 0.6) * r.randf_range(0.8, 1.0)     # capim seco
+	cor.a = 1.0
+	_veg(veg, nome, Transform3D(b, Vector3(x, y - afunda, z)), cor)
+
+func _montar_veg(veg: Dictionary) -> void:
+	var total := 0
+	for nome in veg:
+		var malha: ArrayMesh = Cenario.malha(nome)
+		var grupo: String = nome.rstrip("0123456789").trim_suffix("_")
+		if grupo.begins_with("arvore_seca"):
+			grupo = "arvore_seca"
+		elif grupo.begins_with("pedra"):
+			grupo = "pedra"
+		elif grupo.begins_with("capim"):
+			grupo = "capim"
+		elif grupo.begins_with("planta"):
+			grupo = "planta"
+		elif grupo.begins_with("arbusto"):
+			grupo = "arbusto"
+		var alcance: float = ALCANCE_VEG.get(grupo, 100.0)
+		for k in veg[nome]:
+			var lista: Array = veg[nome][k]
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.use_colors = true
+			mm.mesh = malha
+			mm.instance_count = lista.size()
+			for j in lista.size():
+				mm.set_instance_transform(j, lista[j][0])
+				mm.set_instance_color(j, lista[j][1])
+			total += lista.size()
+			var mi := MultiMeshInstance3D.new()
+			mi.name = "Veg_%s_%d_%d" % [nome, k.x, k.y]
+			mi.multimesh = mm
+			mi.visibility_range_end = alcance
+			mi.set_meta("alcance", alcance)
+			if not grupo in ["arvore", "pinheiro", "arvore_seca", "arvore_grande"]:
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			_adopt(mi)
+			detalhes_veg.append(mi)
+	print("Vegetação baixada: ", total, " (", veg.size(), " modelos)")

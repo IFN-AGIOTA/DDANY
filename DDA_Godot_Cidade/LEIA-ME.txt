@@ -39,6 +39,38 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.69 · CENÁRIO COM MODELOS BAIXADOS: POSTES, PLACAS, SEMÁFOROS, LIXO DE RUA E VEGETAÇÃO
+  · Modelos 3D baixados (todos CC0, créditos na tela de Créditos e em mundo/cenario/LICENCA.txt) no lugar das
+    peças feitas por código, e coisas novas espalhadas pela cidade:
+      - SEMÁFOROS com braço sobre a rua (Quaternius) nos cruzamentos grandes;
+      - PLACAS: PARE nos cruzamentos em T, "proibido estacionar" e "atenção" na beira das calçadas (algumas tortas);
+      - POSTE DE FERRO ANTIGO com 2 lanternas em parte das ruas arborizadas; POSTE DE JARDIM nos parques;
+      - HIDRANTE envelhecido, BARREIRAS de concreto (bloqueios), LIXEIRAS de metal enferrujadas (algumas caídas),
+        CAIXAS DE ENERGIA, BUEIROS no asfalto, montes de SACOS DE LIXO, BARRIS, PNEUS velhos (empilhados),
+        CAIXOTES de madeira, CAIXAS DE PAPELÃO e CARROS COBERTOS COM LONA estacionados (Poly Haven);
+      - ÁRVORES DE CALÇADA (vivas, amarelando e secas) e, nos PARQUES, árvores de verdade (3 tipos comuns,
+        2 pinheiros, 2 secas e uma árvore grande), com ARBUSTOS (alguns com flores), SAMAMBAIAS, PLANTAS, FLORES,
+        CAPIM ALTO e PEDRAS (Quaternius "Stylized Nature MegaKit"). Nos terrenos vazios: capim, arbustos, pedras
+        e árvores secas. O arbusto do mato que cresce em volta do jogador também virou o modelo baixado.
+  · Desempenho: os modelos baixados aparecem de perto (árvores até 140 m, plantas até 60-120 m, conforme
+    Opções › Gráficos › Distância dos detalhes); de longe continuam as versões simples de antes. Objetos
+    esparsos ficam agrupados em pedaços de 500 m (menos nós na cena).
+  · ARQUIVOS MEXIDOS:
+      mundo/cenario/ ............... NOVA (modelos: rua/ Quaternius, natureza/ Quaternius, *.glb Poly Haven,
+                                     LICENCA.txt)
+      mundo/cenario.gd ............. NOVO (carrega os modelos: junta as peças, tamanho, giro, materiais)
+      ferramentas/preparar_cenario.py NOVO (Blender: simplifica os modelos do Poly Haven)
+      mundo/abandono.gd ............ usa os modelos baixados (semáforo, hidrante, barris, sacos de lixo,
+                                     barreiras, árvores de calçada) e põe placas, lixeiras, caixas de energia,
+                                     bueiros, pneus, caixotes, caixas de papelão, carros cobertos e postes antigos
+      mundo/cidade.gd .............. árvores e plantas baixadas nos parques e terrenos (_plantas, _montar_veg),
+                                     alcance pela opção de distância (detalhes_veg)
+      mundo/mato.gd ................ arbusto do mato com o modelo baixado (textura no shader)
+      menu/creditos.gd ............. créditos dos modelos novos
+      menu/config.gd ............... versão 0.69
+  · PUBLICADA: atualizacoes/pacote_0.69.pck (acumulado desde o APK 0.48) + manifesto; os celulares baixam
+    sozinhos. servidor_windows.zip (raiz) refeito na 0.69.
+
 ATUALIZAÇÃO 0.68 · LOCAIS ESPECIAIS: POSTOS DE GASOLINA, HOSPITAIS, SUPERMERCADOS E ARMAZÉNS (ZONAS DE PvP)
   · 28 prédios novos, grandes e montados peça por peça, espalhados por Nova York: 12 POSTOS DE GASOLINA,
     4 HOSPITAIS, 6 SUPERMERCADOS e 6 ARMAZÉNS. Um de cada fica perto da base onde você nasce (o mais perto, o
@@ -1262,6 +1294,8 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   janelas, interiores (shaders) ....... mundo/materiais_cidade.gd
 - colisão com chão/prédios/carros e tiros mundo/colisao_mundo.gd
 - cidade abandonada (carros, entulho) . mundo/abandono.gd
+- modelos baixados do cenário (postes,
+  placas, semáforo, lixo, vegetação) .. mundo/cenario.gd (arquivos em mundo/cenario/, licenças no LICENCA.txt)
 - LOCAIS ESPECIAIS (zonas de PvP): onde ficam, casca de longe,
   monta/desmonta, infectados, aviso ...... mundo/locais.gd (lista LOCAIS: ferramentas/escolher_locais.gd)
 - posto, hospital, supermercado e armazém

@@ -15,7 +15,7 @@ const EQUIPE := [
 		["Willian Ulguim e Gabriel Solla", "Dias de um Apocalipse · Livro 1 e Bíblia da Lore"]]],
 	["JOGO", [
 		["Dias de um Apocalipse · Nova York", "Porte para a Godot do jogo original em HTML"],
-		["Cidade, prédios, interiores, carros, clima e música", "Feitos por código para o jogo (sem arquivos de terceiros)"]]],
+		["Cidade, prédios, interiores, carros, clima e música", "Feitos por código para o jogo (mais os modelos de terceiros listados abaixo)"]]],
 ]
 # [o quê, autor, licença, endereço]
 const RECURSOS := [
@@ -92,6 +92,13 @@ const RECURSOS := [
 		"CC0 1.0 (domínio público)", "opengameart.org/content/sirens-and-alarm-noise"],
 	["Ícones da HUD (vida, sangue, fome, sede, temperatura, pulmões, doenças, pente...)", "Lorc e Delapouite · game-icons.net",
 		"CC BY 3.0", "game-icons.net"],
+	["Postes, semáforo e placas de trânsito", "Quaternius · \"LowPoly Modular Street Pack\"",
+		"CC0 1.0 (domínio público)", "opengameart.org/content/lowpoly-modular-street-pack"],
+	["Árvores, arbustos, samambaias, flores, capim e pedras", "Quaternius · \"Stylized Nature MegaKit\" (Standard)",
+		"CC0 1.0 (domínio público)", "opengameart.org/content/stylized-nature-megakit · quaternius.com"],
+	["Hidrante, barreira de concreto, lixeira, caixa de energia, bueiro, saco de lixo, barril, pneu, caixote, carro coberto e caixa de papelão",
+		"Poly Haven · Gonçalo Felício, Amal Kumar, GurJas Studios, James Ray Cock, Raunox, Benny Weimer, Jorge Camacho, MP, Jurita Burger, Rahul Chaudhary",
+		"CC0 1.0 (domínio público)", "polyhaven.com (lista completa em mundo/cenario/LICENCA.txt)"],
 	["Ícones dos botões de toque (atirar, mirar, correr, pular, agachar, recarregar, mochila, pausa, armas...)",
 		"Lorc, Delapouite, Skoll, John Colburn e Guard13007 · game-icons.net", "CC BY 3.0", "game-icons.net"],
 	["Fonte Roboto Condensed", "Christian Robertson · Google Fonts (Copyright 2011 Google Inc.)",

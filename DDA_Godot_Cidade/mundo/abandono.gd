@@ -5,9 +5,25 @@ extends RefCounted
 # Tudo em MultiMesh por blocos de 250 m (o celular só desenha o que está perto, na frente da câmera e não escondido
 # atrás dos prédios: "visibility_range_end" + frustum + oclusão).
 # Devolve também os OBSTÁCULOS (caixas para a colisão perto do jogador) e os CARROS (porta-malas com loot).
+# 0.69: MODELOS BAIXADOS (mundo/cenario.gd): semáforo, hidrante, barris, sacos de lixo, barreiras, placas, lixeiras,
+# caixas de energia, bueiros, pneus, caixotes, caixas de papelão, carros cobertos, poste antigo e árvores de calçada.
+# De longe continuam as versões simples feitas por código (LOD). Se faltar o arquivo, usa o modelo de código.
 # Mexa AQUI para: quantos carros/obstáculos por rua, modelos dos carros, cores.
 
 const Malhas := preload("res://mundo/malhas.gd")
+const Cenario := preload("res://mundo/cenario.gd")
+# nome da instância -> modelo baixado (mundo/cenario.gd)
+const BAIXADOS := {"semaforo": "semaforo_braco", "hidrante": "hidrante", "barril": "barril",
+	"saco_lixo": "saco_lixo", "barreira": "barreira", "lixeira": "lixeira", "caixa_energia": "caixa_energia", "bueiro": "bueiro", "pneu": "pneu", "caixote": "caixote",
+	"caixa_papelao": "caixa_papelao", "carro_coberto": "carro_coberto", "placa_pare": "placa_pare",
+	"placa_proibido": "placa_proibido", "placa_atencao": "placa_atencao", "poste_duplo": "poste_duplo",
+	"arvore_rua_1": "arvore_1", "arvore_rua_2": "arvore_4", "arvore_rua_seca_1": "arvore_seca_2"}
+# objetos esparsos (poucos por quadra): pedaços de 500 m (menos nós na cena; alcance de pelo menos 420 m)
+const ESPARSOS := ["placa_pare", "placa_proibido", "placa_atencao", "lixeira", "caixa_energia", "pneu", "caixote",
+	"caixa_papelao", "carro_coberto", "bueiro"]
+const BLOCO_ESPARSO := 500.0
+# até onde vai o modelo baixado (depois, a versão simples de código; os pesados ficam mais perto)
+const PERTO_BAIXADO := {"arvore_rua": 110.0, "poste_duplo": 180.0, "carro_coberto": 250.0}
 const BLOCO := 250.0
 const Y := 0.6                       # altura do asfalto
 
@@ -21,7 +37,8 @@ var rng := RandomNumberGenerator.new()
 var densidade := 1.0
 var obstaculos := PackedFloat32Array()   # x, z, giro, tam_x, tam_y, tam_z, y_centro (7 por obstáculo)
 var carros: Array = []                   # [pos Vector3, giro, tipo] (porta-malas)
-var _inst := {}                          # nome do modelo -> {Vector2i: [[Transform3D, Color], ...]}
+var _inst := {}                          # nome do modelo -> {Vector2i: [[Transform3D, Color, cor de longe], ...]}
+var baixados := true                     # usar os modelos baixados (falso = só os de código, para comparar)
 var nos: Array[GeometryInstance3D] = []
 
 func construir(cidade, ruinas: Array, dens: float) -> void:
@@ -145,7 +162,7 @@ static func modelo(nome: String) -> ArrayMesh:
 # LOD: versão de LONGE (sem rodas, luzes, grades nem detalhes; ~5 a 10x menos triângulos). Só os modelos que
 # aparecem longe; os pequenos (lixo, cacos, hidrante...) já somem antes de PERTO_LOD.
 const PERTO_LOD := 300.0                 # até aqui o modelo completo (medido até o centro do pedaço de 250 m)
-const TEM_LOD := ["sedan", "taxi", "van", "onibus", "entulho", "poste", "semaforo", "arvore_rua"]
+const TEM_LOD := ["sedan", "taxi", "van", "onibus", "entulho", "poste", "semaforo", "arvore_rua", "poste_duplo", "carro_coberto"]
 
 static func modelo_longe(nome: String) -> ArrayMesh:
 	var c := Malhas.Construtor.new()
@@ -173,16 +190,33 @@ static func modelo_longe(nome: String) -> ArrayMesh:
 		"arvore_rua":
 			c.caixa(Vector3(0, 1.6, 0), Vector3(0.3, 3.2, 0.3), Color(0.32, 0.24, 0.17))
 			c.cilindro(Vector3(0, 4.4, 0), 1.6, 3.0, 5, Color.WHITE, Basis.IDENTITY, 0.9)
+		"poste_duplo":
+			c.caixa(Vector3(0, 3.6, 0), Vector3(0.2, 7.2, 0.2), Color(0.08, 0.08, 0.08))
+			c.caixa(Vector3(0, 6.8, 0), Vector3(0.25, 0.25, 1.9), Color(0.08, 0.08, 0.08))
+		"carro_coberto":
+			c.caixa(Vector3(0, 0.62, 0), Vector3(1.75, 0.9, 4.3), Color(0.16, 0.17, 0.18))
+			c.caixa(Vector3(0, 1.15, 0.1), Vector3(1.5, 0.45, 2.2), Color(0.16, 0.17, 0.18))
 	return c.malha()
 
 # ---------- colocação ----------
-func _por(nome: String, t: Transform3D, cor: Color) -> void:
+# cor_longe: cor da versão simples de longe (árvore: a de perto já tem textura colorida, a de longe é verde)
+func _por(nome: String, t: Transform3D, cor: Color, cor_longe := Color(0, 0, 0, 0)) -> void:
 	if not _inst.has(nome):
 		_inst[nome] = {}
-	var k := Vector2i(floori(t.origin.x / BLOCO), floori(t.origin.z / BLOCO))
+	var bl := BLOCO_ESPARSO if nome in ESPARSOS else BLOCO
+	var k := Vector2i(floori(t.origin.x / bl), floori(t.origin.z / bl))
 	if not _inst[nome].has(k):
 		_inst[nome][k] = []
-	_inst[nome][k].append([t, cor])
+	_inst[nome][k].append([t, cor, cor if cor_longe.a <= 0.0 else cor_longe])
+
+# instância -> nome do modelo de código (o de longe e o que vale se faltar o arquivo baixado)
+static func _base(nome: String) -> String:
+	if nome.begins_with("arvore_rua"):
+		return "arvore_rua"
+	return {"barril_2": "barril", "saco_lixo": "lixo"}.get(nome, nome)
+
+func _tem_baixado(nome: String) -> bool:
+	return baixados and BAIXADOS.has(nome) and Cenario.tem(BAIXADOS[nome])
 
 func _obstaculo(p: Vector3, giro: float, tam: Vector3) -> void:
 	obstaculos.append_array(PackedFloat32Array([p.x, p.z, giro, tam.x, tam.y, tam.z, p.y + tam.y * 0.5]))
@@ -293,8 +327,16 @@ func _barreiras() -> void:
 		while k < hw - 1.5:
 			if rng.randf() > 0.18:          # algumas faltando (passagem)
 				var p := c + nrm * k + dir * rng.randf_range(-0.3, 0.3)
-				_por("barreira", Transform3D(Basis(Vector3.UP, giro + rng.randf_range(-0.12, 0.12)), Vector3(p.x, Y, p.y)), Color(0.62, 0.6, 0.56) * rng.randf_range(0.85, 1.05))
-				_obstaculo(Vector3(p.x, Y, p.y), giro, Vector3(3.0, 0.85, 0.62))
+				var bb := Basis(Vector3.UP, giro + rng.randf_range(-0.12, 0.12))
+				if _tem_baixado("barreira"):
+					# modelo baixado tem 1,57 m: duas lado a lado no lugar de uma de 3 m (já vem com a cor do concreto)
+					for lado in [-0.79, 0.79]:
+						var q: Vector3 = Vector3(p.x, Y - 0.02, p.y) + bb * Vector3(lado, 0, 0)
+						_por("barreira", Transform3D(bb * Basis(Vector3.UP, rng.randf_range(-0.06, 0.06)), q), Color.WHITE * rng.randf_range(0.8, 1.0))
+					_obstaculo(Vector3(p.x, Y, p.y), giro, Vector3(3.1, 1.1, 0.45))
+				else:
+					_por("barreira", Transform3D(bb, Vector3(p.x, Y, p.y)), Color(0.62, 0.6, 0.56) * rng.randf_range(0.85, 1.05))
+					_obstaculo(Vector3(p.x, Y, p.y), giro, Vector3(3.0, 0.85, 0.62))
 			k += 3.1
 
 func _lixo_nas_calcadas() -> void:
@@ -317,21 +359,56 @@ func _lixo_nas_calcadas() -> void:
 				var g := Basis(Vector3.UP, rng.randf() * TAU)
 				var r := rng.randf()
 				if r < 0.4:
-					_por("lixo", Transform3D(g.scaled(Vector3.ONE * rng.randf_range(0.8, 1.3)), Vector3(p.x, Y - 0.05, p.y)), Color(0.07, 0.07, 0.08) if rng.randf() < 0.8 else Color(0.2, 0.25, 0.4))
+					if _tem_baixado("saco_lixo"):
+						# monte de 2 a 5 sacos de lixo
+						for j in rng.randi_range(2, 5):
+							var q := p + Vector2(rng.randf_range(-0.6, 0.6), rng.randf_range(-0.6, 0.6))
+							var sb := Basis(Vector3.UP, rng.randf() * TAU) * Basis(Vector3.RIGHT, rng.randf_range(-0.3, 0.3))
+							_por("saco_lixo", Transform3D(sb.scaled(Vector3.ONE * rng.randf_range(0.8, 1.25)), Vector3(q.x, Y - 0.06, q.y)), Color.WHITE if rng.randf() < 0.8 else Color(0.45, 0.6, 1.0))
+					else:
+						_por("lixo", Transform3D(g.scaled(Vector3.ONE * rng.randf_range(0.8, 1.3)), Vector3(p.x, Y - 0.05, p.y)), Color(0.07, 0.07, 0.08) if rng.randf() < 0.8 else Color(0.2, 0.25, 0.4))
 				elif r < 0.65:
 					var n := rng.randi_range(1, 3)
 					for j in n:
 						var q := p + Vector2(rng.randf_range(-0.8, 0.8), rng.randf_range(-0.8, 0.8))
 						var deitado := rng.randf() < 0.25
 						var bb := g * Basis(Vector3.FORWARD, PI * 0.5) if deitado else g
-						_por("barril", Transform3D(bb, Vector3(q.x, Y - 0.05 + (0.3 if deitado else 0.0), q.y)), cores_barril[rng.randi() % cores_barril.size()] * rng.randf_range(0.7, 1.0))
+						if _tem_baixado("barril"):
+							_por("barril", Transform3D(bb, Vector3(q.x, Y - 0.05 + (0.28 if deitado else 0.0), q.y)), Color.WHITE * rng.randf_range(0.7, 1.0))
+						else:
+							_por("barril", Transform3D(bb, Vector3(q.x, Y - 0.05 + (0.3 if deitado else 0.0), q.y)), cores_barril[rng.randi() % cores_barril.size()] * rng.randf_range(0.7, 1.0))
 						_obstaculo(Vector3(q.x, Y, q.y), 0.0, Vector3(0.6, 0.9, 0.6))
 				elif r < 0.8:
 					var giro := _giro(dir)
 					_por("cacamba", Transform3D(Basis(Vector3.UP, giro + rng.randf_range(-0.3, 0.3)), Vector3(p.x, Y - 0.05, p.y)), [Color(0.15, 0.3, 0.18), Color(0.15, 0.2, 0.35), Color(0.4, 0.3, 0.1)][rng.randi() % 3])
 					_obstaculo(Vector3(p.x, Y, p.y), giro, Vector3(2.0, 1.3, 1.3))
-				else:
+				elif r < 0.86 or not baixados:
 					_por("cacos", Transform3D(g, Vector3(p.x, Y - 0.05, p.y)), Color(0.55, 0.53, 0.5) * rng.randf_range(0.8, 1.1))
+				elif r < 0.9:
+					# pneus velhos: deitados empilhados ou um em pé encostado
+					if rng.randf() < 0.6:
+						for j in rng.randi_range(1, 4):
+							_por("pneu", Transform3D(g * Basis(Vector3.RIGHT, PI * 0.5), Vector3(p.x, Y - 0.04 + 0.085 + j * 0.16 - 0.16, p.y)), Color.WHITE)
+					else:
+						_por("pneu", Transform3D(g * Basis(Vector3.RIGHT, rng.randf_range(-0.2, 0.2)), Vector3(p.x, Y - 0.05, p.y)), Color.WHITE)
+				elif r < 0.94:
+					_por("caixote", Transform3D(g, Vector3(p.x, Y - 0.05, p.y)), Color.WHITE * rng.randf_range(0.75, 1.0))
+					if rng.randf() < 0.4:
+						_por("caixote", Transform3D(g * Basis(Vector3.UP, rng.randf_range(-0.3, 0.3)), Vector3(p.x, Y - 0.05 + 0.46, p.y)), Color.WHITE * rng.randf_range(0.75, 1.0))
+					_obstaculo(Vector3(p.x, Y, p.y), atan2(-g.x.z, g.x.x), Vector3(0.6, 0.9, 1.2))
+				elif r < 0.97:
+					for j in rng.randi_range(2, 5):
+						var q := p + Vector2(rng.randf_range(-0.9, 0.9), rng.randf_range(-0.9, 0.9))
+						var cb := Basis(Vector3.UP, rng.randf() * TAU)
+						if rng.randf() < 0.3:
+							cb = cb * Basis(Vector3.RIGHT, PI * 0.5)
+						_por("caixa_papelao", Transform3D(cb, Vector3(q.x, Y - 0.05, q.y)), Color.WHITE * rng.randf_range(0.7, 1.0))
+				else:
+					# carro coberto com lona, estacionado colado no meio-fio (do lado da rua)
+					var pc: Vector2 = a + dir * t + nrm * lado * (hw - 1.6)
+					var gc := _giro(dir * lado) + PI * 0.5
+					_por("carro_coberto", Transform3D(Basis(Vector3.UP, gc + rng.randf_range(-0.05, 0.05)), Vector3(pc.x, Y - 0.02, pc.y)), Color.WHITE * rng.randf_range(0.7, 1.0))
+					_obstaculo(Vector3(pc.x, Y, pc.y), gc - PI * 0.5, Vector3(4.4, 1.4, 1.8))
 				t += rng.randf_range(25.0, 70.0) / densidade
 
 # postes (alguns caídos), semáforos nos cruzamentos (alguns tortos), hidrantes, bancos e árvores de calçada
@@ -340,6 +417,7 @@ func _mobiliario_urbano() -> void:
 		var hw: float = float(rd[0]) * 0.5
 		var pts: PackedVector2Array = cid._pts(rd[1])
 		var com_arvores := rng.randf() < 0.45
+		var poste_antigo := baixados and com_arvores and rng.randf() < 0.45     # ruas arborizadas: poste de ferro antigo
 		for i in pts.size() - 1:
 			var a := pts[i]
 			var b := pts[i + 1]
@@ -362,6 +440,9 @@ func _mobiliario_urbano() -> void:
 							# poste caído atravessado na rua
 							var bb := Basis(Vector3.UP, giro) * Basis(Vector3.FORWARD, -PI * 0.47)
 							_por("poste", Transform3D(bb, Vector3(p.x, Y + 0.1, p.y)), Color.WHITE)
+						elif poste_antigo:
+							_por("poste_duplo", Transform3D(Basis(Vector3.UP, giro + PI * 0.5) * Basis(Vector3.FORWARD, rng.randf_range(-0.03, 0.03)), Vector3(p.x, Y - 0.05, p.y)), Color.WHITE * rng.randf_range(0.8, 1.0))
+							_obstaculo(Vector3(p.x, Y, p.y), giro, Vector3(0.45, 7.5, 0.45))
 						else:
 							_por("poste", Transform3D(Basis(Vector3.UP, giro) * Basis(Vector3.FORWARD, rng.randf_range(-0.04, 0.04)), Vector3(p.x, Y - 0.05, p.y)), Color.WHITE)
 							_obstaculo(Vector3(p.x, Y, p.y), giro, Vector3(0.35, 8.0, 0.35))
@@ -372,7 +453,18 @@ func _mobiliario_urbano() -> void:
 							verde = Color(0.35, 0.27, 0.16) * rng.randf_range(0.8, 1.2)    # árvore seca
 						verde.a = 1.0
 						var s := rng.randf_range(0.85, 1.25)
-						_por("arvore_rua", Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s, s, s)), Vector3(q.x, Y - 0.05, q.y)), verde)
+						if baixados:
+							# modelo baixado: árvore viva (5 tipos) ou seca (3 tipos), um pouco menor que as dos parques
+							var seca := verde.r > verde.g
+							var nome_a := "arvore_rua_seca_1" if seca else ("arvore_rua_%d" % (rng.randi() % 2 + 1))
+							var tom := Color(1, 1, 1) * rng.randf_range(0.75, 1.0)
+							if not seca and rng.randf() < 0.15:
+								tom = Color(1.0, 0.72, 0.42)                  # amarelando (outono)
+							tom.a = 1.0
+							var se := s * 0.72
+							_por(nome_a, Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(se, se, se)), Vector3(q.x, Y - 0.05, q.y)), tom, verde)
+						else:
+							_por("arvore_rua", Transform3D(Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(s, s, s)), Vector3(q.x, Y - 0.05, q.y)), verde)
 						_obstaculo(Vector3(q.x, Y, q.y), 0.0, Vector3(0.45, 3.0, 0.45))
 					var r := rng.randf()
 					var q2: Vector2 = a + dir * (t + 7.0) + nrm * lado * (hw + 1.4)
@@ -381,8 +473,45 @@ func _mobiliario_urbano() -> void:
 					elif r < 0.2:
 						var q3: Vector2 = a + dir * (t + 7.0) + nrm * lado * (hw + 3.8)
 						_por("banco", Transform3D(Basis(Vector3.UP, _giro(dir) + (PI if lado > 0.0 else 0.0)), Vector3(q3.x, Y - 0.05, q3.y)), Color.WHITE)
+					elif r < 0.28 and baixados:
+						# placa na beira da calçada, virada para quem vem pela rua
+						var qp: Vector2 = a + dir * (t + 4.0) + nrm * lado * (hw + 0.7)
+						var tipo_p := "placa_proibido" if rng.randf() < 0.6 else "placa_atencao"
+						var gp := _giro(dir * lado) + rng.randf_range(-0.08, 0.08)      # a face da placa é o eixo X do modelo
+						var torta := Basis(Vector3.FORWARD, rng.randf_range(-0.12, 0.12)) if rng.randf() < 0.3 else Basis.IDENTITY
+						_por(tipo_p, Transform3D(Basis(Vector3.UP, gp) * torta, Vector3(qp.x, Y - 0.05, qp.y)), Color.WHITE * rng.randf_range(0.75, 1.0))
+					elif r < 0.36 and baixados:
+						var ql: Vector2 = a + dir * (t + 9.0) + nrm * lado * (hw + 1.3)
+						if rng.randf() < 0.25:
+							_por("lixeira", Transform3D(Basis(Vector3.UP, rng.randf() * TAU) * Basis(Vector3.RIGHT, PI * 0.5), Vector3(ql.x, Y + 0.25, ql.y)), Color.WHITE)   # caída
+						else:
+							_por("lixeira", Transform3D(Basis(Vector3.UP, rng.randf() * TAU), Vector3(ql.x, Y - 0.05, ql.y)), Color.WHITE)
+							_obstaculo(Vector3(ql.x, Y, ql.y), 0.0, Vector3(0.6, 0.9, 0.6))
+					elif r < 0.43 and baixados:
+						# caixa de energia encostada do lado dos prédios
+						var qe: Vector2 = a + dir * (t + 11.0) + nrm * lado * (hw + 4.6)
+						var ge := _giro(dir) + (0.0 if lado > 0.0 else PI)
+						_por("caixa_energia", Transform3D(Basis(Vector3.UP, ge), Vector3(qe.x, Y - 0.05, qe.y)), Color.WHITE * rng.randf_range(0.75, 1.0))
+						_obstaculo(Vector3(qe.x, Y, qe.y), ge, Vector3(0.95, 1.15, 0.45))
+					# bueiro no asfalto, perto da sarjeta
+					if baixados and k % 3 == 1:
+						var qb: Vector2 = a + dir * (t + 3.0) + nrm * lado * (hw - 1.2)
+						_por("bueiro", Transform3D(Basis(Vector3.UP, rng.randf() * TAU), Vector3(qb.x, Y - 0.045, qb.y)), Color.WHITE)
 					t += rng.randf_range(16.0, 22.0)
 					k += 1
+	# placas de PARE nos cruzamentos em T (0.69, modelos baixados)
+	if baixados:
+		for kk in cid._nos:
+			var e = cid._nos[kk]
+			if e["n"] != 3:
+				continue
+			var r: float = e["r"] + 2.0
+			for canto in 2:
+				if rng.randf() < 0.35:
+					continue
+				var ang := PI * 0.25 + (canto * 2 + rng.randi() % 2) * PI * 0.5
+				var p := Vector2(kk) + Vector2(cos(ang), sin(ang)) * r * 1.414
+				_por("placa_pare", Transform3D(Basis(Vector3.UP, _giro(Vector2(cos(ang), sin(ang))) + rng.randf_range(-0.2, 0.2)), Vector3(p.x, Y - 0.05, p.y)), Color.WHITE * rng.randf_range(0.8, 1.0))
 	# semáforos: um em cada canto dos cruzamentos grandes
 	for kk in cid._nos:
 		var e = cid._nos[kk]
@@ -430,14 +559,25 @@ func _montar() -> void:
 	var mat_concreto := _material(0.0)
 	var alcance := {"sedan": 900.0, "taxi": 900.0, "van": 900.0, "onibus": 1200.0, "barreira": 600.0, "barril": 350.0,
 		"cacamba": 450.0, "lixo": 300.0, "entulho": 700.0, "cacos": 250.0, "poste": 600.0, "semaforo": 600.0,
-		"hidrante": 200.0, "banco": 250.0, "arvore_rua": 700.0}
+		"hidrante": 200.0, "banco": 250.0, "arvore_rua": 700.0, "lixeira": 220.0, "caixa_energia": 250.0, "caixa_energia_2": 250.0,
+		"bueiro": 120.0, "pneu": 160.0, "caixote": 200.0, "caixa_papelao": 140.0, "carro_coberto": 900.0, "placa_pare": 260.0,
+		"placa_proibido": 220.0, "placa_atencao": 220.0, "poste_duplo": 600.0}
 	for nome in _inst:
-		var malha := modelo(nome)
-		var concreto: bool = nome in ["barreira", "entulho", "cacos", "lixo", "arvore_rua", "banco"]
-		malha.surface_set_material(0, mat_concreto if concreto else mat_metal)
+		var base := _base(nome)
+		var concreto: bool = base in ["barreira", "entulho", "cacos", "lixo", "arvore_rua", "banco"]
+		var malha: Mesh
+		var perto := PERTO_LOD
+		if _tem_baixado(nome):
+			malha = Cenario.malha(BAIXADOS[nome])
+			perto = PERTO_BAIXADO.get(base, PERTO_LOD)
+		elif BAIXADOS.has(nome) and base == nome and not (nome in ["semaforo", "hidrante", "barril", "barreira"]):
+			continue                              # placa, lixeira... sem arquivo baixado e sem versão de código: não põe
+		else:
+			malha = modelo(base)
+			malha.surface_set_material(0, mat_concreto if concreto else mat_metal)
 		var longe: ArrayMesh = null
-		if nome in TEM_LOD:
-			longe = modelo_longe(nome)
+		if base in TEM_LOD:
+			longe = modelo_longe(base)
 			longe.surface_set_material(0, mat_concreto if concreto else mat_metal)
 		for k in _inst[nome]:
 			var lista: Array = _inst[nome][k]
@@ -452,20 +592,24 @@ func _montar() -> void:
 			var mi := MultiMeshInstance3D.new()
 			mi.name = "%s_%d_%d" % [nome, k.x, k.y]
 			mi.multimesh = mm
-			mi.visibility_range_end = alcance.get(nome, 600.0)
-			if nome in ["lixo", "cacos", "barril", "hidrante", "banco"]:
+			mi.visibility_range_end = alcance.get(base, 600.0)
+			if nome in ESPARSOS:
+				mi.visibility_range_end = maxf(mi.visibility_range_end, 380.0)
+			if base in ["lixo", "cacos", "barril", "hidrante", "banco", "bueiro", "pneu", "caixa_papelao", "placa_pare", "placa_proibido", "placa_atencao"]:
 				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			nos.append(mi)
 			if longe != null:
 				# mesmas posições (instancing), malha simples: completo até PERTO_LOD, simples dali até o alcance
-				mi.visibility_range_end = PERTO_LOD
+				mi.visibility_range_end = perto
 				var mm_l := mm.duplicate() as MultiMesh
 				mm_l.mesh = longe
+				for i in lista.size():
+					mm_l.set_instance_color(i, lista[i][2])
 				var ml := MultiMeshInstance3D.new()
 				ml.name = "%sLonge_%d_%d" % [nome, k.x, k.y]
 				ml.multimesh = mm_l
-				ml.visibility_range_begin = PERTO_LOD
-				ml.visibility_range_end = alcance.get(nome, 600.0)
+				ml.visibility_range_begin = perto
+				ml.visibility_range_end = alcance.get(base, 600.0)
 				ml.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF      # sombra de longe nem aparece
 				nos.append(ml)
 
