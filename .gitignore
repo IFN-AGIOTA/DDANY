@@ -13,3 +13,5 @@ DDA_Godot_Cidade/rede/turn.cfg
 # jogo para PC (Windows): gerado por export "Windows"; vai entregue como jogo_windows.zip (não fica no git)
 jogo_windows/
 jogo_windows.zip
+# cópia do projeto inteiro entregue em zip (o próprio repositório já tem tudo)
+DDA_Godot_Cidade_*.zip
