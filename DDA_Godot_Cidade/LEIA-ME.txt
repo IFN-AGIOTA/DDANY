@@ -1226,6 +1226,10 @@ MÚSICA (pasta audio/)
 - A cada atualização vêm SÓ os arquivos que mudaram, num .zip já com as pastas certas: extraia por cima desta
   pasta (DDA_Godot_Cidade/) e confirme substituir. Junto vem a lista de arquivos alterados/novos/apagados e o
   que mudou em cada um. O APK novo fica na pasta principal do repositório.
+- REGRA: TODA atualização é registrada AQUI, neste LEIA-ME, sem exceção (até consertos pequenos): um bloco
+  "ATUALIZAÇÃO X.YY" novo no topo da seção 2 com tudo o que mudou e os arquivos mexidos, e as seções de
+  controles, números, itens, história e o MAPA de arquivos atualizadas quando for o caso. Este arquivo vai
+  sempre junto no .zip da atualização.
 - Para pedir mudanças, diga o sistema (use o MAPA acima) ou mande foto/mensagem de erro.
 
 -----------------------------------------------------------------------------------------------------

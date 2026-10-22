@@ -6,6 +6,11 @@
   - listar os arquivos alterados/novos/apagados, com o caminho a partir de `DDA_Godot_Cidade/`, e dizer o que mudou em cada um;
   - mandar um `.zip` com apenas esses arquivos, já nas pastas certas, para extrair por cima do projeto;
   - não mandar o projeto inteiro, a não ser que o usuário peça.
+- OBRIGATÓRIO em TODA atualização: registrar no `DDA_Godot_Cidade/LEIA-ME.txt` tudo o que foi mexido, sem exceção (inclusive consertos pequenos, limpezas e mudanças de ajuste):
+  - criar um bloco novo `ATUALIZAÇÃO X.YY · TÍTULO` no topo da seção "2. O JOGO HOJE" (o mais novo fica em cima), com o que mudou para o jogador e os arquivos mexidos (caminho + o que mudou em cada um, e quais são NOVOS ou APAGADOS);
+  - se mudou controle, número, item, loot ou história, atualizar também a seção correspondente (3, 4, 5, 6);
+  - se um arquivo novo passou a cuidar de algum sistema, atualizar o mapa "QUERO MEXER EM... ARQUIVO";
+  - o `LEIA-ME.txt` sempre vai junto no `.zip` da atualização.
 
 # Lore (história do jogo)
 
