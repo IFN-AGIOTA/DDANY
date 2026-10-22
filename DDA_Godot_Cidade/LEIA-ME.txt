@@ -56,6 +56,8 @@ ATUALIZAÇÃO 0.66 · ÍCONES DA HUD BAIXADOS (game-icons.net)
       armas/hud_combate.gd ..... ícone do pente e da arma emperrada
       menu/creditos.gd ......... crédito dos ícones
       menu/config.gd ........... versão 0.66
+  · PUBLICADA: atualizacoes/pacote_0.66.pck (acumulado desde o APK 0.48, 565 arquivos) + manifesto; os celulares
+    baixam sozinhos. Arquivos apagados nas 0.63-0.65 (história, npc/, fontes) continuam dentro do APK antigo, sem uso.
 
 ATUALIZAÇÃO 0.65 · DAYZ DE VERDADE: HUD MÍNIMA, 1ª PESSOA, PILHAS, BOLSOS, INFECTADOS ESPERTOS E EVENTOS
   · HUD MÍNIMA (hud/hud_status.gd, armas/hud_combate.gd, hud/mapa.gd): sem números e sem barras. Só ícones que
