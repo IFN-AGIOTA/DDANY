@@ -19,6 +19,7 @@ const LootCls := preload("res://mundo/loot.gd")
 const LootMundoCls := preload("res://mundo/loot_mundo.gd")
 const InterioresCls := preload("res://mundo/interiores.gd")
 const LocaisCls := preload("res://mundo/locais.gd")
+const PortaCls := preload("res://mundo/porta.gd")
 const MatoCls := preload("res://mundo/mato.gd")
 const FumacaCls := preload("res://mundo/fumaca.gd")
 const HudStatusCls := preload("res://hud/hud_status.gd")
@@ -493,6 +494,11 @@ func _criar_jogo() -> void:
 	loot_mundo.semente = randi()                      # cada jogo novo tem o loot em lugares diferentes
 	# 0.72: o loot volta pelo relógio do jogo (horas desde o 1º dia; na rede a hora é a do host)
 	loot_mundo.relogio = func() -> float: return (float(clima.dia) - 1.0) * 24.0 + float(clima.hora) if clima != null else 0.0
+	# 0.73: portas (mundo/porta.gd): o estado mexido fica no loot (jogo salvo e rede); abrir/fechar/martelar faz barulho
+	PortaCls.ao_mudar = func(pt) -> void: loot_mundo.mudar_porta(pt.id, pt.estado())
+	PortaCls.barulho = func(pos: Vector3, raio: float) -> void:
+		if vagos != null:
+			vagos.barulho(pos, raio, true)
 	interiores = InterioresCls.new()
 	interiores.name = "Interiores"
 	jogo.add_child(interiores)

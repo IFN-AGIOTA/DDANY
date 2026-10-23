@@ -14,6 +14,7 @@ const GradeCls := preload("res://inventario/grade.gd")
 const Itens := preload("res://inventario/itens.gd")
 const Visual := preload("res://inventario/visual.gd")
 const Boneco3D := preload("res://inventario/boneco_3d.gd")
+const PortaCls := preload("res://mundo/porta.gd")
 
 const AMBAR := Color(1.0, 0.71, 0.0)
 const SLOTS_ESQ := ["cabeca", "rosto", "camisa", "colete", "cinto"]   # 0.65: ROSTO (máscara de gás)
@@ -152,10 +153,18 @@ func _process(dt: float) -> void:
 		_t_scan = 0.25
 		if controles != null:
 			var perto = inv.item_mais_proximo()
-			controles.ocultos["PEGAR"] = aberto or perto == null
+			# 0.73: sem item perto, o mesmo botão serve para a PORTA (abrir, fechar, tirar tábua)
+			var acao_porta := ""
+			if perto == null and inv.jogador != null:
+				var pt = PortaCls.perto(inv.jogador.global_position)
+				if pt != null:
+					acao_porta = pt.acao(inv)
+			controles.ocultos["PEGAR"] = aberto or (perto == null and acao_porta == "")
 			# o botão diz O QUE vai pegar (nome curto do item)
-			if perto != null and perto.get("item") != null:
-				controles.textos["PEGAR"] = "PEGAR\n" + String(perto.item.def().get("sigla", perto.item.nome()))
+			if acao_porta != "":
+				controles.textos["PEGAR"] = acao_porta
+			elif perto != null:
+				controles.textos["PEGAR"] = "PEGAR\n" + String(perto.def().get("sigla", perto.nome()))
 		if aberto:
 			var s: String = inv.assinatura_perto()
 			if s != _assinatura:

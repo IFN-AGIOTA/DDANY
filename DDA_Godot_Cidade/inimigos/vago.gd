@@ -36,6 +36,8 @@ const ItemMundo := preload("res://inventario/item_mundo.gd")
 const ItemCls := preload("res://inventario/item.gd")
 const SonsCorpo := preload("res://audio/sons_corpo.gd")
 const SonsBaixados := preload("res://audio/sons_baixados.gd")
+const PortaCls := preload("res://mundo/porta.gd")
+const DANO_PORTA := 2.2                # 0.73: golpe na porta = mordida x isso (porta 100, tábua 140)
 
 # ----- números do Vago -----
 const VIDA := 100.0
@@ -705,6 +707,28 @@ func _decidir(dt: float, j: Node3D) -> void:
 			if _t_ataque >= PREPARO_ATAQUE + 0.45:
 				estado = PERSEGUINDO
 
+# porta fechada perto e para o lado de onde ele quer ir: perto dela, bate; um pouco longe, vai até ela
+func _porta_no_caminho(p: Vector3, quer: Vector3) -> bool:
+	var pt = PortaCls.perto(p, 4.5)
+	if pt == null or not pt.fechada():
+		return false
+	var para_porta: Vector3 = pt.global_position - p
+	para_porta.y = 0.0
+	if para_porta.normalized().dot(quer.normalized()) < -0.3:
+		return false                                  # a porta fica para trás: não é o caminho
+	if para_porta.length() > 1.5:
+		_dir_desvio = para_porta.normalized()
+		_t_desvio = 0.7
+		return true
+	_t_preso = 1.25                                   # um golpe a cada ~1,2 s
+	modelo.atacar()
+	if gerente != null:
+		gerente.rede_ani(self, "atacar", {})
+	_tocar("rosnado", randf_range(0.9, 1.15), 0.0)
+	rotation.y = atan2(-para_porta.x, -para_porta.z)
+	pt.golpear(randf_range(DANO_MIN, DANO_MAX) * DANO_PORTA * _mult_dano)
+	return true
+
 func _acertar(j: Node3D) -> void:
 	var dano := randf_range(DANO_MIN, DANO_MAX) * _mult_dano * (float(gerente.mult_dano) if gerente != null else 1.0)
 	if j.has_method("receber_ataque"):
@@ -890,6 +914,9 @@ func _checar_preso(dt: float, quer: Vector3) -> void:
 		_n_preso += 1
 		if estado == VAGANDO:
 			_novo_destino_vagar()
+			return
+		# 0.73: preso atrás de uma PORTA FECHADA (mundo/porta.gd) indo atrás de alguém: vai até ela e bate até quebrar
+		if _fisica and _porta_no_caminho(p, quer):
 			return
 		var dir := quer.normalized()
 		var nova := dir.cross(Vector3.UP) * _lado

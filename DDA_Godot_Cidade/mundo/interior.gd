@@ -9,6 +9,8 @@ extends RefCounted
 #   - ANDARES DE CIMA (até 2 além do térreo): escada em rampa com degraus num canto, buraco na laje com corrimão,
 #     cômodos, móveis e loot em cada andar (apartamentos nas casas; escritório/depósito no comércio)
 #   - prédios baixos (até 3 andares): a escada chega ao TELHADO, com mureta em volta
+#   - 0.73: PORTAS DE VERDADE (mundo/porta.gd) nos vãos: dupla na rua (abre para dentro), comum entre os cômodos;
+#     umas abertas, outras fechadas, algumas quebradas no chão ou arrancadas (só o vão)
 #   - acima disso, a "casca" do prédio com as mesmas janelas do bloco original
 # Tudo de um prédio vira UMA malha (4 superfícies) + um corpo de colisão: leve no celular.
 # Mexa AQUI para: pé-direito, portas, janelas, divisão dos cômodos e quais móveis vão em cada cômodo.
@@ -18,6 +20,7 @@ const Moveis := preload("res://mundo/moveis.gd")
 const Mat := preload("res://mundo/materiais_cidade.gd")
 const ItemMundo := preload("res://inventario/item_mundo.gd")
 const CaixaMundo := preload("res://inventario/caixa_mundo.gd")
+const PortaCls := preload("res://mundo/porta.gd")
 
 const PE_DIREITO := 4.0
 const LAJE := 0.6
@@ -77,6 +80,8 @@ var cor_fora := Color.GRAY
 var cor_dentro := Color.GRAY
 var comodos: Array = []                # [Rect2, tipo]
 var _pontos: Array = []                # pontos livres no chão (loot solto)
+var portas: Array = []                 # 0.73: {pos (meio do vão, no chão), giro, larg, alt, parede, dupla, estado, abertura}
+var _rp := RandomNumberGenerator.new() # 0.73: sorteio das portas de dentro (separado: não muda o resto do prédio)
 var _pad_piso := 1.0
 var _malha: ArrayMesh = null
 var nivel := 0                         # 0 = térreo · 1, 2 = andares de cima
@@ -179,14 +184,18 @@ func _enfeite_abertura(f: int, s0: float, s1: float, ab: Array) -> void:
 		# porta caída/aberta para dentro + área livre na frente dela (lado de dentro)
 		var dentro: Vector2 = n * (o - 1.4) + t * meio
 		proibido.append(Rect2(dentro - Vector2(1.6, 1.6), Vector2(3.2, 3.2)))
+		# 0.73: porta dupla de verdade (mundo/porta.gd), abre para dentro: 60% aberta, 20% quebrada, 20% fechada
+		var estado := "fechada"
+		var abre := 1.0
 		if r.randf() < 0.6:
-			var dob: Vector2 = n * (o - ESP - 0.45) + t * (s0 + 0.05)
-			var giro := r.randf_range(0.9, 1.5)
-			resto.caixa(Vector3(dob.x, PORTA_A * 0.48, dob.y), Vector3(0.06, PORTA_A * 0.95, s1 - s0 - 0.1) if f < 2 else Vector3(s1 - s0 - 0.1, PORTA_A * 0.95, 0.06),
-				Moveis.MADEIRA * 0.9, Basis(Vector3.UP, giro * (1.0 if f % 2 == 0 else -1.0)))
+			estado = "aberta"
+			abre = r.randf_range(0.9, 1.5) / 1.5
 		elif r.randf() < 0.5:
-			var cai: Vector2 = n * (o - 1.6) + t * meio
-			resto.caixa(Vector3(cai.x, 0.04, cai.y), Vector3(1.0, 0.06, 2.3) if f < 2 else Vector3(2.3, 0.06, 1.0), Moveis.MADEIRA * 0.8, Basis(Vector3.UP, r.randf_range(-0.3, 0.3)))
+			estado = "quebrada"
+			r.randf_range(-0.3, 0.3)
+		var pc: Vector2 = n * (o - ESP * 0.5) + t * meio
+		portas.append({"pos": Vector3(pc.x, 0.0, pc.y), "giro": atan2(n.x, n.y), "larg": s1 - s0, "alt": float(ab[3]) - 0.05,
+			"parede": ESP, "dupla": true, "estado": estado, "abertura": abre})
 	else:
 		var fora: Vector2 = n * (o + 0.03) + t * meio
 		if r.randf() < 0.35:
@@ -224,6 +233,12 @@ func _parede_int(a: Vector2, b: Vector2, vaos: Array) -> void:
 		var meio: Vector2 = a + d * v
 		var nrm := Vector2(-d.y, d.x)
 		proibido.append(Rect2(meio - Vector2(1.3, 1.3), Vector2(2.6, 2.6)))
+		# 0.73: porta de dentro: 25% arrancada (só o vão), 40% aberta, 35% fechada; abre para um lado sorteado
+		var x := _rp.randf()
+		var giro := atan2(nrm.x, nrm.y) + (PI if _rp.randf() < 0.5 else 0.0)
+		if x >= 0.25 and s1 - s0 > 1.0:
+			portas.append({"pos": Vector3(meio.x, 0.0, meio.y), "giro": giro, "larg": s1 - s0 - 0.04, "alt": 2.2,
+				"parede": DIV, "dupla": false, "estado": "aberta" if x < 0.65 else "fechada", "abertura": _rp.randf_range(0.55, 1.0)})
 		cur = s1
 	pedacos.append([cur, L, 0.0, PE_DIREITO])
 	for p in pedacos:
@@ -459,6 +474,7 @@ func _gerar(inf: Dictionary, i: int, cidade) -> void:
 	idx = i
 	cid = cidade
 	r.seed = i * 7919 + 13
+	_rp.seed = i * 4241 + 5
 	hx = float(info["sx"]) * 0.5
 	hz = float(info["sz"]) * 0.5
 	cor_fora = info["cor"] * 0.95
@@ -585,6 +601,24 @@ func criar(lm) -> Node3D:
 			raiz.add_child(cx)
 			cx.position = c["pos"] + Vector3(0, 0.1, 0)
 		raiz.set_meta("pontos_chao", _pontos)
+	# 0.73: portas (o estado mexido fica guardado no loot: loot.portas)
+	for k in portas.size():
+		var e: Dictionary = portas[k]
+		var pt = PortaCls.new()
+		pt.id = "p%d:%d" % [idx, k]
+		pt.largura = e["larg"]
+		pt.altura = e["alt"]
+		pt.parede = e["parede"]
+		pt.dupla = e["dupla"]
+		pt.cor = Moveis.MADEIRA * (0.75 if e["dupla"] else 0.95)
+		pt.aberta = e["estado"] == "aberta"
+		pt.quebrada = e["estado"] == "quebrada"
+		pt.abertura = e["abertura"]
+		if loot != null and loot.get("portas") != null and loot.portas.has(pt.id):
+			pt.aplicar(loot.portas[pt.id])
+		pt.position = e["pos"]
+		pt.rotation.y = e["giro"]
+		raiz.add_child(pt)
 	return raiz
 
 # lugares livres no chão para itens soltos (entre os móveis)
@@ -616,6 +650,7 @@ func _herdar(m, k: int) -> void:
 	telhado = m.telhado
 	nivel = k
 	r.seed = idx * 7919 + 13 + k * 101
+	_rp.seed = idx * 4241 + 5 + k * 37
 	cor_dentro = PAPEL_PAREDE[r.randi() % PAPEL_PAREDE.size()]
 
 func _gerar_andar() -> void:
@@ -666,6 +701,10 @@ func _anexar(a, dy: float) -> void:
 		cont.append(e)
 	for p in a._pontos:
 		_pontos.append([(p[0] as Vector3) + Vector3(0, dy, 0), p[1]])
+	for pt in a.portas:
+		var e: Dictionary = pt.duplicate()
+		e["pos"] = (pt["pos"] as Vector3) + Vector3(0, dy, 0)
+		portas.append(e)
 
 # ---------- escada ----------
 # vão da escada: canto do fundo, encostado na parede lateral. Dois lances lado a lado (A e B):

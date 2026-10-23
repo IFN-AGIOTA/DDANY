@@ -18,6 +18,7 @@ const ItemCls := preload("res://inventario/item.gd")
 const ItemMundo := preload("res://inventario/item_mundo.gd")
 const GradeCls := preload("res://inventario/grade.gd")
 const FogueiraCls := preload("res://mundo/fogueira.gd")
+const PortaCls := preload("res://mundo/porta.gd")
 
 const CONTEINERES_CORPO := ["camisa", "calca", "colete", "cinto", "mochila"]   # ordem na coluna da direita
 const ARMAS_CORPO := ["coldre", "ombro"]
@@ -448,6 +449,9 @@ func _anim_de_uso(it) -> String:
 
 func usar(it) -> void:
 	var d: Dictionary = it.def()
+	if it.id == "tabuas":
+		_barricar(it)
+		return
 	if it.id == "agua_suja" and perto_do_fogo():
 		it.id = "agua"                  # perto da fogueira, USAR = FERVER
 		aviso.emit("FERVEU A ÁGUA")
@@ -499,11 +503,28 @@ func usar(it) -> void:
 	elif it.slot != "maos":
 		equipar(it, "maos")
 
+# 0.73: TÁBUAS: prega uma na porta fechada mais perto (mundo/porta.gd)
+func _barricar(it) -> void:
+	var pt = PortaCls.perto(jogador.global_position, 2.3)
+	if pt == null:
+		aviso.emit("CHEGUE PERTO DE UMA PORTA PARA BARRICAR")
+		return
+	var msg: String = pt.barricar(jogador.global_position)
+	aviso.emit(msg)
+	if msg.begins_with("PORTA BARRICADA"):
+		animar.emit("arrombar")
+		it.qtd -= 1
+		if it.qtd <= 0:
+			retirar(it)
+		_depois()
+
 # texto do botão USAR para este item (a tela do inventário mostra)
 func nome_acao(it) -> String:
 	if it == null:
 		return "USAR"
 	var d: Dictionary = it.def()
+	if it.id == "tabuas":
+		return "BARRICAR"
 	if it.id == "garrafa_vazia":
 		return "ENCHER"
 	if it.id == "radio":

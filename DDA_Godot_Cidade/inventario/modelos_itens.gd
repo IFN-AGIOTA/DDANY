@@ -42,7 +42,7 @@ static var _cenas := {}
 static var _mats := {}
 
 static func tem(id: String) -> bool:
-	return ITENS.has(id) or id in ["refrigerante", "analgesico", "vitaminas", "antibiotico", "carvao", "pastilha"]
+	return ITENS.has(id) or id in ["refrigerante", "analgesico", "vitaminas", "antibiotico", "carvao", "pastilha", "tabuas"]
 
 static func cena(nome: String) -> PackedScene:
 	if not _cenas.has(nome):
@@ -127,6 +127,28 @@ static func _por_codigo(id: String) -> Node3D:
 			_cil(n, 0.022, 0.06, 0.0, _mat(frasco, 0.0, 0.25))
 			_cil(n, 0.0225, 0.03, 0.017, _mat(Color(0.95, 0.95, 0.92), 0.0, 0.7))        # rótulo
 			_cil(n, 0.024, 0.018, 0.06, _mat(tampa, 0.0, 0.5))
+		"tabuas":
+			# 0.73: três tábuas empilhadas, com as pontas dos pregos aparecendo
+			var mad := _mat(Color(0.58, 0.44, 0.28), 0.0, 0.85)
+			var prego := _mat(Color(0.55, 0.55, 0.57), 0.8, 0.4)
+			for k in 3:
+				var mi := MeshInstance3D.new()
+				var bm := BoxMesh.new()
+				bm.size = Vector3(0.12, 0.024, 0.9)
+				mi.mesh = bm
+				mi.material_override = mad
+				mi.position = Vector3((k - 1) * 0.02, 0.012 + k * 0.025, (k - 1) * 0.03)
+				mi.rotation.y = (k - 1) * 0.08
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				n.add_child(mi)
+				for z in [-0.38, 0.38]:
+					var pm := MeshInstance3D.new()
+					var pb := BoxMesh.new()
+					pb.size = Vector3(0.008, 0.02, 0.008)
+					pm.mesh = pb
+					pm.material_override = prego
+					pm.position = mi.position + Vector3(0.0, 0.02, z)
+					n.add_child(pm)
 		_:
 			n.free()
 			return null

@@ -44,7 +44,7 @@ const TABELAS := {
 	"farmacia": [["bandagem", 6, 1, 4], ["analgesico", 5, 1, 1], ["vitaminas", 5, 1, 1], ["antibiotico", 3, 1, 1], ["soro", 2, 1, 1],
 		["kit_medico", 2, 1, 1], ["trapos", 2, 1, 3], ["agua", 2, 1, 1], ["barra", 2, 1, 2], ["carvao", 3, 1, 1],
 		["pastilha", 3, 2, 8], ["tala", 1, 1, 1]],
-	"loja": [["pilha", 4, 1, 1], ["lanterna", 3, 1, 1], ["lanterna_cabeca", 2, 1, 1], ["isqueiro", 3, 1, 1], ["fita", 3, 1, 1], ["corda", 2, 1, 1],
+	"loja": [["tabuas", 1, 1, 2], ["pilha", 4, 1, 1], ["lanterna", 3, 1, 1], ["lanterna_cabeca", 2, 1, 1], ["isqueiro", 3, 1, 1], ["fita", 3, 1, 1], ["corda", 2, 1, 1],
 		["radio", 2, 1, 1], ["kit_costura", 2, 1, 1], ["pochete", 2, 1, 1], ["mochila_escolar", 2, 1, 1], ["mochila_trilha", 1, 1, 1],
 		["pe_de_cabra", 1, 1, 1], ["machado", 1, 1, 1], ["facao", 1, 1, 1], ["celular", 2, 1, 1], ["barra", 2, 1, 2], ["refrigerante", 2, 1, 1]],
 	"loja_roupas": [["camiseta", 5, 1, 1], ["moletom", 5, 1, 1], ["jeans", 5, 1, 1], ["calca", 3, 1, 1], ["jaqueta", 3, 1, 1],
@@ -58,11 +58,11 @@ const TABELAS := {
 		["mun_12", 4, 4, 16], ["m4", 1, 1, 1], ["mp5", 1, 1, 1], ["pente_mp5", 2, 1, 1], ["pente_stanag", 2, 1, 1], ["mun_556", 2, 10, 40], ["colete_policia", 2, 1, 1],
 		["capacete", 1, 1, 1], ["lanterna", 2, 1, 1], ["kit_armas", 2, 1, 1], ["bandagem", 2, 1, 2], ["silenciador", 1, 1, 1],
 		["ak", 1, 1, 1], ["pente_ak", 1, 1, 1], ["mun_762", 1, 8, 30], ["mira_acog", 1, 1, 1]],
-	"deposito": [["mascara_gas", 1, 1, 1], ["pilha", 2, 1, 1], ["corda", 3, 1, 1], ["fita", 3, 1, 1], ["cano", 3, 1, 1], ["pe_de_cabra", 2, 1, 1], ["machado", 2, 1, 1], ["facao", 2, 1, 1],
+	"deposito": [["tabuas", 3, 1, 2], ["mascara_gas", 1, 1, 1], ["pilha", 2, 1, 1], ["corda", 3, 1, 1], ["fita", 3, 1, 1], ["cano", 3, 1, 1], ["pe_de_cabra", 2, 1, 1], ["machado", 2, 1, 1], ["facao", 2, 1, 1],
 		["lanterna", 2, 1, 1], ["trapos", 3, 1, 4], ["agua", 2, 1, 1], ["feijao", 2, 1, 1], ["kit_armas", 1, 1, 1],
 		["mochila_trilha", 1, 1, 1], ["mun_308", 1, 3, 10], ["rifle_caca", 1, 1, 1], ["galho", 3, 1, 4], ["isqueiro", 1, 1, 1],
 		["luneta", 1, 1, 1], ["mun_762", 1, 5, 15]],
-	"carro": [["pilha", 1, 1, 1], ["agua", 3, 1, 1], ["refrigerante", 2, 1, 1], ["biscoito", 2, 1, 1], ["barra", 2, 1, 2], ["lanterna", 2, 1, 1],
+	"carro": [["tabuas", 1, 1, 2], ["pilha", 1, 1, 1], ["agua", 3, 1, 1], ["refrigerante", 2, 1, 1], ["biscoito", 2, 1, 1], ["barra", 2, 1, 2], ["lanterna", 2, 1, 1],
 		["fita", 2, 1, 1], ["corda", 2, 1, 1], ["pe_de_cabra", 2, 1, 1], ["kit_medico", 1, 1, 1], ["bandagem", 2, 1, 2],
 		["mochila_escolar", 2, 1, 1], ["jaqueta", 1, 1, 1], ["capa_chuva", 1, 1, 1], ["taco", 1, 1, 1], ["espingarda", 1, 1, 1],
 		["mun_12", 1, 4, 10], ["rifle_caca", 1, 1, 1], ["mun_308", 1, 3, 8], ["kit_armas", 1, 1, 1], ["dinheiro", 1, 2, 10],
@@ -79,9 +79,9 @@ const TABELAS := {
 		["kit_costura", 2, 1, 1], ["radio", 2, 1, 1], ["revista", 2, 1, 1], ["bone", 2, 1, 1], ["analgesico", 2, 1, 1], ["bandagem", 2, 1, 1],
 		["atum", 2, 1, 1], ["feijao", 2, 1, 1], ["dinheiro", 2, 2, 15]],
 	"posto_bebidas": [["agua", 6, 1, 1], ["refrigerante", 6, 1, 1], ["suco", 4, 1, 1], ["agua_suja", 1, 1, 1]],
-	"posto_deposito": [["fita", 3, 1, 1], ["corda", 3, 1, 1], ["trapos", 3, 1, 4], ["pilha", 3, 1, 1], ["agua", 3, 1, 1], ["barra", 2, 1, 3],
+	"posto_deposito": [["tabuas", 2, 1, 2], ["fita", 3, 1, 1], ["corda", 3, 1, 1], ["trapos", 3, 1, 4], ["pilha", 3, 1, 1], ["agua", 3, 1, 1], ["barra", 2, 1, 3],
 		["lanterna", 2, 1, 1], ["isqueiro", 2, 1, 1], ["mochila_escolar", 1, 1, 1], ["refrigerante", 2, 1, 1]],
-	"posto_oficina": [["pe_de_cabra", 4, 1, 1], ["cano", 4, 1, 1], ["machado", 2, 1, 1], ["facao", 2, 1, 1], ["fita", 4, 1, 1], ["corda", 3, 1, 1],
+	"posto_oficina": [["tabuas", 3, 1, 2], ["pe_de_cabra", 4, 1, 1], ["cano", 4, 1, 1], ["machado", 2, 1, 1], ["facao", 2, 1, 1], ["fita", 4, 1, 1], ["corda", 3, 1, 1],
 		["trapos", 4, 1, 4], ["lanterna", 3, 1, 1], ["lanterna_cabeca", 2, 1, 1], ["isqueiro", 2, 1, 1], ["mascara_gas", 1, 1, 1],
 		["kit_armas", 1, 1, 1], ["calca", 2, 1, 1], ["jaqueta", 1, 1, 1], ["espingarda", 1, 1, 1], ["mun_12", 1, 4, 10]],
 	"lixo": [["garrafa_vazia", 5, 1, 1], ["trapos", 4, 1, 3], ["revista", 3, 1, 1], ["celular", 2, 1, 1], ["galho", 2, 1, 2],
@@ -111,12 +111,12 @@ const TABELAS := {
 		["pochete", 2, 1, 1], ["capa_chuva", 2, 1, 1], ["gorro", 2, 1, 1], ["camiseta", 2, 1, 1], ["moletom", 1, 1, 1]],
 	"super_higiene": [["bandagem", 5, 1, 3], ["analgesico", 4, 1, 1], ["vitaminas", 4, 1, 1], ["trapos", 3, 1, 3], ["pastilha", 3, 2, 6],
 		["carvao", 3, 1, 1], ["antibiotico", 1, 1, 1], ["kit_medico", 1, 1, 1]],
-	"super_estoque": [["feijao", 5, 1, 1], ["atum", 4, 1, 1], ["agua", 5, 1, 1], ["refrigerante", 3, 1, 1], ["biscoito", 3, 1, 1],
+	"super_estoque": [["tabuas", 2, 1, 2], ["feijao", 5, 1, 1], ["atum", 4, 1, 1], ["agua", 5, 1, 1], ["refrigerante", 3, 1, 1], ["biscoito", 3, 1, 1],
 		["leite_condensado", 3, 1, 1], ["barra", 3, 2, 4], ["fita", 2, 1, 1], ["corda", 2, 1, 1], ["pilha", 2, 1, 1], ["mochila_trilha", 1, 1, 1],
 		["lanterna", 1, 1, 1], ["pe_de_cabra", 1, 1, 1]],
 	"cofre": [["dinheiro", 8, 10, 60], ["pistola", 3, 1, 1], ["pente_pistola", 3, 1, 1], ["mun_9mm", 4, 8, 24], ["celular", 2, 1, 1],
 		["radio", 2, 1, 1], ["lanterna", 1, 1, 1]],
-	"armazem_carga": [["jaqueta", 3, 1, 1], ["calca", 3, 1, 1], ["capa_chuva", 3, 1, 1], ["moletom", 3, 1, 1], ["gorro", 2, 1, 1],
+	"armazem_carga": [["tabuas", 4, 1, 2], ["jaqueta", 3, 1, 1], ["calca", 3, 1, 1], ["capa_chuva", 3, 1, 1], ["moletom", 3, 1, 1], ["gorro", 2, 1, 1],
 		["mochila_trilha", 2, 1, 1], ["mochila_escolar", 2, 1, 1], ["pochete", 2, 1, 1], ["corda", 4, 1, 1], ["fita", 4, 1, 1], ["lanterna", 3, 1, 1],
 		["pilha", 3, 1, 1], ["radio", 2, 1, 1], ["kit_costura", 2, 1, 1], ["feijao", 3, 1, 1], ["agua", 3, 1, 1], ["atum", 2, 1, 1],
 		["pe_de_cabra", 2, 1, 1], ["machado", 1, 1, 1], ["facao", 1, 1, 1], ["mascara_gas", 1, 1, 1], ["lanterna_cabeca", 1, 1, 1]],
@@ -128,7 +128,7 @@ const TABELAS := {
 	"armazem_seguranca": [["pistola", 4, 1, 1], ["pente_pistola", 4, 1, 1], ["mun_9mm", 5, 10, 30], ["espingarda", 2, 1, 1], ["mun_12", 3, 6, 16],
 		["colete_policia", 2, 1, 1], ["lanterna", 3, 1, 1], ["radio", 2, 1, 1], ["mp5", 1, 1, 1], ["pente_mp5", 1, 1, 1]],
 	# itens soltos no chão dos prédios, por uso do prédio
-	"chao_residencial": [["galho", 2, 1, 3], ["garrafa_vazia", 2, 1, 1], ["revista", 3, 1, 1], ["trapos", 3, 1, 2], ["barra", 2, 1, 1], ["refrigerante", 2, 1, 1], ["agua", 1, 1, 1],
+	"chao_residencial": [["tabuas", 1, 1, 2], ["galho", 2, 1, 3], ["garrafa_vazia", 2, 1, 1], ["revista", 3, 1, 1], ["trapos", 3, 1, 2], ["barra", 2, 1, 1], ["refrigerante", 2, 1, 1], ["agua", 1, 1, 1],
 		["cano", 1, 1, 1], ["faca", 1, 1, 1], ["mun_9mm", 1, 3, 8], ["celular", 2, 1, 1], ["ursinho", 1, 1, 1]],
 	"chao_comercio": [["garrafa_vazia", 3, 1, 1], ["galho", 1, 1, 2], ["refrigerante", 3, 1, 1], ["salgadinho", 3, 1, 1], ["biscoito", 2, 1, 1], ["dinheiro", 3, 1, 8],
 		["revista", 2, 1, 1], ["cano", 2, 1, 1], ["trapos", 2, 1, 2], ["agua", 1, 1, 1]],
@@ -139,7 +139,7 @@ const TABELAS := {
 		["tala", 1, 1, 1], ["mun_556", 1, 5, 15], ["mun_9mm", 1, 4, 10], ["agua", 1, 1, 1]],
 	"chao_super": [["garrafa_vazia", 2, 1, 1], ["refrigerante", 3, 1, 1], ["biscoito", 3, 1, 1], ["salgadinho", 3, 1, 1], ["feijao", 2, 1, 1],
 		["agua", 2, 1, 1], ["dinheiro", 2, 1, 8], ["trapos", 2, 1, 2], ["taco", 1, 1, 1]],
-	"chao_armazem": [["trapos", 3, 1, 3], ["corda", 2, 1, 1], ["fita", 2, 1, 1], ["cano", 3, 1, 1], ["pe_de_cabra", 1, 1, 1], ["galho", 2, 1, 2],
+	"chao_armazem": [["tabuas", 2, 1, 2], ["trapos", 3, 1, 3], ["corda", 2, 1, 1], ["fita", 2, 1, 1], ["cano", 3, 1, 1], ["pe_de_cabra", 1, 1, 1], ["galho", 2, 1, 2],
 		["agua", 1, 1, 1], ["mun_762", 1, 4, 12], ["mun_12", 1, 3, 8]],
 	"chao_policia": [["mun_9mm", 4, 3, 12], ["mun_12", 2, 2, 6], ["pente_pistola", 1, 1, 1], ["bandagem", 2, 1, 1],
 		["lanterna", 2, 1, 1], ["cano", 1, 1, 1]],
@@ -155,7 +155,15 @@ var _chao := {}                       # id do prédio -> [[item.gd, Vector3 loca
 # pegou: não aparecem mais em nenhum aparelho · grade_criada avisa a sessão quando um móvel é sorteado (conteúdo base)
 var pegos := {}
 var grade_criada := Callable()
-var grade_reabastecida := Callable()  # 0.72: o loot de uma grade voltou aqui (a sessão manda o conteúdo novo para todos)
+var grade_reabastecida := Callable()
+# 0.73: portas mexidas (mundo/porta.gd): id "p12:3" -> [aberta, tábuas, quebrada, lado das tábuas]; vai no jogo salvo
+var portas := {}
+var porta_mudou := Callable()          # rede/sessao_rede.gd: manda para todos
+
+func mudar_porta(id: String, e: Array) -> void:
+	portas[id] = e
+	if porta_mudou.is_valid():
+		porta_mudou.call(id, e)  # 0.72: o loot de uma grade voltou aqui (a sessão manda o conteúdo novo para todos)
 # 0.72: relógio do jogo em horas (main.gd liga no clima) e em que ciclo cada lugar foi sorteado/reabastecido
 var relogio := Callable()
 var _ciclo := {}                      # id da grade -> ciclo
@@ -395,7 +403,7 @@ func salvar(abertos := {}, locais_abertos := {}) -> Dictionary:
 				var p: Vector3 = no.global_transform.affine_inverse() * n.global_position
 				lista.append([n.item.para_dict(), p.x, p.y, p.z])
 		c["L%d" % i] = lista
-	return {"semente": semente, "grades": g, "chao": c, "ciclos": _ciclo.duplicate(), "ciclos_chao": _ciclo_chao.duplicate()}
+	return {"semente": semente, "grades": g, "chao": c, "ciclos": _ciclo.duplicate(), "ciclos_chao": _ciclo_chao.duplicate(), "portas": portas.duplicate()}
 
 func carregar(d: Dictionary) -> void:
 	semente = int(d.get("semente", semente))
@@ -403,6 +411,7 @@ func carregar(d: Dictionary) -> void:
 	_chao.clear()
 	_ciclo.clear()
 	_ciclo_chao.clear()
+	portas = (d.get("portas", {}) as Dictionary).duplicate()
 	var g: Dictionary = d.get("grades", {})
 	for id in g:
 		var gr = GradeCls.new(12, 12, "", null)

@@ -39,6 +39,43 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.73 · PORTAS QUE ABREM E FECHAM, BARRICADAS E INFECTADOS ARROMBANDO
+  · PORTAS DE VERDADE nos prédios (térreo e andares de cima): porta DUPLA na rua (abre para dentro) e porta comum
+    entre os cômodos. Umas estão abertas, outras fechadas, algumas quebradas no chão ou arrancadas (só o vão).
+    Fechada, ninguém passa: nem você, nem os infectados.
+  · ABRIR / FECHAR: o botão PEGAR (tecla E) perto da porta vira "ABRIR PORTA" / "FECHAR PORTA" (se tiver item no
+    chão perto, ele pega o item primeiro). Abrir e fechar faz barulho: os infectados perto ouvem.
+  · BARRICAR: item novo TÁBUAS COM PREGOS (depósitos, oficinas de posto, armazéns, estoque de supermercado, lojas,
+    porta-malas, chão de casas e armazéns). Perto de uma porta FECHADA, USAR as tábuas (botão "BARRICAR" no
+    inventário) prega uma (até 3). Porta barricada não abre. Martelar faz bastante barulho.
+  · TIRAR TÁBUA: com PÉ DE CABRA ou MACHADO no inventário, PEGAR perto da barricada tira uma tábua (ela volta para
+    você). Sem ferramenta aparece "PORTA BARRICADA · PRECISA DE PÉ DE CABRA OU MACHADO".
+  · INFECTADOS ARROMBAM: indo atrás de alguém e presos por uma porta fechada, eles vão até ela e batem até quebrar
+    (cada tábua aguenta mais). Quebrada, a porta cai no chão e o vão fica livre para sempre.
+  · O estado das portas (aberta, tábuas, quebrada) fica guardado: volta igual quando você sai e volta ao prédio,
+    vai no jogo salvo e, no multijogador, é o mesmo para todos (quem chega depois recebe).
+  · Conserto: o botão PEGAR agora mostra o nome curto do item que vai pegar.
+  · Testado no jogo: abrir e fechar pelo PEGAR, botão com o texto certo, barricar 2 tábuas, barricada não abre,
+    sem ferramenta não tira, pé de cabra tira e devolve a tábua, estado salvo, infectado do outro lado quebrando
+    as tábuas e a porta, prédio fechado e aberto de novo com a porta ainda quebrada. Teste geral sem falhas.
+  · ARQUIVOS MEXIDOS:
+      mundo/porta.gd ............ NOVO (a porta: folhas com dobradiça, abrir/fechar, tábuas, vida, quebrar, estado)
+      mundo/interior.gd ......... monta as portas nos vãos (rua e cômodos) com o estado guardado
+      inventario/itens.gd ....... item novo "tabuas" (TÁBUAS COM PREGOS)
+      inventario/inventario.gd .. USAR tábuas = BARRICAR a porta fechada mais perto
+      inventario/tela_inventario.gd  botão PEGAR também para a porta; nome curto do item no botão
+      inventario/modelos_itens.gd modelo 3D das tábuas (feito por código)
+      inventario/icones/tabuas.png  NOVO (ícone, feito por ferramentas/gerar_icones.gd)
+      ferramentas/gerar_icones.gd as tábuas entram na lista de fotos
+      jogador/jogador.gd ........ PEGAR sem item perto = usar a porta
+      mundo/loot_mundo.gd ....... tábuas nas tabelas de loot; guarda e salva o estado das portas
+      main.gd ................... liga as portas ao loot (estado) e aos infectados (barulho)
+      rede/sessao_rede.gd ....... evento "porta" e portas no "mundo_itens"
+      inimigos/vago.gd .......... vai até a porta fechada no caminho e bate até quebrar (DANO_PORTA)
+      menu/config.gd ............ versão 0.73
+  · PUBLICADA: atualizacoes/pacote_0.73.pck (acumulado desde o APK 0.48) + manifesto; os celulares baixam
+    sozinhos. servidor_windows.zip (raiz) refeito na 0.73.
+
 ATUALIZAÇÃO 0.72 · LOOT E INFECTADOS QUE VOLTAM · NADAR, AFUNDAR E AFOGAR
   · O LOOT VOLTA (estilo DayZ): passado um tempo no relógio do jogo, cada lugar ganha um sorteio novo na próxima
     vez que você chega perto (móveis, porta-malas e itens soltos no chão dos prédios). Prédios e carros: a cada
@@ -1239,14 +1276,14 @@ TOQUE (vários dedos ao mesmo tempo)
 - Metade DIREITA: arrastar = olhar. Minimapa: toque = mapa grande.
 - ATIRAR / GOLPEAR (segurar; dá para arrastar o dedo em cima dele para mirar enquanto atira) · CORRER (segurar)
 - PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga) · RECARREGAR · ARMA (troca coldre/ombro) · PEGAR
-  (aparece perto de um item) · INV · II (pausa) · CAM (1ª/3ª pessoa) · VOO (câmera livre: SOBE / DESCE / VEL)
+  (aparece perto de um item; perto de uma PORTA: abrir / fechar / tirar tábua) · INV · II (pausa) · CAM (1ª/3ª pessoa) · VOO (câmera livre: SOBE / DESCE / VEL)
   · BALÃO (só no multijogador): mensagens rápidas.
 - Desde a 0.67 os botões mostram ÍCONES (balas = atirar, mira = mirar, mochila = INV, drone = VOO...); o botão
   ARMA mostra o desenho da arma na mão.
 PC (todas as teclas trocáveis em Opções › Teclado e mouse)
 - WASD/setas andar · Shift correr · Alt andar devagar · Espaço pular · C agachar · mouse esquerdo atirar/golpear ·
   mouse direito mirar · R recarregar · X ou rodinha trocar arma · Q roda do inventário rápido · 1..8 atalhos ·
-  E pegar · Tab inventário · M mapa · Esc/P pausa · F 1ª/3ª pessoa · V câmera livre (E sobe, Q desce) ·
+  E pegar / abrir e fechar porta · Tab inventário · M mapa · Esc/P pausa · F 1ª/3ª pessoa · V câmera livre (E sobe, Q desce) ·
   T mensagens rápidas (multijogador; 1..8 escolhe) · F11 tela cheia.
 
 -----------------------------------------------------------------------------------------------------
@@ -1275,6 +1312,8 @@ SOBREVIVÊNCIA
   estamina nadando: -0,35/s (+0,12/s por kg acima de 15 kg) · rápido -5/s (+0,1/s por kg) · boiando parado +2/s
   (-0,2/s por kg acima de 15 kg) · afunda com estamina 0, volta a boiar com 12 · fôlego 100 = ~8 s embaixo
   d'água, depois -9 de vida por segundo
+PORTAS (0.73): porta 100 de vida, cada tábua mais 140 (até 3) · golpe de infectado na porta = mordida x2,2
+  (8–14 x 2,2) · abrir/fechar: barulho de 7 m · martelar tábua 10,5 m · porta quebrando 14 m · usar até 1,9 m
 LOOT E INFECTADOS QUE VOLTAM (0.72, relógio do jogo: 1 dia = 48 min): loot de prédios/carros a cada 16 h (~32 min),
   dos locais especiais a cada 10 h (~20 min) · infectados presos nos prédios a cada 6 h (~12 min), nos locais
   especiais a cada 4 h (~8 min)
@@ -1294,7 +1333,7 @@ ITENS (inventario/itens.gd; item novo = 1 linha na tabela DB)
 - Comida: feijão, atum, sardinha, pêssegos em calda, biscoitos, barra de cereal, salgadinho (dá sede), maçã.
 - Bebida: água, refrigerante, suco.
 - Ferramentas: fita adesiva e kit de costura (consertam roupas), kit de limpeza de armas, lanterna, corda,
-  rádio, isqueiro.
+  rádio, isqueiro, TÁBUAS COM PREGOS (0.73: USAR perto de uma porta fechada = barricar; até 3 por porta).
 - Roupas (calor / chuva / proteção): capacete tático, gorro, boné, lanterna de cabeça, camiseta, moletom,
   jaqueta acolchoada, capa de chuva, colete tático, colete à prova de balas, calça cargo, jeans.
 - Mochilas: pochete, mochila escolar, de trilha, de combate.
@@ -1424,6 +1463,9 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   por dentro e por fora (planta, móveis) . mundo/local.gd (loot: tabelas em mundo/loot_mundo.gd)
 - prédios por dentro (cômodos, portas,
   escadas, andares de cima, telhado) . mundo/interior.gd
+- PORTA (abrir/fechar, tábuas, vida,
+  quebrar, estado guardado) ........... mundo/porta.gd (onde ficam: mundo/interior.gd · infectados batendo:
+                                        inimigos/vago.gd _porta_no_caminho · BARRICAR: inventario/inventario.gd)
 - móveis .............................. mundo/moveis.gd (tamanhos em TAM)
 - quais prédios abrem perto do jogador, porta-malas mundo/interiores.gd
 - loot de cada móvel/carro/chão ....... mundo/loot_mundo.gd (tabelas no topo)
@@ -1625,7 +1667,8 @@ MÚSICA (pasta audio/)
 - História: apagada na 0.63, vai ser refeita do zero (menu mostra "Em breve").
 - Água (0.72): não dá para mergulhar de propósito nem nadar por baixo das pontes (o fundo sobe até a ponte); os
   itens largados nadando vão para o fundo. A base militar ainda não tem os prédios/pistas do HTML.
-- Locais especiais (0.68): de longe (mais de 140 m) a casca não tem colisão (tiro de longe atravessa).
+- Locais especiais (0.68): de longe (mais de 140 m) a casca não tem colisão (tiro de longe atravessa); as portas
+  de verdade (0.73) ainda são só dos prédios comuns (os postos, hospitais, supermercados e armazéns têm vãos).
 - Transformação em carro e jato do HTML foi descartada: o jogo é só a pé.
 - Os blocos de cima das torres escalonadas também mostram "térreo" (vitrines/placas) na base deles.
 - Sobrevivente: rosto liso de manequim.

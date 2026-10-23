@@ -19,6 +19,8 @@ extends Node
 #   · Quem chega recebe do host "mundo_itens": as grades mexidas, os pegos e os itens largados.
 #   · 0.72: o LOOT QUE VOLTA (mundo/loot_mundo.gd) segue a hora do host; quando uma grade é reabastecida aqui, o
 #     conteúdo novo vai para todos ("grade") e eles não reabastecem de novo. O chão novo tem uid próprio por ciclo.
+#   · 0.73: PORTAS (mundo/porta.gd): abrir, fechar, barricar, tirar tábua e quebrar vão para todos ("porta"); quem
+#     chega recebe as portas mexidas junto com "mundo_itens".
 # AINDA NÃO: dano entre jogadores, salvar a partida em rede, missões do rádio (cada um tem as suas), infectados
 # não entram em prédio atrás de um amigo (o host não tem as paredes do interior onde o amigo está).
 # Mexa AQUI para: o que vai em cada mensagem e de quanto em quanto tempo.
@@ -29,6 +31,7 @@ const ItemCls := preload("res://inventario/item.gd")
 const LootMundo := preload("res://mundo/loot_mundo.gd")
 const Locais := preload("res://mundo/locais.gd")
 const MensagensCls := preload("res://hud/mensagens.gd")
+const PortaCls := preload("res://mundo/porta.gd")
 const INFECTADOS_POR_SEG := 10.0
 const RAIO_INFECTADOS := 170.0                # host manda a cada amigo os infectados até essa distância dele
 const ENVIOS_POR_SEG := 15.0
@@ -91,6 +94,7 @@ func _exit_tree() -> void:
 	if main != null and main.loot_mundo != null:
 		main.loot_mundo.grade_criada = Callable()
 		main.loot_mundo.grade_reabastecida = Callable()
+		main.loot_mundo.porta_mudou = Callable()
 
 # ---------- jogadores ----------
 func _criar(id: int) -> Node3D:
@@ -228,6 +232,8 @@ func _evento(id: int, tipo: String, d: Dictionary) -> void:
 			_item_pego(str(d.get("u", "")))
 		"grade":
 			_grade_recebida(d)
+		"porta":
+			_porta_recebida(str(d.get("i", "")), d.get("e", []))
 		"mundo_itens":
 			if id == 1:
 				_aplicar_mundo_itens(d)
@@ -302,6 +308,7 @@ func _ligar_mundo() -> void:
 			_sig[gid] = LootMundo.assinatura(g)
 			_mexidas[gid] = true
 			Rede.enviar_evento("grade", {"i": gid, "w": g.largura, "h": g.altura, "n": g.nome, "l": LootMundo.conteudo(g)})
+		lm.porta_mudou = func(pid: String, e: Array) -> void: Rede.enviar_evento("porta", {"i": pid, "e": e})
 		for gid in lm._grades:
 			_sig[gid] = LootMundo.assinatura(lm._grades[gid])
 		# caixas da base (mundo/loot.gd): entram na lista das grades com o nome "base_N"
@@ -420,7 +427,8 @@ func _mandar_mundo_itens(para: int) -> void:
 		var n = ItemMundo.por_uid[u]
 		if n != null and is_instance_valid(n) and n.get_parent() == main.jogo and n.item != null:
 			soltos.append([u, n.item.para_dict(), n.global_position])
-	Rede.enviar_evento("mundo_itens", {"grades": gr, "pegos": lm.pegos.keys() if lm != null else [], "soltos": soltos}, para)
+	Rede.enviar_evento("mundo_itens", {"grades": gr, "pegos": lm.pegos.keys() if lm != null else [], "soltos": soltos,
+		"portas": lm.portas if lm != null else {}}, para)
 
 func _aplicar_mundo_itens(d: Dictionary) -> void:
 	var lm = main.loot_mundo
@@ -433,8 +441,21 @@ func _aplicar_mundo_itens(d: Dictionary) -> void:
 			_mexidas[gid] = true
 	for u in d.get("pegos", []):
 		_item_pego(str(u))
+	var ps: Dictionary = d.get("portas", {})
+	for pid in ps:
+		_porta_recebida(str(pid), ps[pid])
 	for e in d.get("soltos", []):
 		_item_solto({"u": e[0], "it": e[1], "p": e[2]})
+
+# ---------- portas (0.73) ----------
+# alguém mexeu numa porta: guarda (sem mandar de volta) e, se ela está montada aqui, mostra igual
+func _porta_recebida(pid: String, e: Array) -> void:
+	if pid == "" or e.size() < 3 or main.loot_mundo == null:
+		return
+	main.loot_mundo.portas[pid] = e
+	var pt = PortaCls.todas.get(pid)
+	if pt != null and is_instance_valid(pt):
+		pt.aplicar(e)
 
 # ---------- PvP (0.71) ----------
 # Regra (escolha do HOST em Opções › Vídeo e som › "PvP no multijogador", vai em Rede.mundo["pvp"]):

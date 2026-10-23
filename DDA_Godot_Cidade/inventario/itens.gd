@@ -170,6 +170,8 @@ const DB := {
 		"desc": "Arraste em cima da LANTERNA, LANTERNA DE CABEÇA ou RÁDIO (a pilha velha sai)."},
 	"isqueiro": {"nome": "ISQUEIRO", "sigla": "ISQ.", "w": 1, "h": 1, "peso": 0.05, "max": 1, "cat": "ferramenta", "slot": "",
 		"desc": "Arraste em cima de 3 GALHOS para acender uma FOGUEIRA."},
+	"tabuas": {"nome": "TÁBUAS COM PREGOS", "sigla": "TÁBUAS", "w": 1, "h": 3, "peso": 1.5, "max": 3, "cat": "ferramenta", "slot": "",
+		"desc": "USAR perto de uma porta FECHADA = BARRICAR (até 3 tábuas: ninguém abre, os infectados demoram para quebrar). Com PÉ DE CABRA ou MACHADO dá para tirar (PEGAR na porta)."},
 	"galho": {"nome": "GALHOS", "sigla": "GALHO", "w": 1, "h": 3, "peso": 0.3, "max": 5, "cat": "ferramenta", "slot": "",
 		"desc": "Lenha. 3 galhos + isqueiro = fogueira · 2 trapos + galho = tala · faca + galho = lança."},
 	"ursinho": {"nome": "URSINHO DE PELÚCIA", "sigla": "URSO", "w": 2, "h": 2, "peso": 0.2, "max": 1, "cat": "diverso", "slot": "",

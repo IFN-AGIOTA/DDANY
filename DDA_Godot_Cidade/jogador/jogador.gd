@@ -45,6 +45,7 @@ const Sons := preload("res://audio/sons.gd")
 const SonsBaixados := preload("res://audio/sons_baixados.gd")
 const InventarioCls := preload("res://inventario/inventario.gd")
 const SobrevivenciaCls := preload("res://jogador/sobrevivencia.gd")
+const PortaCls := preload("res://mundo/porta.gd")
 
 @export_group("Câmera")
 @export var distancia_camera := 2.35
@@ -183,8 +184,18 @@ func _usar_atalho(i: int) -> void:
 		inventario.usar_atalho(i)
 
 func _pegar_do_chao() -> void:
-	if ativo and not morto:
-		inventario.pegar(inventario.item_mais_proximo())
+	if not ativo or morto:
+		return
+	var it = inventario.item_mais_proximo()
+	if it != null:
+		inventario.pegar(it)
+		return
+	# 0.73: sem item perto: a porta (abrir, fechar, tirar tábua)
+	var pt = PortaCls.perto(global_position)
+	if pt != null:
+		var msg: String = pt.usar(inventario)
+		if msg != "":
+			inventario.aviso.emit(msg)
 
 # usa res://modelos/personagem.(tscn|scn|glb|gltf|fbx) se existir; senão fica o soldado original
 func _carregar_modelo_do_projeto() -> void:
