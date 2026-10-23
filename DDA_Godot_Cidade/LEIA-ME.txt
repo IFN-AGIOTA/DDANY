@@ -45,12 +45,14 @@ ATUALIZAÇÃO 0.82 · CHÃO DOS PRÉDIOS E FAIXAS DA RUA NÃO PISCAM MAIS
     ("piscando", como duas texturas brigando). Agora:
       - o piso de dentro dos prédios (térreo e andares) fica 1,5 cm acima do lote (os papéis, manchas e cacos de
         vidro no chão subiram junto); a colisão não mudou;
-      - as faixas (linhas, zebras, linha de parada) ficam 1,2 cm acima do asfalto;
+      - as faixas (linhas, zebras, linha de parada) ficam só 6 mm acima do asfalto e com o MESMO empurrão de
+        profundidade dele (antes tinham um empurrão maior, que de longe as desenhava por cima dos pneus dos carros
+        e da base das coisas: pareciam flutuar);
       - o "empurrão" de profundidade que separa as camadas do chão (terra, lote, calçada, asfalto, faixas) ficou
         4x maior: a profundidade do celular (24 bits) não conseguia separar as camadas com o valor antigo.
   · Arquivos:
       mundo/interior.gd ......... PISO_Y (piso 1,5 cm acima do lote) e coisas no chão acompanhando
-      mundo/cidade.gd ........... FAIXA_ACIMA (faixas 1,2 cm acima do asfalto)
+      mundo/cidade.gd ........... FAIXA_ACIMA (faixas 6 mm acima do asfalto) · CAMADA: faixa = rua
       mundo/materiais_cidade.gd . empurrão das camadas do chão 3e-7 -> 1,2e-6 (os 2 shaders com "camada")
       menu/config.gd ............ versão 0.82
 

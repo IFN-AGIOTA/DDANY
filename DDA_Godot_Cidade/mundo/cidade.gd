@@ -35,8 +35,11 @@ const Y_LAGO := 0.2
 const Y_PARQUE := 0.4
 const Y_CALCADA := 0.55
 const Y_RUA := 0.6
-const FAIXA_ACIMA := 0.012                   # 0.82: faixas pintadas 1,2 cm acima do asfalto (na mesma altura piscavam)
-const CAMADA := {"mar": 0.0, "terra": 1.0, "lago": 2.0, "parque": 3.0, "lote": 3.5, "calcada": 4.0, "rua": 5.0, "faixa": 6.0}
+# 0.82: faixas pintadas 6 mm acima do asfalto (na mesma altura piscavam). Elas usam a MESMA camada do asfalto: a
+# camada é um empurrão de profundidade e, com mais empurrão, de longe as faixas passavam por cima dos pneus dos
+# carros e da base das coisas (pareciam flutuar). Os 6 mm já separam bem (rasante, viram metros de profundidade).
+const FAIXA_ACIMA := 0.006
+const CAMADA := {"mar": 0.0, "terra": 1.0, "lago": 2.0, "parque": 3.0, "lote": 3.5, "calcada": 4.0, "rua": 5.0, "faixa": 5.0}
 
 const BRANCO := Color(0.92, 0.92, 0.88)
 const AMARELO := Color(0.95, 0.72, 0.15)
