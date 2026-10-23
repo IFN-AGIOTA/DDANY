@@ -27,22 +27,22 @@ func _r():
 	var Config = root.get_node("Config")
 	Config.definir("pos", "left")
 	await q(40)
-	var x0: float = j.camera.position.x
+	var x0: float = j._braco.position.x
 	ok(x0 > 0.2, "começa no ombro direito (câmera à direita: %.2f)" % x0)
 	m.controles.ombro_pedido.emit()
 	await process_frame                               # 1 quadro: ainda no caminho (desliza, não pula)
 	var x_meio: float = j._ombro_s
 	await q(60)
-	var x1: float = j.camera.position.x
+	var x1: float = j._braco.position.x
 	ok(x1 < -0.2 and x_meio > -0.99, "trocou para o esquerdo devagar (%.2f -> lado %.2f no 1º quadro -> %.2f)" % [x0, x_meio, x1])
 	ok(Config.valor("pos") == "right", "guardado nas opções (pos = %s)" % Config.valor("pos"))
 	j._mirar_ligado = true
 	await q(60)
-	ok(j.camera.position.x < -0.3, "mirando: em cima do ombro esquerdo (%.2f)" % j.camera.position.x)
+	ok(j._braco.position.x < -0.3, "mirando: em cima do ombro esquerdo (%.2f)" % j._braco.position.x)
 	j._mirar_ligado = false
 	m.controles._acao("ombro", true)                 # a tecla (botão do meio do mouse) faz o mesmo
 	await q(60)
-	ok(j.camera.position.x > 0.2, "tecla de volta para o direito (%.2f)" % j.camera.position.x)
+	ok(j._braco.position.x > 0.2, "tecla de volta para o direito (%.2f)" % j._braco.position.x)
 	ok(load("res://jogador/teclas.gd").codigo("ombro") == "m:%d" % MOUSE_BUTTON_MIDDLE, "tecla padrão: botão do meio do mouse")
 	print("falhas: ", falhas)
 	quit()

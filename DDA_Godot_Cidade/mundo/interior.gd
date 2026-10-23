@@ -12,6 +12,16 @@ extends RefCounted
 #   - 0.73: PORTAS DE VERDADE (mundo/porta.gd) nos vãos: dupla na rua (abre para dentro), comum entre os cômodos;
 #     umas abertas, outras fechadas, algumas quebradas no chão ou arrancadas (só o vão)
 #   - acima disso, a "casca" do prédio com as mesmas janelas do bloco original
+#   - 0.81 · SISTEMA DE PREENCHIMENTO: o andar guarda um MAPA DAS PAREDES (_muros: cada pedaço com a altura de
+#     baixo e de cima, então sabe onde há parede cheia, peitoril de janela, vão de janela ou de porta) e das ABERTURAS
+#     de cada fachada (_vaos). Com isso:
+#       · as divisórias entre cômodos nunca encostam na fachada em cima de porta/janela (são deslocadas);
+#       · porta da rua não abre para dentro do vão da escada; janela não fica onde a parede da escada encosta;
+#       · móvel "de parede" só vai onde há PAREDE DE VERDADE atrás dele na largura toda (nada em vão de porta, borda
+#         sem parede ou buraco); móvel ALTO (guarda-roupa, estante, geladeira...) não fica na frente de janela; os
+#         baixos (sofá, cama, bancada) podem ficar embaixo dela; nenhum móvel cruza parede; a frente das portas fica livre;
+#       · escada: patamar de 1,4 m no fundo e uma PORTA na parede do vão (quem chega pelo lance do fundo sai para o
+#         cômodo; antes dava de cara com a parede); grade da cela antes dos móveis (cama não atravessa a grade).
 # Tudo de um prédio vira UMA malha (4 superfícies) + um corpo de colisão: leve no celular.
 # Mexa AQUI para: pé-direito, portas, janelas, divisão dos cômodos e quais móveis vão em cada cômodo.
 
@@ -32,6 +42,12 @@ const ALTURA_ANDAR := PE_DIREITO + LAJE   # 4,6 m de um piso ao outro
 const MAX_ANDARES_EXTRA := 2          # além do térreo (os mais altos ficam com a "casca" acima)
 const ESCADA_L := 1.45                # largura de cada lance da escada
 const ESCADA_C := 7.0                 # comprimento de cada lance (rampa com degraus)
+const PATAMAR := 1.4                  # 0.81: patamar no fundo do vão da escada (chegada do lance que sobe para o fundo)
+# 0.81: altura de cada móvel "de parede" (m): acima de ALTURA_PEITORIL ele precisa de parede cheia atrás (não tapa janela)
+const ALTURA_PEITORIL := 1.0
+const ALTO := {"guarda_roupa": 2.0, "estante_livros": 1.9, "geladeira": 1.8, "prateleira": 1.9, "armario_armas": 1.9,
+	"armario_remedios": 1.8, "arquivo": 1.3, "estante_tv": 1.3, "quadro": 1.8, "luminaria": 1.6, "arara": 1.6,
+	"barricada": 1.5, "caixas": 1.2, "balcao": 1.05, "poltrona": 1.0, "cama": 1.0, "planta": 1.0, "freezer": 0.9}
 
 # o que vai em cada cômodo: [móvel, modo] · modo: parede / centro / fileiras / meio (centro do cômodo)
 const COMODOS := {
@@ -89,6 +105,8 @@ var extras := 0                        # quantos andares de cima este prédio te
 var telhado := false                   # prédio baixo: a escada chega ao telhado (com mureta)
 var _w_max := 1e9                      # lado da escada: os cômodos vão só até aqui
 var _escada := false
+var _muros: Array = []                 # 0.81: pedaços de parede [Rect2 no plano XZ, y de baixo, y de cima]
+var _vaos := {}                        # 0.81: fachada -> aberturas [s0, s1, y0, y1, tipo]
 static var criar_malha_na_thread := true
 
 static func montar(inf: Dictionary, i: int, cidade, lm) -> Node3D:
@@ -105,7 +123,7 @@ static func preparar(inf: Dictionary, i: int, cidade) -> RefCounted:
 	m.extras = clampi(niveis - 1, 0, MAX_ANDARES_EXTRA)
 	m.telhado = niveis <= MAX_ANDARES_EXTRA + 1
 	var prof_min := minf(float(inf["sx"]), float(inf["sz"]))
-	if prof_min < ESCADA_C + 4.5 or maxf(float(inf["sx"]), float(inf["sz"])) < 11.0:
+	if prof_min < ESCADA_C + PATAMAR + 4.5 or maxf(float(inf["sx"]), float(inf["sz"])) < 11.0:
 		m.extras = 0                      # pequeno demais para ter escada
 		m.telhado = false
 	m._gerar(inf, i, cidade)
@@ -159,9 +177,12 @@ func _parede_ext(f: int, s0: float, s1: float, y0: float, y1: float) -> void:
 		paredes.caixa(Vector3(p2.x, y0 + h * 0.5, p2.y), tam, camada[1])
 	var pc: Vector2 = n * (o - ESP * 0.5) + t * meio
 	col.append([Vector3(pc.x, y0 + h * 0.5, pc.y), Vector3(ESP, h, s1 - s0) if f < 2 else Vector3(s1 - s0, h, ESP), 0.0])
+	var t2 := Vector2(ESP, s1 - s0) if f < 2 else Vector2(s1 - s0, ESP)
+	_muros.append([Rect2(pc - t2 * 0.5, t2), y0, y1])
 
 func _fachada(f: int, aberturas: Array) -> void:
 	aberturas.sort_custom(func(a, b): return a[0] < b[0])
+	_vaos[f] = aberturas
 	var L := _comp(f)
 	var cur := -L * 0.5
 	for ab in aberturas:
@@ -251,6 +272,7 @@ func _parede_int(a: Vector2, b: Vector2, vaos: Array) -> void:
 		var tam := Vector3(s1 - s0, h, DIV) if em_x else Vector3(DIV, h, s1 - s0)
 		paredes.caixa(Vector3(c2.x, p[2] + h * 0.5, c2.y), tam, cor_dentro * 0.95)
 		col.append([Vector3(c2.x, p[2] + h * 0.5, c2.y), tam, 0.0])
+		_muros.append([Rect2(c2 - Vector2(tam.x, tam.z) * 0.5, Vector2(tam.x, tam.z)), float(p[2]), float(p[3])])
 
 # ---------- cômodos ----------
 # converte profundidade (d, da frente para o fundo; d = meia na fachada da frente) e largura (w) em XZ local
@@ -272,25 +294,85 @@ func _dividir(fundo: float, tipos_frente, tipos_fundo: Array) -> void:
 	var wb := minf(L, _w_max)            # com escada, os cômodos não entram no vão dela
 	var d_div := -o + fundo
 	var frentes: Array = tipos_frente if tipos_frente is Array else [tipos_frente]
+	# 0.81: a parede da frente/fundo (d_div) encosta nas fachadas dos lados: fora de porta/janela
+	var f_neg := _f_de(-_t(frente))
+	var f_pos := _f_de(_t(frente))
+	d_div = _ajustar(d_div, -o + 2.5, o - 2.5, func(d): return _encontro_livre(f_neg, _xz(d, wa)) and (wb < L - 0.01 or _encontro_livre(f_pos, _xz(d, wb))))
+	var f_fundo := _f_de(-_n(frente))
 	var nf := frentes.size()
 	var lf := (wb - wa) / nf
+	var cortes_f: Array = [wa]                     # divisórias da frente: encostam na fachada da frente
+	for k in range(1, nf):
+		cortes_f.append(_ajustar(wa + lf * k, cortes_f.back() + 2.4, wb - 2.4, func(w): return _encontro_livre(frente, _xz(o, w))))
+	cortes_f.append(wb)
 	for k in nf:
-		var w0 := wa + lf * k
-		comodos.append([_ret(d_div, o, w0, w0 + lf), frentes[k]])
+		var w0: float = cortes_f[k]
+		comodos.append([_ret(d_div, o, w0, cortes_f[k + 1]), frentes[k]])
 		if k > 0:
 			var prof_f := o - d_div
 			_parede_int(_xz(d_div, w0), _xz(o, w0), [prof_f * r.randf_range(0.35, 0.65)])
 	var n := tipos_fundo.size()
 	var larg := (wb - wa) / n
+	var cortes: Array = [wa]                       # divisórias do fundo: encostam na fachada do fundo
+	for k in range(1, n):
+		cortes.append(_ajustar(wa + larg * k, cortes.back() + 2.2, wb - 2.2, func(w): return _encontro_livre(f_fundo, _xz(-o, w))))
+	cortes.append(wb)
 	var vaos := []
 	for k in n:
-		var w0 := wa + larg * k
-		var w1 := w0 + larg
+		var w0: float = cortes[k]
+		var w1: float = cortes[k + 1]
 		comodos.append([_ret(-o, d_div, w0, w1), tipos_fundo[k]])
-		vaos.append(larg * k + larg * r.randf_range(0.3, 0.7))
+		vaos.append((w0 - wa) + (w1 - w0) * r.randf_range(0.3, 0.7))
 		if k > 0:
 			_parede_int(_xz(-o, w0), _xz(d_div, w0), [])
 	_parede_int(_xz(d_div, wa), _xz(d_div, wb), vaos)
+
+# ---------- 0.81: encontros das paredes com as fachadas ----------
+func _f_de(n: Vector2) -> int:
+	for f in 4:
+		if _n(f).is_equal_approx(n):
+			return f
+	return 0
+
+# uma parede de dentro que encosta na fachada f no ponto p (local) não pode cair numa porta/janela dela
+func _encontro_livre(f: int, p: Vector2) -> bool:
+	var s := p.dot(_t(f))
+	for ab in _vaos.get(f, []):
+		if s > float(ab[0]) - 0.35 and s < float(ab[1]) + 0.35:
+			return false
+	return true
+
+# valor mais perto de "v" (dentro de mn..mx) que passa no teste (de 0,25 em 0,25 m, até 3 m); senão, o próprio v
+func _ajustar(v: float, mn: float, mx: float, teste: Callable) -> float:
+	for k in 25:
+		var off := ceilf(k * 0.5) * 0.25 * (1.0 if k % 2 == 1 else -1.0)
+		var c := v + off
+		if c >= mn and c <= mx and teste.call(c):
+			return c
+	return v
+
+# trecho (ao longo da fachada f) ocupado pelo vão da escada: lá não abre porta da rua
+func _zona_escada(f: int) -> Array:
+	if not _escada:
+		return []
+	var e := _esc()
+	if not (_n(f).is_equal_approx(-_n(frente)) or _n(f).is_equal_approx(_t(frente))):
+		return []
+	var ss: Array = []
+	for d in [-float(e["o"]), float(e["d1"]) + 0.6]:
+		for w in [float(e["parede"]) - 0.4, float(e["lw"])]:
+			ss.append(_xz(d, w).dot(_t(f)))
+	return [ss.min(), ss.max()]
+
+func _cruza(a: float, b: float, zona: Array) -> bool:
+	return not zona.is_empty() and b > float(zona[0]) and a < float(zona[1])
+
+# onde a parede do vão da escada encosta na fachada do fundo (lá não pode ter janela) · NAN = não encosta
+func _junta_escada(f: int) -> float:
+	if not _escada or not _n(f).is_equal_approx(-_n(frente)):
+		return NAN
+	var e := _esc()
+	return _xz(-float(e["o"]), float(e["parede"])).dot(_t(f))
 
 func _layout(uso_forcado := "") -> void:
 	var uso: String = info["uso"] if uso_forcado == "" else uso_forcado
@@ -331,6 +413,34 @@ func _livre(ret: Rect2, sala: Rect2) -> bool:
 	for p in proibido:
 		if p.intersects(ret):
 			return false
+	var dentro := ret.grow(-0.03)                      # 0.81: nenhum móvel cruza parede (nem a grade da cela)
+	for m in _muros:
+		if float(m[1]) < 1.0 and (m[0] as Rect2).intersects(dentro):
+			return false
+	return true
+
+# 0.81: tem parede (pedaço cheio) no ponto p (plano XZ) na altura y?
+func _tem_parede(p: Vector2, y: float) -> bool:
+	for m in _muros:
+		if y >= float(m[1]) and y <= float(m[2]) and (m[0] as Rect2).grow(0.02).has_point(p):
+			return true
+	return false
+
+# 0.81: o móvel "de parede" (centro c, giro g = a frente dele, tam = largura x fundura) tem parede de verdade atrás
+# na largura toda? Baixo: só parede (não vão de porta, não borda aberta). Alto: parede cheia também em cima
+# (não fica na frente de janela).
+func _parede_atras(nome: String, c: Vector2, g: float, tam: Vector2) -> bool:
+	var fr := Vector2(sin(g), cos(g))
+	var lado := Vector2(fr.y, -fr.x)
+	var atras := c - fr * (tam.y * 0.5 + 0.15)
+	var alto: float = ALTO.get(nome, 0.9)
+	var alturas := [0.4] if alto <= ALTURA_PEITORIL else [0.4, minf(alto, 2.2) - 0.05]
+	var n := maxi(2, int(ceil(tam.x / 0.3)) + 1)
+	for k in n:
+		var q := atras + lado * lerpf(-tam.x * 0.45, tam.x * 0.45, float(k) / (n - 1))
+		for y in alturas:
+			if not _tem_parede(q, y):
+				return false
 	return true
 
 func _colocar(nome: String, giro: float, centro: Vector2, ret: Rect2, uso: String) -> void:
@@ -353,7 +463,7 @@ func _por_parede(nome: String, sala: Rect2, uso: String) -> bool:
 		z += 0.45
 	cands.shuffle()
 	for c in cands:
-		if _livre(c[2], sala):
+		if _livre(c[2], sala) and _parede_atras(nome, c[0], c[1], tam):
 			_colocar(nome, c[1], c[0], c[2], uso)
 			return true
 	return false
@@ -413,6 +523,8 @@ func _mobiliar() -> void:
 	for cm in comodos:
 		var sala: Rect2 = cm[0]
 		var tipo: String = cm[1]
+		if tipo == "cela":
+			_grades_cela(sala)                        # 0.81: antes dos móveis (a cama não atravessa a grade)
 		for item in COMODOS.get(tipo, []):
 			match item[1]:
 				"parede":
@@ -423,8 +535,6 @@ func _mobiliar() -> void:
 					_no_meio(item[0], sala, uso, true)
 				"fileiras":
 					_fileiras(item[0], sala, uso)
-		if tipo == "cela":
-			_grades_cela(sala)
 		# cômodos grandes ganham mais coisas nas paredes (casa e comércio)
 		var extra := int(sala.get_area() / 45.0) - 1
 		for k in clampi(extra, 0, 4):
@@ -446,9 +556,28 @@ func _mobiliar() -> void:
 			resto.caixa(Vector3(p.x, 0.004, p.y), Vector3(s, 0.003, s * r.randf_range(0.5, 1.0)), Color(0.18, 0.08, 0.06), Basis(Vector3.UP, r.randf() * 3.0))
 
 func _grades_cela(sala: Rect2) -> void:
-	# grade de ferro atravessando a cela, com a porta aberta
-	var horiz := sala.size.x >= sala.size.y
+	# grade de ferro atravessando a cela, com a porta aberta. 0.81: na direção em que as DUAS pontas encostam em
+	# parede cheia (não termina numa janela da fachada)
 	var meio := sala.get_center()
+	var horiz := sala.size.x >= sala.size.y
+	var achou := false
+	for k in 13:                                   # do meio para os lados, de 0,4 em 0,4 m
+		var off := ceilf(k * 0.5) * 0.4 * (1.0 if k % 2 == 1 else -1.0)
+		for tenta in [horiz, not horiz]:
+			var m2 := sala.get_center() + (Vector2(0, off) if tenta else Vector2(off, 0))
+			if not sala.grow(-1.0).has_point(m2):
+				continue
+			var a2 := Vector2(sala.position.x - 0.2, m2.y) if tenta else Vector2(m2.x, sala.position.y - 0.2)
+			var b2 := Vector2(sala.end.x + 0.2, m2.y) if tenta else Vector2(m2.x, sala.end.y + 0.2)
+			var lat := Vector2(0, 0.35) if tenta else Vector2(0.35, 0)        # com folga até a borda da janela
+			if _tem_parede(a2, 1.8) and _tem_parede(b2, 1.8) and _tem_parede(a2 + lat, 1.8) and _tem_parede(a2 - lat, 1.8) \
+					and _tem_parede(b2 + lat, 1.8) and _tem_parede(b2 - lat, 1.8):
+				horiz = tenta
+				meio = m2
+				achou = true
+				break
+		if achou:
+			break
 	var L := sala.size.x if horiz else sala.size.y
 	var ini := (sala.position.x if horiz else sala.position.y)
 	var porta := r.randf_range(0.2, 0.7) * L
@@ -467,6 +596,11 @@ func _grades_cela(sala: Rect2) -> void:
 		if b - a > 0.1:
 			var c := Vector2((a + b) * 0.5, meio.y) if horiz else Vector2(meio.x, (a + b) * 0.5)
 			col.append([Vector3(c.x, 1.4, c.y), Vector3(b - a, 2.8, 0.1) if horiz else Vector3(0.1, 2.8, b - a), 0.0])
+			var t2 := Vector2(b - a, 0.1) if horiz else Vector2(0.1, b - a)
+			_muros.append([Rect2(c - t2 * 0.5, t2), 0.0, 2.8])
+	# a passagem da porta da grade fica livre
+	var pp := Vector2(ini + porta, meio.y) if horiz else Vector2(meio.x, ini + porta)
+	proibido.append(Rect2(pp - Vector2(0.8, 0.8), Vector2(1.6, 1.6)))
 
 # ---------- montagem ----------
 func _gerar(inf: Dictionary, i: int, cidade) -> void:
@@ -492,26 +626,37 @@ func _gerar(inf: Dictionary, i: int, cidade) -> void:
 		melhor = r.randi() % 4
 	frente = melhor
 	var loja := uso in ["loja", "mercado", "farmacia", "restaurante"]
+	_escada = extras > 0 or telhado
 	for f in 4:
 		var L := _comp(f)
 		var ab: Array = []
 		var tem_porta: bool = f == frente or (ruas[f] > 0 and r.randf() < 0.45)
 		var porta_s := r.randf_range(-L * 0.5 + 3.0, L * 0.5 - 3.0) if f != frente else r.randf_range(-L * 0.25, L * 0.25)
+		# 0.81: porta da rua não abre para dentro do vão da escada (tenta outro lugar; senão, sem porta deste lado)
+		var zona := _zona_escada(f)
+		if tem_porta and f != frente and _cruza(porta_s - PORTA_L * 0.5 - 0.3, porta_s + PORTA_L * 0.5 + 0.3, zona):
+			tem_porta = false
+			for k in 8:
+				var tenta := r.randf_range(-L * 0.5 + 3.0, L * 0.5 - 3.0)
+				if not _cruza(tenta - PORTA_L * 0.5 - 0.3, tenta + PORTA_L * 0.5 + 0.3, zona):
+					porta_s = tenta
+					tem_porta = true
+					break
 		if tem_porta:
 			ab.append([porta_s - PORTA_L * 0.5, porta_s + PORTA_L * 0.5, 0.0, PORTA_A, "porta"])
 		var vitrine := loja and f == frente
 		var lj := 2.6 if vitrine else 1.3
 		var passo := 3.3 if vitrine else 3.4
+		var junta := _junta_escada(f)
 		var s := -L * 0.5 + 1.6
 		while s + lj < L * 0.5 - 1.2:
-			if not tem_porta or absf(s + lj * 0.5 - porta_s) > (PORTA_L + lj) * 0.5 + 0.5:
+			if (not tem_porta or absf(s + lj * 0.5 - porta_s) > (PORTA_L + lj) * 0.5 + 0.5) and not (s - 0.35 < junta and junta < s + lj + 0.35):
 				if vitrine:
 					ab.append([s, s + lj, 0.55, 3.3, "janela"])
 				elif r.randf() < 0.85:
 					ab.append([s, s + lj, 1.05, 2.5, "janela"])
 			s += passo
 		_fachada(f, ab)
-	_escada = extras > 0 or telhado
 	if _escada:
 		_reservar_escada()
 	_layout()
@@ -658,9 +803,10 @@ func _gerar_andar() -> void:
 	for f in 4:
 		var L := _comp(f)
 		var ab: Array = []
+		var junta := _junta_escada(f)
 		var s := -L * 0.5 + 1.6
 		while s + 1.3 < L * 0.5 - 1.2:
-			if r.randf() < 0.85:
+			if r.randf() < 0.85 and not (s - 0.35 < junta and junta < s + 1.3 + 0.35):
 				ab.append([s, s + 1.3, 1.05, 2.5, "janela"])
 			s += 3.4
 		_fachada(f, ab)
@@ -712,7 +858,7 @@ func _anexar(a, dy: float) -> void:
 func _esc() -> Dictionary:
 	var o := _meia(frente) - ESP
 	var lw := _comp(frente) * 0.5 - ESP
-	var d0 := -o + 0.3
+	var d0 := -o + PATAMAR                       # 0.81: patamar no fundo (antes 0,3 m: dava de cara com a parede)
 	return {"o": o, "lw": lw, "d0": d0, "d1": d0 + ESCADA_C,
 		"a": [lw - ESCADA_L, lw], "b": [lw - 2.0 * ESCADA_L, lw - ESCADA_L], "parede": lw - 2.0 * ESCADA_L - 0.08}
 
@@ -720,8 +866,8 @@ func _reservar_escada() -> void:
 	var e := _esc()
 	_w_max = float(e["parede"]) - 0.1
 	proibido.append(_ret(-float(e["o"]), float(e["d1"]) + 1.6, float(e["parede"]) - 0.3, float(e["lw"])))
-	# parede do vão da escada (do fundo até um pouco depois do fim dos lances)
-	_parede_int(_xz(-float(e["o"]), float(e["parede"])), _xz(float(e["d1"]) + 0.3, float(e["parede"])), [])
+	# parede do vão da escada (do fundo até um pouco depois do fim dos lances), com uma PORTA no patamar do fundo
+	_parede_int(_xz(-float(e["o"]), float(e["parede"])), _xz(float(e["d1"]) + 0.3, float(e["parede"])), [PATAMAR * 0.5 + 0.05])
 
 # retângulo (no plano XZ local) do lance que SAI do nível k (para o buraco na laje)
 func _buraco(k: int) -> Rect2:

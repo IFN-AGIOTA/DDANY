@@ -56,6 +56,7 @@ var infectados: Array = []             # onde nascem os infectados (Vector3 loca
 var bombas: Array = []                 # 0.76: bombas de gasolina (Vector3 local): enchem o galão (mundo/veiculos.gd)
 var dentro := Rect2()                  # área coberta do prédio principal (shader: sol fraco lá dentro)
 var textos: Array = []                 # 0.78: letreiros e pichações [Vector3 local, giro, texto, cor, tamanho]
+var escadas: Array = []                # 0.81: [pé (Vector2), direção, largura, y0, subida, comprimento] (testes: chegada livre)
 var _malha: ArrayMesh = null
 
 const NOVOS := ["delegacia", "escola", "metro", "quartel"]
@@ -305,6 +306,7 @@ func _janelas(L: float, passo: float, larg: float, yb: float, yc: float, portas:
 
 # escada reta: pé em "ini", sobe na direção "dir" (eixo X ou Z) por "comp" metros até subir "dy"
 func _escada(ini: Vector2, dir: Vector2, larg: float, y0: float, dy: float, comp: float, cor: Color, corrimao := 0) -> void:
+	escadas.append([ini, dir, larg, y0, dy, comp])
 	var n := int(ceil(dy / 0.19))
 	var lat := Vector2(-dir.y, dir.x)
 	for i in n:
@@ -1297,7 +1299,7 @@ func _armazem() -> void:
 	_conteiner(Vector2(29.6, 12.4), 0.0, Color(0.5, 0.5, 0.52), "")
 	_conteiner(Vector2(29.6, 12.4), 0.0, Color(0.55, 0.2, 0.12), "armazem_conteiner", 2.6)
 	_escada(Vector2(24.5, -11.0), Vector2(1, 0), 1.2, 0.0, 2.6, 3.9, METAL, 1)
-	_escada(Vector2(29.0, -9.2), Vector2(0, -1), 1.1, 2.6, 2.6, 5.3, METAL, -1)
+	_escada(Vector2(30.15, -9.2), Vector2(0, -1), 1.1, 2.6, 2.6, 5.3, METAL, 1)     # 0.81: no outro lado (a 1ª chega livre)
 	_carreta(Vector2(-19.75, 9.6), 0.0)
 	_carro(Vector2(-6.0, 16.0), 0.4, Color(0.3, 0.32, 0.36))
 	_carro(Vector2(10.0, 9.0), PI - 0.3, Color(0.6, 0.6, 0.6), "carro", true)

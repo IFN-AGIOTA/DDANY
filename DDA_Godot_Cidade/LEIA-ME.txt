@@ -39,6 +39,44 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.81 · ESCADAS, CÂMERA E SISTEMA DE PREENCHIMENTO DOS PRÉDIOS
+  · ESCADAS (mundo/interior.gd e mundo/local.gd):
+    - Prédios: a escada de cima chegava a 0,3 m da parede de trás, dentro de uma parede sem porta (dava "na
+      parede"). Agora tem um PATAMAR de 1,4 m no alto e a parede da escada ganhou porta. A porta da rua e as
+      janelas nunca ficam na frente da escada nem onde a parede dela encosta na fachada.
+    - Armazém: a 2ª escada dos contêineres caía em cima da saída da 1ª; mudou de lugar.
+  · CÂMERA (jogador/jogador.gd, jogador/jogador.tscn): o deslocamento para o lado do ombro era aplicado DEPOIS do
+    braço da câmera checar as paredes, então perto de parede/corredor/escada ela entrava na parede. Agora o lado é
+    aplicado na origem do braço e conferido por um raio (folga 0,35 m); a esfera da câmera ficou maior (0,25 m).
+  · SISTEMA DE PREENCHIMENTO DOS PRÉDIOS (mundo/interior.gd): antes de pôr os móveis, o prédio anota onde ficam
+    todas as paredes, grades e vãos (portas e janelas). Cada móvel só vai para um lugar se:
+      - não encosta em nenhuma parede/grade nem fica na frente de porta (área proibida na frente de cada porta);
+      - tem PAREDE DE VERDADE atrás dele (embaixo e, nos móveis altos, também em cima): guarda-roupa, estante,
+        geladeira etc. não ficam mais na frente de janela nem "flutuando" no meio da sala. Altura de cada móvel
+        na tabela ALTO; os baixos (até 1 m) podem ficar embaixo da janela;
+      - cada cômodo continua com os móveis do tipo dele (quarto, cozinha, banheiro, sala...) e, se não há espaço,
+        o móvel é pulado em vez de ser enfiado.
+    As paredes de dentro também foram arrumadas: nenhuma parede termina mais no meio de uma porta ou janela da
+    fachada (a divisão anda até achar parede lisa). As grades das celas procuram uma posição em que as duas pontas
+    batem em parede.
+    Obs.: a planta de alguns prédios mudou um pouco (paredes de dentro e móveis em outro lugar).
+  · Testes novos: teste_escadas_moveis (de toda escada dá para andar pelo andar de cima; nenhum móvel atravessa
+    parede; nenhuma parede no meio de vão; toda escada dos locais tem saída) e teste_camera_paredes (8 direções x
+    mirando/não x os 2 ombros, em patamar de escada e no corredor da delegacia: câmera nunca dentro da parede).
+  · Arquivos:
+      jogador/jogador.gd ........ lado do ombro na origem do braço da câmera + raio de conferência (FOLGA_CAMERA)
+      jogador/jogador.tscn ...... esfera da câmera 0,2 -> 0,25 m
+      mundo/interior.gd ......... sistema de preenchimento (_muros, _vaos, ALTO, _parede_atras, _tem_parede,
+                                  _livre), patamar da escada (PATAMAR), divisões fora dos vãos (_ajustar,
+                                  _encontro_livre), porta/janelas longe da escada (_zona_escada, _junta_escada),
+                                  grades das celas
+      mundo/local.gd ............ lista "escadas" (para o teste) e 2ª escada do armazém em outro lugar
+      menu/config.gd ............ versão 0.81
+      ferramentas/testes/teste_escadas_moveis.gd ... NOVO
+      ferramentas/testes/teste_camera_paredes.gd ... NOVO
+      ferramentas/testes/teste_ombro.gd ............ lê o lado no braço da câmera
+      ferramentas/testes/rodar.sh .................. roda os 2 testes novos
+
 ATUALIZAÇÃO 0.80 · INFECTADOS: VISÃO DE VERDADE E CÍRCULO DE AUDIÇÃO · NÃO MORDEM NEM SAEM PELA PAREDE
   · PERCEPÇÃO NOVA (inimigos/vago.gd):
     - VISÃO: só com LINHA DE VISÃO livre. A linha bate em paredes, portas, móveis e carros (física) e, de longe, nos
@@ -1760,6 +1798,10 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   dos prédios mudaram) ................. menu/salvamento.gd (MAPA_PREDIOS) e mundo/cidade.gd (remapa_v2/v3)
 - prédios por dentro (cômodos, portas,
   escadas, andares de cima, telhado) . mundo/interior.gd
+- onde vai cada móvel nos prédios
+  (preenchimento: parede atrás, longe de
+  portas/janelas, altura dos móveis) .. mundo/interior.gd (_muros, _vaos, ALTO, _parede_atras, _livre)
+- câmera não atravessar parede .......... jogador/jogador.gd (FOLGA_CAMERA) + esfera em jogador/jogador.tscn
 - VEÍCULOS: o carro (física, motor,
   gasolina, batidas, atropelar, som) ... mundo/veiculo.gd (TANQUE, LITROS_POR_KM, FORCA, VEL_MAX...)
 - quais carros funcionam, entrar/sair,

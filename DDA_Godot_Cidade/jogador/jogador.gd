@@ -32,6 +32,7 @@ const VEL_AGACHADO := 1.0
 const VEL_AGACHADO_RAPIDO := 1.8
 const VEL_MIRANDO := 2.2
 const VEL_MIRANDO_LADO := 1.1         # 0.61: mirando e andando de lado (passos laterais) ou de costas
+const FOLGA_CAMERA := 0.35            # 0.81: distância mínima da câmera até uma parede do lado
 const MIRA_NEUTRA := 0.12            # inclinação da câmera em que a arma fica reta (a câmera fica acima do ombro)
 const FORCA_PULO := 5.2
 # 0.72 · água
@@ -62,6 +63,7 @@ const PortaCls := preload("res://mundo/porta.gd")
 @export var ombro_mirando := 0.55      # mirando, a câmera vai para cima do ombro direito (metros)
 var ombro := 1.0                        # 0.79: 1 = câmera no ombro DIREITO (personagem à esquerda) · -1 = ombro ESQUERDO
 var _ombro_s := 1.0                     # o mesmo, suavizado (a câmera desliza de um lado para o outro)
+var _lado_cam := 0.0                    # 0.81: deslocamento lateral do braço da câmera (já limitado pelas paredes)
 @export var sensibilidade := 1.0
 @export var inverter_y := false         # Opções › Controles › Eixo vertical
 var giroscopio := false                 # Opções › Controles › Giroscópio (olhar mexendo o celular)
@@ -674,7 +676,7 @@ func _camera_primeira_pessoa(delta: float, fov_alvo: float) -> void:
 	var k := smoothstep(0.0, 1.0, _fp)
 	_pivo.global_position = _pivo.global_position.lerp(olhos, k)
 	_braco.spring_length = lerpf(_braco.spring_length, 0.0, k)
-	camera.position.x = lerpf(camera.position.x, 0.0, k)
+	_braco.position.x = lerpf(_braco.position.x, 0.0, k)
 	camera.near = lerpf(_near_3p, 0.03, k)
 	var fov_fp := lerpf(fov_camera + 18.0, (fov_camera + 18.0) * 0.55 / armas.zoom_mira(), fator_mira)
 	camera.fov = lerpf(camera.fov, lerpf(fov_alvo, fov_fp, k), minf(1.0, delta * 6.0 + 0.02))
@@ -731,9 +733,25 @@ func _process(delta: float) -> void:
 	var meia_largura := tan(deg_to_rad(camera.fov) * 0.5) * asp
 	var frac := _braco.get_hit_length() / maxf(dist, 0.01)
 	_ombro_s = move_toward(_ombro_s, ombro, delta * 5.0)
-	camera.position.x = lerpf(dist * meia_largura * absf(lateral_camera) * _ombro_s, ombro_mirando * _ombro_s, fator_mira) * frac
+	# 0.81: o deslocamento para o lado (ombro) vai na ORIGEM do braço, testado por um raio para o lado: assim o braço
+	# (esfera de colisão) sai do ponto já deslocado e a câmera não entra mais nas paredes de lado (corredor, escada)
+	var lado := lerpf(dist * meia_largura * absf(lateral_camera) * _ombro_s, ombro_mirando * _ombro_s, fator_mira) * frac
 	if veiculo != null:
-		camera.position.x = 0.0                   # dirigindo: o carro no meio da tela
+		lado = 0.0                                # dirigindo: o carro no meio da tela
+	var lim := absf(lado)
+	if lim > 0.01:
+		var de := _pivo.global_position
+		var q := PhysicsRayQueryParameters3D.create(de, de + _pivo.global_basis.x * signf(lado) * (lim + FOLGA_CAMERA), _braco.collision_mask, [get_rid()])
+		var rl := get_world_3d().direct_space_state.intersect_ray(q)
+		if not rl.is_empty():
+			lim = maxf(0.0, de.distance_to(rl["position"]) - FOLGA_CAMERA)
+	var alvo_x := signf(lado) * minf(absf(lado), lim)
+	if lim < absf(lado) or signf(alvo_x) != signf(_lado_cam):
+		_lado_cam = alvo_x if lim < absf(_lado_cam) else move_toward(_lado_cam, alvo_x, delta * 6.0)   # parede: recolhe na hora
+	else:
+		_lado_cam = move_toward(_lado_cam, alvo_x, delta * 3.0)                                          # sem parede: volta devagar
+	_braco.position.x = _lado_cam
+	camera.position.x = 0.0
 	_camera_primeira_pessoa(delta, fov_alvo)
 	_tela_submersa()
 	animador.atualizar(delta, self)
