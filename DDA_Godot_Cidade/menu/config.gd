@@ -5,7 +5,7 @@ extends Node
 
 signal mudou(chave: String)          # "gfx" quando os gráficos foram aplicados; "hud" quando a HUD foi editada
 
-const VERSAO := "0.70"
+const VERSAO := "0.71"
 const ARQUIVO := "user://opcoes.cfg"
 
 const PADRAO := {
@@ -24,6 +24,7 @@ const PADRAO := {
 	"fps": false, "som": true, "vol": 100, "awake": false, "mus": true, "mvol": 70,
 	"svol": 100,                          # volume dos efeitos (tiros, passos, infectados, chuva)
 	"dif": 1,                             # dificuldade do modo livre: 0 fácil, 1 normal, 2 difícil
+	"pvp": "zonas",                       # 0.71: PvP quando VOCÊ cria a partida: "zonas", "tudo" ou "desligado"
 	"rec_tempo": 0.0, "rec_abates": 0,    # recordes (tela de morte)
 	"nome_rede": "", "ip_rede": "",       # multijogador: seu nome e o último IP digitado (menu/tela_multijogador.gd)
 }

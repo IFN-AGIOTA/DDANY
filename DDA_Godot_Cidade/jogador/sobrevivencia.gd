@@ -237,6 +237,38 @@ func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3) -> void
 			var it = vestidos[randi() % vestidos.size()]
 			it.estado = maxf(0.0, it.estado - randf_range(0.03, 0.12))
 
+# ---------- PvP (0.71): tiro/golpe de OUTRO JOGADOR (rede/sessao_rede.gd) ----------
+# Cabeça: x2,5 (capacete segura boa parte). Corpo: o colete segura. Tiro tira sangue e costuma abrir sangramento.
+func levar_tiro_pvp(dano: float, cabeca: bool, origem: Vector3, quem: String, golpe: bool) -> void:
+	if jogador.morto:
+		return
+	atingido.emit(origem)
+	var inv = inventario()
+	var capacete: bool = inv != null and inv.slots.get("cabeca") != null and float(inv.slots["cabeca"].def().get("protecao", 0.0)) >= 0.3
+	var colete: bool = inv != null and inv.slots.get("colete") != null and float(inv.slots["colete"].def().get("protecao", 0.0)) >= 0.3
+	var d := dano
+	if cabeca:
+		d *= 1.4 if capacete else 2.5
+	elif colete:
+		d *= 0.55
+	var por := ("golpeado por " if golpe else "baleado por ") + quem
+	_dano(d, por)
+	ferido.emit(d)
+	if not golpe:
+		sangue = maxf(0.0, sangue - d * 10.0)
+		if sangue < 500.0:
+			_morrer(por)
+	if randf() < (0.3 if golpe else 0.6) * (0.5 if colete and not cabeca else 1.0):
+		sangramentos += 1
+		if inv != null:
+			inv.aviso.emit("SANGRANDO")
+	# a roupa leva o tiro
+	if inv != null:
+		var s: String = "cabeca" if cabeca else ["camisa", "colete", "calca"][randi() % 3]
+		var it = inv.slots.get(s)
+		if it != null:
+			it.estado = maxf(0.0, it.estado - randf_range(0.08, 0.2))
+
 # ---------- consumíveis (inventario.usar chama aqui) ----------
 # devolve "" quando usou; ou um aviso quando não dá para usar (o item não é gasto)
 func aplicar(efeito: Dictionary, _id: String, estado := 1.0) -> String:

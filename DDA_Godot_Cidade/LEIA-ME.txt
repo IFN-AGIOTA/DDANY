@@ -39,6 +39,43 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.71 · PvP, AMIGOS NO MAPA, COLISÃO ENTRE JOGADORES E MENSAGENS RÁPIDAS
+  · PvP DE VERDADE no multijogador: tiro e golpe acertam o boneco do amigo (corpo e CABEÇA) e o dano é aplicado
+    no aparelho dele. Cabeça = dano x2,5 (com CAPACETE x1,4); COLETE segura 45% no corpo; tiro tira sangue e
+    costuma abrir SANGRAMENTO (o colete diminui); a roupa atingida se gasta. Quem morre deixa tudo no chão
+    (como antes) e aparece para todos "FULANO MATOU BELTRANO · M4A1 · NA CABEÇA"; o abate conta para quem
+    matou. Tela de morte: "Baleado por FULANO." / "Golpeado por FULANO.".
+  · ONDE VALE (escolha de quem CRIA a partida em Opções › Vídeo e som › "PvP no multijogador"):
+      - Só nas zonas (padrão): só dentro dos postos, hospitais, supermercados e armazéns (mundo/locais.gd);
+      - Cidade toda · Desligado.
+    Quem decide é o aparelho de quem leva o tiro (pela posição dele). Atirando em alguém fora da zona aparece
+    "FORA DA ZONA DE PvP: NÃO FERE".
+  · AMIGOS NO MAPA E NO MINIMAPA: bolinha verde com o nome (no minimapa, na borda quando está longe).
+  · COLISÃO ENTRE JOGADORES: um não atravessa mais o outro.
+  · MENSAGENS RÁPIDAS: botão de BALÃO (canto de cima, só no multijogador) ou tecla T abre 8 frases prontas
+    (SOCORRO!, VEM AQUI, CUIDADO: INFECTADOS, CUIDADO: JOGADOR, AMIGO NÃO ATIRE, ACHEI LOOT, PRECISO DE
+    REMÉDIO, VAMOS EMBORA); toque ou 1..8 manda para todos ("NOME: FRASE" na tela, com som).
+  · Testado com dois jogos conectados: tiro no corpo e na cabeça pela física, morte, abate contado, regra das
+    zonas (fora não fere, dentro fere), mensagem chegando no outro.
+  · ARQUIVOS MEXIDOS:
+      rede/alvo_jogador.gd ...... NOVO (corpo/cabeça do boneco do amigo que os tiros e golpes acertam)
+      hud/mensagens.gd .......... NOVO (painel das mensagens rápidas)
+      rede/jogador_remoto.gd .... tem o alvo; levar_dano manda o dano pela rede
+      rede/sessao_rede.gd ....... PvP (mandar_pvp, eventos "pvp" e "abate", regra das zonas) e mensagens ("msg")
+      rede/rede.gd .............. a regra do PvP do host vai junto com o mundo (Rede.mundo["pvp"])
+      jogador/sobrevivencia.gd .. levar_tiro_pvp (cabeça, capacete, colete, sangue, sangramento)
+      jogador/jogador.tscn ...... colide com outros jogadores (máscara 1 + 16)
+      jogador/controles.gd ...... botão MSG e tecla da mensagem; ícone novo
+      jogador/teclas.gd ......... ação "mensagem" (T)
+      hud/mapa.gd ............... amigos no mapa e no minimapa
+      hud/icones/botoes.png ..... ícone do balão (ferramentas/gerar_icones_botoes.gd)
+      ferramentas/gerar_icones_botoes.gd ícone MSG (chat-bubble, Delapouite)
+      menu/opcoes.gd ............ opção "PvP no multijogador"
+      menu/config.gd ............ opção "pvp" e versão 0.71
+      menu/tela_morte.gd ........ "Baleado/Golpeado por FULANO."
+  · PUBLICADA: atualizacoes/pacote_0.71.pck (acumulado desde o APK 0.48) + manifesto; os celulares baixam
+    sozinhos. servidor_windows.zip (raiz) refeito na 0.71.
+
 ATUALIZAÇÃO 0.70 · REVISÃO: CONSERTOS DO MULTIJOGADOR, COLISÃO E DESEMPENHO
   · MULTIJOGADOR (conserto): no aparelho do AMIGO (cliente), os prédios infestados, os locais especiais, as
     missões do rádio e os eventos criavam infectados próprios, que só ele via; eles ganhavam números de rede
@@ -1153,14 +1190,15 @@ TOQUE (vários dedos ao mesmo tempo)
 - Metade DIREITA: arrastar = olhar. Minimapa: toque = mapa grande.
 - ATIRAR / GOLPEAR (segurar; dá para arrastar o dedo em cima dele para mirar enquanto atira) · CORRER (segurar)
 - PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga) · RECARREGAR · ARMA (troca coldre/ombro) · PEGAR
-  (aparece perto de um item) · INV · II (pausa) · CAM (1ª/3ª pessoa) · VOO (câmera livre: SOBE / DESCE / VEL).
+  (aparece perto de um item) · INV · II (pausa) · CAM (1ª/3ª pessoa) · VOO (câmera livre: SOBE / DESCE / VEL)
+  · BALÃO (só no multijogador): mensagens rápidas.
 - Desde a 0.67 os botões mostram ÍCONES (balas = atirar, mira = mirar, mochila = INV, drone = VOO...); o botão
   ARMA mostra o desenho da arma na mão.
 PC (todas as teclas trocáveis em Opções › Teclado e mouse)
 - WASD/setas andar · Shift correr · Alt andar devagar · Espaço pular · C agachar · mouse esquerdo atirar/golpear ·
   mouse direito mirar · R recarregar · X ou rodinha trocar arma · Q roda do inventário rápido · 1..8 atalhos ·
   E pegar · Tab inventário · M mapa · Esc/P pausa · F 1ª/3ª pessoa · V câmera livre (E sobe, Q desce) ·
-  F11 tela cheia.
+  T mensagens rápidas (multijogador; 1..8 escolhe) · F11 tela cheia.
 
 -----------------------------------------------------------------------------------------------------
 4. NÚMEROS DO JOGO
@@ -1401,6 +1439,9 @@ MULTIJOGADOR (pasta rede/ · modo livre)
   15x/s, roupa, ações, tiros, clima) .. rede/sessao_rede.gd
 - o boneco do outro jogador (suavizado,
   nome em cima, roupa, arma) .......... rede/jogador_remoto.gd
+- PvP: onde o tiro acerta o amigo ..... rede/alvo_jogador.gd (corpo/cabeça) · regra e eventos: rede/sessao_rede.gd
+  (mandar_pvp, pvp_vale_em) · dano: jogador/sobrevivencia.gd (levar_tiro_pvp) · opção: menu/opcoes.gd
+- mensagens rápidas (frases) .......... hud/mensagens.gd
 - conta (Google/convidado), amigos e
   partidas dos amigos (Firebase) ...... rede/conta.gd (autoload "Conta")
 - chaves do Firebase / regras do banco  rede/firebase_config.cfg / rede/firebase_regras.json
@@ -1526,10 +1567,10 @@ MÚSICA (pasta audio/)
 - Os blocos de cima das torres escalonadas também mostram "térreo" (vitrines/placas) na base deles.
 - Sobrevivente: rosto liso de manequim.
 - Infectados: os rostos são simples (manequim, olhos pintados).
-- MULTIJOGADOR: infectados, itens e caixas já são iguais para todos (0.44). Falta: dano entre jogadores (PvP:
-  os locais especiais da 0.68 já estão prontos para ele), jogadores sem colisão entre si, salvar a partida em
-  rede (em rede não salva), outros jogadores no mapa/minimapa, chat, infectados nos prédios/locais perto só do
-  amigo (só o host cria; quando o host está longe, o prédio do amigo fica vazio). Internet sem roteador/VPN (servidor próprio de "ponte"/relay, que
+- MULTIJOGADOR: infectados, itens e caixas iguais para todos (0.44); PvP, amigos no mapa, colisão entre
+  jogadores e mensagens rápidas (0.71). Falta: salvar a partida em rede (em rede não salva), chat escrito,
+  infectados nos prédios/locais perto só do amigo (só o host cria; quando o host está longe, o prédio do
+  amigo fica vazio). Internet sem roteador/VPN (servidor próprio de "ponte"/relay, que
   precisa de um servidor ligado 24h) e abrir o jogo direto por um link (precisa de plugin Android).
 - Ideias para depois: loot por região, lugares
   especiais (postos do exército, quarentena, metrô), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,

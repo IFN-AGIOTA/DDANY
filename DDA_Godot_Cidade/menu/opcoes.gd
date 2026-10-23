@@ -385,6 +385,9 @@ func _pagina_video(v: float) -> Control:
 	_deslizante("svol", 0, 100, 5, "%", g, "Volume dos efeitos")
 	_secao(g, "Dificuldade", _seg("dif", [[0, "Fácil"], [1, "Normal"], [2, "Difícil"]],
 		{0: "Menos infectados e mordidas mais fracas.", 1: "Equilíbrio do jogo.", 2: "Mais infectados, mordidas mais fortes."}))
+	_secao(g, "PvP no multijogador (quando você cria a partida)", _seg("pvp", [["zonas", "Só nas zonas"], ["tudo", "Cidade toda"], ["desligado", "Desligado"]],
+		{"zonas": "Jogadores só se ferem nos postos, hospitais, supermercados e armazéns.", "tudo": "Jogadores se ferem em qualquer lugar.",
+		"desligado": "Ninguém fere ninguém."}))
 	_secao(g, "Manter tela ligada", _seg("awake", [[false, "Não"], [true, "Sim"]]))
 	var tc := UI.BotaoMenu.new("Alternar tela cheia", "", false, 3.2, 0.0)
 	tc.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN

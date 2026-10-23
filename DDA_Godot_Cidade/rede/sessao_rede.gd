@@ -25,6 +25,8 @@ const RemotoCls := preload("res://rede/jogador_remoto.gd")
 const ItemMundo := preload("res://inventario/item_mundo.gd")
 const ItemCls := preload("res://inventario/item.gd")
 const LootMundo := preload("res://mundo/loot_mundo.gd")
+const Locais := preload("res://mundo/locais.gd")
+const MensagensCls := preload("res://hud/mensagens.gd")
 const INFECTADOS_POR_SEG := 10.0
 const RAIO_INFECTADOS := 170.0                # host manda a cada amigo os infectados até essa distância dele
 const ENVIOS_POR_SEG := 15.0
@@ -52,6 +54,16 @@ func ligar(m: Node) -> void:
 	jogador.inventario.mudou.connect(_mandar_roupa)
 	jogador.animador.tocou_acao.connect(func(n, v, c): Rede.enviar_evento("acao", {"n": n, "v": v, "c": c}))
 	jogador.armas.disparou.connect(_mandar_tiro)
+	jogador.sobrevivencia.morreu.connect(_morri)
+	# 0.71: mensagens rápidas (botão MSG / tecla T)
+	_mensagens = MensagensCls.new()
+	_mensagens.name = "Mensagens"
+	_mensagens.controles = main.controles
+	add_child(_mensagens)
+	_mensagens.escolheu.connect(_mandar_mensagem)
+	if main.controles != null:
+		main.controles.ocultos["MSG"] = false
+		main.controles.mensagem_pedida.connect(_mensagens.abrir)
 	for id in Rede.jogadores:
 		if id != Rede.meu_id():
 			_criar(id)
@@ -69,6 +81,8 @@ func _exit_tree() -> void:
 			[Rede.infectados_recebidos, _infectados]]:
 		if (s[0] as Signal).is_connected(s[1]):
 			(s[0] as Signal).disconnect(s[1])
+	if main != null and main.controles != null and is_instance_valid(main.controles):
+		main.controles.ocultos["MSG"] = true
 	ItemMundo.ao_soltar = Callable()
 	ItemMundo.ao_pegar = Callable()
 	ItemMundo.por_uid.clear()
@@ -82,6 +96,7 @@ func _criar(id: int) -> Node3D:
 	var r := RemotoCls.new()
 	r.name = "Remoto_%d" % id
 	r.id = id
+	r.sessao = self
 	r.nome = Rede.nome_de(id)
 	main.jogo.add_child(r)
 	r.definir_nome(r.nome)
@@ -193,6 +208,12 @@ func _evento(id: int, tipo: String, d: Dictionary) -> void:
 		"inf_ani":
 			if id == 1 and main.vagos != null:
 				main.vagos.receber_ani_rede(int(d.get("i", 0)), str(d.get("a", "")), d.get("d", {}))
+		"pvp":
+			_pvp_recebido(id, d)
+		"msg":
+			_mostrar_mensagem(id, int(d.get("i", 0)))
+		"abate":
+			_abate(id, d)
 		"mordida":
 			if id == 1 and not jogador.morto:
 				jogador.receber_ataque(float(d.get("d", 10.0)), float(d.get("c", 0.3)), d.get("o", jogador.global_position))
@@ -405,3 +426,89 @@ func _aplicar_mundo_itens(d: Dictionary) -> void:
 		_item_pego(str(u))
 	for e in d.get("soltos", []):
 		_item_solto({"u": e[0], "it": e[1], "p": e[2]})
+
+# ---------- PvP (0.71) ----------
+# Regra (escolha do HOST em Opções › Vídeo e som › "PvP no multijogador", vai em Rede.mundo["pvp"]):
+#   "zonas" (padrão) = só vale dentro das ZONAS DE PvP (postos, hospitais, supermercados, armazéns: mundo/locais.gd)
+#   "tudo" = na cidade inteira · "desligado" = ninguém fere ninguém
+# Quem decide é o aparelho de quem LEVA o tiro (pela posição dele): sem trapaça de quem atira.
+const PVP_ZONA_MARGEM := 4.0
+const ABATE_JANELA := 12.0                    # morreu até 12 s depois de levar tiro de alguém = abate dele
+var _t_aviso_pvp := 0.0
+var _ultimo_atirador := 0
+var _t_ultimo_tiro := -100.0
+var _ultima_arma := ""
+var _ultima_cabeca := false
+
+static func modo_pvp() -> String:
+	return str(Rede.mundo.get("pvp", "zonas"))
+
+static func pvp_vale_em(p: Vector3) -> bool:
+	match modo_pvp():
+		"tudo":
+			return true
+		"desligado":
+			return false
+	return Locais.em(Vector2(p.x, p.z), PVP_ZONA_MARGEM) >= 0
+
+# eu acertei o jogador "alvo_id": manda o dano para o aparelho dele (falso = o PvP não vale onde ele está)
+func mandar_pvp(alvo_id: int, dano: float, cabeca: bool, direcao: Vector3, golpe: bool) -> bool:
+	var r = remotos.get(alvo_id)
+	if r == null or not pvp_vale_em(r.global_position):
+		var agora := Time.get_ticks_msec() / 1000.0
+		if agora - _t_aviso_pvp > 4.0 and main.hud != null:
+			_t_aviso_pvp = agora
+			main.hud.mostrar_aviso("PvP DESLIGADO AQUI" if modo_pvp() == "desligado" else "FORA DA ZONA DE PvP: NÃO FERE")
+		return false
+	Rede.enviar_evento("pvp", {"dn": dano, "c": cabeca, "d": direcao, "g": golpe, "a": str(jogador.armas.atual),
+		"o": jogador.global_position}, alvo_id)
+	return true
+
+func _pvp_recebido(de: int, d: Dictionary) -> void:
+	if jogador == null or jogador.morto or not pvp_vale_em(jogador.global_position):
+		return
+	_ultimo_atirador = de
+	_t_ultimo_tiro = Time.get_ticks_msec() / 1000.0
+	_ultima_arma = str(d.get("a", ""))
+	_ultima_cabeca = bool(d.get("c", false))
+	jogador.sobrevivencia.levar_tiro_pvp(float(d.get("dn", 0.0)), _ultima_cabeca, d.get("o", jogador.global_position),
+		Rede.nome_de(de), bool(d.get("g", false)))
+
+# morri: se foi tiro/golpe de alguém há pouco, avisa todo mundo (e ele ganha o abate)
+func _morri(_causa: String) -> void:
+	if Time.get_ticks_msec() / 1000.0 - _t_ultimo_tiro > ABATE_JANELA or _ultimo_atirador == 0:
+		return
+	var d := {"q": _ultimo_atirador, "a": _ultima_arma, "c": _ultima_cabeca}
+	Rede.enviar_evento("abate", d)
+	_abate(Rede.meu_id(), d)
+
+func _abate(vitima: int, d: Dictionary) -> void:
+	var quem := int(d.get("q", 0))
+	var arma := str(d.get("a", ""))
+	var nome_arma: String = jogador.armas.WDEF[arma]["nome"] if jogador.armas.WDEF.has(arma) else ""
+	var txt := "%s MATOU %s%s%s" % [Rede.nome_de(quem).to_upper(), Rede.nome_de(vitima).to_upper(),
+		(" · " + nome_arma) if nome_arma != "" else "", " · NA CABEÇA" if bool(d.get("c", false)) else ""]
+	if quem == Rede.meu_id():
+		txt = "VOCÊ MATOU %s%s" % [Rede.nome_de(vitima).to_upper(), " · NA CABEÇA" if bool(d.get("c", false)) else ""]
+		main.abates += 1
+	elif vitima == Rede.meu_id():
+		txt = "%s MATOU VOCÊ" % Rede.nome_de(quem).to_upper()
+	if main.hud != null:
+		main.hud.mostrar_aviso(txt, 6.0)
+
+# ---------- mensagens rápidas (0.71) ----------
+var _mensagens
+var _t_msg := 0.0
+
+func _mandar_mensagem(i: int) -> void:
+	var agora := Time.get_ticks_msec() / 1000.0
+	if agora - _t_msg < 1.5:
+		return                                # sem metralhar mensagem
+	_t_msg = agora
+	Rede.enviar_evento("msg", {"i": i})
+	_mostrar_mensagem(Rede.meu_id(), i)
+
+func _mostrar_mensagem(de: int, i: int) -> void:
+	if main.hud != null:
+		main.hud.mostrar_aviso(MensagensCls.texto(Rede.nome_de(de), i), 6.0)
+	preload("res://audio/sons.gd").tocar("ui/aviso", -6.0)

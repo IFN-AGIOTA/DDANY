@@ -39,6 +39,7 @@ const LISTA := [
 	["facao", "lorc/machete", false],
 	["pe_de_cabra", "delapouite/crowbar", false],
 	["punhos", "lorc/fist", false],
+	["MSG", "delapouite/chat-bubble", false],      # 0.71: mensagens rápidas (multijogador)
 ]
 const CEL := 128
 const ICONE := 112                     # sobra uma borda vazia: as mipmaps não "vazam" para o vizinho

@@ -105,7 +105,7 @@ func criar_partida(meu_nome: String, semente_loot: int) -> void:
 	ligado = true
 	_host_nome = nome
 	jogadores = {} if servidor_dedicado else {1: {"nome": nome, "avatar": Conta.avatar, "uid": Conta.uid}}
-	mundo = {"semente": semente_loot, "comecou": servidor_dedicado}
+	mundo = {"semente": semente_loot, "comecou": servidor_dedicado, "pvp": str(Config.valor("pvp"))}   # 0.71: regra do PvP
 	partida_comecou = servidor_dedicado         # servidor: a partida já começa aberta (entra direto na cidade)
 	_anuncio = PacketPeerUDP.new()
 	_anuncio.set_broadcast_enabled(true)

@@ -4,17 +4,21 @@ extends Node3D
 # (jogador/animador_modelo.gd), mas sem física nem controles: só segue o que chega pela rede
 # (rede/sessao_rede.gd), suavizado (interpolação ATRASO segundos no passado, para não tremer).
 # Mostra o nome em cima da cabeça, a roupa equipada e a arma das mãos.
+# 0.71 · PvP: tem um ALVO (rede/alvo_jogador.gd) que os tiros e golpes acertam; o dano vai para o aparelho dele.
 # Mexa AQUI para: atraso da interpolação, altura/tamanho do nome.
 
 const SobreviventeCls := preload("res://jogador/modelo_sobrevivente.gd")
 const AnimadorCls := preload("res://jogador/animador_modelo.gd")
 const ModelosArmas := preload("res://armas/modelos_armas.gd")
 const ItemCls := preload("res://inventario/item.gd")
+const AlvoCls := preload("res://rede/alvo_jogador.gd")
 const ATRASO := 0.12                           # segundos (2 pacotes a 15/s)
 const FUZIS := ["mp5", "m4", "ak", "espingarda", "rifle_caca"]
 
 var id := 0
 var nome := ""
+var sessao = null                              # rede/sessao_rede.gd (manda o dano do PvP)
+var alvo                                       # rede/alvo_jogador.gd
 # --- lidos pelo animador_modelo.gd (mesmos nomes do jogador/jogador.gd) ---
 var velocity := Vector3.ZERO
 var vel_horizontal := 0.0
@@ -62,10 +66,23 @@ func _ready() -> void:
 	_rotulo.fixed_size = false
 	_rotulo.modulate = Color("#ffe9d0")
 	add_child(_rotulo)
+	alvo = AlvoCls.new()
+	alvo.name = "Alvo"
+	alvo.dono = self
+	add_child(alvo)
 	vestir({})
 
 func is_on_floor() -> bool:
 	return _no_chao
+
+# PvP: um tiro/golpe MEU acertou este jogador. A reação aparece já aqui; o dano é decidido no aparelho dele.
+func levar_dano(dano: float, cabeca: bool, direcao: Vector3, golpe: bool) -> Dictionary:
+	if morto or sessao == null:
+		return {"cabeca": false, "morto": false}
+	if not sessao.mandar_pvp(id, dano, cabeca, direcao, golpe):
+		return {"cabeca": false, "morto": false}              # PvP desligado aqui (fora da zona): não conta acerto
+	animador.acao(["levar_golpe_a", "levar_golpe_b"][randi() % 2], 1.3, false)
+	return {"cabeca": cabeca, "morto": false}
 
 # um infectado do HOST mordeu este amigo: o dano vai para o aparelho dele (rede/sessao_rede.gd "mordida")
 func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3) -> void:
@@ -147,6 +164,8 @@ func _process(dt: float) -> void:
 		global_position = global_position.lerp(_amostras[0][1], minf(1.0, dt * 10.0))
 		rotation.y = lerp_angle(rotation.y, float(_amostras[0][2]), minf(1.0, dt * 10.0))
 	armas.since += dt
+	if alvo != null:
+		alvo.atualizar(agachado, visible and not morto)
 	if not _pausado:
 		animador.atualizar(dt, self)
 

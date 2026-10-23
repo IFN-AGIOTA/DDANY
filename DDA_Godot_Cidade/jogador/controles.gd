@@ -34,6 +34,7 @@ signal inventario_pedido
 signal pegar_pedido
 signal pausa_pedida
 signal selecionou(id: String)      # modo de edição da HUD: botão tocado
+signal mensagem_pedida             # 0.71: mensagens rápidas do multijogador (botão MSG, tecla T)
 
 const UI := preload("res://menu/ui.gd")
 const Teclas := preload("res://jogador/teclas.gd")
@@ -43,7 +44,7 @@ const RAIO_STICK := 90.0
 const FOLHA_ICONES := preload("res://hud/icones/botoes.png")
 const ICONES := ["PAUSA", "INV", "VOO", "CAM", "MIRAR", "ATIRAR", "PULAR", "CORRER", "AGACHAR", "RECARREGAR", "PEGAR",
 	"SOBE", "DESCE", "VEL", "pistola", "m4", "mp5", "ak", "espingarda", "rifle_caca", "faca", "taco", "machado", "cano",
-	"lanca", "facao", "pe_de_cabra", "punhos"]
+	"lanca", "facao", "pe_de_cabra", "punhos", "MSG"]
 
 # OTIMIZAÇÃO: botões = disco e anel em TEXTURA (menu/ui.gd circulo/aro): todos os discos = 1 chamada de desenho,
 # todos os anéis = 1, textos = 1 (draw_circle/draw_arc eram 2 chamadas por botão).
@@ -130,7 +131,9 @@ func _ready() -> void:
 	_bt("INV", "INV", "tr", Vector2(132, 46), 30, Color(1.0, 0.71, 0.0), "tocar", false, false)
 	_bt("PAUSA", "II", "tr", Vector2(208, 46), 30, Color(1.0, 0.54, 0.21), "tocar", false, false)
 	_bt("CAM", "CAM", "tr", Vector2(284, 46), 30, Color(0.75, 0.85, 1.0), "tocar", false, false)
+	_bt("MSG", "MSG", "tr", Vector2(360, 46), 30, Color(0.45, 1.0, 0.45), "tocar", false, false)
 	ocultos["PEGAR"] = true
+	ocultos["MSG"] = true                 # só aparece no multijogador (rede/sessao_rede.gd mostra)
 	_bt("SOBE", "SOBE", "br", Vector2(80, 330), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
 	_bt("DESCE", "DESCE", "br", Vector2(80, 210), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
 	_bt("VEL", "VEL", "br", Vector2(80, 90), 44, Color(0.6, 0.6, 0.6), "tocar", false, true)
@@ -415,6 +418,9 @@ func _acao(acao: String, apertou: bool) -> void:
 			if modo_voo:
 				vel_pedida.emit()
 		"pausa": pausa_pedida.emit()
+		"mensagem":
+			if not ocultos.get("MSG", true):
+				mensagem_pedida.emit()
 		_:
 			if acao.begins_with("atalho_") and not modo_voo:
 				atalho_pedido.emit(int(acao.substr(7)) - 1)
@@ -503,6 +509,7 @@ func _tocou(id: String) -> void:
 		"PAUSA": pausa_pedida.emit()
 		"PEGAR": pegar_pedido.emit()
 		"CAM": camera_pedida.emit()
+		"MSG": mensagem_pedida.emit()
 
 # OTIMIZAÇÃO: redesenha só quando algo que aparece mudou (botão aceso, texto, botão escondido, bloqueio).
 # Os toques já pedem redesenho na hora (_input). Antes redesenhava todos os botões em todo quadro.

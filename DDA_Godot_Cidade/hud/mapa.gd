@@ -40,6 +40,7 @@ const COR_RUA := Color(0.47, 0.47, 0.46)
 const COR_PREDIO := Color(0.125, 0.125, 0.135)
 const COR_RUINA := Color(0.26, 0.15, 0.11)
 const COR_JOGADOR := Color(0.40, 0.88, 1.0)
+const COR_AMIGO := Color(0.45, 1.0, 0.45)       # 0.71: outros jogadores da partida
 const COR_OBJETIVO := Color(1.0, 0.706, 0.0)
 const COR_FUNDO := Color(0.03, 0.05, 0.08, 0.6)
 const RUMOS := ["N", "NE", "L", "SE", "S", "SO", "O", "NO"]
@@ -634,6 +635,19 @@ func _seta(ci: CanvasItem, c: Vector2, ang: float, tam: float, cor: Color) -> vo
 	ci.draw_polyline(contorno, Color(0, 0, 0, 0.85), maxf(3.0, tam * 0.28), true)
 	ci.draw_colored_polygon(pts, cor)
 
+# 0.71: outros jogadores da partida (rede/sessao_rede.gd): [[posição, nome], ...]
+func _amigos() -> Array:
+	var l := []
+	var cena := get_tree().current_scene if is_inside_tree() else null
+	var s = cena.get("sessao_rede") if cena != null else null
+	if s == null or not is_instance_valid(s):
+		return l
+	for id in s.remotos:
+		var r = s.remotos[id]
+		if is_instance_valid(r) and r.visible and not r.morto:
+			l.append([Vector2(r.global_position.x, r.global_position.z), str(r.nome)])
+	return l
+
 # local especial: círculo escuro, aro na cor do tipo e a letra (P, H, S, A)
 func _icone_local(ci: CanvasItem, c: Vector2, r: float, tipo: String) -> void:
 	var cor: Color = Locais.CORES_MAPA[tipo]
@@ -693,6 +707,14 @@ func _desenhar_minimapa(vh: float) -> void:
 		var p := Vector2(d.dot(direita), -d.dot(frente)) * esc
 		if p.length() <= r - 1.2 * vh:
 			_icone_local(ci, c + p, 1.1 * vh, e[0])
+	# amigos (multijogador): bolinha verde; fora do alcance, na borda
+	for a in _amigos():
+		var d2: Vector2 = a[0] - _pos
+		var pa := Vector2(d2.dot(direita), -d2.dot(frente)) * esc
+		if pa.length() > r - 1.0 * vh:
+			pa = pa.normalized() * (r - 1.0 * vh)
+		UI.circulo(ci, c + pa, 0.85 * vh, Color(0.03, 0.05, 0.08, 0.9))
+		UI.circulo(ci, c + pa, 0.6 * vh, COR_AMIGO)
 	# jogador no centro (frente = para cima)
 	_seta(ci, c, 0.0, 1.5 * vh, COR_JOGADOR)
 	# "N" na borda, onde fica o norte
@@ -864,6 +886,12 @@ func _desenhar_mapa() -> void:
 		_icone_local(ci, pl, 1.5 * vh, e[0])
 		if _mpp < 9.0:
 			_texto(ci, Locais.NOMES[e[0]], pl + Vector2(0, 2.8 * vh), tl, Locais.CORES_MAPA[e[0]])
+	# amigos (multijogador)
+	for a in _amigos():
+		var pa := _mundo_para_tela(a[0])
+		UI.circulo(ci, pa, 1.3 * vh, Color(0.03, 0.05, 0.08, 0.9))
+		UI.circulo(ci, pa, 0.9 * vh, COR_AMIGO)
+		_texto(ci, a[1], pa + Vector2(0, -2.4 * vh), int(1.9 * vh), COR_AMIGO)
 	# jogador
 	var pj := _mundo_para_tela(_pos)
 	ci.draw_circle(pj, 3.4 * vh, Color(COR_JOGADOR.r, COR_JOGADOR.g, COR_JOGADOR.b, 0.15))

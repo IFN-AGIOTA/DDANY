@@ -46,6 +46,8 @@ func _montar() -> void:
 	col.add_child(t)
 	var motivo: String = {"infectados": "Os infectados pegaram você.", "fome": "Morreu de fome.", "sede": "Morreu de sede.",
 		"frio": "Morreu de frio.", "sangue": "Perdeu sangue demais.", "infecção": "A infecção venceu.", "queda": "A queda foi alta demais."}.get(causa, "")
+	if causa.begins_with("baleado por ") or causa.begins_with("golpeado por "):   # 0.71: PvP
+		motivo = ("Baleado por " if causa.begins_with("baleado") else "Golpeado por ") + causa.get_slice(" por ", 1) + "."
 	var s := int(tempo_vivo)
 	var linha := "%s   Sobreviveu %d min %02d s · %d abates" % [motivo, s / 60, s % 60, abates]
 	var l := UI.rotulo(linha, 3.0 * v, Color(1, 1, 1, 0.85), 700)
