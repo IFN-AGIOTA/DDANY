@@ -94,6 +94,12 @@ func _r():
 		print("  quadros: %d · com física: %d · dentro de algo: %d (seguidos %d) · chegou a %.1f m do jogador" % [n, com_fisica, dentro, max_seguidos, dmin])
 		ok(com_fisica > n * 0.9, "perseguindo perto = com física")
 		ok(max_seguidos <= 3, "não atravessou parede/móvel")
+		if i == 28 and is_instance_valid(inf):          # 0.80: linha de visão pelas paredes de dentro da delegacia
+			var a: Vector3 = no.global_transform * Vector3(10, 1.3, -15)       # sala de provas
+			var b: Vector3 = no.global_transform * Vector3(10, 1.3, -4)        # vestiário (2 paredes no meio)
+			var c1: Vector3 = no.global_transform * Vector3(-18, 1.3, -9.5)    # corredor, de ponta a ponta
+			var c2: Vector3 = no.global_transform * Vector3(18, 1.3, -9.5)
+			ok(not inf._linha_livre(a, b) and inf._linha_livre(c1, c2), "visão: parede tapa, corredor livre")
 		if is_instance_valid(inf):
 			inf.queue_free()
 		m.vagos.vivos.clear()

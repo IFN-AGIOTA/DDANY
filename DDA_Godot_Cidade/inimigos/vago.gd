@@ -8,6 +8,11 @@ extends CharacterBody3D
 #   -> ATACANDO (prepara 0,4 s e golpeia) · MORTO.
 # Reage a SOM (passos conforme a velocidade, tiros, tosse, grito do gritador), LUZ (lanterna à noite) e
 # MOVIMENTO (parado você é visto bem mais perto; correndo, de mais longe e até de lado, fora do cone).
+# 0.80 · PERCEPÇÃO: VISÃO só com LINHA DE VISÃO livre (paredes, móveis e carros pela física; prédios e locais
+# fechados de longe pelos dados do mapa: _linha_livre) — atrás da parede ele não vê, nem colado nela. AUDIÇÃO é um
+# CÍRCULO do tamanho do barulho; com parede no meio o som sai abafado (círculo x ABAFADO). Ouvir NUNCA diz onde
+# você está: ele vai até o lugar do barulho (com erro, maior de longe) e só persegue se te VIR. Perdeu de vista:
+# segue a posição exata só por MEMORIA s, depois vai ao último lugar visto/ouvido. Ataca só com a linha livre.
 # Sentidos: AUDIÇÃO (o gerente avisa tiros e passos do jogador) e VISÃO (cone de 110° à frente, 38 m de dia,
 # ~14 m à noite, menos se o jogador estiver agachado; o raio de visão bate nas paredes = camada 1).
 # Fora de vista por ~TEMPO_ESQUECER ele PERDE você: vai até o último lugar onde te viu, olha em volta e volta a vagar.
@@ -88,6 +93,11 @@ const VISAO_PARADO := 0.6              # jogador parado: visto só a 60% da dist
 const VISAO_CORRENDO := 1.25           # correndo: de mais longe
 const PERIFERIA_CORRENDO := 9.0        # correndo perto assim, é notado mesmo fora do cone de visão
 const RUIDO_INVESTIGAR := 28.0         # barulho deste raio para cima (tiro) faz ir ver direto, sem parar no "hm?"
+# 0.80 · PERCEPÇÃO = LINHA DE VISÃO + CÍRCULO DE AUDIÇÃO
+const PERTO_SENTIR := 1.6              # mais perto que isso nota você mesmo fora do cone (mas a parede ainda tapa)
+const MEMORIA := 0.6                   # depois de perder de vista, ainda segue a posição exata por esse tempo
+const ABAFADO := 0.5                   # barulho do outro lado de parede/prédio: o círculo de audição cai a isso
+const VISTO_ATAQUE := 0.35             # só ataca quem viu há menos disso (e com a linha livre no golpe)
 
 # sons (gerados uma vez; o gerente chama sintetizar_sons() numa thread e depois definir_sons())
 const TAXA_SOM := 16000
@@ -291,22 +301,23 @@ func ouvir(pos: Vector3, raio: float, do_jogador: bool) -> void:
 	var d := global_position.distance_to(pos)
 	if d > raio:
 		return
+	# 0.80 · CÍRCULO DE AUDIÇÃO: com parede/prédio no meio o som chega abafado (círculo menor)
+	if not _linha_livre(global_position + Vector3(0, 1.55, 0), pos + Vector3(0, 1.0, 0)):
+		if d > raio * ABAFADO:
+			return
+	var erro := minf(d * 0.12, 8.0)                  # de longe ele só sabe mais ou menos de onde veio
+	var onde := pos + Vector3(randf_range(-erro, erro), 0.0, randf_range(-erro, erro))
 	if estado == PERSEGUINDO or estado == ATACANDO:
-		if do_jogador:
-			_ultimo_visto = pos
-			_t_sem_ver = minf(_t_sem_ver, 1.5)
+		# já está atrás de alguém que sumiu de vista: o barulho mostra para onde ir (não a posição exata agora)
+		if do_jogador and _t_sem_ver >= MEMORIA:
+			_ultimo_visto = onde
+			_t_sem_ver = clampf(_t_sem_ver, MEMORIA + 0.01, TEMPO_ESQUECER * 0.5)
 		return
-	if do_jogador and (d < raio * 0.35 or d < 4.0):
-		_ultimo_visto = pos
-		_t_sem_ver = 1.0
-		perseguir()
+	# ouvir não é ver: vai até o lugar do barulho e só persegue se te VIR lá
+	if raio >= RUIDO_INVESTIGAR or estado == INVESTIGANDO or d < 4.0:
+		investigar(onde)                                # tiro/grito (ou passos bem perto): vai ver direto
 	else:
-		var erro := minf(d * 0.12, 8.0)              # de longe ele só sabe mais ou menos de onde veio
-		var onde := pos + Vector3(randf_range(-erro, erro), 0.0, randf_range(-erro, erro))
-		if raio >= RUIDO_INVESTIGAR or estado == INVESTIGANDO:
-			investigar(onde)                            # tiro/grito: vai ver direto
-		else:
-			desconfiar(onde)                            # passos: para e escuta ("hm?")
+		desconfiar(onde)                                # passos: para e escuta ("hm?")
 
 # DESCONFIADO (0.65): para, vira para "pos" e escuta/olha um pouco antes de decidir
 func desconfiar(pos: Vector3) -> void:
@@ -548,7 +559,9 @@ func _physics_process(dt: float) -> void:
 		# 0.79: correndo atrás de alguém perto, SEMPRE com física (antes só perto de prédio aberto: atravessava os
 		# móveis e paredes dos locais especiais, os carros que funcionam, cercas, grades...)
 		var folga := 4.0 if _fisica else 0.0
-		var quer_fisica: bool = mundo.tem_chao_fisico(p.x, p.z) and (
+		# 0.80: dentro de um prédio FECHADO (caixa de colisão inteira) nunca liga a física: ela o empurraria para fora
+		# atravessando a parede. Fica "pelos dados" (preso lá dentro) até o prédio abrir (paredes e portas de verdade).
+		var quer_fisica: bool = not mundo.dentro_de_predio(p.x, p.z, 0.1) and mundo.tem_chao_fisico(p.x, p.z) and (
 			(esta_cacando() and dist_jogador < DIST_FISICA_CACANDO + folga)
 			or (dist_jogador < DIST_FISICA + folga and mundo.perto_de_aberto(p.x, p.z, 10.0 if _fisica else 8.0)))
 		if quer_fisica != _fisica:
@@ -620,19 +633,14 @@ func _olhar(j: Node3D) -> void:
 	if dist_jogador <= alcance:
 		var p := global_position
 		var pj := j.global_position
-		if dist_jogador < 2.0:
-			visto = true                                # de tão perto sente mesmo sem ver
-		else:
-			var no_cone := cacando or estado == DESCONFIADO and dist_jogador < alcance * 0.7
-			if not no_cone:
-				var para := Vector3(pj.x - p.x, 0.0, pj.z - p.z) / dist_jogador
-				no_cone = (-global_basis.z).dot(para) >= cos(deg_to_rad(ANGULO_VISAO * 0.5))
-			if not no_cone and vj > 5.0 and dist_jogador < PERIFERIA_CORRENDO:
-				no_cone = true                          # movimento rápido com o canto do olho
-			if no_cone:
-				_consulta.from = p + Vector3(0, 1.55, 0)
-				_consulta.to = pj + Vector3(0, 0.8 if bool(j.get("agachado")) else 1.3, 0)
-				visto = get_world_3d().direct_space_state.intersect_ray(_consulta).is_empty()
+		var no_cone := cacando or dist_jogador < PERTO_SENTIR or estado == DESCONFIADO and dist_jogador < alcance * 0.7
+		if not no_cone and dist_jogador > 0.01:
+			var para := Vector3(pj.x - p.x, 0.0, pj.z - p.z) / dist_jogador
+			no_cone = (-global_basis.z).dot(para) >= cos(deg_to_rad(ANGULO_VISAO * 0.5))
+		if not no_cone and vj > 5.0 and dist_jogador < PERIFERIA_CORRENDO:
+			no_cone = true                              # movimento rápido com o canto do olho
+		if no_cone:                                     # 0.80: sempre com a linha de visão livre (nem colado vê através da parede)
+			visto = _linha_livre(p + Vector3(0, 1.55, 0), pj + Vector3(0, 0.8 if bool(j.get("agachado")) else 1.3, 0))
 	if visto:
 		_ultimo_visto = j.global_position
 		_t_sem_ver = 0.0
@@ -644,6 +652,25 @@ func _olhar(j: Node3D) -> void:
 				desconfiar(_ultimo_visto)               # viu algo de relance: "hm?"
 	else:
 		_suspeita = maxf(0.0, _suspeita - 0.08)
+
+# 0.80: nada entre "de" e "ate"? Física (paredes, portas, móveis, carros perto) + prédios e cascas dos locais
+# fechados pelos dados do mapa (de longe não há física)
+func _linha_livre(de: Vector3, ate: Vector3) -> bool:
+	_consulta.from = de
+	_consulta.to = ate
+	if not get_world_3d().direct_space_state.intersect_ray(_consulta).is_empty():
+		return false
+	var v := ate - de
+	var L := v.length()
+	if L < 0.05 or gerente == null or gerente.mundo == null:
+		return true
+	var mu = gerente.mundo
+	if mu.dentro_de_predio(de.x, de.z, 0.0) != mu.dentro_de_predio(ate.x, ate.z, 0.0):
+		return false                                    # um dentro de um prédio fechado e o outro fora: parede no meio
+	var r: Dictionary = mu.raio(de, v / L, L)
+	if not bool(r["hit"]) or float(r["dist"]) >= L - 0.2:
+		return true
+	return not (bool(r.get("predio", false)) or (r["n"] as Vector3) != Vector3.UP)    # o chão não tapa
 
 func _decidir(dt: float, j: Node3D) -> void:
 	var p := global_position
@@ -685,16 +712,16 @@ func _decidir(dt: float, j: Node3D) -> void:
 				if dist_jogador < ALCANCE_SOM:
 					_tocar("gemido%d" % (randi() % 4), randf_range(0.7, 0.8), -2.0)
 				return
-			# logo depois de perder de vista ainda "sabe" para onde ele foi
-			_destino = j.global_position if _t_sem_ver < 2.0 else _ultimo_visto
-			if _t_sem_ver >= 2.0 and _dist_xz(p, _destino) < 1.5:
+			# logo depois de perder de vista ainda "sabe" para onde ele foi (só um instante: 0.80)
+			_destino = j.global_position if _t_sem_ver < MEMORIA else _ultimo_visto
+			if _t_sem_ver >= MEMORIA and _dist_xz(p, _destino) < 1.5:
 				investigar(_ultimo_visto)
 				return
 			_vel_alvo = _vel_correr
 			if dist_jogador < 2.5:
 				_vel_alvo = clampf((dist_jogador - 0.95) * 3.0, 0.0, _vel_correr)
 			var dy := absf(j.global_position.y - p.y)
-			if dist_jogador < DIST_ATAQUE and _recarga <= 0.0 and _t_sem_ver < 1.0 and dy < 1.6 and _atordoado <= 0.0:
+			if dist_jogador < DIST_ATAQUE and _recarga <= 0.0 and _t_sem_ver < VISTO_ATAQUE and dy < 1.6 and _atordoado <= 0.0:
 				estado = ATACANDO
 				_t_ataque = 0.0
 				_golpeou = false
@@ -708,8 +735,9 @@ func _decidir(dt: float, j: Node3D) -> void:
 			if not _golpeou and _t_ataque >= PREPARO_ATAQUE:
 				_golpeou = true
 				var dy := absf(j.global_position.y - p.y)
-				if not bool(j.get("morto")) and dist_jogador < DIST_ATAQUE + 0.35 and dy < 1.6:
-					_acertar(j)
+				if not bool(j.get("morto")) and dist_jogador < DIST_ATAQUE + 0.35 and dy < 1.6 \
+						and _linha_livre(p + Vector3(0, 1.3, 0), j.global_position + Vector3(0, 1.1, 0)):
+					_acertar(j)                         # 0.80: nada de morder através da parede
 				_recarga = RECARGA_ATAQUE
 			if _t_ataque >= PREPARO_ATAQUE + 0.45:
 				estado = PERSEGUINDO
@@ -870,6 +898,11 @@ func _mover(dt: float) -> void:
 			global_position = g
 	else:
 		var np := p + (_vel_xz + empurro) * dt
+		# 0.80: preso dentro da planta de um prédio (sem física não há porta): não sai atravessando a parede
+		var m_ = gerente.mundo
+		if m_.dentro_de_predio(p.x, p.z, 0.0, true) and not m_.dentro_de_predio(np.x, np.z, -0.35, true):
+			np = Vector3(p.x, np.y, p.z)
+			_vel_xz *= 0.5
 		# bate e desliza nas plantas (prédios são caixas alinhadas aos eixos): tenta só X, depois só Z
 		if (np.x != p.x or np.z != p.z) and _bate(np, 0.3, 0.25) and not _bate(p, 0.3, 0.25):
 			var so_x := Vector3(np.x, np.y, p.z)

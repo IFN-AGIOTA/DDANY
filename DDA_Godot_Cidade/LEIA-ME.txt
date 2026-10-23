@@ -39,6 +39,37 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.80 · INFECTADOS: VISÃO DE VERDADE E CÍRCULO DE AUDIÇÃO · NÃO MORDEM NEM SAEM PELA PAREDE
+  · PERCEPÇÃO NOVA (inimigos/vago.gd):
+    - VISÃO: só com LINHA DE VISÃO livre. A linha bate em paredes, portas, móveis e carros (física) e, de longe, nos
+      prédios e locais fechados (dados do mapa). Atrás de uma parede ele NÃO vê você, nem colado nela (antes, a
+      menos de 2 m ele "sentia" através da parede). Bem perto (1,6 m) nota mesmo fora do cone, mas a parede tapa.
+    - AUDIÇÃO: um CÍRCULO do tamanho do barulho (agachado 1,5 m · andando 4 m · trote 8 m · correndo 18 m · tiros e
+      gritos bem maiores). Com parede/prédio no meio o som chega ABAFADO: o círculo cai pela metade. Ouvir NUNCA diz
+      onde você está: ele para e escuta ("hm?") ou vai até o LUGAR do barulho (com erro maior de longe) e só
+      persegue se te VIR lá. (Antes, passos perto faziam ele perseguir na hora, sabendo onde você estava.)
+    - MEMÓRIA: depois de perder você de vista, segue a sua posição exata só por 0,6 s (antes 2 s, e cada passo
+      ouvido renovava isso: ele te seguia através das paredes). Depois vai ao último lugar visto/ouvido e procura.
+    - ATAQUE: só em quem ele viu há menos de 0,35 s e com a linha livre no momento do golpe (antes mordia através da
+      parede quando estava colado do outro lado).
+  · NÃO SAI PELA PAREDE: dentro de um prédio FECHADO (sem o interior montado) o infectado não liga a física (ela o
+    empurraria para fora atravessando a parede) e, sem física, não sai da planta do prédio (fica preso lá dentro até
+    o prédio abrir, com paredes e portas de verdade).
+  · Testado (ferramentas/testes/teste_infectados_paredes.gd, NOVO): indo para o outro lado de um prédio (perto e
+    longe) não atravessa; preso dentro não sai; atrás da parede a 3 m e de frente NÃO percebe; no aberto a 8 m vê e
+    persegue; passos atrás da parede = vai ver o lugar, não persegue; colado na parede, perseguindo, não morde
+    (antes: perdia 41 de vida). Paredes de dentro da delegacia tapam a visão e o corredor não. Simulação com 28
+    infectados atrás do jogador dentro de 5 prédios com interior: nenhum atravessou parede.
+  · ARQUIVOS MEXIDOS:
+      inimigos/vago.gd .......... _linha_livre (visão e audição), círculo de audição abafado, memória curta, ataque só
+                                  com linha livre, física desligada dentro de prédio fechado, preso na planta
+      menu/config.gd ............ versão 0.80
+      ferramentas/testes/ ....... teste_infectados_paredes.gd (NOVO); teste_infectados_colisao.gd (visão nas paredes
+                                  da delegacia); rodar.sh roda o novo
+                                  · teste_ombro.gd: a conferência do "desliza" ficou independente da velocidade
+                                  do computador (falhava às vezes por tempo, não por erro do jogo)
+  · PUBLICADA: atualizacoes/pacote_0.80.pck (desde o APK 0.75) + manifesto; servidor_windows.zip refeito na 0.80.
+
 ATUALIZAÇÃO 0.79 · INFECTADOS NÃO ATRAVESSAM MAIS · TROCAR DE OMBRO · MENOS DRAW CALLS
   · INFECTADOS NÃO ATRAVESSAM OBJETOS: antes eles só usavam a física de verdade perto de um prédio com interior
     aberto; no resto andavam "pelos dados do mapa" (desviando só das plantas dos prédios e dos obstáculos da rua)
@@ -1720,6 +1751,9 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - trocar de ombro (câmera) .............. jogador/jogador.gd (trocar_ombro) · botão em jogador/controles.gd
 - quando o infectado usa física de
   verdade (não atravessa nada) .......... inimigos/vago.gd (DIST_FISICA, DIST_FISICA_CACANDO, _bate)
+- o que o infectado vê e ouve (linha de
+  visão, círculo de audição, memória) ... inimigos/vago.gd (_olhar, _linha_livre, ouvir, MEMORIA, ABAFADO) ·
+                                          tamanho dos barulhos: inimigos/vagos.gd (RUIDO_*)
 - juntar partes dos modelos do cenário
   (menos draw calls) .................... mundo/cenario.gd (_juntar_iguais)
 - converter jogo salvo antigo (números

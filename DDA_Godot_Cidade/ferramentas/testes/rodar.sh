@@ -66,6 +66,7 @@ elif [ "$alvo" = todos ]; then
 	rodar teste_luz_locais 1
 	rodar teste_locais_novos 1
 	rodar teste_infectados_colisao 1
+	rodar teste_infectados_paredes 1
 	rodar teste_ombro 1
 else
 	rodar "$alvo" 1
