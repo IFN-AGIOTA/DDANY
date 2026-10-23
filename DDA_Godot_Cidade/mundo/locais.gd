@@ -119,6 +119,20 @@ static func em_construcao(p: Vector2, margem := 0.0) -> bool:
 			return true
 	return false
 
+# 0.74: volumes grandes de todos os locais no MUNDO (caixas alinhadas), para o tiro de longe (mundo/colisao_mundo.gd
+# raio): [[índice do local, AABB], ...]. y = altura do chão do terreno
+static func volumes_mundo(y: float) -> Array:
+	var r := []
+	for i in LOCAIS.size():
+		var e: Array = LOCAIS[i]
+		for v in casca(e[0]):
+			var c3: Vector3 = v[0]
+			var t3: Vector3 = v[1]
+			var c := local_para_mundo(i, Vector2(c3.x, c3.z))
+			var t := Vector2(t3.z, t3.x) if int(e[3]) % 2 == 1 else Vector2(t3.x, t3.z)
+			r.append([i, AABB(Vector3(c.x - t.x * 0.5, y + c3.y - t3.y * 0.5, c.y - t.y * 0.5), Vector3(t.x, t3.y, t.y))])
+	return r
+
 # casca de longe de um local (nó da cidade; os chunks põem/tiram da cena)
 static func montar_casca(i: int, y: float) -> MeshInstance3D:
 	var e: Array = LOCAIS[i]
@@ -137,9 +151,11 @@ var cidade = null
 var jogador: Node3D = null
 var loot = null
 var vagos = null
+var mundo = null                       # 0.74: mundo/colisao_mundo.gd (casca no tiro de longe)
 var hud = null                         # armas/hud_combate.gd (aviso ao entrar)
 var abertos := {}                      # índice -> Node3D
 var ativo := true
+var centros_extra := Callable()        # 0.74: host: posições dos amigos (abre também os locais perto deles)
 var usar_thread := true
 var _infestados := {}                  # local -> ciclo em que foi enchido (nesta partida)
 var _dentro := -1
@@ -175,19 +191,27 @@ func _process(dt: float) -> void:
 		_terminar(_tarefa_i, _tarefa_res)
 		_tarefa_res = null
 	var p := Vector2(jogador.global_position.x, jogador.global_position.z)
+	var centros: Array[Vector2] = [p]
+	if centros_extra.is_valid():
+		for q in centros_extra.call():
+			centros.append(Vector2((q as Vector3).x, (q as Vector3).z))
 	for i in abertos.keys():
-		if _dist(p, i) > RAIO_FECHAR:
+		var dmin := INF
+		for pc in centros:
+			dmin = minf(dmin, _dist(pc, i))
+		if dmin > RAIO_FECHAR:
 			fechar(i)
 	var melhor := -1
 	var md := RAIO_ABRIR
 	for i in LOCAIS.size():
 		if abertos.has(i):
 			continue
-		var d := _dist(p, i)
-		if d < md:
-			md = d
-			melhor = i
-	if melhor >= 0 and abertos.size() < MAX_ABERTOS:
+		for pc in centros:
+			var d := _dist(pc, i)
+			if d < md:
+				md = d
+				melhor = i
+	if melhor >= 0 and abertos.size() < MAX_ABERTOS + centros.size() - 1:
 		abrir(melhor)
 	# entrou numa zona de PvP: aviso
 	var agora := em(p, 4.0)
@@ -226,6 +250,8 @@ func _terminar(i: int, prep) -> void:
 	var no: Node3D = prep.criar(loot, cidade.Y_CALCADA)
 	add_child(no)
 	abertos[i] = no
+	if mundo != null:
+		mundo.locais_abertos[i] = true          # 0.74: aberto tem colisão de verdade (o tiro de longe não usa a casca)
 	var casca_no = cidade.locais_casca[i] if i < cidade.locais_casca.size() else null
 	if casca_no != null and is_instance_valid(casca_no):
 		casca_no.visible = false
@@ -261,6 +287,8 @@ func fechar(i: int) -> void:
 		return
 	var no: Node3D = abertos[i]
 	abertos.erase(i)
+	if mundo != null:
+		mundo.locais_abertos.erase(i)
 	if loot != null and is_instance_valid(no):
 		loot.guardar_chao("L%d" % i, no)
 	if is_instance_valid(no):

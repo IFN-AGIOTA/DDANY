@@ -11,6 +11,9 @@ extends Node3D
 #    (menos os que estão com o interior montado: esses têm paredes de verdade, ver mundo/interiores.gd).
 #  - OBSTÁCULOS: carros, barreiras, caçambas e entulho perto do jogador (outro pool de caixas giradas).
 # Camadas de física: 1 = mundo · 2 = jogador · 3 = inimigos (futuro).
+# 0.74 · MULTIJOGADOR (host): criar_extra(amigo) faz uma cópia leve que segue o amigo (chão, prédios e obstáculos de
+# física perto DELE, com os mesmos dados da cidade): os infectados perto do amigo andam com física, batem nas paredes e
+# portas dos prédios abertos lá. tem_chao_fisico() vale para todas as cópias.
 
 const ALT_MAR := -0.5
 const ALT_TERRA := 0.0
@@ -70,6 +73,42 @@ var _pool_obst_forma: Array[BoxShape3D] = []
 var _obst_uso := 0
 var _ult_obst := Vector2(1.0e9, 1.0e9)
 var abertos := {}            # prédios com interior montado (a colisão/tiro usa as paredes de verdade)
+# 0.74: LOCAIS ESPECIAIS de longe (casca, mundo/locais.gd): o tiro de longe para neles; os abertos (perto) já têm
+# colisão de verdade e ficam de fora
+var _locais: Array = []      # [[índice, AABB], ...]
+var locais_abertos := {}
+
+func configurar_locais(vols: Array) -> void:
+	_locais = vols
+
+# ---------- 0.74: cópias que seguem os amigos (só no host) ----------
+var extras: Array = []
+
+func criar_extra(quem: Node3D) -> Node3D:
+	var c = get_script().new()
+	c.name = "ColisaoAmigo"
+	c.alvo = quem
+	for campo in ["_t_pts", "_t_box", "_l_pts", "_l_box", "_p_pts", "_p_box", "_p_hash", "_r_hash", "_pred", "_pred_hash",
+			"_lote", "_lote_w", "_lote_h", "_lote_cel", "_lote_origem", "_lote_rampa", "_locais"]:
+		c.set(campo, get(campo))
+	c.abertos = abertos                   # o MESMO dicionário (prédios abertos não viram caixa em nenhuma cópia)
+	c.locais_abertos = locais_abertos
+	get_parent().add_child(c)
+	c.configurar_obstaculos(_obst)
+	extras.append(c)
+	return c
+
+func remover_extra(c: Node3D) -> void:
+	extras.erase(c)
+	if is_instance_valid(c):
+		c.queue_free()
+
+# os prédios abertos mudaram: refaz a colisão dos prédios perto (aqui e nas cópias)
+func refazer_predios() -> void:
+	_ult_pred = Vector2(1.0e9, 1.0e9)
+	for e in extras:
+		if is_instance_valid(e):
+			e._ult_pred = Vector2(1.0e9, 1.0e9)
 
 func _ready() -> void:
 	process_physics_priority = -10     # roda antes do jogador
@@ -538,6 +577,33 @@ func raio(o: Vector3, d: Vector3, alcance: float) -> Dictionary:
 				n.z = -signf(d.z)
 			melhor = entra
 			res = {"hit": true, "pos": o + d * entra, "n": n, "dist": entra, "predio": true}
+	# 0.74: cascas dos locais especiais fechados
+	var fim := o + d * melhor
+	for par in _locais:
+		if locais_abertos.has(par[0]):
+			continue
+		var ab: AABB = par[1]
+		if ab.has_point(o):
+			continue
+		var hit = ab.intersects_segment(o, fim)
+		if hit == null:
+			continue
+		var hp: Vector3 = hit
+		var t := o.distance_to(hp)
+		if t >= melhor:
+			continue
+		var nn := Vector3.UP
+		var rel := (hp - ab.get_center()) / (ab.size * 0.5)
+		var ax := rel.abs()
+		if ax.x >= ax.y and ax.x >= ax.z:
+			nn = Vector3(signf(rel.x), 0, 0)
+		elif ax.z >= ax.y:
+			nn = Vector3(0, 0, signf(rel.z))
+		else:
+			nn = Vector3(0, signf(rel.y), 0)
+		melhor = t
+		fim = hp
+		res = {"hit": true, "pos": hp, "n": nn, "dist": t, "predio": true}
 	return res
 
 # ---------- consultas para os inimigos (inimigos/vago.gd e inimigos/vagos.gd) ----------
@@ -606,7 +672,12 @@ func dentro_de_obstaculo(x: float, z: float, margem := 0.0) -> bool:
 # true se o chão de física (mapa de alturas em volta do jogador) cobre (x, z) com folga
 func tem_chao_fisico(x: float, z: float) -> bool:
 	var lim := (MEIO - 3) * ESPACO
-	return absf(x - _centro.x) < lim and absf(z - _centro.y) < lim
+	if absf(x - _centro.x) < lim and absf(z - _centro.y) < lim:
+		return true
+	for e in extras:                      # 0.74: perto de um amigo (host)
+		if is_instance_valid(e) and absf(x - e._centro.x) < lim and absf(z - e._centro.y) < lim:
+			return true
+	return false
 
 # true se (x, z) está a menos de "margem" metros de um prédio com interior aberto (paredes de física)
 func perto_de_aberto(x: float, z: float, margem := 8.0) -> bool:

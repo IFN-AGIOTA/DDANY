@@ -424,6 +424,7 @@ func _criar_jogo() -> void:
 	jogo.add_child(mundo)
 	mundo.configurar(cidade.dados_cidade, cidade.predios)
 	mundo.configurar_lotes(cidade.lote, cidade.W, cidade.H, cidade.CELL, cidade.WORLD, cidade.RAMPA_LOTE)   # chão dos quarteirões
+	mundo.configurar_locais(LocaisCls.volumes_mundo(cidade.Y_CALCADA))   # 0.74: tiro de longe para nos locais especiais
 	chunks = ChunksCls.new()
 	chunks.name = "Chunks"
 	jogo.add_child(chunks)
@@ -509,6 +510,7 @@ func _criar_jogo() -> void:
 	jogo.add_child(locais)
 	locais.ligar(cidade, jogador, loot_mundo)
 	locais.vagos = vagos
+	locais.mundo = mundo
 	locais.hud = hud
 	missoes = MissoesCls.new()
 	missoes.name = "Missoes"

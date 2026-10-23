@@ -6,6 +6,8 @@ extends Node
 #   - no máximo MAX_ABERTOS ao mesmo tempo e UM montado por vez (sem travadas).
 #   - o que ficou no chão do prédio volta para o loot guardado (mundo/loot_mundo.gd) quando ele fecha.
 #   - PORTA-MALAS: carros a até RAIO_CARRO metros ganham um contêiner invisível atrás (loot de carro).
+#   - 0.74 · MULTIJOGADOR (host): também abre os prédios perto de cada AMIGO (centros_extra, ligado por
+#     rede/sessao_rede.gd), para os infectados presos lá dentro existirem e baterem nas paredes de verdade.
 #   - 0.72: os INFECTADOS presos lá dentro voltam: a cada CICLO_INFECTADOS horas de jogo o prédio sorteia de novo
 #     (se os de antes já morreram ou foram embora). O loot volta sozinho (mundo/loot_mundo.gd, CICLO).
 # Mexa AQUI para: distâncias, quantos prédios abertos de uma vez, de quanto em quanto tempo os infectados voltam.
@@ -30,6 +32,7 @@ const CHANCE_INFESTADO := 0.33
 const CICLO_INFECTADOS := 6.0         # 0.72: horas de jogo (6 h = 12 min de verdade)
 var _infestados := {}                 # prédio -> ciclo em que foi sorteado (nesta partida)
 var ativo := true
+var centros_extra := Callable()       # 0.74: host: posições dos amigos (Array de Vector3)
 var _hash := {}                       # Vector2i -> PackedInt32Array (prédios com entrada)
 var _hash_carros := {}                # Vector2i -> PackedInt32Array (carros)
 var _malas := {}                      # índice do carro -> CaixaMundo
@@ -85,41 +88,53 @@ func _process(dt: float) -> void:
 		_terminar(_tarefa_i, _tarefa_res)
 		_tarefa_res = null
 	var p := Vector2(jogador.global_position.x, jogador.global_position.z)
-	# fecha os que ficaram longe
+	var centros: Array[Vector2] = [p]
+	if centros_extra.is_valid():
+		for q in centros_extra.call():
+			centros.append(Vector2((q as Vector3).x, (q as Vector3).z))
+	var max_abertos := mini(MAX_ABERTOS + 2 * (centros.size() - 1), 11)
+	# fecha os que ficaram longe (de todos)
 	for i in abertos.keys():
-		if _dist_ret(p, cidade.predio_info[i]) > RAIO_FECHAR:
+		if _dist_centros(centros, cidade.predio_info[i]) > RAIO_FECHAR:
 			fechar(i)
-	# o mais perto que ainda não está aberto
+	# o mais perto (de alguém) que ainda não está aberto
 	var melhor := -1
 	var md := RAIO_ABRIR
-	var c := Vector2i(floori(p.x / CEL), floori(p.y / CEL))
-	for dz in range(-1, 2):
-		for dx in range(-1, 2):
-			var k := c + Vector2i(dx, dz)
-			if not _hash.has(k):
-				continue
-			for i in _hash[k]:
-				if abertos.has(i):
+	for pc in centros:
+		var c := Vector2i(floori(pc.x / CEL), floori(pc.y / CEL))
+		for dz in range(-1, 2):
+			for dx in range(-1, 2):
+				var k := c + Vector2i(dx, dz)
+				if not _hash.has(k):
 					continue
-				var d := _dist_ret(p, cidade.predio_info[i])
-				if d < md:
-					md = d
-					melhor = i
+				for i in _hash[k]:
+					if abertos.has(i):
+						continue
+					var d := _dist_ret(pc, cidade.predio_info[i])
+					if d < md:
+						md = d
+						melhor = i
 	if melhor >= 0:
-		if abertos.size() >= MAX_ABERTOS:
+		if abertos.size() >= max_abertos:
 			# troca o aberto mais longe, se o novo estiver mais perto
 			var longe := -1
 			var dl := md
 			for i in abertos:
-				var d := _dist_ret(p, cidade.predio_info[i])
+				var d := _dist_centros(centros, cidade.predio_info[i])
 				if d > dl:
 					dl = d
 					longe = i
 			if longe >= 0:
 				fechar(longe)
-		if abertos.size() < MAX_ABERTOS:
+		if abertos.size() < max_abertos:
 			abrir(melhor)
 	_porta_malas(p)
+
+static func _dist_centros(centros: Array[Vector2], inf: Dictionary) -> float:
+	var m := INF
+	for pc in centros:
+		m = minf(m, _dist_ret(pc, inf))
+	return m
 
 func abrir(i: int, ja := false) -> void:
 	if abertos.has(i) or _tarefa >= 0:
@@ -158,7 +173,7 @@ func _terminar(i: int, prep) -> void:
 	abertos[i] = no
 	cidade.esconder_predio(i, true)
 	mundo.abertos[i] = true
-	mundo.set("_ult_pred", Vector2(1.0e9, 1.0e9))      # refaz a colisão dos prédios perto (sem o bloco deste)
+	mundo.refazer_predios()      # refaz a colisão dos prédios perto (sem o bloco deste)
 	if loot != null and no.has_meta("pontos_chao"):
 		loot.espalhar_chao("p%d" % i, String(inf.get("uso", "")), no.get_meta("pontos_chao"), no)
 	_infestar(i, no)
@@ -205,7 +220,7 @@ func fechar(i: int) -> void:
 		no.queue_free()
 	cidade.esconder_predio(i, false)
 	mundo.abertos.erase(i)
-	mundo.set("_ult_pred", Vector2(1.0e9, 1.0e9))
+	mundo.refazer_predios()
 
 func fechar_todos() -> void:
 	if _tarefa >= 0:

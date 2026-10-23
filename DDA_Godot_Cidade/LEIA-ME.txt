@@ -39,6 +39,34 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.74 · INFECTADOS PERTO DO AMIGO, TIRO DE LONGE NOS LOCAIS E TESTES AUTOMÁTICOS
+  · MULTIJOGADOR: quando o HOST está longe, os prédios e locais especiais perto do AMIGO agora abrem também no
+    aparelho do host: os infectados presos lá dentro aparecem para o amigo, e o host ganha chão, prédios e
+    obstáculos de física em volta de cada amigo (uma cópia leve da colisão que segue ele). Assim os infectados
+    perto do amigo andam com física, batem nas paredes e nas portas (e arrombam) como perto do host.
+  · TIRO DE LONGE nos POSTOS, HOSPITAIS, SUPERMERCADOS e ARMAZÉNS: de longe (casca, mais de 140 m) o tiro não
+    atravessa mais: para nos volumes do prédio. Perto, quando o local está montado, vale a colisão de verdade.
+  · TESTES AUTOMÁTICOS no projeto (ferramentas/testes/, fora do APK e dos pacotes): compilar todos os scripts,
+    loot que volta, teste geral do jogo, água, portas, tiro de longe nos locais e um teste de rede com dois jogos
+    (host + amigo longe). Rodar: GODOT=<godot> ferramentas/testes/rodar.sh  (ou "rodar.sh rede"). Cada teste
+    diz "falhas: N"; no fim "TUDO CERTO" ou "ALGUM TESTE FALHOU".
+  · Testado: toda a bateria (0 falhas) e o teste de rede (host a 640 m: 4 prédios abertos perto do amigo,
+    colisão seguindo o amigo, 3 infectados com física; o amigo vê os 3).
+  · ARQUIVOS MEXIDOS:
+      mundo/colisao_mundo.gd .... criar_extra/remover_extra (colisão que segue o amigo), refazer_predios,
+                                  tem_chao_fisico vale para as cópias, volumes dos locais no tiro de longe
+      mundo/locais.gd ........... volumes_mundo (casca no tiro), avisa a colisão quais estão abertos, abre também
+                                  perto dos amigos (centros_extra)
+      mundo/interiores.gd ....... abre também os prédios perto dos amigos (centros_extra); refazer_predios
+      rede/sessao_rede.gd ....... host: cria/remove a colisão de cada amigo e liga os prédios/locais perto deles
+      main.gd ................... liga os volumes dos locais na colisão
+      ferramentas/testes/ ....... NOVA pasta: rodar.sh, compilar_tudo.gd, teste_jogo.gd, teste_loot_volta.gd,
+                                  teste_agua.gd, teste_portas.gd, teste_tiro_locais.gd, rede_amigo_host.gd,
+                                  rede_amigo_cliente.gd (todos NOVOS)
+      menu/config.gd ............ versão 0.74
+  · PUBLICADA: atualizacoes/pacote_0.74.pck (acumulado desde o APK 0.48) + manifesto; os celulares baixam
+    sozinhos. servidor_windows.zip (raiz) refeito na 0.74.
+
 ATUALIZAÇÃO 0.73 · PORTAS QUE ABREM E FECHAM, BARRICADAS E INFECTADOS ARROMBANDO
   · PORTAS DE VERDADE nos prédios (térreo e andares de cima): porta DUPLA na rua (abre para dentro) e porta comum
     entre os cômodos. Umas estão abertas, outras fechadas, algumas quebradas no chão ou arrancadas (só o vão).
@@ -1483,6 +1511,8 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd
 - chunks de 500 m (o que fica na cena, raio) ....... mundo/chunks.gd (+ Opções › Gráficos › Raio de chunks)
 - roda de armas (botão ARMA, tecla Q) .............. hud/roda_armas.gd (+ jogador/controles.gd)
+- TESTES AUTOMÁTICOS (rodar antes de publicar) ..... ferramentas/testes/rodar.sh (instruções no topo de cada teste)
+- colisão em volta dos amigos (host) ............. mundo/colisao_mundo.gd (criar_extra) + rede/sessao_rede.gd
 - servidor de teste no PC (Windows) ............... rede/servidor.gd + servidor_windows/ (preset "Servidor Windows")
 - atualizações pelo jogo (APK e pacotes) .......... rede/atualizador.gd, rede/atualizacoes.gd, ferramentas/gerar_pacote.gd
 - assinatura do APK (chave nova + rotação) ......... ferramentas/assinar_apk.sh (chaves em ../chaves_privadas, fora do git)
@@ -1667,16 +1697,15 @@ MÚSICA (pasta audio/)
 - História: apagada na 0.63, vai ser refeita do zero (menu mostra "Em breve").
 - Água (0.72): não dá para mergulhar de propósito nem nadar por baixo das pontes (o fundo sobe até a ponte); os
   itens largados nadando vão para o fundo. A base militar ainda não tem os prédios/pistas do HTML.
-- Locais especiais (0.68): de longe (mais de 140 m) a casca não tem colisão (tiro de longe atravessa); as portas
-  de verdade (0.73) ainda são só dos prédios comuns (os postos, hospitais, supermercados e armazéns têm vãos).
+- Locais especiais (0.68): as portas de verdade (0.73) ainda são só dos prédios comuns (os postos, hospitais,
+  supermercados e armazéns têm vãos). De longe os infectados que andam sem física atravessam a casca deles.
 - Transformação em carro e jato do HTML foi descartada: o jogo é só a pé.
 - Os blocos de cima das torres escalonadas também mostram "térreo" (vitrines/placas) na base deles.
 - Sobrevivente: rosto liso de manequim.
 - Infectados: os rostos são simples (manequim, olhos pintados).
 - MULTIJOGADOR: infectados, itens e caixas iguais para todos (0.44); PvP, amigos no mapa, colisão entre
-  jogadores e mensagens rápidas (0.71). Falta: salvar a partida em rede (em rede não salva), chat escrito,
-  infectados nos prédios/locais perto só do amigo (só o host cria; quando o host está longe, o prédio do
-  amigo fica vazio). Internet sem roteador/VPN (servidor próprio de "ponte"/relay, que
+  jogadores e mensagens rápidas (0.71); prédios, infectados e física perto do amigo mesmo com o host longe
+  (0.74). Falta: salvar a partida em rede (em rede não salva), chat escrito. Internet sem roteador/VPN (servidor próprio de "ponte"/relay, que
   precisa de um servidor ligado 24h) e abrir o jogo direto por um link (precisa de plugin Android).
 - Ideias para depois: loot por região, lugares
   especiais (postos do exército, quarentena, metrô), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,

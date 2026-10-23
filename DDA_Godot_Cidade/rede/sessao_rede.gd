@@ -48,6 +48,7 @@ var _t_inf := 0.0
 var _sig := {}                                # id da grade -> assinatura do conteúdo (o que todos já sabem)
 var _mexidas := {}                            # grades que mudaram desde o sorteio (vão para quem chega)
 var _cont_uid := 0
+var _colisoes := {}                           # 0.74: host: id -> colisão que segue o amigo (mundo/colisao_mundo.gd)
 
 func ligar(m: Node) -> void:
 	main = m
@@ -91,6 +92,15 @@ func _exit_tree() -> void:
 	ItemMundo.ao_soltar = Callable()
 	ItemMundo.ao_pegar = Callable()
 	ItemMundo.por_uid.clear()
+	if main != null:
+		for c in _colisoes.values():
+			if main.mundo != null and is_instance_valid(main.mundo):
+				main.mundo.remover_extra(c)
+		_colisoes.clear()
+		for n in ["interiores", "locais", "chunks"]:
+			var o = main.get(n)
+			if o != null and is_instance_valid(o):
+				o.centros_extra = Callable()
 	if main != null and main.loot_mundo != null:
 		main.loot_mundo.grade_criada = Callable()
 		main.loot_mundo.grade_reabastecida = Callable()
@@ -107,6 +117,9 @@ func _criar(id: int) -> Node3D:
 	r.nome = Rede.nome_de(id)
 	main.jogo.add_child(r)
 	r.definir_nome(r.nome)
+	# 0.74: host: chão e prédios de física em volta do amigo (os infectados de lá andam com física)
+	if Rede.eh_host() and main.mundo != null and main.mundo.has_method("criar_extra"):
+		_colisoes[id] = main.mundo.criar_extra(r)
 	r.visible = false                         # aparece no 1º estado (antes disso não se sabe onde está)
 	remotos[id] = r
 	return r
@@ -117,6 +130,9 @@ func _entrou(id: int, _nome: String) -> void:
 		main.hud.mostrar_aviso("%s ENTROU NA PARTIDA" % Rede.nome_de(id).to_upper())
 
 func _saiu(id: int) -> void:
+	if _colisoes.has(id):
+		main.mundo.remover_extra(_colisoes[id])
+		_colisoes.erase(id)
 	if remotos.has(id):
 		var nm: String = remotos[id].nome
 		remotos[id].queue_free()
@@ -292,13 +308,20 @@ func _ligar_mundo() -> void:
 			v.espelho = true                   # cliente: os infectados são do host
 			v.limpar()
 	# host: os chunks em volta de cada amigo também ficam "ativos" (não pausa os infectados perto dele)
+	var perto_amigos := func() -> Array:
+		var l := []
+		for rm in remotos.values():
+			if is_instance_valid(rm) and rm.visible:
+				l.append(rm.global_position)
+		return l
 	if Rede.eh_host() and main.get("chunks") != null:
-		main.chunks.centros_extra = func() -> Array:
-			var l := []
-			for rm in remotos.values():
-				if is_instance_valid(rm) and rm.visible:
-					l.append(rm.global_position)
-			return l
+		main.chunks.centros_extra = perto_amigos
+	# 0.74: host: prédios e locais perto dos amigos também abrem aqui (infectados presos lá dentro, paredes e portas)
+	if Rede.eh_host():
+		if main.get("interiores") != null:
+			main.interiores.centros_extra = perto_amigos
+		if main.get("locais") != null:
+			main.locais.centros_extra = perto_amigos
 	ItemMundo.ao_soltar = _item_solto_aqui
 	ItemMundo.ao_pegar = _item_pego_aqui
 	var lm = main.loot_mundo
