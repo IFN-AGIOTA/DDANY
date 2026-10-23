@@ -1,5 +1,6 @@
 extends Node
-# LOCAIS ESPECIAIS (0.68): POSTOS DE GASOLINA, HOSPITAIS, SUPERMERCADOS e ARMAZÉNS. São as ZONAS DE PvP do mapa:
+# LOCAIS ESPECIAIS (0.68): POSTOS DE GASOLINA, HOSPITAIS, SUPERMERCADOS e ARMAZÉNS — e, desde a 0.78, DELEGACIAS,
+# ESCOLAS, ESTAÇÕES DO METRÔ (elevadas) e QUARTÉIS DA GUARDA NACIONAL (na base). São as ZONAS DE PvP do mapa:
 # prédios grandes e caprichados (mundo/local.gd), loot melhor e próprio de cada lugar (mundo/loot_mundo.gd, tabelas
 # "posto_*", "hospital_*", "super_*", "armazem_*"), mais infectados e um aviso na tela quando você entra.
 #   - ONDE FICAM: lista LOCAIS abaixo (feita por ferramentas/escolher_locais.gd: terreno livre com rua na frente,
@@ -19,10 +20,15 @@ const AmbienteCls := preload("res://mundo/ambiente_local.gd")
 const Malhas := preload("res://mundo/malhas.gd")
 const Mat := preload("res://mundo/materiais_cidade.gd")
 
-const TAMANHO := {"posto": Vector2(46, 36), "hospital": Vector2(72, 54), "supermercado": Vector2(66, 56), "armazem": Vector2(66, 50)}
-const NOMES := {"posto": "POSTO DE GASOLINA", "hospital": "HOSPITAL", "supermercado": "SUPERMERCADO", "armazem": "ARMAZÉM"}
-const CORES_MAPA := {"posto": Color(0.95, 0.45, 0.15), "hospital": Color(0.9, 0.2, 0.2), "supermercado": Color(0.3, 0.75, 0.35), "armazem": Color(0.35, 0.6, 0.95)}
-const SIGLAS := {"posto": "P", "hospital": "H", "supermercado": "S", "armazem": "A"}
+const TAMANHO := {"posto": Vector2(46, 36), "hospital": Vector2(72, 54), "supermercado": Vector2(66, 56), "armazem": Vector2(66, 50),
+	"delegacia": Vector2(56, 44), "escola": Vector2(70, 54), "metro": Vector2(64, 28), "quartel": Vector2(64, 50)}
+const NOMES := {"posto": "POSTO DE GASOLINA", "hospital": "HOSPITAL", "supermercado": "SUPERMERCADO", "armazem": "ARMAZÉM",
+	"delegacia": "DELEGACIA", "escola": "ESCOLA", "metro": "ESTAÇÃO DO METRÔ", "quartel": "QUARTEL DA GUARDA NACIONAL"}
+const CORES_MAPA := {"posto": Color(0.95, 0.45, 0.15), "hospital": Color(0.9, 0.2, 0.2), "supermercado": Color(0.3, 0.75, 0.35), "armazem": Color(0.35, 0.6, 0.95),
+	"delegacia": Color(0.25, 0.4, 0.95), "escola": Color(0.95, 0.8, 0.2), "metro": Color(0.7, 0.45, 0.9), "quartel": Color(0.5, 0.65, 0.3)}
+const SIGLAS := {"posto": "P", "hospital": "H", "supermercado": "S", "armazem": "A", "delegacia": "D", "escola": "E", "metro": "M", "quartel": "Q"}
+# 0.78: os 28 primeiros são os da 0.68 (a ordem não pode mudar: o loot salvo é "L<índice>_..."); os novos vêm depois
+const N_LOCAIS_068 := 28
 
 # [tipo, x, z, giro (frente para: 0 = sul +Z, 1 = leste +X, 2 = norte -Z, 3 = oeste -X)] · ferramentas/escolher_locais.gd
 const LOCAIS := [
@@ -54,6 +60,21 @@ const LOCAIS := [
 	["posto", -8136.5, 1964.5, 1],
 	["posto", -2534.5, -2065.0, 1],
 	["posto", -4897.0, 3363.0, 3],
+	# 0.78 (ferramentas/escolher_locais.gd NOVOS=1): delegacias, escolas, estações do metrô e quartéis (na base)
+	["delegacia", 4848.5, -207.0, 3],
+	["escola", 4684.0, 1154.5, 0],
+	["metro", 4223.0, 683.0, 2],
+	["quartel", 6079.5, 531.5, 1],
+	["quartel", 6725.5, 696.5, 2],
+	["delegacia", -6405.0, 3178.0, 1],
+	["delegacia", -2580.5, 2239.5, 0],
+	["delegacia", 436.5, 1676.5, 1],
+	["escola", -2971.0, -962.0, 3],
+	["escola", 957.5, -760.0, 3],
+	["escola", 5144.5, -1009.0, 1],
+	["metro", -714.0, 2598.0, 3],
+	["metro", -4247.0, -4053.5, 0],
+	["metro", -1636.0, 407.0, 3],
 ]
 
 const RAIO_ABRIR := 140.0              # da borda do terreno
@@ -101,6 +122,44 @@ static func casca(tipo: String) -> Array:
 				[Vector3(29.6, 2.6, -18), Vector3(2.44, 5.2, 6.06), Color(0.4, 0.3, 0.25)],
 				[Vector3(29.6, 2.6, 12.4), Vector3(2.44, 5.2, 6.06), Color(0.5, 0.4, 0.3)],
 				[Vector3(-19.75, 2.4, 9.6), Vector3(2.55, 3.6, 12), Color(0.85, 0.85, 0.83)]]
+		# 0.78 (mundo/local_novos.gd)
+		"delegacia":
+			return [[Vector3(0, 5.15, -10), Vector3(40.3, 10.3, 20.3), Color(0.55, 0.34, 0.26)],
+				[Vector3(1.4, 10.7, -14.6), Vector3(3.7, 3.0, 8.9), Color(0.6, 0.59, 0.56)],
+				[Vector3(0, 3.35, 1.25), Vector3(7.0, 0.3, 2.5), Color(0.42, 0.41, 0.39)]]
+		"escola":
+			return [[Vector3(0, 5.15, -17), Vector3(60.3, 10.3, 16.3), Color(0.62, 0.42, 0.32)],
+				[Vector3(-5.8, 10.7, -16.35), Vector3(3.5, 3.0, 9.6), Color(0.6, 0.59, 0.56)],
+				[Vector3(20, 12.0, -17), Vector3(3.8, 4.0, 3.8), Color(0.45, 0.35, 0.25)],
+				[Vector3(16, 1.45, 19), Vector3(11.0, 2.9, 2.5), Color(0.92, 0.66, 0.08)]]
+		"metro":
+			var m := [[Vector3(-5, 5.6, -2), Vector3(54, 0.8, 12), Color(0.42, 0.41, 0.39)],
+				[Vector3(-5, 10.1, -6.5), Vector3(40, 0.2, 3.8), Color(0.55, 0.58, 0.56)],
+				[Vector3(-5, 10.1, 2.5), Vector3(40, 0.2, 3.8), Color(0.55, 0.58, 0.56)],
+				[Vector3(-5, 6.55, -6.5), Vector3(54, 1.1, 3), Color(0.63, 0.62, 0.59)],
+				[Vector3(-5, 6.55, 2.5), Vector3(54, 1.1, 3), Color(0.63, 0.62, 0.59)],
+				[Vector3(-4.8, 8.47, -3.5), Vector3(44.4, 2.74, 2.9), Color(0.68, 0.7, 0.72)],
+				[Vector3(27, 1.8, -2), Vector3(10, 3.0, 12), Color(0.42, 0.41, 0.39)]]
+			for k in 6:
+				for z in [-7.5, 3.5]:
+					m.append([Vector3(-30 + k * 10, 2.6, z), Vector3(0.6, 5.2, 0.6), Color(0.24, 0.32, 0.27)])
+			return m
+		"quartel":
+			var cq := Color(0.5, 0.52, 0.42)
+			var hs := Color(0.62, 0.55, 0.4)
+			return [[Vector3(-13, 1.95, -15.5), Vector3(30.3, 3.9, 11.3), cq],
+				[Vector3(18, 1.95, -15), Vector3(20.3, 3.9, 12.3), cq],
+				[Vector3(-27, 4.25, 19), Vector3(3.8, 8.5, 3.8), Color(0.45, 0.36, 0.25)],
+				[Vector3(27, 4.25, 19), Vector3(3.8, 8.5, 3.8), Color(0.45, 0.36, 0.25)],
+				[Vector3(-18.15, 1.05, 24.3), Vector3(27.7, 2.1, 1.4), hs],
+				[Vector3(18.15, 1.05, 24.3), Vector3(27.7, 2.1, 1.4), hs],
+				[Vector3(-11.65, 1.05, -24.3), Vector3(40.7, 2.1, 1.4), hs],
+				[Vector3(22.15, 1.05, -24.3), Vector3(19.7, 2.1, 1.4), hs],
+				[Vector3(-31.3, 1.05, -14.15), Vector3(1.4, 2.1, 21.7), hs],
+				[Vector3(-31.3, 1.05, 12.15), Vector3(1.4, 2.1, 25.7), hs],
+				[Vector3(31.3, 1.05, 0), Vector3(1.4, 2.1, 50.0), hs],
+				[Vector3(19, 1.7, 4), Vector3(2.4, 3.4, 7.5), Color(0.27, 0.31, 0.2)],
+				[Vector3(25, 1.7, 4.5), Vector3(2.4, 3.4, 7.5), Color(0.27, 0.31, 0.2)]]
 	return []
 
 # está dentro de um prédio de algum local (volumes grandes da casca)? Para não nascer infectado/caixa dentro das paredes

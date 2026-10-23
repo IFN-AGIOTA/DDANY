@@ -1,5 +1,5 @@
 extends Node3D
-# LUZ E SOM DOS LOCAIS ESPECIAIS (0.77) · criado por mundo/locais.gd quando um posto/hospital/supermercado/armazém
+# LUZ E SOM DOS LOCAIS ESPECIAIS (0.77) · criado por mundo/locais.gd quando um local especial (posto, hospital, ...)
 # é montado perto do jogador (e some junto com ele).
 #   - GERADOR: alguns locais ainda têm um gerador funcionando (CHANCE_GERADOR, sempre os mesmos: vem do índice do
 #     local). Com gerador: ronco dele num canto do terreno e, à NOITE (clima escuro), lâmpadas acesas por dentro
@@ -7,6 +7,7 @@ extends Node3D
 #     Visto de longe, um local aceso à noite chama a atenção (e os outros jogadores sabem que tem gente por perto).
 #   - SEM GERADOR: escuro; só o vento batendo em alguma chapa solta (rangido) de vez em quando.
 #   - Hospital com gerador: o BIPE de um aparelho esquecido ligado, num quarto.
+#   - 0.78: delegacia e quartel com gerador: o CHIADO de um rádio esquecido ligado (estática baixinha).
 #   - Zumbido das lâmpadas acesas (bem baixo, só de perto).
 # Os sons são feitos por código (nada baixado). Poucas luzes (no máximo LUZES_MAX por local, sem sombra, somem de
 # longe): leve no celular.
@@ -69,7 +70,7 @@ func _ready() -> void:
 		var t2: Vector3 = cobertura[1]
 		for k in 2:
 			pontos.append(Vector3(c2.x + t2.x * (k - 0.5) * 0.5, c2.y - t2.y * 0.5 - 0.3, c2.z))
-	var cor := Color(0.85, 0.93, 1.0) if tipo in ["hospital", "supermercado"] else Color(1.0, 0.86, 0.62)
+	var cor := Color(0.85, 0.93, 1.0) if tipo in ["hospital", "supermercado", "delegacia", "escola", "quartel"] else Color(1.0, 0.86, 0.62)
 	for k in mini(pontos.size(), LUZES_MAX):
 		var l := OmniLight3D.new()
 		l.position = pontos[k]
@@ -97,6 +98,9 @@ func _ready() -> void:
 	ger.play()
 	if tipo == "hospital" and not predio.is_empty():
 		_bipe = _som("bipe", (predio[0] as Vector3) + Vector3(_rng.randf_range(-8, 8), -(predio[1] as Vector3).y * 0.5 + 1.2, 0.0), -16.0, 9.0)
+	if tipo in ["delegacia", "quartel"] and not predio.is_empty():
+		var ch := _som("chiado", (predio[0] as Vector3) + Vector3(_rng.randf_range(-5, 5), -(predio[1] as Vector3).y * 0.5 + 1.2, 0.0), -20.0, 8.0)
+		ch.play()
 
 func _som(nome: String, pos: Vector3, vol: float, alcance: float) -> AudioStreamPlayer3D:
 	var s := AudioStreamPlayer3D.new()
@@ -171,6 +175,9 @@ static func _wav(nome: String) -> AudioStreamWAV:
 				ruido = ruido * 0.92 + (r.randf() * 2.0 - 1.0) * 0.08
 				var pulso := 1.0 if fmod(t * 25.0, 1.0) < 0.22 else 0.0
 				x = 0.45 * sin(TAU * 50.0 * t) + 0.3 * pulso + 0.9 * ruido
+			"chiado":                   # rádio fora de sintonia: ruído com o volume ondulando
+				ruido = ruido * 0.35 + (r.randf() * 2.0 - 1.0) * 0.65
+				x = ruido * (0.35 + 0.25 * sin(TAU * 0.7 * t) + 0.15 * sin(TAU * 3.1 * t))
 			"bipe":                     # monitor: um bipe de 1 kHz com ataque e queda suaves
 				var env := minf(1.0, t / 0.01) * minf(1.0, (float(n) / taxa - t) / 0.03)
 				x = 0.6 * sin(TAU * 1000.0 * t) * env

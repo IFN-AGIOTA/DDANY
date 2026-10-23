@@ -567,6 +567,7 @@ uniform float sol_dentro = 0.12;
 uniform float semente = 0.0;                  // a mesma do prédio (hera do lado de fora parecida com a de longe)
 uniform float sujeira = 1.0;                  // 0.68: força das manchas/sujeira (locais especiais usam menos)
 uniform float forca_hera = 1.0;               // 0.68: quanto de hera pode subir pelas paredes de fora
+uniform float camada = 0.0;                   // 0.78: chão pintado dos locais especiais (por cima do lote ao longe)
 global uniform float molhado;
 varying vec3 wp;
 varying float dentro;
@@ -590,6 +591,8 @@ varying float vertical;
 void vertex() {
 	wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	vertical = step(abs(NORMAL.y), 0.5);
+	POSITION = PROJECTION_MATRIX * MODELVIEW_MATRIX * vec4(VERTEX, 1.0);
+	POSITION.z += camada * 3e-7 * POSITION.w;
 }
 void fragment() {
 	vec2 d = abs(wp.xz - caixa.xy) - caixa.zw;

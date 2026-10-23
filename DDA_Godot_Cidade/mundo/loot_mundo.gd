@@ -17,7 +17,7 @@ const ItemMundoCls := preload("res://inventario/item_mundo.gd")
 const Itens := preload("res://inventario/itens.gd")
 
 const CHANCE_VAZIO := 0.35            # móvel já saqueado
-const CHANCE_VAZIO_LOCAL := 0.15      # 0.68: locais especiais (posto, hospital, supermercado, armazém) têm mais coisa
+const CHANCE_VAZIO_LOCAL := 0.15      # 0.68: locais especiais (posto, hospital, supermercado, armazém...) têm mais coisa
 const CHANCE_CHAO := 0.45             # chance de cada ponto livre do chão ter alguma coisa
 const MAX_CHAO := 4                   # itens soltos por prédio
 const CICLO := 16.0                   # 0.72: horas de JOGO para o loot de um prédio/carro voltar (16 h = 32 min de verdade)
@@ -127,6 +127,61 @@ const TABELAS := {
 		["pilha", 2, 1, 1], ["mun_9mm", 2, 4, 12], ["pente_pistola", 1, 1, 1], ["refrigerante", 2, 1, 1], ["barra", 2, 1, 2]],
 	"armazem_seguranca": [["pistola", 4, 1, 1], ["pente_pistola", 4, 1, 1], ["mun_9mm", 5, 10, 30], ["espingarda", 2, 1, 1], ["mun_12", 3, 6, 16],
 		["colete_policia", 2, 1, 1], ["lanterna", 3, 1, 1], ["radio", 2, 1, 1], ["mp5", 1, 1, 1], ["pente_mp5", 1, 1, 1]],
+	# ---- 0.78: DELEGACIA, ESCOLA, METRÔ e QUARTEL (mundo/local_novos.gd) ----
+	"delegacia_arsenal": [["pistola", 4, 1, 1], ["pente_pistola", 5, 1, 1], ["mun_9mm", 6, 12, 40], ["espingarda", 3, 1, 1], ["mun_12", 4, 6, 18],
+		["mp5", 2, 1, 1], ["pente_mp5", 3, 1, 1], ["m4", 2, 1, 1], ["pente_stanag", 3, 1, 1], ["mun_556", 3, 15, 45], ["colete_policia", 3, 1, 1],
+		["capacete", 2, 1, 1], ["mascara_gas", 2, 1, 1], ["kit_armas", 2, 1, 1], ["silenciador", 1, 1, 1], ["mira_acog", 1, 1, 1], ["lanterna", 2, 1, 1]],
+	"delegacia_escritorio": [["dinheiro", 3, 2, 15], ["celular", 3, 1, 1], ["radio", 2, 1, 1], ["lanterna", 3, 1, 1], ["pilha", 3, 1, 1],
+		["mun_9mm", 3, 4, 14], ["pente_pistola", 1, 1, 1], ["revista", 2, 1, 1], ["refrigerante", 2, 1, 1], ["barra", 2, 1, 2],
+		["analgesico", 1, 1, 1], ["isqueiro", 1, 1, 1], ["fita", 1, 1, 1]],
+	"delegacia_vestiario": [["colete_policia", 2, 1, 1], ["lanterna", 3, 1, 1], ["lanterna_cabeca", 2, 1, 1], ["jaqueta", 3, 1, 1], ["calca", 3, 1, 1],
+		["bone", 3, 1, 1], ["capa_chuva", 2, 1, 1], ["camiseta", 3, 1, 1], ["bandagem", 3, 1, 2], ["mun_9mm", 3, 5, 15], ["pistola", 1, 1, 1],
+		["pente_pistola", 1, 1, 1], ["mochila_trilha", 1, 1, 1], ["pochete", 2, 1, 1], ["barra", 1, 1, 2]],
+	"delegacia_provas": [["dinheiro", 5, 5, 40], ["pistola", 3, 1, 1], ["faca", 3, 1, 1], ["facao", 2, 1, 1], ["taco", 2, 1, 1], ["celular", 3, 1, 1],
+		["mun_9mm", 3, 4, 16], ["mun_12", 2, 3, 10], ["espingarda", 1, 1, 1], ["pastilha", 2, 2, 6], ["analgesico", 2, 1, 1], ["radio", 1, 1, 1],
+		["isqueiro", 2, 1, 1], ["ak", 1, 1, 1], ["pente_ak", 1, 1, 1], ["mun_762", 1, 5, 15], ["revista", 1, 1, 1]],
+	"viatura": [["espingarda", 3, 1, 1], ["mun_12", 4, 4, 14], ["pistola", 2, 1, 1], ["pente_pistola", 2, 1, 1], ["mun_9mm", 3, 6, 18],
+		["colete_policia", 2, 1, 1], ["kit_medico", 1, 1, 1], ["bandagem", 3, 1, 2], ["lanterna", 3, 1, 1], ["radio", 2, 1, 1], ["agua", 1, 1, 1],
+		["barra", 1, 1, 2], ["galao", 1, 1, 1]],
+	"central_radio": [["radio", 6, 1, 1], ["pilha", 5, 1, 2], ["lanterna", 3, 1, 1], ["celular", 2, 1, 1], ["mun_9mm", 2, 4, 12], ["pente_pistola", 1, 1, 1],
+		["barra", 2, 1, 2], ["agua", 2, 1, 1], ["revista", 1, 1, 1], ["fita", 2, 1, 1]],
+	"escola_sala": [["mochila_escolar", 5, 1, 1], ["revista", 3, 1, 1], ["barra", 4, 1, 2], ["salgadinho", 3, 1, 1], ["refrigerante", 3, 1, 1],
+		["suco", 3, 1, 1], ["lanterna", 2, 1, 1], ["pilha", 2, 1, 1], ["celular", 3, 1, 1], ["dinheiro", 2, 1, 6], ["kit_costura", 1, 1, 1],
+		["ursinho", 2, 1, 1], ["fita", 2, 1, 1], ["moletom", 1, 1, 1], ["bone", 1, 1, 1]],
+	"escola_armario": [["mochila_escolar", 4, 1, 1], ["moletom", 3, 1, 1], ["camiseta", 3, 1, 1], ["bone", 3, 1, 1], ["gorro", 2, 1, 1],
+		["celular", 3, 1, 1], ["barra", 3, 1, 2], ["refrigerante", 3, 1, 1], ["salgadinho", 2, 1, 1], ["revista", 2, 1, 1], ["taco", 2, 1, 1],
+		["lanterna", 1, 1, 1], ["dinheiro", 2, 1, 5], ["jaqueta", 1, 1, 1], ["pochete", 1, 1, 1]],
+	"escola_cantina": [["feijao", 5, 1, 1], ["atum", 3, 1, 1], ["sardinha", 3, 1, 1], ["pessego", 3, 1, 1], ["biscoito", 4, 1, 1], ["leite_condensado", 3, 1, 1],
+		["suco", 4, 1, 1], ["agua", 4, 1, 1], ["maca", 3, 1, 1], ["barra", 2, 1, 2], ["faca", 2, 1, 1], ["isqueiro", 1, 1, 1]],
+	"escola_secretaria": [["dinheiro", 3, 2, 12], ["celular", 2, 1, 1], ["radio", 2, 1, 1], ["lanterna", 2, 1, 1], ["pilha", 3, 1, 1], ["revista", 3, 1, 1],
+		["fita", 2, 1, 1], ["analgesico", 1, 1, 1], ["refrigerante", 2, 1, 1], ["barra", 2, 1, 2]],
+	"escola_enfermaria": [["bandagem", 6, 1, 3], ["analgesico", 5, 1, 1], ["vitaminas", 4, 1, 1], ["trapos", 3, 1, 3], ["tala", 2, 1, 1],
+		["antibiotico", 1, 1, 1], ["kit_medico", 1, 1, 1], ["pastilha", 2, 2, 6], ["carvao", 2, 1, 1]],
+	"escola_lab": [["carvao", 4, 1, 1], ["pastilha", 4, 2, 8], ["isqueiro", 3, 1, 1], ["fita", 3, 1, 1], ["mascara_gas", 2, 1, 1], ["garrafa_vazia", 3, 1, 1],
+		["lanterna", 2, 1, 1], ["pilha", 2, 1, 1], ["antibiotico", 1, 1, 1], ["corda", 1, 1, 1]],
+	"escola_biblioteca": [["revista", 6, 1, 1], ["lanterna", 2, 1, 1], ["pilha", 2, 1, 1], ["barra", 2, 1, 1], ["celular", 1, 1, 1], ["mochila_escolar", 2, 1, 1],
+		["ursinho", 1, 1, 1], ["kit_costura", 1, 1, 1]],
+	"escola_abrigo": [["agua", 5, 1, 1], ["feijao", 4, 1, 1], ["atum", 3, 1, 1], ["biscoito", 3, 1, 1], ["barra", 3, 1, 2], ["bandagem", 3, 1, 2],
+		["analgesico", 2, 1, 1], ["lanterna", 3, 1, 1], ["pilha", 3, 1, 2], ["radio", 2, 1, 1], ["ursinho", 2, 1, 1], ["mochila_trilha", 1, 1, 1],
+		["trapos", 2, 1, 3], ["taco", 2, 1, 1], ["pistola", 1, 1, 1], ["mun_9mm", 2, 3, 10], ["capa_chuva", 1, 1, 1], ["isqueiro", 2, 1, 1]],
+	"onibus_escolar": [["mochila_escolar", 5, 1, 1], ["kit_medico", 2, 1, 1], ["bandagem", 3, 1, 2], ["agua", 3, 1, 1], ["barra", 3, 1, 2], ["salgadinho", 2, 1, 1],
+		["lanterna", 2, 1, 1], ["ursinho", 2, 1, 1], ["revista", 2, 1, 1], ["celular", 2, 1, 1], ["galao", 1, 1, 1]],
+	"metro_vagao": [["mochila_escolar", 3, 1, 1], ["mochila_trilha", 2, 1, 1], ["pochete", 3, 1, 1], ["celular", 4, 1, 1], ["dinheiro", 3, 2, 15],
+		["agua", 3, 1, 1], ["barra", 3, 1, 2], ["salgadinho", 2, 1, 1], ["refrigerante", 2, 1, 1], ["jaqueta", 2, 1, 1], ["capa_chuva", 2, 1, 1],
+		["gorro", 2, 1, 1], ["revista", 2, 1, 1], ["analgesico", 2, 1, 1], ["bandagem", 2, 1, 2], ["lanterna", 2, 1, 1], ["isqueiro", 1, 1, 1],
+		["pistola", 1, 1, 1], ["mun_9mm", 1, 3, 10], ["faca", 1, 1, 1], ["radio", 1, 1, 1]],
+	"metro_bilheteria": [["dinheiro", 6, 5, 30], ["celular", 2, 1, 1], ["radio", 2, 1, 1], ["lanterna", 2, 1, 1], ["pilha", 2, 1, 1], ["barra", 2, 1, 2],
+		["refrigerante", 2, 1, 1], ["pistola", 1, 1, 1], ["mun_9mm", 1, 3, 10]],
+	"metro_banca": [["revista", 6, 1, 1], ["barra", 4, 1, 3], ["salgadinho", 4, 1, 1], ["refrigerante", 4, 1, 1], ["agua", 3, 1, 1], ["isqueiro", 3, 1, 1],
+		["pilha", 2, 1, 1], ["celular", 1, 1, 1], ["dinheiro", 2, 1, 8], ["biscoito", 2, 1, 1]],
+	"quartel_arsenal": [["m4", 4, 1, 1], ["ak", 3, 1, 1], ["mp5", 2, 1, 1], ["pente_stanag", 5, 1, 1], ["pente_ak", 4, 1, 1], ["pente_mp5", 3, 1, 1],
+		["mun_556", 6, 20, 60], ["mun_762", 5, 20, 50], ["mun_9mm", 3, 15, 40], ["pistola", 2, 1, 1], ["pente_pistola", 2, 1, 1], ["mira_acog", 2, 1, 1],
+		["silenciador", 2, 1, 1], ["luneta", 1, 1, 1], ["rifle_caca", 1, 1, 1], ["mun_308", 2, 5, 15], ["colete", 3, 1, 1], ["capacete", 3, 1, 1],
+		["mochila_combate", 2, 1, 1], ["kit_armas", 3, 1, 1], ["mascara_gas", 2, 1, 1]],
+	"quartel_alojamento": [["camiseta", 3, 1, 1], ["calca", 3, 1, 1], ["jaqueta", 3, 1, 1], ["capa_chuva", 2, 1, 1], ["gorro", 2, 1, 1], ["bone", 2, 1, 1],
+		["mochila_combate", 1, 1, 1], ["mochila_trilha", 2, 1, 1], ["lanterna", 3, 1, 1], ["lanterna_cabeca", 2, 1, 1], ["pilha", 3, 1, 2],
+		["barra", 3, 1, 2], ["agua", 3, 1, 1], ["feijao", 2, 1, 1], ["mun_556", 2, 10, 30], ["pente_stanag", 1, 1, 1], ["pistola", 1, 1, 1],
+		["mun_9mm", 2, 5, 15], ["bandagem", 3, 1, 2], ["isqueiro", 2, 1, 1], ["revista", 2, 1, 1], ["faca", 2, 1, 1], ["facao", 1, 1, 1]],
 	# itens soltos no chão dos prédios, por uso do prédio
 	"chao_residencial": [["tabuas", 1, 1, 2], ["galho", 2, 1, 3], ["garrafa_vazia", 2, 1, 1], ["revista", 3, 1, 1], ["trapos", 3, 1, 2], ["barra", 2, 1, 1], ["refrigerante", 2, 1, 1], ["agua", 1, 1, 1],
 		["cano", 1, 1, 1], ["faca", 1, 1, 1], ["mun_9mm", 1, 3, 8], ["celular", 2, 1, 1], ["ursinho", 1, 1, 1]],
@@ -143,10 +198,17 @@ const TABELAS := {
 		["agua", 1, 1, 1], ["mun_762", 1, 4, 12], ["mun_12", 1, 3, 8]],
 	"chao_policia": [["mun_9mm", 4, 3, 12], ["mun_12", 2, 2, 6], ["pente_pistola", 1, 1, 1], ["bandagem", 2, 1, 1],
 		["lanterna", 2, 1, 1], ["cano", 1, 1, 1]],
+	"chao_escola": [["revista", 3, 1, 1], ["garrafa_vazia", 3, 1, 1], ["barra", 2, 1, 1], ["refrigerante", 2, 1, 1], ["trapos", 2, 1, 2], ["cano", 1, 1, 1],
+		["taco", 1, 1, 1], ["ursinho", 1, 1, 1], ["celular", 1, 1, 1], ["bandagem", 1, 1, 1], ["mun_9mm", 1, 3, 8]],
+	"chao_metro": [["garrafa_vazia", 3, 1, 1], ["revista", 2, 1, 1], ["celular", 2, 1, 1], ["dinheiro", 2, 1, 6], ["trapos", 3, 1, 2], ["cano", 2, 1, 1],
+		["galho", 1, 1, 2], ["refrigerante", 1, 1, 1], ["mun_9mm", 1, 3, 10], ["pe_de_cabra", 1, 1, 1]],
+	"chao_quartel": [["mun_556", 4, 5, 20], ["mun_762", 3, 5, 15], ["mun_9mm", 2, 4, 12], ["pente_stanag", 1, 1, 1], ["bandagem", 3, 1, 2], ["trapos", 2, 1, 2],
+		["agua", 2, 1, 1], ["barra", 2, 1, 2], ["feijao", 1, 1, 1], ["garrafa_vazia", 2, 1, 1]],
 }
 const CHAO_DO_USO := {"residencial": "chao_residencial", "loja": "chao_comercio", "mercado": "chao_comercio",
 	"restaurante": "chao_comercio", "escritorio": "chao_comercio", "farmacia": "chao_saude", "clinica": "chao_saude",
-	"delegacia": "chao_policia", "posto": "chao_posto", "hospital": "chao_hospital", "supermercado": "chao_super", "armazem": "chao_armazem"}
+	"delegacia": "chao_policia", "posto": "chao_posto", "hospital": "chao_hospital", "supermercado": "chao_super", "armazem": "chao_armazem",
+	"escola": "chao_escola", "metro": "chao_metro", "quartel": "chao_quartel"}
 
 var semente := 1234                   # muda o loot do mundo inteiro (salvo junto com o jogo)
 var _grades := {}                     # id do lugar -> grade (já sorteada; o que o jogador mexeu fica aqui)

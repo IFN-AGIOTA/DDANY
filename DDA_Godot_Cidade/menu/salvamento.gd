@@ -77,26 +77,44 @@ static func salvar(main, morto := false) -> bool:
 # save de antes (sem "mapa_predios") é convertido com cidade.remapa_predios (número antigo -> novo; -1 = sumiu).
 # A 0.68 tirou os prédios que ficavam nos terrenos dos locais especiais (mundo/locais.gd): save da 0.43..0.67
 # ("mapa_predios" = 2) é convertido com cidade.remapa_v2.
-const MAPA_PREDIOS := 3
+# A 0.78 tirou os prédios dos terrenos dos locais NOVOS (delegacias, escolas, metrôs): save da 0.68..0.77
+# ("mapa_predios" = 3) é convertido com cidade.remapa_v3 (também o do multijogador, que não tinha o número).
+const MAPA_PREDIOS := 4
+
+# id de algo de um prédio ("p12", "p12_3", "p12:3") com o número trocado pelo novo ("" = o prédio sumiu);
+# ids que não são de prédio (carros "c..", locais "L..") voltam iguais
+static func _remapear_id(s: String, remapa: PackedInt32Array) -> String:
+	if not s.begins_with("p") or not s.substr(1, 1).is_valid_int():
+		return s
+	var k := 1
+	while k < s.length() and s.substr(k, 1).is_valid_int():
+		k += 1
+	var i := int(s.substr(1, k - 1))
+	if i < 0 or i >= remapa.size() or remapa[i] < 0:
+		return ""
+	return "p%d%s" % [remapa[i], s.substr(k)]
 
 static func _remapear_loot(loot: Dictionary, remapa: PackedInt32Array) -> Dictionary:
 	var o := loot.duplicate(true)
-	for parte in ["grades", "chao"]:
+	for parte in ["grades", "chao", "ciclos", "ciclos_chao", "portas"]:
 		var velho: Dictionary = loot.get(parte, {})
 		var novo := {}
 		for id in velho:
-			var s := String(id)
-			if not s.begins_with("p") or not s.substr(1, 1).is_valid_int():
-				novo[id] = velho[id]                  # carros e outros: não dependem do número do prédio
-				continue
-			var resto := s.substr(1)
-			var num := resto.get_slice("_", 0)
-			var i := int(num)
-			if i < 0 or i >= remapa.size() or remapa[i] < 0:
-				continue                              # prédio removido: o loot dele some
-			novo["p%d%s" % [remapa[i], resto.substr(num.length())]] = velho[id]
+			var n := _remapear_id(String(id), remapa)
+			if n != "":                               # prédio removido: o loot dele some
+				novo[n] = velho[id]
 		o[parte] = novo
 	return o
+
+# a tabela certa para converter um save com essa versão do mapa (vazia = não precisa)
+static func _remapa_de(main, versao_mapa: int) -> PackedInt32Array:
+	if versao_mapa < 2:
+		return main.cidade.remapa_predios
+	if versao_mapa < 3:
+		return main.cidade.remapa_v2
+	if versao_mapa < MAPA_PREDIOS:
+		return main.cidade.remapa_v3
+	return PackedInt32Array()
 
 # itens largados pelo jogador (filhos do nó Jogo; os dos prédios ficam no loot_mundo)
 static func _chao(main, p: Vector3) -> Array:
@@ -118,11 +136,9 @@ static func carregar(main, d: Dictionary) -> void:
 	main.abates = int(d.get("abates", 0))
 	if main.loot_mundo != null:
 		var loot: Dictionary = d.get("loot", {})
-		var versao_mapa := int(d.get("mapa_predios", 1))
-		if versao_mapa < 2:
-			loot = _remapear_loot(loot, main.cidade.remapa_predios)
-		elif versao_mapa < MAPA_PREDIOS:
-			loot = _remapear_loot(loot, main.cidade.remapa_v2)
+		var remapa := _remapa_de(main, int(d.get("mapa_predios", 1)))
+		if not remapa.is_empty():
+			loot = _remapear_loot(loot, remapa)
 		main.loot_mundo.carregar(loot)
 		if main.get("veiculos") != null:
 			main.veiculos.sincronizar()           # 0.76: carros já mexidos (some o largado original)
@@ -203,6 +219,7 @@ static func salvar_rede(main, morto := false) -> bool:
 		d["mundo"] = {"semente": lm.semente,
 			"loot": lm.salvar(main.interiores.abertos if main.interiores != null else {}, main.locais.abertos if main.get("locais") != null else {}),
 			"pegos": lm.pegos.keys(),
+			"mapa_predios": MAPA_PREDIOS,
 			"clima": main.clima.salvar() if main.clima != null and main.clima.has_method("salvar") else {}}
 	return _gravar_rede(d)
 
@@ -221,10 +238,16 @@ static func carregar_rede(main) -> String:
 	var rede = main.get_node_or_null("/root/Rede")
 	var m: Dictionary = d.get("mundo", {})
 	if rede != null and rede.eh_host() and not m.is_empty() and main.loot_mundo != null and int(m.get("semente", -1)) == main.loot_mundo.semente:
-		main.loot_mundo.carregar(m.get("loot", {}))
+		var remapa := _remapa_de(main, int(m.get("mapa_predios", 3)))      # o da 0.77 não tinha o número: era o 3
+		var loot: Dictionary = m.get("loot", {})
+		if not remapa.is_empty():
+			loot = _remapear_loot(loot, remapa)
+		main.loot_mundo.carregar(loot)
 		main.loot_mundo.semente = int(m["semente"])
 		for u in m.get("pegos", []):
-			main.loot_mundo.pegos[str(u)] = true
+			var id := _remapear_id(str(u), remapa) if not remapa.is_empty() else str(u)
+			if id != "":
+				main.loot_mundo.pegos[id] = true
 		if main.clima != null and m.has("clima"):
 			main.clima.carregar(m["clima"])
 		if main.get("veiculos") != null:

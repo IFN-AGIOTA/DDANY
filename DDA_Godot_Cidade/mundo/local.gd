@@ -9,6 +9,7 @@ extends RefCounted
 # Igual aos prédios comuns (mundo/interior.gd): tudo vira UMA malha (5 superfícies) + UM corpo de colisão; a parte
 # pesada (preparar) pode rodar numa thread; criar() faz os nós, a colisão e os contêineres de loot.
 # Mexa AQUI para: a planta, os cômodos, os móveis e os enfeites de cada local. Onde ficam e quantos: mundo/locais.gd.
+# 0.78: DELEGACIA, ESCOLA, ESTAÇÃO DO METRÔ e QUARTEL ficam em mundo/local_novos.gd (usa as peças daqui).
 
 const Malhas := preload("res://mundo/malhas.gd")
 const Moveis := preload("res://mundo/moveis.gd")
@@ -47,16 +48,20 @@ var piso := Malhas.Construtor.new()    # pisos de dentro (cerâmica)
 var resto := Malhas.Construtor.new()   # móveis, enfeites, bombas, carros...
 var teto := Malhas.Construtor.new()    # forro (embaixo das lajes)
 var concreto := Malhas.Construtor.new()  # piso de concreto de dentro (oficina, estoque, armazém)
+var chao := Malhas.Construtor.new()    # 0.78: chão pintado do terreno (asfalto, concreto, faixas): "camada" por cima do lote
 var col: Array = []                    # [centro, tamanho, giro, base]
 var cont: Array = []                   # contêineres de loot {"pos", "loot", "nome", "tam"}
 var pontos: Array = []                 # chão livre para loot solto: [Vector3 local, cômodo]
 var infectados: Array = []             # onde nascem os infectados (Vector3 local)
 var bombas: Array = []                 # 0.76: bombas de gasolina (Vector3 local): enchem o galão (mundo/veiculos.gd)
 var dentro := Rect2()                  # área coberta do prédio principal (shader: sol fraco lá dentro)
+var textos: Array = []                 # 0.78: letreiros e pichações [Vector3 local, giro, texto, cor, tamanho]
 var _malha: ArrayMesh = null
 
+const NOVOS := ["delegacia", "escola", "metro", "quartel"]
+
 static func preparar(t: String, i: int, gi: int, c: Vector2) -> RefCounted:
-	var m = load("res://mundo/local.gd").new()
+	var m = load("res://mundo/local_novos.gd" if t in NOVOS else "res://mundo/local.gd").new()
 	m.tipo = t
 	m.idx = i
 	m.giro = gi
@@ -67,8 +72,53 @@ static func preparar(t: String, i: int, gi: int, c: Vector2) -> RefCounted:
 		"hospital": m._hospital()
 		"supermercado": m._supermercado()
 		"armazem": m._armazem()
+		"delegacia": m._delegacia()
+		"escola": m._escola()
+		"metro": m._metro()
+		"quartel": m._quartel()
+	if t in NOVOS:
+		m._livrar_pontos()
 	m._criar_malha()
 	return m
+
+# 0.78: ponto de infectado/loot que ficou encostado numa caixa de colisão (parede, móvel, carro) vai para um lugar
+# livre a até 1,6 m (ou sai da lista). Só nos locais novos (nos antigos a ordem dos pontos não muda).
+func _livre(p: Vector3) -> bool:
+	for h in [0.5, 1.2]:
+		var q := p + Vector3(0, h, 0)
+		for c in col:
+			var b: Basis = c[3] if c.size() > 3 else Basis(Vector3.UP, c[2])
+			var meio: Vector3 = (c[1] as Vector3).abs() * 0.5
+			var l := b.inverse() * (q - (c[0] as Vector3))
+			var perto := Vector3(clampf(l.x, -meio.x, meio.x), clampf(l.y, -meio.y, meio.y), clampf(l.z, -meio.z, meio.z))
+			if l.distance_squared_to(perto) < 0.09:
+				return false
+	return true
+
+func _achar_livre(p: Vector3) -> Vector3:
+	if _livre(p):
+		return p
+	for raio in [0.6, 1.0, 1.6]:
+		for k in 8:
+			var a := k * TAU / 8.0
+			var n: Vector3 = p + Vector3(cos(a), 0, sin(a)) * float(raio)
+			if _livre(n):
+				return n
+	return Vector3.INF
+
+func _livrar_pontos() -> void:
+	var inf: Array = []
+	for p in infectados:
+		var n: Vector3 = _achar_livre(p)
+		if n != Vector3.INF:
+			inf.append(n)
+	infectados = inf
+	var pts: Array = []
+	for e in pontos:
+		var n: Vector3 = _achar_livre(e[0])
+		if n != Vector3.INF:
+			pts.append([n, e[1]])
+	pontos = pts
 
 # a malha (5 superfícies) pode ser feita na thread, como nos interiores
 func _criar_malha() -> void:
@@ -80,6 +130,8 @@ func _criar_malha() -> void:
 		piso.malha(Mat.material(Mat.INTERIOR, {"caixa": cx, "padrao": 1.0, "sujeira": 0.7}), am)
 	if not concreto.vazio():
 		concreto.malha(Mat.material(Mat.INTERIOR, {"caixa": cx, "padrao": 4.0, "sujeira": 0.6}), am)
+	if not chao.vazio():
+		chao.malha(Mat.material(Mat.INTERIOR, {"caixa": Vector4(0, 0, -1, -1), "padrao": 4.0, "sujeira": 0.45, "camada": CAMADA_CHAO}), am)
 	resto.malha(Mat.material(Mat.INTERIOR, {"caixa": cx, "padrao": 0.0, "sujeira": 0.6}), am)
 	teto.malha(Mat.material(Mat.INTERIOR, {"caixa": cx, "padrao": 0.0, "sujeira": 0.5}), am)
 	_malha = am
@@ -127,6 +179,22 @@ func criar(lm, y: float) -> Node3D:
 			raiz.add_child(cx)
 			cx.position = (c["pos"] as Vector3) + Vector3(0, 0.1, 0)
 	raiz.set_meta("pontos_chao", pontos)
+	# 0.78: letreiros e pichações (texto de verdade, iluminado como a parede)
+	for t in textos:
+		var l := Label3D.new()
+		l.position = t[0]
+		l.rotation.y = float(t[1])
+		l.text = String(t[2])
+		l.modulate = t[3]
+		l.font_size = int(t[4])
+		l.pixel_size = 0.01
+		l.outline_size = 0
+		l.shaded = true
+		l.double_sided = false
+		l.alpha_cut = Label3D.ALPHA_CUT_DISCARD
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.visibility_range_end = 90.0
+		raiz.add_child(l)
 	# 0.76: as bombas (grupo "bombas"): PEGAR perto com um galão = encher
 	for k in bombas.size():
 		var b := Node3D.new()
@@ -309,16 +377,18 @@ func _laje(ret: Rect2, y: float, esp: float, buracos: Array, cor_cima: Color, ci
 		(fora if cima_fora else piso).caixa(Vector3(c.x, y + esp - 0.02, c.y), Vector3(p.size.x, 0.04, p.size.y), cor_cima, Basis.IDENTITY, true)
 		col.append([Vector3(c.x, y + esp * 0.5, c.y), Vector3(p.size.x, esp, p.size.y), 0.0, Basis.IDENTITY])
 
-# chão pintado (asfalto/concreto) por cima do lote, sem colisão (o lote já é o chão)
+# chão pintado (asfalto/concreto) por cima do lote, sem colisão (o lote já é o chão). 0.78: numa superfície própria com
+# "camada" (como os pisos da cidade): ao longe o chão do lote (camada 3,5) passava por cima e o asfalto sumia
+const CAMADA_CHAO := 4.5
 func _chao(ret: Rect2, cor: Color, y := 0.015) -> void:
 	var c := ret.get_center()
-	fora.caixa(Vector3(c.x, y, c.y), Vector3(ret.size.x, 0.03, ret.size.y), cor, Basis.IDENTITY, true)
+	chao.caixa(Vector3(c.x, y, c.y), Vector3(ret.size.x, 0.03, ret.size.y), cor, Basis.IDENTITY, true)
 
 func _faixa(a: Vector2, b: Vector2, larg := 0.12, cor := FAIXA, y := 0.035) -> void:
 	var m := (a + b) * 0.5
 	var L := a.distance_to(b)
 	var em_x := absf(b.x - a.x) > absf(b.y - a.y)
-	fora.caixa(Vector3(m.x, y, m.y), Vector3(L, 0.01, larg) if em_x else Vector3(larg, 0.01, L), cor, Basis.IDENTITY, true)
+	(chao if y < 0.1 else fora).caixa(Vector3(m.x, y, m.y), Vector3(L, 0.01, larg) if em_x else Vector3(larg, 0.01, L), cor, Basis.IDENTITY, true)
 
 # vagas de estacionamento: fileira de linhas ao longo de X, de x0 até x1, vagas de "fundo" metros a partir de z0
 func _vagas(x0: float, x1: float, z0: float, fundo: float) -> void:
@@ -336,6 +406,10 @@ func _movel(nome: String, p: Vector3, g: float, loot := "", nome_cont := "") -> 
 			cont[k]["loot"] = loot
 		if nome_cont != "":
 			cont[k]["nome"] = nome_cont
+
+# letreiro/pichação (Label3D, virado para +Z local girado de g)
+func _texto(p: Vector3, g: float, texto: String, cor: Color, tam := 64) -> void:
+	textos.append([p, g, texto, cor, tam])
 
 func _loot(p: Vector3, loot: String, nome: String, tam: Vector2i) -> void:
 	cont.append({"pos": p, "loot": loot, "nome": nome, "tam": tam})

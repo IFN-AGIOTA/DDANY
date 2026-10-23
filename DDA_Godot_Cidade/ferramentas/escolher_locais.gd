@@ -4,6 +4,10 @@ extends SceneTree
 # dos outros, e imprime a lista LOCAIS para colar em mundo/locais.gd. Feito uma vez (fora do jogo): o jogo não gasta
 # tempo procurando e todo aparelho tem os locais nos mesmos lugares.
 # Rodar, dentro da pasta DDA_Godot_Cidade:  godot --headless -s ferramentas/escolher_locais.gd
+# 0.78: com NOVOS=1 os locais que já existem (mundo/locais.gd LOCAIS) ficam onde estão e só os tipos de QUANTOS_NOVOS
+# (delegacia, escola, metrô, quartel) são escolhidos: as linhas impressas vão no FIM da lista LOCAIS (a ordem dos
+# antigos não pode mudar). O QUARTEL fica só dentro da base militar do aeroporto (onde o jogador nasce), longe do
+# ponto de partida, com o portão virado para ele.
 # Esta pasta (ferramentas/) não vai para o APK.
 
 const Locais := preload("res://mundo/locais.gd")
@@ -14,6 +18,10 @@ const RAIO_SPAWN := 2600.0
 const DIST_MIN := 650.0                        # entre dois locais quaisquer
 const DIST_MESMO := 2000.0                     # entre dois do mesmo tipo
 const FRENTE_MAX := 9.0                        # a rua (com calçada) tem de estar a até isso da frente do terreno
+const QUANTOS_NOVOS := {"delegacia": 4, "escola": 4, "metro": 4, "quartel": 2}
+const PERTO_SPAWN_NOVOS := {"delegacia": 1, "escola": 1, "metro": 1, "quartel": 2}
+const QUARTEL_DIST_SPAWN := 160.0             # o quartel não fica em cima do ponto de partida / estande de tiro
+const QUARTEL_DIST_MIN := 300.0               # quartel x outros locais (a base é menor que a cidade)
 
 var C
 
@@ -39,11 +47,18 @@ func _initialize() -> void:
 		z += 24.0
 	var escolhidos := []
 	var ordem := []
-	for tipo in QUANTOS:
-		for k in PERTO_SPAWN[tipo]:
+	var novos := OS.get_environment("NOVOS") == "1"
+	var quantos: Dictionary = QUANTOS_NOVOS if novos else QUANTOS
+	var perto: Dictionary = PERTO_SPAWN_NOVOS if novos else PERTO_SPAWN
+	if novos:
+		for e in Locais.LOCAIS:
+			escolhidos.append((e as Array).duplicate())
+	var ja := escolhidos.size()
+	for tipo in quantos:
+		for k in perto[tipo]:
 			ordem.append([tipo, true])
-	for tipo in ["hospital", "supermercado", "armazem", "posto"]:
-		for k in QUANTOS[tipo] - PERTO_SPAWN[tipo]:
+	for tipo in quantos:
+		for k in quantos[tipo] - perto[tipo]:
 			ordem.append([tipo, false])
 	for o in ordem:
 		var tipo: String = o[0]
@@ -66,10 +81,11 @@ func _initialize() -> void:
 			break
 		if not achou:
 			print("NÃO ACHEI lugar para ", tipo)
-	print("const LOCAIS := [")
-	for e in escolhidos:
+	print("const LOCAIS := [" if not novos else "\t# 0.78 (ferramentas/escolher_locais.gd NOVOS=1)")
+	for e in escolhidos.slice(ja):
 		print("\t[\"%s\", %.1f, %.1f, %d],     # %d m da base" % [e[0], e[1], e[2], e[3], int(Vector2(e[1], e[2]).distance_to(SPAWN))])
-	print("]")
+	if not novos:
+		print("]")
 	quit()
 
 func _embaralhar(a: Array, r: RandomNumberGenerator) -> void:
@@ -80,17 +96,25 @@ func _embaralhar(a: Array, r: RandomNumberGenerator) -> void:
 		a[j] = t
 
 func _longe(p: Vector2, tipo: String, escolhidos: Array) -> bool:
+	if tipo == "quartel" and p.distance_to(SPAWN) < QUARTEL_DIST_SPAWN:
+		return false
 	for e in escolhidos:
 		var d := p.distance_to(Vector2(e[1], e[2]))
-		if d < DIST_MIN or (e[0] == tipo and d < DIST_MESMO):
+		var minimo := QUARTEL_DIST_MIN if tipo == "quartel" or e[0] == "quartel" else DIST_MIN
+		if d < minimo or (e[0] == tipo and d < (QUARTEL_DIST_MIN * 2.0 if tipo == "quartel" else DIST_MESMO)):
 			return false
 	return true
 
+func _na_base(p: Vector2) -> bool:
+	return p.x > 5600.0 and p.y > -1600.0 and p.y < 2600.0
+
 # 0..3 = para que lado fica a frente (a rua) · -1 = não serve
 func _giro_valido(tipo: String, p: Vector2) -> int:
-	if p.x > 5600.0 and p.y > -1600.0 and p.y < 2600.0:
-		return -1                                  # aeroporto / base militar
+	if _na_base(p) != (tipo == "quartel"):
+		return -1                                  # aeroporto / base militar: só o quartel (e ele só lá)
 	var tam: Vector2 = Locais.TAMANHO[tipo]
+	if tipo == "quartel":
+		return _giro_quartel(p, tam)
 	var melhor := -1
 	var melhor_d := INF
 	for giro in 4:
@@ -121,3 +145,18 @@ func _sem_parque(p: Vector2, t: Vector2) -> bool:
 			z += 10.0
 		x += 10.0
 	return true
+
+# quartel (dentro da base, sem rua): terreno livre de água/rua/parque; o portão (frente) virado para o ponto de partida
+func _giro_quartel(p: Vector2, tam: Vector2) -> int:
+	var para := (SPAWN - p).normalized()
+	var melhor := -1
+	var melhor_v := -INF
+	for giro in 4:
+		var t := tam if giro % 2 == 0 else Vector2(tam.y, tam.x)
+		if C._predio_ruim(p.x, p.y, t.x + 4.0, t.y + 4.0) != "" or not _sem_parque(p, t):
+			continue
+		var dir: Vector2 = [Vector2(0, 1), Vector2(1, 0), Vector2(0, -1), Vector2(-1, 0)][giro]
+		if dir.dot(para) > melhor_v:
+			melhor_v = dir.dot(para)
+			melhor = giro
+	return melhor

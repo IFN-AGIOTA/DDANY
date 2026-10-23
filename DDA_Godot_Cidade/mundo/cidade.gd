@@ -566,7 +566,8 @@ var _mm_predios := {}                       # Vector2i -> MultiMesh dos prédios
 var ruinas: Array = []                      # [x, z, tam_x, tam_z, altura] dos prédios destruídos
 var abandono                                # mundo/abandono.gd (carros, obstáculos)
 var locais_casca: Array = []                # 0.68: casca de longe de cada local especial (mundo/locais.gd), mesma ordem de LOCAIS
-var remapa_v2 := PackedInt32Array()         # número do prédio na 0.43..0.67 -> 0.68 (-1 = saiu para dar lugar a um local especial)
+var remapa_v2 := PackedInt32Array()         # número do prédio na 0.43..0.67 -> agora (-1 = saiu para dar lugar a um local especial)
+var remapa_v3 := PackedInt32Array()         # 0.78: número do prédio na 0.68..0.77 -> agora (-1 = saiu para os locais novos)
 
 func _sortear_uso(r: RandomNumberGenerator, h: float) -> String:
 	if h > 70.0:
@@ -601,9 +602,11 @@ func _buildings() -> void:
 	removidos = {"agua": 0, "rua": 0, "local": 0}
 	pos_removidos = PackedVector2Array()
 	remapa_v2 = PackedInt32Array()
+	remapa_v3 = PackedInt32Array()
 	var rets_locais: Array[Rect2] = []
 	for i in LocaisCls.LOCAIS.size():
 		rets_locais.append(LocaisCls.retangulo(i, 3.0))
+	var n_068: int = LocaisCls.N_LOCAIS_068
 	for lr in range(0, H - 1, 2):
 		for lc in range(0, W - 1, 2):
 			var n_land := 0
@@ -633,12 +636,18 @@ func _buildings() -> void:
 			if fora == "":
 				# 0.68: no terreno de um local especial (posto, hospital, mercado, armazém) o prédio comum sai
 				var planta := Rect2(bx - sx * 0.5, bz - sz * 0.5, sx, sz)
-				var no_local := false
-				for rl in rets_locais:
-					if rl.intersects(planta):
-						no_local = true
-						break
+				var no_antigo := false                  # num local da 0.68 (já saía antes)
+				var no_novo := false                    # 0.78: num local novo (delegacia, escola, metrô, quartel)
+				for il in rets_locais.size():
+					if rets_locais[il].intersects(planta):
+						if il < n_068:
+							no_antigo = true
+						else:
+							no_novo = true
+				var no_local := no_antigo or no_novo
 				remapa_v2.append(-1 if no_local else predio_info.size())
+				if not no_antigo:
+					remapa_v3.append(-1 if no_novo else predio_info.size())
 				if no_local:
 					fora = "local"
 			remapa_predios.append(-1 if fora != "" else predio_info.size())

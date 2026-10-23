@@ -126,14 +126,14 @@ func _r():
 	await q(20)
 	m.vagos.ativo = true
 	var frente: Vector3 = veic.global_basis.z
-	var alvo: Vector3 = veic.global_position + frente * 22.0
+	var alvo: Vector3 = veic.global_position + frente * 14.0      # perto: em 22 m o carro às vezes já desviou de lado
 	m.vagos._criar(Vector3(alvo.x, m.mundo.altura(alvo.x, alvo.z) + 0.05, alvo.z), Vector3.INF)
 	var inf = m.vagos.vivos.back()
 	inf.set_physics_process(false)
 	inf.set_process(false)
 	m.controles.mover = Vector2(0, 1)
 	var n_dbg := 0
-	while n_dbg < 360 and is_instance_valid(inf) and inf.estado != 4:
+	while n_dbg < 480 and is_instance_valid(inf) and inf.estado != 4:
 		await physics_frame
 		n_dbg += 1
 		if n_dbg % 30 == 0 and OS.get_environment("DBG") != "":

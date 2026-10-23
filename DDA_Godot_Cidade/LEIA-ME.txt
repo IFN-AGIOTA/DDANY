@@ -39,6 +39,67 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.78 · LOCAIS NOVOS: DELEGACIAS, ESCOLAS, ESTAÇÕES DO METRÔ E QUARTÉIS DA GUARDA NACIONAL
+  · 14 LOCAIS ESPECIAIS NOVOS (zonas de PvP, com loot próprio, infectados, aviso ao entrar, luz/som do gerador e
+    nome/cor/letra no mapa). Agora são 42 no total:
+    - 4 DELEGACIAS (D, azul no mapa): prédio de tijolo de 2 andares com as lâmpadas verdes na porta e o letreiro
+      "DELEGACIA · 41º DISTRITO". Térreo: recepção com balcão alto (sacos de areia e barricada na porta), sala dos
+      investigadores, vestiário (armários dos policiais), 3 CELAS com grade de verdade (o tiro passa entre as
+      barras; a do meio está trancada e tem um infectado preso), ARSENAL (armários de armas), sala de provas e
+      interrogatório. Em cima: sala do delegado com COFRE, central de rádio, dormitório, arquivo e copa. TELHADO
+      com ninho de sacos de areia e caixa de munição. Fora: VIATURAS (porta-malas com espingarda, munição,
+      colete), barreiras e o furgão da tática no pátio. Na fachada, a pichação da história: "NÃO SÃO MONSTROS.
+      SÃO O QUE SOBROU."
+    - 4 ESCOLAS (E, amarelo): "ESCOLA PÚBLICA 118", 2 andares com corredor e ARMÁRIOS dos alunos; secretaria,
+      enfermaria, CANTINA com cozinha, BIBLIOTECA; em cima salas de aula com carteiras e quadro, laboratório de
+      ciências e a SALA BARRICADA onde um grupo se escondeu (colchões, mantimentos, carteiras empilhadas na porta e
+      o recado no quadro). Telhado com caixa d'água. A QUADRA virou ABRIGO DA DEFESA CIVIL (barracas, colchões,
+      alambrado, tabelas de basquete); ônibus escolar amarelo e mastro da bandeira.
+    - 4 ESTAÇÕES DO METRÔ (M, roxo): o "El" de Nova York — viaduto de ferro verde a 6 m do chão com 2 linhas e 2
+      PLATAFORMAS cobertas ("RUA 125 (1)"), escadarias da rua até cada uma, catracas e bilheteria. Um TREM de 3
+      vagões parado (dá para entrar: bolsas e mochilas largadas). Numa ponta o viaduto CAIU e virou uma RAMPA até
+      o chão (outro caminho para subir); dá para descer nos trilhos pelos degraus de serviço. Embaixo: banca de
+      jornal, carros, um acampamento.
+    - 2 QUARTÉIS DA GUARDA NACIONAL (Q, verde-oliva), dentro da base militar do aeroporto (a ~160 m e ~500 m de
+      onde você nasce): muro de HESCO (gaiolas de areia) com portão, cancela e guarita, rombos no muro, 2 TORRES DE
+      VIGIA, ALOJAMENTO com beliches (escada até o telhado), ARSENAL (M4, AK, pentes, colete, capacete, miras),
+      rádio e enfermaria, heliponto VAZIO (o helicóptero foi levado: "VAGOS" pichado no alojamento), barracas,
+      caminhões e jipes com loot, caixas de suprimento. O loot militar mais forte perto da base.
+  · LETREIROS e PICHAÇÕES com texto de verdade (delegacia, escola, metrô, quartel).
+  · Loot: tabelas novas (ver seção 5). Luz: delegacia, escola e quartel com luz fria; metrô com luz amarelada nas
+    plataformas e no trem; delegacia e quartel com gerador têm o CHIADO de um rádio esquecido ligado.
+  · Os pontos de infectados e de loot dos locais novos nunca ficam dentro de parede/móvel (são conferidos ao
+    montar e vão para um lugar livre perto).
+  · O chão pintado dos locais (asfalto, concreto, faixas) de todos os locais especiais ganhou "camada" (como os
+    pisos da cidade): de bem longe o chão de terra do lote não passa mais por cima do asfalto.
+  · JOGO SALVO: 14 prédios comuns saíram dos terrenos dos locais novos e a numeração dos prédios mudou. O jogo
+    salvo da 0.68..0.77 (e o mundo salvo do multijogador da 0.77) é convertido sozinho: o loot, o que foi pego do
+    chão, as portas/barricadas e os ciclos de cada prédio continuam no prédio certo (dos que saíram, some).
+  · Testado: os 4 tipos montam com colisão, loot e letreiros; nenhum ponto de infectado/loot dentro de algo; o
+    jogador sobe todas as escadas (andar de cima e telhado da delegacia e da escola, as 2 escadarias do metrô, a
+    rampa caída, os degraus dos trilhos, a torre de vigia e o telhado do alojamento); a conversão do jogo salvo
+    (tabela 0.77 -> 0.78 e ids de loot/porta/chão). Toda a bateria de testes e os 3 testes de rede sem falhas
+    (o teste dos veículos ficou mais firme: o infectado do atropelamento fica a 14 m, antes 22).
+  · ARQUIVOS MEXIDOS:
+      mundo/local_novos.gd ...... NOVO (delegacia, escola, estação do metrô e quartel por dentro e por fora)
+      mundo/local.gd ............ chama os locais novos; letreiros (Label3D); confere os pontos de infectado/loot;
+                                  chão pintado numa superfície própria com "camada"
+      mundo/locais.gd ........... tipos novos (tamanho, nome, cor e letra no mapa, casca de longe); 14 locais novos
+                                  no fim da lista LOCAIS (os 28 de antes não mudam de lugar nem de número)
+      mundo/loot_mundo.gd ....... tabelas novas da delegacia, escola, metrô e quartel; chão de cada um
+      mundo/ambiente_local.gd ... cor da luz dos tipos novos; chiado do rádio (delegacia e quartel)
+      mundo/cidade.gd ........... tabela remapa_v3 (número do prédio na 0.68..0.77 -> agora)
+      mundo/materiais_cidade.gd . material dos interiores aceita "camada" (só o chão dos locais usa)
+      menu/salvamento.gd ........ mapa dos prédios versão 4: converte saves da 0.68..0.77 e o mundo salvo em rede
+                                  (loot, chão pego, portas e ciclos); o save em rede guarda a versão do mapa
+      menu/config.gd ............ versão 0.78
+      ferramentas/escolher_locais.gd  modo NOVOS=1 (mantém os locais de antes e escolhe só os novos; o quartel só
+                                  dentro da base, com o portão virado para onde você nasce)
+      ferramentas/testes/ ....... teste_locais_novos.gd (NOVO); rodar.sh (roda ele também); teste_veiculos.gd
+  · PUBLICADA: atualizacoes/pacote_0.78.pck (o que mudou desde o APK 0.75, 0,6 MB) + manifesto; os celulares com o
+    APK 0.75 baixam sozinhos (o pacote 0.77 saiu da pasta). servidor_windows.zip (raiz) refeito na 0.78 — o servidor
+    do PC também precisa dele (os locais e a numeração dos prédios mudaram).
+
 ATUALIZAÇÃO 0.77 · LUZ E SOM NOS LOCAIS · SALVAR NO MULTIJOGADOR
   · LUZ E SOM nos POSTOS, HOSPITAIS, SUPERMERCADOS e ARMAZÉNS: 6 em cada 10 ainda têm um GERADOR funcionando
     (sempre os mesmos). Com gerador: o ronco dele num canto e, À NOITE, lâmpadas acesas por dentro (luz fria no
@@ -1442,6 +1503,9 @@ VEÍCULOS (0.76): tanque 30 L · ~1,6 L/km + 0,03 L/min ligado · até ~86 km/h 
   m/s · motor ouvido a ~38 m · ~4% dos sedãs/táxis/vans inteiros funcionam
 PORTAS (0.73): porta 100 de vida, cada tábua mais 140 (até 3) · golpe de infectado na porta = mordida x2,2
   (8–14 x 2,2) · abrir/fechar: barulho de 7 m · martelar tábua 10,5 m · porta quebrando 14 m · usar até 1,9 m
+LOCAIS ESPECIAIS (0.78): 42 = 12 postos, 4 hospitais, 6 supermercados, 6 armazéns, 4 delegacias, 4 escolas,
+  4 estações do metrô (plataformas a 7,1 m; trilhos a 6 m) e 2 quartéis (torres de vigia a 6 m) · 6 em cada 10
+  com gerador · só 15% dos móveis vazios
 LOOT E INFECTADOS QUE VOLTAM (0.72, relógio do jogo: 1 dia = 48 min): loot de prédios/carros a cada 16 h (~32 min),
   dos locais especiais a cada 10 h (~20 min) · infectados presos nos prédios a cada 6 h (~12 min), nos locais
   especiais a cada 4 h (~8 min)
@@ -1480,6 +1544,16 @@ LOOT (mundo/loot_mundo.gd; tabelas no topo, com raridade e quantidades)
   "super_hortifruti", "super_congelados", "super_utilidades", "super_higiene", "super_estoque", "cofre",
   "armazem_carga", "armazem_conteiner", "armazem_escritorio", "armazem_seguranca", "lixo" (caçambas) e o chão
   de cada um ("chao_posto", "chao_hospital", "chao_super", "chao_armazem"). Só 15% dos móveis vazios.
+- LOCAIS NOVOS (0.78): delegacia "delegacia_arsenal" (pistola, espingarda, MP5, M4, coletes, capacete, máscara),
+  "delegacia_escritorio", "delegacia_vestiario" (colete, lanternas, roupas), "delegacia_provas" (dinheiro, armas
+  apreendidas, até AK), "viatura" (porta-malas: espingarda, munição 12, colete), "central_radio" (rádios, pilhas);
+  escola "escola_sala" e "escola_armario" (mochilas, lanches, taco), "escola_cantina", "escola_secretaria",
+  "escola_enfermaria", "escola_lab" (carvão, pastilhas, máscara), "escola_biblioteca", "escola_abrigo" (comida,
+  água, lanterna, rádio, às vezes pistola), "onibus_escolar"; metrô "metro_vagao" (bolsas e mochilas dos
+  passageiros), "metro_bilheteria" (dinheiro), "metro_banca"; quartel "quartel_arsenal" (M4, AK, pentes, muita
+  munição 5.56/7.62, colete, capacete, miras, silenciador, mochila de combate), "quartel_alojamento" (roupas,
+  mochila, lanterna, munição) e as caixas "militar"/"militar_med". Chão: "chao_policia", "chao_escola",
+  "chao_metro", "chao_quartel".
 - ITENS SOLTOS no chão dos prédios (até 4 por prédio, conforme o uso).
 - 35% dos móveis já foram saqueados. Armas vêm com pente pela metade (ou sem pente). Itens vêm gastos.
 - O conteúdo é sorteado na 1ª visita e fica guardado (e salvo). 0.72: depois de um tempo (16 h de jogo nos
@@ -1593,6 +1667,11 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   monta/desmonta, infectados, aviso ...... mundo/locais.gd (lista LOCAIS: ferramentas/escolher_locais.gd)
 - posto, hospital, supermercado e armazém
   por dentro e por fora (planta, móveis) . mundo/local.gd (loot: tabelas em mundo/loot_mundo.gd)
+- DELEGACIA, ESCOLA, ESTAÇÃO DO METRÔ e
+  QUARTEL por dentro e por fora (0.78) .. mundo/local_novos.gd (usa as peças do mundo/local.gd)
+- letreiros e pichações dos locais ...... mundo/local.gd (_texto) e mundo/local_novos.gd
+- converter jogo salvo antigo (números
+  dos prédios mudaram) ................. menu/salvamento.gd (MAPA_PREDIOS) e mundo/cidade.gd (remapa_v2/v3)
 - prédios por dentro (cômodos, portas,
   escadas, andares de cima, telhado) . mundo/interior.gd
 - VEÍCULOS: o carro (física, motor,
@@ -1807,9 +1886,12 @@ MÚSICA (pasta audio/)
 - Só abrem até o 3º andar; o telhado só nos prédios de até 3 andares (nos mais altos, o resto fica fechado).
 - História: apagada na 0.63, vai ser refeita do zero (menu mostra "Em breve").
 - Água (0.72): não dá para mergulhar de propósito nem nadar por baixo das pontes (o fundo sobe até a ponte); os
-  itens largados nadando vão para o fundo. A base militar ainda não tem os prédios/pistas do HTML.
-- Locais especiais (0.68): as portas de verdade (0.73) ainda são só dos prédios comuns (os postos, hospitais,
-  supermercados e armazéns têm vãos). De longe os infectados que andam sem física atravessam a casca deles.
+  itens largados nadando vão para o fundo. A base militar tem os 2 quartéis (0.78), mas ainda não os prédios/pistas
+  do aeroporto do HTML.
+- Locais especiais (0.68): as portas de verdade (0.73) ainda são só dos prédios comuns (os locais especiais têm
+  vãos; as grades das celas e do arsenal ficam abertas ou fechadas para sempre). De longe os infectados que andam
+  sem física atravessam a casca deles. Metrô (0.78): é um trecho só (o viaduto acaba no fim do terreno), o trem
+  não anda e não há metrô subterrâneo (o chão do mapa é uma peça só).
 - Veículos (0.76): só sedã, táxi e van; não dá para levar passageiro; as rodas não giram no desenho; o motor
   estragado ainda não tem conserto. (A transformação em carro e jato do HTML continua descartada.)
 - Os blocos de cima das torres escalonadas também mostram "térreo" (vitrines/placas) na base deles.
@@ -1821,7 +1903,7 @@ MÚSICA (pasta audio/)
   base). Falta: chat escrito. Internet sem roteador/VPN (servidor próprio de "ponte"/relay, que
   precisa de um servidor ligado 24h) e abrir o jogo direto por um link (precisa de plugin Android).
 - Ideias para depois: loot por região, lugares
-  especiais (postos do exército, quarentena, metrô), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,
+  especiais (quarentena), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,
   outros sobreviventes (NPCs), o modo história novo.
 
 -----------------------------------------------------------------------------------------------------
