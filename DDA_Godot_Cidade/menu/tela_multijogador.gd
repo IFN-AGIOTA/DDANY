@@ -14,6 +14,7 @@ signal comecar                                # hora de ir para a cidade (main.g
 signal abrir_perfil
 signal pedir_login
 
+const Salvamento := preload("res://menu/salvamento.gd")
 const UI := preload("res://menu/ui.gd")
 const AvatarCls := preload("res://menu/avatar.gd")
 const CHAMADO_DURA := 30.0                    # segundos que o botão fica em "Chamado"
@@ -178,6 +179,20 @@ func _tela_inicio(area: Control, v: float, nome_antes: String) -> void:
 	cc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cc.apertado.connect(_criar)
 	cartoes.add_child(cc)
+	# 0.77: o mundo da última sala está salvo: avisa e deixa começar um novo
+	var rm := Salvamento.resumo_mundo_rede()
+	if rm != "":
+		var hm := HBoxContainer.new()
+		hm.add_theme_constant_override("separation", int(2.0 * v))
+		var tm := UI.rotulo("Sua sala continua o mundo salvo (%s)." % rm, 2.6 * v, UI.AMBAR, 700)
+		tm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		hm.add_child(tm)
+		var bn := UI.BotaoMenu.new("Começar mundo novo", "", false, 2.6, 22.0)
+		bn.apertado.connect(func():
+			Salvamento.apagar_mundo_rede()
+			_montar())
+		hm.add_child(bn)
+		col.add_child(hm)
 	var n_salas := Conta.convites.size() + _achadas.size() + Conta.servidores.size()
 	var ce := _Cartao.new(">", "ENTRAR NUMA SALA", ("%d sala(s) aberta(s) para você" % n_salas) if n_salas > 0 else "Salas dos amigos, mesmo Wi-Fi ou código.", false)
 	ce.custom_minimum_size = Vector2(0, 30.0 * v)
@@ -543,7 +558,7 @@ func _criar() -> void:
 		return
 	_esperando = true
 	_status.text = "Abrindo a sala…"
-	Rede.criar_partida(_meu_nome(), randi())
+	Rede.criar_partida(_meu_nome(), Salvamento.semente_rede())     # 0.77: continua o mundo salvo da última sala
 
 func _entrar(ip: String) -> void:
 	if _esperando:

@@ -39,6 +39,36 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.77 · LUZ E SOM NOS LOCAIS · SALVAR NO MULTIJOGADOR
+  · LUZ E SOM nos POSTOS, HOSPITAIS, SUPERMERCADOS e ARMAZÉNS: 6 em cada 10 ainda têm um GERADOR funcionando
+    (sempre os mesmos). Com gerador: o ronco dele num canto e, À NOITE, lâmpadas acesas por dentro (luz fria no
+    hospital e no supermercado, amarelada no posto e no armazém, e embaixo da cobertura do posto), uma delas
+    piscando; zumbido baixinho das lâmpadas; no hospital, o BIPE de um aparelho esquecido ligado. De dia apagam.
+    Sem gerador: escuro, só rangidos de vez em quando. Um local aceso de noite chama a atenção de longe.
+  · SALVAR NO MULTIJOGADOR (arquivo à parte: não mexe no seu jogo salvo sozinho): cada aparelho guarda o seu
+    PERSONAGEM da partida em rede (o que carrega, vida/fome/sede/sangue, abates) e o HOST guarda o MUNDO (o que
+    foi saqueado e pego do chão, portas e barricadas, carros mexidos, dia/hora). Salva sozinho como no jogo
+    sozinho (a cada 2 min, ao pausar, ao sair). Na próxima sala, o personagem volta ("SEU PERSONAGEM DA PARTIDA EM
+    REDE VOLTOU") e o host continua o mesmo mundo ("O MUNDO DA SUA ÚLTIMA SALA CONTINUA"); os amigos recebem o
+    mundo como está. Morreu em rede: o personagem volta do zero. Na tela Multijogador aparece "Sua sala continua
+    o mundo salvo (Dia X)" com o botão "Começar mundo novo". O servidor do PC também continua o mundo dele.
+  · Testado: local com gerador aceso à noite e apagado de dia, local sem gerador escuro; salvar em rede em duas
+    sessões seguidas (host e amigo): mesma semente, personagem de cada um de volta, porta mexida e item pego
+    chegando ao amigo. Toda a bateria de testes sem falhas.
+  · ARQUIVOS MEXIDOS:
+      mundo/ambiente_local.gd ... NOVO (gerador, luzes, lâmpada piscando, zumbido, ronco, bipe, rangidos)
+      mundo/locais.gd ........... põe o ambiente em cada local montado; recebe o clima
+      main.gd ................... liga o clima nos locais; salvar em rede (save_rede.json) e carregar ao começar
+      menu/salvamento.gd ........ salvar_rede / carregar_rede / semente_rede / apagar_mundo_rede (personagem e mundo)
+      menu/tela_multijogador.gd . a sala continua o mundo salvo; botão "Começar mundo novo"
+      rede/servidor.gd .......... o servidor do PC continua o mundo salvo
+      rede/sessao_rede.gd ....... quem chega recebe as grades do mundo salvo
+      ferramentas/testes/ ....... teste_luz_locais.gd, rede_save_host.gd, rede_save_cliente.gd (NOVOS); rodar.sh
+                                  ("rodar.sh rede_save")
+      menu/config.gd ............ versão 0.77
+  · PUBLICADA: atualizacoes/pacote_0.77.pck (o que mudou desde o APK 0.75) + manifesto; os celulares com o APK
+    0.75 baixam sozinhos. servidor_windows.zip (raiz) refeito na 0.77.
+
 ATUALIZAÇÃO 0.76 · VEÍCULOS COM GASOLINA
   · CARROS QUE FUNCIONAM: alguns carros largados (sedã, táxi e van inteiros, ~4%: 408 na cidade, sempre os mesmos
     em todo aparelho) dão para dirigir. Perto de um, o botão PEGAR (E) vira "ENTRAR CARRO".
@@ -1551,6 +1581,9 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - nadar, afundar, água rasa ........... jogador/jogador.gd (NADO_*, VEL_NADO) + jogador/sobrevivencia.gd (estamina
                                         na água, fôlego, afogar) + animação "nadar" (ferramentas/retarget_cmu.gd)
 - de quanto em quanto tempo o loot volta mundo/loot_mundo.gd (CICLO, CICLO_LOCAL)
+- luz e som dos locais (gerador, lâmpadas,
+  zumbido, bipe do hospital) .......... mundo/ambiente_local.gd (CHANCE_GERADOR, LUZES_MAX, ALCANCE)
+- salvar no multijogador .............. menu/salvamento.gd (salvar_rede/carregar_rede; arquivo user://save_rede.json)
 - de quanto em quanto tempo os infectados
   dos prédios/locais voltam ............ mundo/interiores.gd e mundo/locais.gd (CICLO_INFECTADOS)
 - cidade abandonada (carros, entulho) . mundo/abandono.gd
@@ -1784,7 +1817,8 @@ MÚSICA (pasta audio/)
 - Infectados: os rostos são simples (manequim, olhos pintados).
 - MULTIJOGADOR: infectados, itens e caixas iguais para todos (0.44); PvP, amigos no mapa, colisão entre
   jogadores e mensagens rápidas (0.71); prédios, infectados e física perto do amigo mesmo com o host longe
-  (0.74). Falta: salvar a partida em rede (em rede não salva), chat escrito. Internet sem roteador/VPN (servidor próprio de "ponte"/relay, que
+  (0.74); salvar em rede: personagem de cada um e o mundo do host (0.77; a posição não volta: todos nascem na
+  base). Falta: chat escrito. Internet sem roteador/VPN (servidor próprio de "ponte"/relay, que
   precisa de um servidor ligado 24h) e abrir o jogo direto por um link (precisa de plugin Android).
 - Ideias para depois: loot por região, lugares
   especiais (postos do exército, quarentena, metrô), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,

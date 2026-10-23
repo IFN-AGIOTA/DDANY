@@ -347,6 +347,8 @@ func _ligar_mundo() -> void:
 		main.veiculos.mudou = func(k: String, vid: String, e: Dictionary) -> void: Rede.enviar_evento("veiculo", {"k": k, "i": vid, "e": e})
 		for gid in lm._grades:
 			_sig[gid] = LootMundo.assinatura(lm._grades[gid])
+			if Rede.eh_host():
+				_mexidas[gid] = true             # 0.77: mundo salvo carregado: quem chegar recebe como está
 		# caixas da base (mundo/loot.gd): entram na lista das grades com o nome "base_N"
 		for c in get_tree().get_nodes_in_group("conteineres_mundo"):
 			var cid := String(c.get("id_loot"))

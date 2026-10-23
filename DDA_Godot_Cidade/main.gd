@@ -266,6 +266,9 @@ func _ligar_rede() -> void:
 	if not Rede.ligado or jogo == null:
 		return
 	loot_mundo.semente = int(Rede.mundo.get("semente", loot_mundo.semente))
+	var voltou := Salvamento.carregar_rede(self)        # 0.77: personagem (e, no host, o mundo) da última partida em rede
+	if voltou != "" and hud != null:
+		hud.mostrar_aviso(voltou, 5.0)
 	if Rede.eh_cliente():
 		var a := randf() * TAU
 		var p := SPAWN + Vector2(cos(a), sin(a)) * randf_range(2.0, 5.0)
@@ -285,7 +288,10 @@ func _rede_caiu(motivo: String) -> void:
 
 func salvar_jogo() -> void:
 	if Rede.ligado:
-		return                               # partida em rede ainda não salva (não estraga o jogo salvo sozinho)
+		if jogo != null and jogador != null:  # 0.77: partida em rede salva no arquivo dela (não estraga o jogo salvo sozinho)
+			_t_salvar = 0.0
+			Salvamento.salvar_rede(self)
+		return
 	if jogo != null and jogador != null:
 		_t_salvar = 0.0
 		Salvamento.salvar(self)
@@ -513,6 +519,7 @@ func _criar_jogo() -> void:
 	locais.ligar(cidade, jogador, loot_mundo)
 	locais.vagos = vagos
 	locais.mundo = mundo
+	locais.clima = clima
 	locais.hud = hud
 	veiculos = VeiculosCls.new()
 	veiculos.name = "Veiculos"
@@ -555,6 +562,8 @@ func _morreu(causa: String) -> void:
 		ItemMundoCls.soltar(jogo, it, p + Vector3(cos(a) * r, 0.02, sin(a) * r))
 	if not Rede.ligado:
 		Salvamento.salvar(self, true)                 # a morte vale: sair agora não desfaz
+	else:
+		Salvamento.salvar_rede(self, true)            # 0.77: em rede também (o personagem volta do zero)
 	Musica.adicionar_tensao(1.0)
 	await get_tree().create_timer(2.5).timeout
 	if jogador == null or not jogador.morto or tela_morte != null:

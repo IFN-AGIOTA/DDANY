@@ -3,6 +3,7 @@
 #   GODOT=/caminho/do/godot ferramentas/testes/rodar.sh          (todos, menos rede)
 #   GODOT=... ferramentas/testes/rodar.sh rede                     (dois jogos conectados: infectados perto do amigo)
 #   GODOT=... ferramentas/testes/rodar.sh rede_carro               (dois jogos conectados: amigo dirigindo)
+#   GODOT=... ferramentas/testes/rodar.sh rede_save                (salvar em rede: duas sessões seguidas)
 #   GODOT=... ferramentas/testes/rodar.sh teste_agua               (só um)
 # Sem monitor (servidor/CI) usa xvfb-run. Cada teste imprime "falhas: N"; o script termina com erro se algum falhar.
 # Os testes usam uma pasta de dados própria (não mexem no seu jogo salvo).
@@ -28,7 +29,17 @@ rodar() {   # nome, com_tela(0/1)
 	[ "$n" = 0 ] || falhou=1
 }
 alvo="${1:-todos}"
-if [ "$alvo" = rede_carro ]; then
+if [ "$alvo" = rede_save ]; then
+	for fase in 1 2; do
+		FASE=$fase XDG_DATA_HOME="$DADOS/h" timeout 240 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_save_host.gd > "$DADOS/host$fase.txt" 2>&1 &
+		sleep 2
+		FASE=$fase XDG_DATA_HOME="$DADOS/c" timeout 240 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_save_cliente.gd > "$DADOS/cli$fase.txt" 2>&1
+		wait
+		grep -hE "HOST[12]:|SCRIPT ERROR" "$DADOS/host$fase.txt"
+		grep -hE "CLI[12]:|SCRIPT ERROR" "$DADOS/cli$fase.txt"
+	done
+	grep -q "fome 3[23].*tábuas 2 · porta true · pego true" "$DADOS/host2.txt" && grep -q "fome 4[34].*galão 1 · porta do host true · pego do host true" "$DADOS/cli2.txt" || falhou=1
+elif [ "$alvo" = rede_carro ]; then
 	XDG_DATA_HOME="$DADOS/h" timeout 300 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_carro_host.gd > "$DADOS/host.txt" 2>&1 &
 	sleep 2
 	XDG_DATA_HOME="$DADOS/c" timeout 300 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_carro_cliente.gd > "$DADOS/cli.txt" 2>&1
@@ -52,6 +63,7 @@ elif [ "$alvo" = todos ]; then
 	rodar teste_portas 1
 	rodar teste_tiro_locais 1
 	rodar teste_veiculos 1
+	rodar teste_luz_locais 1
 else
 	rodar "$alvo" 1
 fi

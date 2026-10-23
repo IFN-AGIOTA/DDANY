@@ -8,11 +8,14 @@ extends Node
 #   - DE PERTO (até RAIO_ABRIR m da borda do terreno): o local inteiro é montado (numa thread, como os interiores)
 #     com móveis, colisão, loot e infectados; a casca some. Longe de novo (RAIO_FECHAR): desmonta e guarda o chão.
 #   - No mapa: cada local aparece com a cor e o nome (hud/mapa.gd).
+#   - 0.77: LUZ E SOM (mundo/ambiente_local.gd): alguns têm gerador ligado (luzes à noite, uma piscando, zumbido,
+#     ronco do gerador, bipe no hospital); os outros ficam no escuro, com rangidos.
 #   - 0.72: os infectados VOLTAM: a cada CICLO_INFECTADOS horas de jogo o local enche de novo quando você chega
 #     (se os de antes já morreram ou foram embora). O loot volta pelo ciclo do mundo/loot_mundo.gd (CICLO_LOCAL).
 # Mexa AQUI para: quantos/onde (LOCAIS), nomes, cores no mapa, distâncias e quantos infectados.
 
 const LocalCls := preload("res://mundo/local.gd")
+const AmbienteCls := preload("res://mundo/ambiente_local.gd")
 const Malhas := preload("res://mundo/malhas.gd")
 const Mat := preload("res://mundo/materiais_cidade.gd")
 
@@ -152,6 +155,7 @@ var jogador: Node3D = null
 var loot = null
 var vagos = null
 var mundo = null                       # 0.74: mundo/colisao_mundo.gd (casca no tiro de longe)
+var clima = null                       # 0.77: mundo/clima.gd (as luzes acendem à noite)
 var hud = null                         # armas/hud_combate.gd (aviso ao entrar)
 var abertos := {}                      # índice -> Node3D
 var ativo := true
@@ -250,6 +254,13 @@ func _terminar(i: int, prep) -> void:
 	var no: Node3D = prep.criar(loot, cidade.Y_CALCADA)
 	add_child(no)
 	abertos[i] = no
+	var amb = AmbienteCls.new()              # 0.77: luz e som
+	amb.name = "Ambiente"
+	amb.tipo = LOCAIS[i][0]
+	amb.indice = i
+	amb.volumes = casca(LOCAIS[i][0])
+	amb.clima = clima
+	no.add_child(amb)
 	if mundo != null:
 		mundo.locais_abertos[i] = true          # 0.74: aberto tem colisão de verdade (o tiro de longe não usa a casca)
 	var casca_no = cidade.locais_casca[i] if i < cidade.locais_casca.size() else null

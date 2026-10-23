@@ -3,12 +3,17 @@ extends RefCounted
 # o que já foi saqueado nos prédios/carros (mundo/loot_mundo.gd) e os itens largados no chão.
 # Salva sozinho a cada 2 minutos, ao pausar, ao voltar ao menu e quando o celular sai do jogo.
 # No menu principal aparece "Continuar" quando existe um jogo salvo.
+# 0.77 · MULTIJOGADOR (user://save_rede.json, separado: não mexe no jogo salvo sozinho): cada aparelho guarda o seu
+# PERSONAGEM da partida em rede (o que carrega, vida/fome/sede..., abates); o HOST guarda também o MUNDO (semente do
+# loot, o que foi saqueado e pego do chão, portas, carros, hora/tempo). Na próxima sala, o personagem volta e o host
+# continua o mesmo mundo (os amigos recebem). "Começar mundo novo" (tela Multijogador) apaga só o mundo.
 # Mexa AQUI para: o que é salvo (e a versão do arquivo, se mudar o formato).
 
 const ItemCls := preload("res://inventario/item.gd")
 const ItemMundoCls := preload("res://inventario/item_mundo.gd")
 
 const ARQUIVO := "user://save.json"
+const ARQUIVO_REDE := "user://save_rede.json"
 const VERSAO := 1
 const MAX_CHAO := 300                 # itens largados no chão guardados (os mais perto do jogador)
 
@@ -146,3 +151,83 @@ static func carregar(main, d: Dictionary) -> void:
 		j.teleportar(pos + Vector3(0, 0.05, 0), float(jd.get("yaw", 0.0)))
 	if main.get("missoes") != null and d.has("missoes"):
 		main.missoes.carregar(d["missoes"])
+
+# ================= 0.77: PARTIDA EM REDE =================
+static func ler_rede() -> Dictionary:
+	if not FileAccess.file_exists(ARQUIVO_REDE):
+		return {}
+	var f := FileAccess.open(ARQUIVO_REDE, FileAccess.READ)
+	if f == null:
+		return {}
+	var d = JSON.parse_string(f.get_as_text())
+	return d if d is Dictionary and int(d.get("versao", 0)) == VERSAO else {}
+
+static func _gravar_rede(d: Dictionary) -> bool:
+	d["versao"] = VERSAO
+	var f := FileAccess.open(ARQUIVO_REDE, FileAccess.WRITE)
+	if f == null:
+		return false
+	f.store_string(JSON.stringify(d))
+	return true
+
+# semente do loot para uma sala nova: a do mundo salvo (continua o mesmo mundo) ou uma nova
+static func semente_rede() -> int:
+	var m: Dictionary = ler_rede().get("mundo", {})
+	return int(m["semente"]) if m.has("semente") else randi()
+
+# resumo do mundo salvo ("" = não tem): para a tela Multijogador
+static func resumo_mundo_rede() -> String:
+	var m: Dictionary = ler_rede().get("mundo", {})
+	if m.is_empty():
+		return ""
+	var c: Dictionary = m.get("clima", {})
+	return "Dia %d" % int(c.get("dia", 1))
+
+static func apagar_mundo_rede() -> void:
+	var d := ler_rede()
+	if d.erase("mundo"):
+		_gravar_rede(d)
+
+# salva o personagem (todos) e o mundo (só o host). morto = morreu: o personagem volta do zero
+static func salvar_rede(main, morto := false) -> bool:
+	var j = main.jogador
+	if j == null or not is_instance_valid(j) or (j.morto and not morto):
+		return false
+	var rede = main.get_node_or_null("/root/Rede")
+	var d := ler_rede()
+	if not bool(j.get("servidor")):          # o "jogador" do servidor do PC não é gente
+		d["personagem"] = {"sobrevivencia": j.sobrevivencia.salvar(), "inventario": j.inventario.salvar(),
+			"abates": main.abates, "tempo_jogo": main._tempo_jogo, "morto": morto}
+	if rede != null and rede.eh_host() and main.loot_mundo != null:
+		var lm = main.loot_mundo
+		d["mundo"] = {"semente": lm.semente,
+			"loot": lm.salvar(main.interiores.abertos if main.interiores != null else {}, main.locais.abertos if main.get("locais") != null else {}),
+			"pegos": lm.pegos.keys(),
+			"clima": main.clima.salvar() if main.clima != null and main.clima.has_method("salvar") else {}}
+	return _gravar_rede(d)
+
+# ao começar a partida em rede (main.gd _ligar_rede): o personagem volta; o host continua o mundo salvo
+static func carregar_rede(main) -> String:
+	var d := ler_rede()
+	var avisos := PackedStringArray()
+	var j = main.jogador
+	var pj: Dictionary = d.get("personagem", {})
+	if not pj.is_empty() and not bool(pj.get("morto", false)) and not bool(j.get("servidor")):
+		j.inventario.carregar(pj.get("inventario", {}))
+		j.sobrevivencia.carregar(pj.get("sobrevivencia", {}))
+		main.abates = int(pj.get("abates", 0))
+		main._tempo_jogo = float(pj.get("tempo_jogo", 0.0))
+		avisos.append("SEU PERSONAGEM DA PARTIDA EM REDE VOLTOU")
+	var rede = main.get_node_or_null("/root/Rede")
+	var m: Dictionary = d.get("mundo", {})
+	if rede != null and rede.eh_host() and not m.is_empty() and main.loot_mundo != null and int(m.get("semente", -1)) == main.loot_mundo.semente:
+		main.loot_mundo.carregar(m.get("loot", {}))
+		main.loot_mundo.semente = int(m["semente"])
+		for u in m.get("pegos", []):
+			main.loot_mundo.pegos[str(u)] = true
+		if main.clima != null and m.has("clima"):
+			main.clima.carregar(m["clima"])
+		if main.get("veiculos") != null:
+			main.veiculos.sincronizar()
+		avisos.append("O MUNDO DA SUA ÚLTIMA SALA CONTINUA")
+	return " · ".join(avisos)

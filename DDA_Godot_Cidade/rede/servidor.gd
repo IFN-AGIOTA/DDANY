@@ -14,6 +14,7 @@ extends Node
 #   · escreve no console: endereços para entrar, quem entrou/saiu e, a cada minuto, um resumo
 # Mexa AQUI para: nome padrão, FPS do servidor, troca de foco, resumo.
 
+const Salvamento := preload("res://menu/salvamento.gd")
 const NOME_PADRAO := "Servidor do PC"
 const RtcCls := preload("res://rede/rtc.gd")
 const FPS := 60
@@ -64,7 +65,7 @@ func iniciar(m: Node) -> void:
 	if Rede.endereco_tunel != "":
 		_log("TÚNEL: os celulares vão entrar por  %s  (playit.gg, funciona no 4G)" % Rede.endereco_tunel)
 	await _entrar_na_conta(nome)
-	Rede.criar_partida(nome, randi())
+	Rede.criar_partida(nome, Salvamento.semente_rede())      # 0.77: o servidor continua o mundo salvo
 	if not Rede.ligado:
 		_log("Não deu para abrir a partida. Feche outro jogo/servidor que esteja usando a porta %d e tente de novo." % Rede.PORTA)
 		return
