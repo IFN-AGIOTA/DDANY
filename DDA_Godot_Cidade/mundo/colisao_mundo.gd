@@ -103,6 +103,17 @@ func remover_extra(c: Node3D) -> void:
 	if is_instance_valid(c):
 		c.queue_free()
 
+# 0.76: o carro largado j virou veículo (mundo/veiculos.gd): o obstáculo dele some (aqui e nas cópias)
+func desligar_obstaculo(j: int) -> void:
+	if j < 0 or j * 7 + 6 >= _obst.size():
+		return
+	_obst[j * 7] = 1.0e7
+	_obst[j * 7 + 1] = 1.0e7
+	_ult_obst = Vector2(1.0e9, 1.0e9)
+	for e in extras:
+		if is_instance_valid(e):
+			e.desligar_obstaculo(j)
+
 # os prédios abertos mudaram: refaz a colisão dos prédios perto (aqui e nas cópias)
 func refazer_predios() -> void:
 	_ult_pred = Vector2(1.0e9, 1.0e9)

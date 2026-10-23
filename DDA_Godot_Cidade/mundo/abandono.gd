@@ -36,7 +36,9 @@ var cid                                  # mundo/cidade.gd
 var rng := RandomNumberGenerator.new()
 var densidade := 1.0
 var obstaculos := PackedFloat32Array()   # x, z, giro, tam_x, tam_y, tam_z, y_centro (7 por obstáculo)
-var carros: Array = []                   # [pos Vector3, giro, tipo] (porta-malas)
+var carros: Array = []                   # [pos Vector3, giro, tipo, cor, estado, obstáculo, bloco, índice no bloco]
+										  # (porta-malas; 0.76: veículos dirigíveis, mundo/veiculos.gd)
+var _mm_bloco := {}                       # 0.76: tipo -> bloco -> [MultiMesh perto, MultiMesh longe] (sumir um carro)
 var _inst := {}                          # nome do modelo -> {Vector2i: [[Transform3D, Color, cor de longe], ...]}
 var baixados := true                     # usar os modelos baixados (falso = só os de código, para comparar)
 var nos: Array[GeometryInstance3D] = []
@@ -237,8 +239,10 @@ func _carro(pos: Vector2, giro: float, estado: String) -> void:
 	if nome == "onibus":
 		cor = [Color(0.85, 0.6, 0.1), Color(0.75, 0.75, 0.75), Color(0.2, 0.35, 0.6)][rng.randi() % 3]
 	cor = cor * rng.randf_range(0.7, 1.0)
+	var queimado := false
 	if rng.randf() < 0.2:
 		cor = QUEIMADO * rng.randf_range(0.8, 1.3)
+		queimado = true
 	cor.a = 1.0
 	var b := Basis(Vector3.UP, giro)
 	var y := Y
@@ -251,9 +255,20 @@ func _carro(pos: Vector2, giro: float, estado: String) -> void:
 		b = b * Basis(Vector3.RIGHT, PI * 0.5)
 		y = Y + tam.z * 0.5
 		tam = Vector3(tam.x, tam.z, tam.y)
+	var bk := Vector2i(floori(pos.x / BLOCO), floori(pos.y / BLOCO))
+	var n_bloco: int = _inst[nome][bk].size() if _inst.has(nome) and _inst[nome].has(bk) else 0
+	var n_obst := obstaculos.size() / 7
 	_por(nome, Transform3D(b, Vector3(pos.x, y, pos.y)), cor)
 	_obstaculo(Vector3(pos.x, Y, pos.y), giro, tam)
-	carros.append([Vector3(pos.x, Y, pos.y), giro, nome])
+	carros.append([Vector3(pos.x, Y, pos.y), giro, nome, cor, "queimado" if queimado and estado == "" else estado, n_obst, bk, n_bloco])
+
+# 0.76: some com o desenho do carro largado i (virou veículo: mundo/veiculos.gd)
+func esconder_carro(i: int) -> void:
+	var c: Array = carros[i]
+	var por_bloco: Dictionary = _mm_bloco.get(c[2], {})
+	for mm in por_bloco.get(c[6], []):
+		if mm != null and int(c[7]) < (mm as MultiMesh).instance_count:
+			(mm as MultiMesh).set_instance_transform(int(c[7]), Transform3D(Basis.from_scale(Vector3.ONE * 0.001), Vector3(c[0].x, -500.0, c[0].z)))
 
 func _carros_nas_ruas() -> void:
 	for rd in cid.dados_cidade["roads"]:
@@ -592,6 +607,9 @@ func _montar() -> void:
 			for i in lista.size():
 				mm.set_instance_transform(i, lista[i][0])
 				mm.set_instance_color(i, lista[i][1])
+			if not _mm_bloco.has(nome):
+				_mm_bloco[nome] = {}
+			_mm_bloco[nome][k] = [mm]
 			var mi := MultiMeshInstance3D.new()
 			mi.name = "%s_%d_%d" % [nome, k.x, k.y]
 			mi.multimesh = mm
@@ -605,6 +623,7 @@ func _montar() -> void:
 				# mesmas posições (instancing), malha simples: completo até PERTO_LOD, simples dali até o alcance
 				mi.visibility_range_end = perto
 				var mm_l := mm.duplicate() as MultiMesh
+				_mm_bloco[nome][k].append(mm_l)
 				mm_l.mesh = longe
 				for i in lista.size():
 					mm_l.set_instance_color(i, lista[i][2])

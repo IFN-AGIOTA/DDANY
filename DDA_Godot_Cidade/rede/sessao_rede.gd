@@ -105,6 +105,8 @@ func _exit_tree() -> void:
 		main.loot_mundo.grade_criada = Callable()
 		main.loot_mundo.grade_reabastecida = Callable()
 		main.loot_mundo.porta_mudou = Callable()
+	if main != null and main.get("veiculos") != null and is_instance_valid(main.veiculos):
+		main.veiculos.mudou = Callable()
 
 # ---------- jogadores ----------
 func _criar(id: int) -> Node3D:
@@ -166,9 +168,12 @@ func _physics_process(dt: float) -> void:
 func estado_local() -> Array:
 	var j = jogador
 	var bits := (1 if j.agachado else 0) | (2 if j.mirando else 0) | (4 if j.morto else 0) | (0 if j.is_on_floor() else 8) \
-		| (16 if j.mancando else 0) | (32 if j.nadando else 0) | (64 if j.afundando else 0)
+		| (16 if j.mancando else 0) | (32 if j.nadando else 0) | (64 if j.afundando else 0) | (128 if j.veiculo != null else 0)
+	var carro: Array = ["", Vector3.ZERO]
+	if j.veiculo != null and is_instance_valid(j.veiculo):
+		carro = [str(j.veiculo.id), j.veiculo.rotation]     # 0.76: dirigindo: qual carro e como ele está virado
 	return [j.global_position, j.rotation.y, j.velocity, bits, str(j.armas.atual), snappedf(j.armas.aim, 0.01), minf(j.armas.since, 9.0),
-		snappedf(j.mira_pitch, 0.02)]
+		snappedf(j.mira_pitch, 0.02), carro[0], carro[1]]
 
 func _mandar_roupa(para := 0) -> void:
 	if Rede.servidor_dedicado:
@@ -250,6 +255,12 @@ func _evento(id: int, tipo: String, d: Dictionary) -> void:
 			_grade_recebida(d)
 		"porta":
 			_porta_recebida(str(d.get("i", "")), d.get("e", []))
+		"veiculo":
+			if main.get("veiculos") != null:
+				if str(d.get("k", "")) == "entrou":
+					main.veiculos.remoto_entrou(str(d.get("i", "")), id)
+				else:
+					main.veiculos.remoto_saiu(str(d.get("i", "")), d.get("e", {}))
 		"mundo_itens":
 			if id == 1:
 				_aplicar_mundo_itens(d)
@@ -332,6 +343,8 @@ func _ligar_mundo() -> void:
 			_mexidas[gid] = true
 			Rede.enviar_evento("grade", {"i": gid, "w": g.largura, "h": g.altura, "n": g.nome, "l": LootMundo.conteudo(g)})
 		lm.porta_mudou = func(pid: String, e: Array) -> void: Rede.enviar_evento("porta", {"i": pid, "e": e})
+	if main.get("veiculos") != null:
+		main.veiculos.mudou = func(k: String, vid: String, e: Dictionary) -> void: Rede.enviar_evento("veiculo", {"k": k, "i": vid, "e": e})
 		for gid in lm._grades:
 			_sig[gid] = LootMundo.assinatura(lm._grades[gid])
 		# caixas da base (mundo/loot.gd): entram na lista das grades com o nome "base_N"
@@ -451,7 +464,7 @@ func _mandar_mundo_itens(para: int) -> void:
 		if n != null and is_instance_valid(n) and n.get_parent() == main.jogo and n.item != null:
 			soltos.append([u, n.item.para_dict(), n.global_position])
 	Rede.enviar_evento("mundo_itens", {"grades": gr, "pegos": lm.pegos.keys() if lm != null else [], "soltos": soltos,
-		"portas": lm.portas if lm != null else {}}, para)
+		"portas": lm.portas if lm != null else {}, "veiculos": lm.veiculos if lm != null else {}}, para)
 
 func _aplicar_mundo_itens(d: Dictionary) -> void:
 	var lm = main.loot_mundo
@@ -467,6 +480,10 @@ func _aplicar_mundo_itens(d: Dictionary) -> void:
 	var ps: Dictionary = d.get("portas", {})
 	for pid in ps:
 		_porta_recebida(str(pid), ps[pid])
+	var vs: Dictionary = d.get("veiculos", {})
+	if main.get("veiculos") != null:
+		for vid in vs:
+			main.veiculos.remoto_saiu(str(vid), vs[vid])
 	for e in d.get("soltos", []):
 		_item_solto({"u": e[0], "it": e[1], "p": e[2]})
 

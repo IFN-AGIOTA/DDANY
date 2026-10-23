@@ -42,7 +42,7 @@ static var _cenas := {}
 static var _mats := {}
 
 static func tem(id: String) -> bool:
-	return ITENS.has(id) or id in ["refrigerante", "analgesico", "vitaminas", "antibiotico", "carvao", "pastilha", "tabuas"]
+	return ITENS.has(id) or id in ["refrigerante", "analgesico", "vitaminas", "antibiotico", "carvao", "pastilha", "tabuas", "galao"]
 
 static func cena(nome: String) -> PackedScene:
 	if not _cenas.has(nome):
@@ -127,6 +127,20 @@ static func _por_codigo(id: String) -> Node3D:
 			_cil(n, 0.022, 0.06, 0.0, _mat(frasco, 0.0, 0.25))
 			_cil(n, 0.0225, 0.03, 0.017, _mat(Color(0.95, 0.95, 0.92), 0.0, 0.7))        # rótulo
 			_cil(n, 0.024, 0.018, 0.06, _mat(tampa, 0.0, 0.5))
+		"galao":
+			# 0.76: galão vermelho de plástico com alça e bico
+			var plast := _mat(Color(0.72, 0.1, 0.07), 0.0, 0.45)
+			var preto := _mat(Color(0.08, 0.08, 0.08), 0.0, 0.6)
+			for peca in [[Vector3(0, 0.17, 0), Vector3(0.17, 0.34, 0.26), plast], [Vector3(0, 0.37, -0.03), Vector3(0.05, 0.05, 0.17), plast],
+					[Vector3(0, 0.36, 0.1), Vector3(0.035, 0.08, 0.035), preto]]:
+				var mi := MeshInstance3D.new()
+				var bm := BoxMesh.new()
+				bm.size = peca[1]
+				mi.mesh = bm
+				mi.material_override = peca[2]
+				mi.position = peca[0]
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				n.add_child(mi)
 		"tabuas":
 			# 0.73: três tábuas empilhadas, com as pontas dos pregos aparecendo
 			var mad := _mat(Color(0.58, 0.44, 0.28), 0.0, 0.85)

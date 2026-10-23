@@ -39,6 +39,52 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.76 · VEÍCULOS COM GASOLINA
+  · CARROS QUE FUNCIONAM: alguns carros largados (sedã, táxi e van inteiros, ~4%: 408 na cidade, sempre os mesmos
+    em todo aparelho) dão para dirigir. Perto de um, o botão PEGAR (E) vira "ENTRAR CARRO".
+  · DIRIGIR: joystick para a frente acelera, para trás freia e depois dá ré, para os lados vira; PULAR = freio de
+    mão; PEGAR = "SAIR CARRO" (sai pela porta do motorista; se tiver parede, pela outra). A câmera vai para trás e
+    para cima do carro e se vira sozinha para a frente (dá para olhar em volta arrastando). Os botões de arma somem
+    enquanto dirige. Painel embaixo: velocidade, gasolina e estado do MOTOR.
+  · GASOLINA: tanque de 30 L, ~1,6 L por km (~18 km por tanque) e um pouco parado com o motor ligado. Os carros
+    largados têm de 0 a 9 L (1 em cada 5 está seco). Acabou, o motor morre.
+  · GALÃO DE GASOLINA (item novo, 10 L): USAR perto de um carro = ABASTECER. Vazio, PEGAR perto de uma BOMBA de
+    posto enche ("ENCHER GALÃO"; 3 em cada 10 bombas estão secas). Aparece em oficinas e depósitos de posto,
+    armazéns, depósitos, porta-malas e no chão dos postos (metade vem vazio). Cheio pesa ~7,5 kg a mais.
+  · BATIDAS estragam o MOTOR (menos força; em 0% não liga mais) e machucam quem dirige. ATROPELAR infectados
+    machuca/mata conforme a velocidade. O motor faz barulho: os infectados perto (~38 m) ouvem.
+  · CAPOTOU? Ao entrar, o carro é desvirado.
+  · ESTACIONADO onde você deixar: fica guardado (jogo salvo) e, longe, vira estátua (sem física).
+  · MULTIJOGADOR: os outros veem você dirigindo (o carro anda, o boneco some); ao sair, o carro fica estacionado
+    para todos; carro com alguém dirigindo não abre. Quem entra depois recebe os carros mexidos.
+  · Testado: achar carro, botão ENTRAR, abastecer com galão, entrar, acelerar (45 km/h em 4 s), gastar gasolina,
+    virar, frear, sair do lado, estacionado guardado e salvo, entrar de novo, atropelar; e em rede (dois jogos):
+    o host vê o amigo dirigindo e depois o carro estacionado. Toda a bateria de testes sem falhas.
+  · Testes automáticos novos: teste_veiculos (no "rodar.sh") e "rodar.sh rede_carro" (dois jogos).
+  · ARQUIVOS MEXIDOS:
+      mundo/veiculo.gd .......... NOVO (o carro: física, motor, gasolina, batidas, atropelar, som do motor)
+      mundo/veiculos.gd ......... NOVO (quais funcionam, entrar/sair, estacionados, painel, galão, bombas, rede)
+      mundo/abandono.gd ......... cada carro largado guarda o desenho e o obstáculo dele (some ao virar veículo)
+      mundo/colisao_mundo.gd .... desligar_obstaculo (o carro largado que virou veículo)
+      mundo/local.gd ............ bombas dos postos (grupo "bombas")
+      mundo/loot_mundo.gd ....... galão no loot (com gasolina sorteada); carros mexidos guardados e salvos
+      jogador/jogador.gd ........ dirigir (entrar_veiculo, sair_veiculo, câmera do carro); PEGAR = carro/bomba
+      inventario/itens.gd ....... item novo "galao"
+      inventario/item.gd ........ galão começa vazio; peso da gasolina
+      inventario/inventario.gd .. USAR galão = ABASTECER
+      inventario/tela_inventario.gd  botão PEGAR: ENTRAR/SAIR CARRO, ENCHER GALÃO; litros do galão
+      inventario/modelos_itens.gd modelo do galão (feito por código)
+      inventario/icones/galao.png NOVO (ícone, ferramentas/gerar_icones.gd)
+      ferramentas/gerar_icones.gd o galão entra na lista de fotos
+      menu/salvamento.gd ........ carros mexidos ao carregar o jogo
+      main.gd ................... cria o mundo/veiculos.gd
+      rede/sessao_rede.gd ....... carro no estado de quem dirige; evento "veiculo"; carros no "mundo_itens"
+      rede/jogador_remoto.gd .... mostra o carro do amigo dirigindo
+      ferramentas/testes/ ....... teste_veiculos.gd, rede_carro_host.gd, rede_carro_cliente.gd (NOVOS) e rodar.sh
+      menu/config.gd ............ versão 0.76
+  · PUBLICADA: atualizacoes/pacote_0.76.pck (só o que mudou desde o APK 0.75, bem menor) + manifesto; os celulares
+    com o APK 0.75 baixam sozinhos. servidor_windows.zip (raiz) refeito na 0.76.
+
 ATUALIZAÇÃO 0.75 · APK NOVO
   · APK NOVO 0.75 (versão/código 45) com tudo até aqui: PvP, amigos no mapa e mensagens, loot e infectados que
     voltam, água (nadar/afundar), portas e barricadas, infectados perto do amigo, tiro de longe nos locais. O
@@ -1325,6 +1371,8 @@ TOQUE (vários dedos ao mesmo tempo)
 - PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga) · RECARREGAR · ARMA (troca coldre/ombro) · PEGAR
   (aparece perto de um item; perto de uma PORTA: abrir / fechar / tirar tábua) · INV · II (pausa) · CAM (1ª/3ª pessoa) · VOO (câmera livre: SOBE / DESCE / VEL)
   · BALÃO (só no multijogador): mensagens rápidas.
+- CARRO (0.76): PEGAR perto de um carro que funciona = ENTRAR; joystick frente/trás = acelerar/freio e ré, lados =
+  virar; PULAR = freio de mão; PEGAR = SAIR. PC: W/S/A/D (setas), Espaço freio de mão, E sair.
 - Desde a 0.67 os botões mostram ÍCONES (balas = atirar, mira = mirar, mochila = INV, drone = VOO...); o botão
   ARMA mostra o desenho da arma na mão.
 PC (todas as teclas trocáveis em Opções › Teclado e mouse)
@@ -1359,6 +1407,9 @@ SOBREVIVÊNCIA
   estamina nadando: -0,35/s (+0,12/s por kg acima de 15 kg) · rápido -5/s (+0,1/s por kg) · boiando parado +2/s
   (-0,2/s por kg acima de 15 kg) · afunda com estamina 0, volta a boiar com 12 · fôlego 100 = ~8 s embaixo
   d'água, depois -9 de vida por segundo
+VEÍCULOS (0.76): tanque 30 L · ~1,6 L/km + 0,03 L/min ligado · até ~86 km/h · carros largados com 0–9 L (20% secos)
+  · galão 10 L · 70% das bombas com gasolina · batida forte tira estado do motor e machuca · atropelar = 9 de dano por
+  m/s · motor ouvido a ~38 m · ~4% dos sedãs/táxis/vans inteiros funcionam
 PORTAS (0.73): porta 100 de vida, cada tábua mais 140 (até 3) · golpe de infectado na porta = mordida x2,2
   (8–14 x 2,2) · abrir/fechar: barulho de 7 m · martelar tábua 10,5 m · porta quebrando 14 m · usar até 1,9 m
 LOOT E INFECTADOS QUE VOLTAM (0.72, relógio do jogo: 1 dia = 48 min): loot de prédios/carros a cada 16 h (~32 min),
@@ -1380,7 +1431,8 @@ ITENS (inventario/itens.gd; item novo = 1 linha na tabela DB)
 - Comida: feijão, atum, sardinha, pêssegos em calda, biscoitos, barra de cereal, salgadinho (dá sede), maçã.
 - Bebida: água, refrigerante, suco.
 - Ferramentas: fita adesiva e kit de costura (consertam roupas), kit de limpeza de armas, lanterna, corda,
-  rádio, isqueiro, TÁBUAS COM PREGOS (0.73: USAR perto de uma porta fechada = barricar; até 3 por porta).
+  rádio, isqueiro, TÁBUAS COM PREGOS (0.73: USAR perto de uma porta fechada = barricar; até 3 por porta),
+  GALÃO DE GASOLINA (0.76: 10 L; USAR perto do carro = abastecer; encher na bomba do posto).
 - Roupas (calor / chuva / proteção): capacete tático, gorro, boné, lanterna de cabeça, camiseta, moletom,
   jaqueta acolchoada, capa de chuva, colete tático, colete à prova de balas, calça cargo, jeans.
 - Mochilas: pochete, mochila escolar, de trilha, de combate.
@@ -1510,6 +1562,10 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   por dentro e por fora (planta, móveis) . mundo/local.gd (loot: tabelas em mundo/loot_mundo.gd)
 - prédios por dentro (cômodos, portas,
   escadas, andares de cima, telhado) . mundo/interior.gd
+- VEÍCULOS: o carro (física, motor,
+  gasolina, batidas, atropelar, som) ... mundo/veiculo.gd (TANQUE, LITROS_POR_KM, FORCA, VEL_MAX...)
+- quais carros funcionam, entrar/sair,
+  estacionados, galão e bombas, painel .. mundo/veiculos.gd (CHANCE, COMB_MAX...) · dirigir: jogador/jogador.gd
 - PORTA (abrir/fechar, tábuas, vida,
   quebrar, estado guardado) ........... mundo/porta.gd (onde ficam: mundo/interior.gd · infectados batendo:
                                         inimigos/vago.gd _porta_no_caminho · BARRICAR: inventario/inventario.gd)
@@ -1721,7 +1777,8 @@ MÚSICA (pasta audio/)
   itens largados nadando vão para o fundo. A base militar ainda não tem os prédios/pistas do HTML.
 - Locais especiais (0.68): as portas de verdade (0.73) ainda são só dos prédios comuns (os postos, hospitais,
   supermercados e armazéns têm vãos). De longe os infectados que andam sem física atravessam a casca deles.
-- Transformação em carro e jato do HTML foi descartada: o jogo é só a pé.
+- Veículos (0.76): só sedã, táxi e van; não dá para levar passageiro; as rodas não giram no desenho; o motor
+  estragado ainda não tem conserto. (A transformação em carro e jato do HTML continua descartada.)
 - Os blocos de cima das torres escalonadas também mostram "térreo" (vitrines/placas) na base deles.
 - Sobrevivente: rosto liso de manequim.
 - Infectados: os rostos são simples (manequim, olhos pintados).

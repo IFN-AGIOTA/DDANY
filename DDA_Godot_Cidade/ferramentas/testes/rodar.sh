@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # RODA OS TESTES AUTOMÁTICOS DO JOGO (0.74). Dentro da pasta DDA_Godot_Cidade:
 #   GODOT=/caminho/do/godot ferramentas/testes/rodar.sh          (todos, menos rede)
-#   GODOT=... ferramentas/testes/rodar.sh rede                     (só o teste de dois jogos conectados)
+#   GODOT=... ferramentas/testes/rodar.sh rede                     (dois jogos conectados: infectados perto do amigo)
+#   GODOT=... ferramentas/testes/rodar.sh rede_carro               (dois jogos conectados: amigo dirigindo)
 #   GODOT=... ferramentas/testes/rodar.sh teste_agua               (só um)
 # Sem monitor (servidor/CI) usa xvfb-run. Cada teste imprime "falhas: N"; o script termina com erro se algum falhar.
 # Os testes usam uma pasta de dados própria (não mexem no seu jogo salvo).
@@ -27,7 +28,15 @@ rodar() {   # nome, com_tela(0/1)
 	[ "$n" = 0 ] || falhou=1
 }
 alvo="${1:-todos}"
-if [ "$alvo" = rede ]; then
+if [ "$alvo" = rede_carro ]; then
+	XDG_DATA_HOME="$DADOS/h" timeout 300 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_carro_host.gd > "$DADOS/host.txt" 2>&1 &
+	sleep 2
+	XDG_DATA_HOME="$DADOS/c" timeout 300 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_carro_cliente.gd > "$DADOS/cli.txt" 2>&1
+	wait
+	grep -E "HOST:|SCRIPT ERROR" "$DADOS/host.txt"
+	grep -E "CLI:|SCRIPT ERROR" "$DADOS/cli.txt"
+	grep -q "estacionado guardado true" "$DADOS/host.txt" && grep -q "andou [1-9]" "$DADOS/host.txt" || falhou=1
+elif [ "$alvo" = rede ]; then
 	XDG_DATA_HOME="$DADOS/h" timeout 240 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_amigo_host.gd > "$DADOS/host.txt" 2>&1 &
 	sleep 2
 	XDG_DATA_HOME="$DADOS/c" timeout 240 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_amigo_cliente.gd > "$DADOS/cli.txt" 2>&1
@@ -42,6 +51,7 @@ elif [ "$alvo" = todos ]; then
 	rodar teste_agua 1
 	rodar teste_portas 1
 	rodar teste_tiro_locais 1
+	rodar teste_veiculos 1
 else
 	rodar "$alvo" 1
 fi

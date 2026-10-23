@@ -20,6 +20,7 @@ const LootMundoCls := preload("res://mundo/loot_mundo.gd")
 const InterioresCls := preload("res://mundo/interiores.gd")
 const LocaisCls := preload("res://mundo/locais.gd")
 const PortaCls := preload("res://mundo/porta.gd")
+const VeiculosCls := preload("res://mundo/veiculos.gd")
 const MatoCls := preload("res://mundo/mato.gd")
 const FumacaCls := preload("res://mundo/fumaca.gd")
 const HudStatusCls := preload("res://hud/hud_status.gd")
@@ -68,6 +69,7 @@ var aplicador: Node
 var loot_mundo                              # mundo/loot_mundo.gd (o que tem em cada móvel/carro, guardado)
 var interiores: Node                        # mundo/interiores.gd (prédios por dentro perto do jogador)
 var locais: Node                            # mundo/locais.gd (postos, hospitais, supermercados e armazéns: zonas de PvP)
+var veiculos: Node                          # 0.76: mundo/veiculos.gd (carros que funcionam: dirigir, gasolina)
 var _t_info := 0.0
 var missoes: Node = null                    # mundo/missoes.gd (suprimentos militares avisados pelo rádio)
 var eventos: Node = null                    # mundo/eventos.gd (0.65: helicóptero caído, comboio, zona contaminada)
@@ -512,6 +514,11 @@ func _criar_jogo() -> void:
 	locais.vagos = vagos
 	locais.mundo = mundo
 	locais.hud = hud
+	veiculos = VeiculosCls.new()
+	veiculos.name = "Veiculos"
+	jogo.add_child(veiculos)
+	veiculos.ligar(cidade, mundo, jogador, loot_mundo, vagos)
+	jogador.veiculos_mgr = veiculos
 	missoes = MissoesCls.new()
 	missoes.name = "Missoes"
 	jogo.add_child(missoes)

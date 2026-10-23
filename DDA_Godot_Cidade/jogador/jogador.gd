@@ -14,6 +14,10 @@ extends CharacterBody3D
 # se não estiver pesado demais. Estamina zerada = AFUNDA: a cabeça vai para baixo d'água, o fôlego acaba e você se
 # afoga (jogador/sobrevivencia.gd). Solte peso ou nade para a margem. Profundidade do mar/lagos: mundo/colisao_mundo.gd.
 #
+# VEÍCULO (0.76): dentro de um carro (mundo/veiculos.gd + mundo/veiculo.gd) o boneco some e acompanha o carro; o
+# joystick vira acelerador/ré (frente/trás) e direção (lados), PULAR = freio de mão, PEGAR = sair. A câmera vai mais
+# para trás e para cima e se vira sozinha para a frente do carro (dá para olhar em volta arrastando).
+#
 # MODELO 3D: o nó "Modelo" é o encaixe. Se existir res://modelos/personagem.glb (ou .tscn/.fbx) ele substitui o
 # soldado original, com as animações (ver modelos/LEIA-ME.txt). Por código: jogador.trocar_modelo(no).
 
@@ -97,6 +101,9 @@ var prof_agua := 0.0                # 0.72: metros de água acima dos pés (anda
 var _t_agua := 0.0
 var _fundo := 0.0                   # da superfície até o chão, aqui
 var _tela_agua: ColorRect = null    # câmera embaixo d'água: tela azul-esverdeada
+var veiculo = null                  # 0.76: carro que está dirigindo (mundo/veiculo.gd) · null = a pé
+var veiculos_mgr = null             # 0.76: mundo/veiculos.gd (main.gd liga)
+var _t_olhou := 0.0                 # 0.76: segundos desde que olhou em volta (a câmera volta para a frente do carro)
 var fator_agachado := 0.0           # 0 em pé · 1 agachado (suavizado, para a câmera)
 var fator_mira := 0.0
 
@@ -186,10 +193,26 @@ func _usar_atalho(i: int) -> void:
 func _pegar_do_chao() -> void:
 	if not ativo or morto:
 		return
+	# 0.76: dentro do carro, PEGAR = sair
+	if veiculo != null:
+		if veiculos_mgr != null:
+			veiculos_mgr.sair()
+		return
 	var it = inventario.item_mais_proximo()
 	if it != null:
 		inventario.pegar(it)
 		return
+	if veiculos_mgr != null:
+		if veiculos_mgr.perto != "" and not nadando:
+			var m: String = veiculos_mgr.entrar(veiculos_mgr.perto)
+			if m != "":
+				inventario.aviso.emit(m)
+			return
+		if veiculos_mgr.bomba_perto() != null:
+			var m2: String = veiculos_mgr.encher_galao(inventario)
+			if m2 != "":
+				inventario.aviso.emit(m2)
+			return
 	# 0.73: sem item perto: a porta (abrir, fechar, tirar tábua)
 	var pt = PortaCls.perto(global_position)
 	if pt != null:
@@ -283,6 +306,67 @@ func _passos(delta: float) -> void:
 	_som_passo.pitch_scale = randf_range(0.9, 1.1)
 	_som_passo.volume_db = (-14.0 if agachado else (-3.0 if vel_horizontal > 5.0 else -8.0)) + (4.0 if prof_agua > 0.3 else 0.0)
 	_som_passo.play()
+
+# ---------- VEÍCULO (0.76) ----------
+const CAMERA_CARRO := 6.2              # distância da câmera dirigindo
+const ALTURA_CARRO := 2.3
+
+func entrar_veiculo(v) -> void:
+	veiculo = v
+	velocity = Vector3.ZERO
+	if agachado:
+		agachado = false
+		_aplicar_capsula()
+	_mirar_ligado = false
+	_colisao.disabled = true
+	_slot.visible = false
+	armas.esconder_arma(true)
+	armas.gatilho = false
+	_t_olhou = 9.0
+	cam_pit = 0.3
+	if controles != null:
+		for b in ["ATIRAR", "MIRAR", "RECARREGAR", "AGACHAR", "ARMA"]:
+			controles.ocultos[b] = true
+		controles.textos["PEGAR"] = "SAIR\nCARRO"
+		controles.ocultos["PEGAR"] = false
+
+func sair_veiculo(pos: Vector3) -> void:
+	var v = veiculo
+	veiculo = null
+	_colisao.disabled = false
+	_slot.visible = true
+	armas.esconder_arma(false)
+	teleportar(pos, cam_yaw)
+	if v != null and is_instance_valid(v):
+		rotation.y = v.rotation.y + PI
+	if controles != null:
+		for b in ["ATIRAR", "MIRAR", "RECARREGAR", "AGACHAR", "ARMA"]:
+			controles.ocultos.erase(b)
+
+func _dirigir(delta: float) -> void:
+	var v = veiculo
+	if v == null or not is_instance_valid(v):
+		veiculo = null
+		_colisao.disabled = false
+		_slot.visible = true
+		return
+	var ix := 0.0
+	var iy := 0.0
+	var freio := false
+	if controles != null and not morto:
+		var m: Vector2 = controles.vetor_mover()
+		ix = m.x
+		iy = m.y
+		freio = controles.pulando()
+		armas.gatilho = false
+	v.controlar(iy, ix, freio)
+	# o boneco (invisível) vai junto: a câmera, o chão de física, os prédios abertos e os infectados seguem ele
+	global_position = v.global_position + Vector3(0, 1.0, 0)
+	velocity = v.linear_velocity
+	vel_horizontal = Vector2(velocity.x, velocity.z).length()
+	rotation.y = v.rotation.y + PI
+	nadando = false
+	_sons_corpo(delta)
 
 # ---------- ÁGUA (0.72) ----------
 # 10 vezes por segundo: tem água aqui? quão funda? entra/sai do nado
@@ -439,6 +523,9 @@ func _cabe_em_pe() -> bool:
 func _physics_process(delta: float) -> void:
 	if not ativo:
 		return
+	if veiculo != null:
+		_dirigir(delta)
+		return
 	var ix := 0.0
 	var iy := 0.0
 	var sprint := false
@@ -565,7 +652,7 @@ func alternar_camera() -> void:
 	Config.definir("cam", 0 if primeira_pessoa else 1)     # menu/aplicar_opcoes.gd liga primeira_pessoa
 
 func _camera_primeira_pessoa(delta: float, fov_alvo: float) -> void:
-	_fp = move_toward(_fp, 1.0 if primeira_pessoa else 0.0, delta * 5.0)
+	_fp = move_toward(_fp, 1.0 if primeira_pessoa and veiculo == null else 0.0, delta * 5.0)   # dirigindo: 3ª pessoa
 	var m = _slot.get_child(0) if _slot.get_child_count() > 0 else null
 	if m != null and m.has_method("primeira_pessoa"):
 		m.primeira_pessoa(_fp > 0.5)
@@ -599,6 +686,11 @@ func _process(delta: float) -> void:
 			var sm := sens_mouse * (sens_mouse_mira if mirando else 1.0)
 			cam_yaw -= rm.x * 0.0022 * sm
 			cam_pit = clampf(cam_pit + rm.y * 0.0018 * sm * (-1.0 if inverter_y_mouse else 1.0), _pit_min(), _pit_max())
+		if veiculo != null:
+			_t_olhou = 0.0 if (r != Vector2.ZERO or rm != Vector2.ZERO) else _t_olhou + delta
+			if _t_olhou > 1.2 and is_instance_valid(veiculo) and veiculo.linear_velocity.length() > 2.0:
+				cam_yaw = lerp_angle(cam_yaw, veiculo.rotation.y + PI, minf(1.0, delta * 2.5))
+				cam_pit = lerpf(cam_pit, 0.3, minf(1.0, delta * 2.0))
 		if giroscopio:
 			# celular deitado (paisagem): girar em pé = olhar para os lados, inclinar = olhar para cima/baixo
 			var gv := Input.get_gyroscope() - giro_zero
@@ -614,6 +706,8 @@ func _process(delta: float) -> void:
 	# câmera: pivô na altura do ombro, gira com a mira (+ recuo da arma); o braço (SpringArm3D) bate nos prédios
 	_y_cam = lerpf(_y_cam, global_position.y, 1.0 - exp(-12.0 * delta))
 	var alvo_y := lerpf(altura_alvo, altura_alvo_agachado, fator_agachado) + 0.1 * fator_mira
+	if veiculo != null:
+		alvo_y = ALTURA_CARRO - 1.0
 	_pivo.global_position = Vector3(global_position.x, _y_cam + alvo_y, global_position.z)
 	_pivo.rotation = Vector3(-(cam_pit - armas.kick), cam_yaw + armas.ky, 0.0)
 	mira_pitch = clampf(MIRA_NEUTRA * (1.0 - _fp) - cam_pit, -0.8, 0.6)
@@ -621,11 +715,15 @@ func _process(delta: float) -> void:
 	var fov_alvo := fov_base + 5.0 * clampf((vel_horizontal - 3.0) / 4.0, 0.0, 1.0)
 	camera.fov = lerpf(camera.fov, fov_alvo, minf(1.0, delta * 4.0 + 0.02))
 	var dist := lerpf(distancia_camera, distancia_mirando, fator_mira)
+	if veiculo != null:
+		dist = CAMERA_CARRO
 	_braco.spring_length = dist
 	var asp := get_viewport().get_visible_rect().size.aspect()
 	var meia_largura := tan(deg_to_rad(camera.fov) * 0.5) * asp
 	var frac := _braco.get_hit_length() / maxf(dist, 0.01)
 	camera.position.x = lerpf(dist * meia_largura * lateral_camera, ombro_mirando, fator_mira) * frac
+	if veiculo != null:
+		camera.position.x = 0.0                   # dirigindo: o carro no meio da tela
 	_camera_primeira_pessoa(delta, fov_alvo)
 	_tela_submersa()
 	animador.atualizar(delta, self)

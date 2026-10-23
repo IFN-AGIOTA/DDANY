@@ -45,6 +45,8 @@ static func novo(tipo: String, quantidade := 1) -> RefCounted:
 		it.municao = int(d["cap"])
 	if tipo == "pilha":
 		it.carga = 1.0
+	elif tipo == "galao":
+		it.carga = 0.0                  # 0.76: galão vazio (o loot sorteia quanto vem dentro)
 	elif d.get("pilha", false):
 		it.carga = randf_range(0.2, 1.0) if randf() < 0.7 else -1.0    # às vezes vem sem pilha
 	if d.has("grade"):
@@ -111,6 +113,8 @@ func tem_conteudo() -> bool:
 # peso total (kg), contando o que tem dentro
 func peso() -> float:
 	var p := float(def().get("peso", 0.0)) * qtd
+	if id == "galao":
+		p += maxf(carga, 0.0) * 7.5         # 0.76: 10 L de gasolina pesam ~7,5 kg
 	for g in grades():
 		p += g.peso()
 	var mid: String = def().get("municao", def().get("pente_de", ""))

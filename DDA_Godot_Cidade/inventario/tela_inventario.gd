@@ -154,8 +154,17 @@ func _process(dt: float) -> void:
 		if controles != null:
 			var perto = inv.item_mais_proximo()
 			# 0.73: sem item perto, o mesmo botão serve para a PORTA (abrir, fechar, tirar tábua)
+			# 0.76: e para o CARRO (entrar/sair) e a BOMBA do posto (encher o galão)
 			var acao_porta := ""
-			if perto == null and inv.jogador != null:
+			var vm = inv.jogador.get("veiculos_mgr") if inv.jogador != null else null
+			if inv.jogador != null and inv.jogador.get("veiculo") != null:
+				perto = null
+				acao_porta = "SAIR\nCARRO"
+			elif perto == null and vm != null and vm.perto != "":
+				acao_porta = "ENTRAR\nCARRO"
+			elif perto == null and vm != null and vm.bomba_perto() != null:
+				acao_porta = "ENCHER\nGALÃO" if vm.tem_galao_para_encher(inv) else "BOMBA DE\nGASOLINA"
+			if perto == null and acao_porta == "" and inv.jogador != null:
 				var pt = PortaCls.perto(inv.jogador.global_position)
 				if pt != null:
 					acao_porta = pt.acao(inv)
@@ -482,6 +491,8 @@ func _atualizar_meio() -> void:
 				linhas += "  ·  " + String(Itens.def(it.acessorios[k]).get("sigla", ""))
 		elif it.eh_pente():
 			linhas += "  ·  %d/%d balas" % [it.municao, it.capacidade()]
+		if it.id == "galao":                               # 0.76: litros no galão
+			linhas += "  ·  %.1f L DE GASOLINA" % (maxf(it.carga, 0.0) * 10.0) if it.carga > 0.0 else "  ·  VAZIO"
 		if d.get("pilha", false) or it.id == "pilha":      # 0.65: carga da pilha em palavras
 			var c: float = it.carga
 			linhas += "  ·  " + ("SEM PILHA" if c < 0.0 else ("PILHA VAZIA" if c <= 0.0 else ("PILHA FRACA" if c < 0.25 else ("PILHA PELA METADE" if c < 0.6 else "PILHA CHEIA"))))

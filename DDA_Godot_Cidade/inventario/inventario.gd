@@ -452,6 +452,13 @@ func usar(it) -> void:
 	if it.id == "tabuas":
 		_barricar(it)
 		return
+	if it.id == "galao":
+		var vm = jogador.get("veiculos_mgr")
+		if vm != null:
+			aviso.emit(vm.abastecer(it))
+			Sons.tocar("inventario/beber", -12.0)
+			_depois()
+		return
 	if it.id == "agua_suja" and perto_do_fogo():
 		it.id = "agua"                  # perto da fogueira, USAR = FERVER
 		aviso.emit("FERVEU A ÁGUA")
@@ -525,6 +532,8 @@ func nome_acao(it) -> String:
 	var d: Dictionary = it.def()
 	if it.id == "tabuas":
 		return "BARRICAR"
+	if it.id == "galao":
+		return "ABASTECER"
 	if it.id == "garrafa_vazia":
 		return "ENCHER"
 	if it.id == "radio":

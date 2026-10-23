@@ -170,6 +170,8 @@ const DB := {
 		"desc": "Arraste em cima da LANTERNA, LANTERNA DE CABEÇA ou RÁDIO (a pilha velha sai)."},
 	"isqueiro": {"nome": "ISQUEIRO", "sigla": "ISQ.", "w": 1, "h": 1, "peso": 0.05, "max": 1, "cat": "ferramenta", "slot": "",
 		"desc": "Arraste em cima de 3 GALHOS para acender uma FOGUEIRA."},
+	"galao": {"nome": "GALÃO DE GASOLINA", "sigla": "GALÃO", "w": 2, "h": 3, "peso": 1.0, "max": 1, "cat": "ferramenta", "slot": "",
+		"desc": "Até 10 L. USAR perto de um CARRO = ABASTECER. Vazio: PEGAR perto de uma BOMBA de posto enche (algumas estão secas)."},
 	"tabuas": {"nome": "TÁBUAS COM PREGOS", "sigla": "TÁBUAS", "w": 1, "h": 3, "peso": 1.5, "max": 3, "cat": "ferramenta", "slot": "",
 		"desc": "USAR perto de uma porta FECHADA = BARRICAR (até 3 tábuas: ninguém abre, os infectados demoram para quebrar). Com PÉ DE CABRA ou MACHADO dá para tirar (PEGAR na porta)."},
 	"galho": {"nome": "GALHOS", "sigla": "GALHO", "w": 1, "h": 3, "peso": 0.3, "max": 5, "cat": "ferramenta", "slot": "",

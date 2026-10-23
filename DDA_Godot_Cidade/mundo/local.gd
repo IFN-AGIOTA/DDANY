@@ -51,6 +51,7 @@ var col: Array = []                    # [centro, tamanho, giro, base]
 var cont: Array = []                   # contêineres de loot {"pos", "loot", "nome", "tam"}
 var pontos: Array = []                 # chão livre para loot solto: [Vector3 local, cômodo]
 var infectados: Array = []             # onde nascem os infectados (Vector3 local)
+var bombas: Array = []                 # 0.76: bombas de gasolina (Vector3 local): enchem o galão (mundo/veiculos.gd)
 var dentro := Rect2()                  # área coberta do prédio principal (shader: sol fraco lá dentro)
 var _malha: ArrayMesh = null
 
@@ -126,6 +127,14 @@ func criar(lm, y: float) -> Node3D:
 			raiz.add_child(cx)
 			cx.position = (c["pos"] as Vector3) + Vector3(0, 0.1, 0)
 	raiz.set_meta("pontos_chao", pontos)
+	# 0.76: as bombas (grupo "bombas"): PEGAR perto com um galão = encher
+	for k in bombas.size():
+		var b := Node3D.new()
+		b.name = "Bomba_%d" % k
+		b.add_to_group("bombas")
+		b.set_meta("id", "L%d:%d" % [idx, k])
+		b.position = bombas[k]
+		raiz.add_child(b)
 	return raiz
 
 # ---------- peças ----------
@@ -553,6 +562,7 @@ func _posto() -> void:
 	infectados = [Vector3(-14, 0, -8), Vector3(3, 0, -7), Vector3(2, 0, 13), Vector3(15, 0, 9)]
 
 func _bomba(p: Vector2, cor: Color) -> void:
+	bombas.append(Vector3(p.x, 0.0, p.y))
 	_bx(resto, Vector3(p.x, 0.22 + 0.85, p.y), Vector3(0.75, 1.7, 0.5), Color(0.9, 0.9, 0.88))
 	resto.caixa(Vector3(p.x, 0.22 + 1.85, p.y), Vector3(0.8, 0.3, 0.55), cor)
 	for s in [-1.0, 1.0]:

@@ -119,6 +119,8 @@ static func carregar(main, d: Dictionary) -> void:
 		elif versao_mapa < MAPA_PREDIOS:
 			loot = _remapear_loot(loot, main.cidade.remapa_v2)
 		main.loot_mundo.carregar(loot)
+		if main.get("veiculos") != null:
+			main.veiculos.sincronizar()           # 0.76: carros já mexidos (some o largado original)
 	j.inventario.carregar(d.get("inventario", {}))
 	j.sobrevivencia.carregar(d.get("sobrevivencia", {}))
 	if main.clima != null and main.clima.has_method("carregar") and d.has("clima"):

@@ -58,11 +58,11 @@ const TABELAS := {
 		["mun_12", 4, 4, 16], ["m4", 1, 1, 1], ["mp5", 1, 1, 1], ["pente_mp5", 2, 1, 1], ["pente_stanag", 2, 1, 1], ["mun_556", 2, 10, 40], ["colete_policia", 2, 1, 1],
 		["capacete", 1, 1, 1], ["lanterna", 2, 1, 1], ["kit_armas", 2, 1, 1], ["bandagem", 2, 1, 2], ["silenciador", 1, 1, 1],
 		["ak", 1, 1, 1], ["pente_ak", 1, 1, 1], ["mun_762", 1, 8, 30], ["mira_acog", 1, 1, 1]],
-	"deposito": [["tabuas", 3, 1, 2], ["mascara_gas", 1, 1, 1], ["pilha", 2, 1, 1], ["corda", 3, 1, 1], ["fita", 3, 1, 1], ["cano", 3, 1, 1], ["pe_de_cabra", 2, 1, 1], ["machado", 2, 1, 1], ["facao", 2, 1, 1],
+	"deposito": [["galao", 2, 1, 1], ["tabuas", 3, 1, 2], ["mascara_gas", 1, 1, 1], ["pilha", 2, 1, 1], ["corda", 3, 1, 1], ["fita", 3, 1, 1], ["cano", 3, 1, 1], ["pe_de_cabra", 2, 1, 1], ["machado", 2, 1, 1], ["facao", 2, 1, 1],
 		["lanterna", 2, 1, 1], ["trapos", 3, 1, 4], ["agua", 2, 1, 1], ["feijao", 2, 1, 1], ["kit_armas", 1, 1, 1],
 		["mochila_trilha", 1, 1, 1], ["mun_308", 1, 3, 10], ["rifle_caca", 1, 1, 1], ["galho", 3, 1, 4], ["isqueiro", 1, 1, 1],
 		["luneta", 1, 1, 1], ["mun_762", 1, 5, 15]],
-	"carro": [["tabuas", 1, 1, 2], ["pilha", 1, 1, 1], ["agua", 3, 1, 1], ["refrigerante", 2, 1, 1], ["biscoito", 2, 1, 1], ["barra", 2, 1, 2], ["lanterna", 2, 1, 1],
+	"carro": [["galao", 2, 1, 1], ["tabuas", 1, 1, 2], ["pilha", 1, 1, 1], ["agua", 3, 1, 1], ["refrigerante", 2, 1, 1], ["biscoito", 2, 1, 1], ["barra", 2, 1, 2], ["lanterna", 2, 1, 1],
 		["fita", 2, 1, 1], ["corda", 2, 1, 1], ["pe_de_cabra", 2, 1, 1], ["kit_medico", 1, 1, 1], ["bandagem", 2, 1, 2],
 		["mochila_escolar", 2, 1, 1], ["jaqueta", 1, 1, 1], ["capa_chuva", 1, 1, 1], ["taco", 1, 1, 1], ["espingarda", 1, 1, 1],
 		["mun_12", 1, 4, 10], ["rifle_caca", 1, 1, 1], ["mun_308", 1, 3, 8], ["kit_armas", 1, 1, 1], ["dinheiro", 1, 2, 10],
@@ -79,9 +79,9 @@ const TABELAS := {
 		["kit_costura", 2, 1, 1], ["radio", 2, 1, 1], ["revista", 2, 1, 1], ["bone", 2, 1, 1], ["analgesico", 2, 1, 1], ["bandagem", 2, 1, 1],
 		["atum", 2, 1, 1], ["feijao", 2, 1, 1], ["dinheiro", 2, 2, 15]],
 	"posto_bebidas": [["agua", 6, 1, 1], ["refrigerante", 6, 1, 1], ["suco", 4, 1, 1], ["agua_suja", 1, 1, 1]],
-	"posto_deposito": [["tabuas", 2, 1, 2], ["fita", 3, 1, 1], ["corda", 3, 1, 1], ["trapos", 3, 1, 4], ["pilha", 3, 1, 1], ["agua", 3, 1, 1], ["barra", 2, 1, 3],
+	"posto_deposito": [["galao", 3, 1, 1], ["tabuas", 2, 1, 2], ["fita", 3, 1, 1], ["corda", 3, 1, 1], ["trapos", 3, 1, 4], ["pilha", 3, 1, 1], ["agua", 3, 1, 1], ["barra", 2, 1, 3],
 		["lanterna", 2, 1, 1], ["isqueiro", 2, 1, 1], ["mochila_escolar", 1, 1, 1], ["refrigerante", 2, 1, 1]],
-	"posto_oficina": [["tabuas", 3, 1, 2], ["pe_de_cabra", 4, 1, 1], ["cano", 4, 1, 1], ["machado", 2, 1, 1], ["facao", 2, 1, 1], ["fita", 4, 1, 1], ["corda", 3, 1, 1],
+	"posto_oficina": [["galao", 4, 1, 1], ["tabuas", 3, 1, 2], ["pe_de_cabra", 4, 1, 1], ["cano", 4, 1, 1], ["machado", 2, 1, 1], ["facao", 2, 1, 1], ["fita", 4, 1, 1], ["corda", 3, 1, 1],
 		["trapos", 4, 1, 4], ["lanterna", 3, 1, 1], ["lanterna_cabeca", 2, 1, 1], ["isqueiro", 2, 1, 1], ["mascara_gas", 1, 1, 1],
 		["kit_armas", 1, 1, 1], ["calca", 2, 1, 1], ["jaqueta", 1, 1, 1], ["espingarda", 1, 1, 1], ["mun_12", 1, 4, 10]],
 	"lixo": [["garrafa_vazia", 5, 1, 1], ["trapos", 4, 1, 3], ["revista", 3, 1, 1], ["celular", 2, 1, 1], ["galho", 2, 1, 2],
@@ -116,7 +116,7 @@ const TABELAS := {
 		["lanterna", 1, 1, 1], ["pe_de_cabra", 1, 1, 1]],
 	"cofre": [["dinheiro", 8, 10, 60], ["pistola", 3, 1, 1], ["pente_pistola", 3, 1, 1], ["mun_9mm", 4, 8, 24], ["celular", 2, 1, 1],
 		["radio", 2, 1, 1], ["lanterna", 1, 1, 1]],
-	"armazem_carga": [["tabuas", 4, 1, 2], ["jaqueta", 3, 1, 1], ["calca", 3, 1, 1], ["capa_chuva", 3, 1, 1], ["moletom", 3, 1, 1], ["gorro", 2, 1, 1],
+	"armazem_carga": [["galao", 2, 1, 1], ["tabuas", 4, 1, 2], ["jaqueta", 3, 1, 1], ["calca", 3, 1, 1], ["capa_chuva", 3, 1, 1], ["moletom", 3, 1, 1], ["gorro", 2, 1, 1],
 		["mochila_trilha", 2, 1, 1], ["mochila_escolar", 2, 1, 1], ["pochete", 2, 1, 1], ["corda", 4, 1, 1], ["fita", 4, 1, 1], ["lanterna", 3, 1, 1],
 		["pilha", 3, 1, 1], ["radio", 2, 1, 1], ["kit_costura", 2, 1, 1], ["feijao", 3, 1, 1], ["agua", 3, 1, 1], ["atum", 2, 1, 1],
 		["pe_de_cabra", 2, 1, 1], ["machado", 1, 1, 1], ["facao", 1, 1, 1], ["mascara_gas", 1, 1, 1], ["lanterna_cabeca", 1, 1, 1]],
@@ -133,7 +133,7 @@ const TABELAS := {
 	"chao_comercio": [["garrafa_vazia", 3, 1, 1], ["galho", 1, 1, 2], ["refrigerante", 3, 1, 1], ["salgadinho", 3, 1, 1], ["biscoito", 2, 1, 1], ["dinheiro", 3, 1, 8],
 		["revista", 2, 1, 1], ["cano", 2, 1, 1], ["trapos", 2, 1, 2], ["agua", 1, 1, 1]],
 	"chao_saude": [["bandagem", 4, 1, 2], ["trapos", 3, 1, 2], ["analgesico", 2, 1, 1], ["soro", 1, 1, 1], ["agua", 1, 1, 1]],
-	"chao_posto": [["garrafa_vazia", 3, 1, 1], ["refrigerante", 3, 1, 1], ["salgadinho", 2, 1, 1], ["trapos", 3, 1, 2], ["cano", 2, 1, 1],
+	"chao_posto": [["galao", 1, 1, 1], ["garrafa_vazia", 3, 1, 1], ["refrigerante", 3, 1, 1], ["salgadinho", 2, 1, 1], ["trapos", 3, 1, 2], ["cano", 2, 1, 1],
 		["isqueiro", 2, 1, 1], ["fita", 1, 1, 1], ["dinheiro", 2, 1, 6], ["mun_9mm", 1, 3, 8], ["pe_de_cabra", 1, 1, 1]],
 	"chao_hospital": [["bandagem", 5, 1, 2], ["trapos", 3, 1, 2], ["analgesico", 3, 1, 1], ["soro", 2, 1, 1], ["antibiotico", 1, 1, 1],
 		["tala", 1, 1, 1], ["mun_556", 1, 5, 15], ["mun_9mm", 1, 4, 10], ["agua", 1, 1, 1]],
@@ -159,6 +159,9 @@ var grade_reabastecida := Callable()
 # 0.73: portas mexidas (mundo/porta.gd): id "p12:3" -> [aberta, tábuas, quebrada, lado das tábuas]; vai no jogo salvo
 var portas := {}
 var porta_mudou := Callable()          # rede/sessao_rede.gd: manda para todos
+# 0.76: carros que viraram veículo e foram mexidos (mundo/veiculos.gd): id "v123_-456" -> estado (posição, giro,
+# gasolina, motor, tipo, cor); vai no jogo salvo e na rede
+var veiculos := {}
 
 func mudar_porta(id: String, e: Array) -> void:
 	portas[id] = e
@@ -352,6 +355,8 @@ func _sortear(tabela: String, r: RandomNumberGenerator, tam := Vector2i(99, 99))
 
 # cidade abandonada: as coisas não estão novas; armas vêm com o pente pela metade (ou sem) e munição solta
 func _estado_inicial(it, r: RandomNumberGenerator) -> void:
+	if it.id == "galao":
+		it.carga = 0.0 if r.randf() < 0.5 else r.randf_range(0.15, 1.0)      # 0.76: metade vem vazio
 	var x := r.randf()
 	it.estado = 1.0 if x < 0.3 else (r.randf_range(0.55, 0.95) if x < 0.75 else r.randf_range(0.2, 0.55))
 	if it.eh_arma_de_fogo():
@@ -403,7 +408,7 @@ func salvar(abertos := {}, locais_abertos := {}) -> Dictionary:
 				var p: Vector3 = no.global_transform.affine_inverse() * n.global_position
 				lista.append([n.item.para_dict(), p.x, p.y, p.z])
 		c["L%d" % i] = lista
-	return {"semente": semente, "grades": g, "chao": c, "ciclos": _ciclo.duplicate(), "ciclos_chao": _ciclo_chao.duplicate(), "portas": portas.duplicate()}
+	return {"semente": semente, "grades": g, "chao": c, "ciclos": _ciclo.duplicate(), "ciclos_chao": _ciclo_chao.duplicate(), "portas": portas.duplicate(), "veiculos": veiculos.duplicate(true)}
 
 func carregar(d: Dictionary) -> void:
 	semente = int(d.get("semente", semente))
@@ -412,6 +417,7 @@ func carregar(d: Dictionary) -> void:
 	_ciclo.clear()
 	_ciclo_chao.clear()
 	portas = (d.get("portas", {}) as Dictionary).duplicate()
+	veiculos = (d.get("veiculos", {}) as Dictionary).duplicate(true)
 	var g: Dictionary = d.get("grades", {})
 	for id in g:
 		var gr = GradeCls.new(12, 12, "", null)

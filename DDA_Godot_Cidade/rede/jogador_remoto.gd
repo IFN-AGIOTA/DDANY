@@ -12,6 +12,7 @@ const AnimadorCls := preload("res://jogador/animador_modelo.gd")
 const ModelosArmas := preload("res://armas/modelos_armas.gd")
 const ItemCls := preload("res://inventario/item.gd")
 const AlvoCls := preload("res://rede/alvo_jogador.gd")
+const VeiculoCls := preload("res://mundo/veiculo.gd")
 const ATRASO := 0.12                           # segundos (2 pacotes a 15/s)
 const FUZIS := ["mp5", "m4", "ak", "espingarda", "rifle_caca"]
 
@@ -39,6 +40,9 @@ var _rotulo: Label3D
 var _amostras: Array = []                     # [[tempo, pos, yaw], ...]
 var _relogio := 0.0
 var _armas_3d := {}                           # tipo -> Node3D
+var dirigindo_id := ""                         # 0.76: carro que ele está dirigindo ("" = a pé)
+var _carro = null                              # cópia do carro (mundo/veiculo.gd remoto, sem física própria)
+var _rot_carro := Vector3.ZERO
 var _arma_atual := ""
 
 func _ready() -> void:
@@ -116,6 +120,11 @@ func receber_estado(d: Array) -> void:
 	armas.aim = float(d[5])
 	armas.since = float(d[6])
 	mira_pitch = float(d[7]) if d.size() > 7 else 0.0
+	var vid := str(d[8]) if d.size() > 8 and b & 128 != 0 else ""
+	if d.size() > 9:
+		_rot_carro = d[9]
+	if vid != dirigindo_id:
+		_trocar_carro(vid)
 	_mostrar_arma(str(d[4]))
 
 # roupa: slot -> id do item ("" = vazio)
@@ -168,10 +177,13 @@ func _process(dt: float) -> void:
 		global_position = global_position.lerp(_amostras[0][1], minf(1.0, dt * 10.0))
 		rotation.y = lerp_angle(rotation.y, float(_amostras[0][2]), minf(1.0, dt * 10.0))
 	armas.since += dt
+	if _carro != null and is_instance_valid(_carro):
+		_carro.global_position = global_position - Vector3(0, 1.0, 0)
+		_carro.quaternion = _carro.quaternion.slerp(Quaternion.from_euler(_rot_carro), minf(1.0, dt * 12.0))
 	if _arma_atual != "" and _armas_3d.has(_arma_atual) and (_armas_3d[_arma_atual] as Node3D).visible == nadando:
 		(_armas_3d[_arma_atual] as Node3D).visible = not nadando      # 0.72: nadando, a arma some
 	if alvo != null:
-		alvo.atualizar(agachado, visible and not morto)
+		alvo.atualizar(agachado, visible and not morto and dirigindo_id == "")
 	if not _pausado:
 		animador.atualizar(dt, self)
 
@@ -193,3 +205,30 @@ class _Armas extends RefCounted:
 
 class _Equip extends RefCounted:
 	var slots := {}
+
+# 0.76: entrou/saiu de um carro: mostra a cópia do carro (o boneco some) ou tira
+func _trocar_carro(vid: String) -> void:
+	if _carro != null and is_instance_valid(_carro):
+		_carro.queue_free()
+	_carro = null
+	dirigindo_id = vid
+	_slot.visible = vid == ""
+	if vid == "" or sessao == null or sessao.main.get("veiculos") == null:
+		return
+	var vm = sessao.main.veiculos
+	var dd: Dictionary = vm.dados(vid)
+	vm.remoto_entrou(vid, id)
+	var c = VeiculoCls.new()
+	c.remoto = true
+	c.id = vid
+	c.tipo = str(dd.get("t", "sedan"))
+	c.cor = Color.html(str(dd.get("cor", "ffffff")))
+	c.name = "CarroDe_%d" % id
+	sessao.main.jogo.add_child(c)
+	c.global_position = global_position - Vector3(0, 1.0, 0)
+	c.rotation = _rot_carro
+	_carro = c
+
+func _exit_tree() -> void:
+	if _carro != null and is_instance_valid(_carro):
+		_carro.queue_free()
