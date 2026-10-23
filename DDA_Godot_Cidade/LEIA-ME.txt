@@ -22,7 +22,7 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 - Celular: instale DiasDeUmApocalipse.apk (pasta principal do repositório; Android arm64, paisagem).
   Ele é assinado sempre com a mesma chave (chave nova desde a 0.48, com "rotação" a partir da antiga), então cada
-  versão nova instala por cima da antiga e o jogo salvo continua.
+  versão nova instala por cima da antiga e o jogo salvo continua. APK atual: 0.75 (versão/código 45).
 - PC: Godot 4.3 > Importar projeto > escolha esta pasta (a que tem project.godot) > Rodar (F5).
   Renderizador "Compatibilidade" (GL Compatibility), o mesmo do celular.
   Ao entrar no jogo, a cidade leva ~2 s para ser montada (veja "Cidade pronta em ... ms" na Saída).
@@ -39,6 +39,25 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.75 · APK NOVO
+  · APK NOVO 0.75 (versão/código 45) com tudo até aqui: PvP, amigos no mapa e mensagens, loot e infectados que
+    voltam, água (nadar/afundar), portas e barricadas, infectados perto do amigo, tiro de longe nos locais. O
+    conteúdo é o mesmo da 0.74; o que muda é que as próximas atualizações pelo jogo partem dele e ficam pequenas
+    (até a 0.74 cada pacote levava tudo desde o APK 0.48, ~23 MB).
+  · No celular aparece o aviso "APK novo" com o botão BAIXAR: o Android baixa e pergunta se instala. Instala POR
+    CIMA (mesma chave, com a "rotação" da 0.48): o jogo salvo, a conta e as opções continuam. Quem ainda não
+    instalou continua jogando com o pacote 0.74 que já tem (ele não é apagado pelo aviso do APK novo).
+  · Conferido: assinatura v1/v2/v3 com a chave nova (mesma do APK 0.48), pacote Android
+    com.diasdeumapocalipse.godot, versionCode 45 / versionName 0.75, texturas do celular (ETC2) dentro, pasta
+    ferramentas/ fora, todos os scripts carregando a partir do APK. Bateria de testes sem falhas.
+  · ARQUIVOS MEXIDOS:
+      rede/atualizador.gd ....... CODIGO_APK = 45 (só muda com APK novo)
+      export_presets.cfg ........ Android: versão/código 45, nome 0.75
+      menu/config.gd ............ versão 0.75
+      ../DiasDeUmApocalipse.apk . APK novo (pasta principal do repositório, 77 MB)
+  · PUBLICADO: atualizacoes/atualizacao.json aponta o APK 0.75 (o pacote 0.74 saiu do manifesto: era do APK 0.48).
+    servidor_windows.zip (raiz) refeito na 0.75.
+
 ATUALIZAÇÃO 0.74 · INFECTADOS PERTO DO AMIGO, TIRO DE LONGE NOS LOCAIS E TESTES AUTOMÁTICOS
   · MULTIJOGADOR: quando o HOST está longe, os prédios e locais especiais perto do AMIGO agora abrem também no
     aparelho do host: os infectados presos lá dentro aparecem para o amigo, e o host ganha chão, prédios e
@@ -1686,6 +1705,9 @@ MÚSICA (pasta audio/)
   "ATUALIZAÇÃO X.YY" novo no topo da seção 2 com tudo o que mudou e os arquivos mexidos, e as seções de
   controles, números, itens, história e o MAPA de arquivos atualizadas quando for o caso. Este arquivo vai
   sempre junto no .zip da atualização.
+- PELO JOGO (celular): pacote com os arquivos mudados desde o APK atual (0.75), feito por ferramentas/gerar_pacote.gd
+  (MODO=pacote) e publicado em atualizacoes/; APK novo com MODO=apk (ver seção 1 e o topo do gerar_pacote.gd).
+  Antes de publicar, rode os testes: ferramentas/testes/rodar.sh.
 - Para pedir mudanças, diga o sistema (use o MAPA acima) ou mande foto/mensagem de erro.
 
 -----------------------------------------------------------------------------------------------------

@@ -12,7 +12,7 @@ extends Node
 #      nem link de APK para os aparelhos.
 # Mexa AQUI para: CODIGO_APK (tem de ser igual a version/code do export_presets.cfg a cada APK novo).
 
-const CODIGO_APK := 44
+const CODIGO_APK := 45
 const CHAVE_PUBLICA := """-----BEGIN PUBLIC KEY-----
 MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAoX/PSEJ5Pqhsjhx4Mnwv
 jMdXyJEEo0S0+H1rPQ89ELIKcsW5jdkQmdDGJqz8CxXtKDziiGYVMI9Gi+ZFJOj6
