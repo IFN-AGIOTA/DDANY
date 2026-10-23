@@ -35,6 +35,7 @@ const Y_LAGO := 0.2
 const Y_PARQUE := 0.4
 const Y_CALCADA := 0.55
 const Y_RUA := 0.6
+const FAIXA_ACIMA := 0.012                   # 0.82: faixas pintadas 1,2 cm acima do asfalto (na mesma altura piscavam)
 const CAMADA := {"mar": 0.0, "terra": 1.0, "lago": 2.0, "parque": 3.0, "lote": 3.5, "calcada": 4.0, "rua": 5.0, "faixa": 6.0}
 
 const BRANCO := Color(0.92, 0.92, 0.88)
@@ -286,7 +287,7 @@ func _marca(v: PackedVector3Array, cores: PackedColorArray, c: Vector2, dir: Vec
 	var a := c - dir * comp * 0.5
 	var b := c + dir * comp * 0.5
 	var n0 := v.size()
-	_faixa(v, a, b, larg * 0.5, Y_RUA)
+	_faixa(v, a, b, larg * 0.5, Y_RUA + FAIXA_ACIMA)
 	for i in v.size() - n0:
 		cores.append(cor)
 

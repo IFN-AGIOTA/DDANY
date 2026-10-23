@@ -99,6 +99,8 @@ var _pontos: Array = []                # pontos livres no chão (loot solto)
 var portas: Array = []                 # 0.73: {pos (meio do vão, no chão), giro, larg, alt, parede, dupla, estado, abertura}
 var _rp := RandomNumberGenerator.new() # 0.73: sorteio das portas de dentro (separado: não muda o resto do prédio)
 var _pad_piso := 1.0
+# 0.82: o piso (o desenho) fica 1,5 cm acima do chão do lote: na mesma altura os dois "brigavam" e piscavam
+const PISO_Y := 0.015
 var _malha: ArrayMesh = null
 var nivel := 0                         # 0 = térreo · 1, 2 = andares de cima
 var extras := 0                        # quantos andares de cima este prédio tem abertos
@@ -235,7 +237,7 @@ func _enfeite_abertura(f: int, s0: float, s1: float, ab: Array) -> void:
 			paredes.caixa(Vector3(fora.x, y1, fora.y), tam2, Color(0.15, 0.15, 0.16))
 			for k in r.randi_range(1, 4):
 				var q: Vector2 = n * (o - ESP - r.randf_range(0.2, 1.2)) + t * r.randf_range(s0, s1)
-				resto.caixa(Vector3(q.x, 0.01, q.y), Vector3(r.randf_range(0.05, 0.2), 0.01, r.randf_range(0.05, 0.15)), Color(0.55, 0.65, 0.68), Basis(Vector3.UP, r.randf() * 3.0))
+				resto.caixa(Vector3(q.x, PISO_Y + 0.01, q.y), Vector3(r.randf_range(0.05, 0.2), 0.01, r.randf_range(0.05, 0.15)), Color(0.55, 0.65, 0.68), Basis(Vector3.UP, r.randf() * 3.0))
 
 # ---------- paredes internas ----------
 # parede reta de a até b (alinhada a X ou Z) com vãos de porta nas posições "vaos" (distância a partir de a)
@@ -549,11 +551,11 @@ func _mobiliar() -> void:
 			_no_meio("entulho", sala, uso, true)
 		for k in r.randi_range(2, 8):
 			var p := Vector2(r.randf_range(sala.position.x, sala.end.x), r.randf_range(sala.position.y, sala.end.y))
-			resto.caixa(Vector3(p.x, 0.008, p.y), Vector3(0.21, 0.004, 0.3), Moveis.BRANCO * r.randf_range(0.7, 1.0), Basis(Vector3.UP, r.randf() * 3.0))
+			resto.caixa(Vector3(p.x, PISO_Y + 0.008, p.y), Vector3(0.21, 0.004, 0.3), Moveis.BRANCO * r.randf_range(0.7, 1.0), Basis(Vector3.UP, r.randf() * 3.0))
 		if r.randf() < 0.4:
 			var p := Vector2(r.randf_range(sala.position.x, sala.end.x), r.randf_range(sala.position.y, sala.end.y))
 			var s := r.randf_range(0.5, 1.4)
-			resto.caixa(Vector3(p.x, 0.004, p.y), Vector3(s, 0.003, s * r.randf_range(0.5, 1.0)), Color(0.18, 0.08, 0.06), Basis(Vector3.UP, r.randf() * 3.0))
+			resto.caixa(Vector3(p.x, PISO_Y + 0.004, p.y), Vector3(s, 0.003, s * r.randf_range(0.5, 1.0)), Color(0.18, 0.08, 0.06), Basis(Vector3.UP, r.randf() * 3.0))
 
 func _grades_cela(sala: Rect2) -> void:
 	# grade de ferro atravessando a cela, com a porta aberta. 0.81: na direção em que as DUAS pontas encostam em
@@ -668,7 +670,7 @@ func _gerar(inf: Dictionary, i: int, cidade) -> void:
 		"mercado": Color(0.75, 0.74, 0.7), "farmacia": Color(0.78, 0.78, 0.76), "clinica": Color(0.7, 0.74, 0.72),
 		"delegacia": Color(0.55, 0.55, 0.52), "restaurante": Color(0.55, 0.36, 0.24)}.get(uso, Color(0.5, 0.5, 0.5))
 	_pad_piso = {"residencial": 2.0, "restaurante": 2.0, "escritorio": 4.0}.get(uso, 1.0)
-	piso.caixa(Vector3(0, -0.05, 0), Vector3(hx * 2.0 - 0.02, 0.1, hz * 2.0 - 0.02), cor_piso, Basis.IDENTITY, true)
+	piso.caixa(Vector3(0, PISO_Y - 0.05, 0), Vector3(hx * 2.0 - 0.02, 0.1, hz * 2.0 - 0.02), cor_piso, Basis.IDENTITY, true)
 	col.append([Vector3(0, -0.05, 0), Vector3(hx * 2.0, 0.1, hz * 2.0), 0.0])
 	_laje(teto, PE_DIREITO, LAJE, _buraco(0) if _escada else Rect2(), Color(0.78, 0.77, 0.74), true, extras > 0)
 	if extras == 0 and telhado:
@@ -820,7 +822,7 @@ func _gerar_andar() -> void:
 	_construir_escada(not topo or telhado, true)
 	var cor_piso: Color = Color(0.5, 0.34, 0.2) if uso_andar == "residencial" else Color(0.38, 0.38, 0.4)
 	_pad_piso = 2.0 if uso_andar == "residencial" else 4.0
-	_laje(piso, -0.1, 0.1, _buraco(nivel - 1), cor_piso, false, false)
+	_laje(piso, PISO_Y - 0.1, 0.1, _buraco(nivel - 1), cor_piso, false, false)
 	var buraco_cima := _buraco(nivel) if (not topo or telhado) else Rect2()
 	_laje(teto, PE_DIREITO, LAJE, buraco_cima, Color(0.78, 0.77, 0.74), true, not topo)
 	if topo and telhado:

@@ -34,8 +34,9 @@ const VERTICE_CAMADA := """
 void vertex() {
 	wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	// empurra a camada um tiquinho para a frente na profundidade (testado: + = por cima neste renderizador)
+	// 0.82: 3e-7 -> 1.2e-6 (a profundidade de 24 bits do celular não separava as camadas: piscava)
 	POSITION = PROJECTION_MATRIX * MODELVIEW_MATRIX * vec4(VERTEX, 1.0);
-	POSITION.z += camada * 3e-7 * POSITION.w;
+	POSITION.z += camada * 1.2e-6 * POSITION.w;
 }
 """
 
@@ -592,7 +593,7 @@ void vertex() {
 	wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
 	vertical = step(abs(NORMAL.y), 0.5);
 	POSITION = PROJECTION_MATRIX * MODELVIEW_MATRIX * vec4(VERTEX, 1.0);
-	POSITION.z += camada * 3e-7 * POSITION.w;
+	POSITION.z += camada * 1.2e-6 * POSITION.w;
 }
 void fragment() {
 	vec2 d = abs(wp.xz - caixa.xy) - caixa.zw;
