@@ -33,6 +33,7 @@ const ACOES := [
 	["mapa", "Mapa", "k:%d" % KEY_M, "Interação"],
 	["pausa", "Pausa", "k:%d" % KEY_ESCAPE, "Interação"],
 	["camera", "1ª / 3ª pessoa", "k:%d" % KEY_F, "Interação"],
+	["ombro", "Trocar de ombro (câmera)", "m:%d" % MOUSE_BUTTON_MIDDLE, "Combate"],
 	["mensagem", "Mensagens rápidas (multijogador)", "k:%d" % KEY_T, "Interação"],
 	["voo", "Câmera livre (voo)", "k:%d" % KEY_V, "Câmera livre"],
 	["voo_sobe", "Câmera livre: subir", "k:%d" % KEY_E, "Câmera livre"],

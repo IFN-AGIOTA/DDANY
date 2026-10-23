@@ -60,6 +60,8 @@ const PortaCls := preload("res://mundo/porta.gd")
 @export var distancia_mirando := 1.6
 @export var fov_mirando := 34.0
 @export var ombro_mirando := 0.55      # mirando, a câmera vai para cima do ombro direito (metros)
+var ombro := 1.0                        # 0.79: 1 = câmera no ombro DIREITO (personagem à esquerda) · -1 = ombro ESQUERDO
+var _ombro_s := 1.0                     # o mesmo, suavizado (a câmera desliza de um lado para o outro)
 @export var sensibilidade := 1.0
 @export var inverter_y := false         # Opções › Controles › Eixo vertical
 var giroscopio := false                 # Opções › Controles › Giroscópio (olhar mexendo o celular)
@@ -179,6 +181,7 @@ func ligar_controles(c) -> void:
 	c.agachar_pedido.connect(alternar_agachar)
 	c.mirar_pedido.connect(func(): _mirar_ligado = not _mirar_ligado)
 	c.camera_pedida.connect(alternar_camera)
+	c.ombro_pedido.connect(trocar_ombro)
 	c.recarregar_pedido.connect(func():
 		if not nadando:
 			armas.recarregar())
@@ -648,6 +651,12 @@ func _pit_min() -> float:
 func _pit_max() -> float:
 	return 1.3 if primeira_pessoa else 1.15
 
+# 0.79: TROCAR DE OMBRO (tecla do meio do mouse ou botão OMBRO): a câmera passa para o outro lado do personagem
+# (e mirando, para cima do outro ombro). Fica guardado em Opções › Câmera › Posição do personagem.
+func trocar_ombro() -> void:
+	ombro = -ombro
+	Config.definir("pos", "left" if ombro > 0.0 else "right")    # menu/aplicar_opcoes.gd põe o lado e o ombro
+
 func alternar_camera() -> void:
 	Config.definir("cam", 0 if primeira_pessoa else 1)     # menu/aplicar_opcoes.gd liga primeira_pessoa
 
@@ -721,7 +730,8 @@ func _process(delta: float) -> void:
 	var asp := get_viewport().get_visible_rect().size.aspect()
 	var meia_largura := tan(deg_to_rad(camera.fov) * 0.5) * asp
 	var frac := _braco.get_hit_length() / maxf(dist, 0.01)
-	camera.position.x = lerpf(dist * meia_largura * lateral_camera, ombro_mirando, fator_mira) * frac
+	_ombro_s = move_toward(_ombro_s, ombro, delta * 5.0)
+	camera.position.x = lerpf(dist * meia_largura * absf(lateral_camera) * _ombro_s, ombro_mirando * _ombro_s, fator_mira) * frac
 	if veiculo != null:
 		camera.position.x = 0.0                   # dirigindo: o carro no meio da tela
 	_camera_primeira_pessoa(delta, fov_alvo)

@@ -13,8 +13,10 @@ extends CharacterBody3D
 # Fora de vista por ~TEMPO_ESQUECER ele PERDE você: vai até o último lugar onde te viu, olha em volta e volta a vagar.
 # Movimento (barato para o celular): anda "por conta" na altura do chão (mundo.altura), batendo e deslizando
 # nas plantas dos prédios e nos obstáculos (carros, barreiras) pelos dados do mapa, sem motor de física.
-# Só perto do jogador (~20 m) E perto de um prédio com interior aberto usa a física de verdade
-# (move_and_slide nas paredes/portas/móveis; altura por um raio para baixo).
+# Só perto do jogador (~20 m) E perto de um prédio/local com interior aberto usa a física de verdade
+# (move_and_slide nas paredes/portas/móveis; altura por um raio para baixo). 0.79: PERSEGUINDO alguém a menos de
+# ~26 m, sempre com física (não atravessa nada). Sem física, desvia também das construções dos locais especiais
+# e dos carros que funcionam.
 # Tiros: receber_tiro(dano, ponto, direcao, forma, atirador) igual aos alvos do estande; forma 1 = cabeça (x3).
 # Golpes corpo a corpo: receber_golpe(dano, direcao, atacante) (empurra e atordoa um pouco).
 # Ataque no jogador: jogador.receber_ataque(dano, chance_sangrar, origem) se o jogador tiver esse método.
@@ -58,6 +60,7 @@ const ANGULO_VISAO := 110.0           # graus (cone à frente)
 const FATOR_AGACHADO := 0.55
 const TEMPO_ESQUECER := 8.0           # segundos sem ver o jogador até desistir
 const DIST_FISICA := 20.0             # física de verdade só a menos disso do jogador e perto de interior aberto
+const DIST_FISICA_CACANDO := 26.0     # 0.79: perseguindo/atacando, física de verdade a menos disso (bate em tudo)
 const CHANCE_LOOT := 0.25
 const LOOT := ["bandagem", "feijao", "agua", "mun_9mm"]
 const VISAO_LANTERNA := 30.0          # de noite, com a lanterna acesa, é visto pelo menos daqui
@@ -542,8 +545,12 @@ func _physics_process(dt: float) -> void:
 	_t_modo -= dt
 	if _t_modo <= 0.0:
 		_t_modo = 0.5
-		var quer_fisica: bool = dist_jogador < (DIST_FISICA + 4.0 if _fisica else DIST_FISICA) \
-			and mundo.tem_chao_fisico(p.x, p.z) and mundo.perto_de_aberto(p.x, p.z, 10.0 if _fisica else 8.0)
+		# 0.79: correndo atrás de alguém perto, SEMPRE com física (antes só perto de prédio aberto: atravessava os
+		# móveis e paredes dos locais especiais, os carros que funcionam, cercas, grades...)
+		var folga := 4.0 if _fisica else 0.0
+		var quer_fisica: bool = mundo.tem_chao_fisico(p.x, p.z) and (
+			(esta_cacando() and dist_jogador < DIST_FISICA_CACANDO + folga)
+			or (dist_jogador < DIST_FISICA + folga and mundo.perto_de_aberto(p.x, p.z, 10.0 if _fisica else 8.0)))
 		if quer_fisica != _fisica:
 			_trocar_modo(quer_fisica)
 	# sentidos: 4-5 vezes por segundo, cada Vago num momento diferente
@@ -760,7 +767,10 @@ func _bate(q: Vector3, m_predio: float, m_obst: float) -> bool:
 	var m = gerente.mundo
 	if m.dentro_de_predio(q.x, q.z, m_predio, not _fisica):
 		return true
-	return not _fisica and m.dentro_de_obstaculo(q.x, q.z, m_obst)
+	if _fisica:
+		return false
+	return m.dentro_de_obstaculo(q.x, q.z, m_obst) or gerente.dentro_de_veiculo(q.x, q.z, m_obst) \
+		or gerente.Locais.em_construcao(Vector2(q.x, q.z), m_predio)
 
 # CONTORNAR: se o caminho direto está livre, vai direto. Se não, segue a parede sempre pelo mesmo lado
 # (escolhido pelo lado que abre primeiro), pegando a direção livre mais próxima do destino (de 30 em 30°).

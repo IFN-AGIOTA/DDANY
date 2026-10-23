@@ -345,7 +345,9 @@ func _pagina_camera(v: float) -> Control:
 	_secao(g, "Câmera", _seg("cam", [[0, "3ª pessoa"], [1, "1ª pessoa"]],
 		{1: "Câmera nos olhos: você vê os braços, a arma e as pernas. Troque no jogo com F ou o botão CAM."}))
 	_secao(g, "Distância (câmera traseira)", _seg("dist", [["near", "Perto"], ["mid", "Média"], ["far", "Longe"]]))
-	_secao(g, "Posição do personagem", _seg("pos", [["left", "Esquerda"], ["center", "Centro"], ["right", "Direita"]]))
+	_secao(g, "Posição do personagem", _seg("pos", [["left", "Esquerda"], ["center", "Centro"], ["right", "Direita"]],
+		{"left": "Câmera no ombro direito. Troque de ombro no jogo com o botão OMBRO ou o botão do meio do mouse.",
+		"right": "Câmera no ombro esquerdo. Troque de ombro no jogo com o botão OMBRO ou o botão do meio do mouse."}))
 	var d := UI.Deslizante.new(36, 70, 1, int(Config.valor("fov")))
 	var em := _secao(g, "Campo de visão", d, str(int(Config.valor("fov"))) + "°")
 	d.mudou.connect(func(val):

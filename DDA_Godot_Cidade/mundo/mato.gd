@@ -15,10 +15,10 @@ const Locais := preload("res://mundo/locais.gd")
 const Cenario := preload("res://mundo/cenario.gd")
 const Col := preload("res://mundo/colisao_mundo.gd")
 const Cid := preload("res://mundo/cidade.gd")
-const TAM := 32.0                                   # tamanho de cada pedaço (m)
+const TAM := 64.0                                   # tamanho de cada pedaço (m) · 0.79: 64 (antes 32): ~metade dos desenhos
 const RAIOS := [40.0, 56.0, 72.0, 90.0]             # alcance por "Distância dos detalhes" (0..3)
 const DENSIDADES := [0.45, 0.75, 1.0]               # por "Densidade do cenário" (0..2)
-const CANDIDATOS := 200                             # pontos sorteados por pedaço (densidade máxima)
+const CANDIDATOS := 800                             # pontos sorteados por pedaço (densidade máxima; 4x por causa do TAM)
 const AO_MAX := 24                                  # prédios mandados para a sombra no chão
 const AO_RAIO := 70.0
 

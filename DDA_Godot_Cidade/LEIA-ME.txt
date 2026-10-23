@@ -39,6 +39,51 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.79 · INFECTADOS NÃO ATRAVESSAM MAIS · TROCAR DE OMBRO · MENOS DRAW CALLS
+  · INFECTADOS NÃO ATRAVESSAM OBJETOS: antes eles só usavam a física de verdade perto de um prédio com interior
+    aberto; no resto andavam "pelos dados do mapa" (desviando só das plantas dos prédios e dos obstáculos da rua)
+    e por isso atravessavam as paredes e móveis dos locais especiais, os carros que funcionam, cercas e grades.
+    Agora: PERSEGUINDO alguém a menos de ~26 m, sempre com física (bate em tudo que você bate); perto de um local
+    especial montado também; e longe, sem física, desviam também das construções dos locais especiais e dos carros
+    que funcionam.
+  · TROCAR DE OMBRO: botão OMBRO na tela (perto do ARMA) ou o botão do MEIO do mouse (trocável em Opções › Teclado e
+    mouse). A câmera desliza para o outro lado do personagem e, mirando, fica em cima do outro ombro. Fica guardado
+    em Opções › Câmera › Posição do personagem (Esquerda = ombro direito, Direita = ombro esquerdo).
+  · OTIMIZAÇÃO (menos chamadas de desenho), medido no centro da cidade: 276 -> ~181 por quadro; base 214 -> ~175;
+    bairro 212 -> ~176. O que mudou:
+    - modelos baixados do cenário: as partes com só cor (ou a mesma textura) viraram UMA superfície, a cor de cada
+      parte nos vértices (semáforo 5 -> 1, poste 3 -> 1, placas 3/4 -> 1, lixeira e carro coberto 2 -> 1) — cada
+      tipo continua em MultiMesh (todos os postes de um bloco = 1 desenho);
+    - caixas d'água dos prédios: 3 -> 1 superfície;
+    - chão (terra, lotes, calçadas, asfalto, parques) em pedaços de 2000 m (antes 1000): ~77 -> ~42 desenhos;
+    - mato em volta do jogador em pedaços de 64 m (antes 32, mesma quantidade de mato): ~19 -> ~9;
+    - estande de tiro: os 8 alvos (32 malhas) viraram 2 MultiMesh = 2 desenhos.
+    Os PRÉDIOS continuam em blocos de 500 m de propósito (a câmera e a oclusão descartam os quarteirões escondidos;
+    blocos maiores pintariam prédios atrás de prédios, o que pesa mais no celular do que alguns desenhos).
+  · Testado: infectado perseguindo dentro da delegacia (saguão -> arsenal; estacionamento -> dormitório) e do posto
+    (pátio -> loja) nunca fica dentro de parede/móvel (com a lógica antiga ficava até 31 quadros seguidos dentro);
+    troca de ombro (botão, tecla, mirando, guardado nas opções); toda a bateria e os 3 testes de rede sem falhas.
+  · ARQUIVOS MEXIDOS:
+      inimigos/vago.gd .......... perseguindo perto = sempre com física (DIST_FISICA_CACANDO); sem física desvia dos
+                                  locais especiais e dos carros que funcionam
+      inimigos/vagos.gd ......... dentro_de_veiculo (carros que funcionam, para quem anda sem física)
+      mundo/colisao_mundo.gd .... perto_de_aberto também perto de local especial montado
+      mundo/locais.gd ........... em_construcao em grade de 100 m (é chamada muito mais vezes agora)
+      mundo/veiculos.gd ......... passa a lista de carros para os infectados
+      jogador/jogador.gd ........ trocar_ombro (lado da câmera, suave; mirando no outro ombro)
+      jogador/controles.gd ...... botão OMBRO e a ação "ombro"
+      jogador/teclas.gd ......... ação "Trocar de ombro (câmera)" (padrão: botão do meio do mouse)
+      menu/aplicar_opcoes.gd .... Posição do personagem decide o ombro
+      menu/opcoes.gd ............ dica da troca de ombro na Posição do personagem
+      mundo/cenario.gd .......... junta as partes de mesma cor/textura numa superfície (_juntar_iguais)
+      mundo/cidade.gd ........... chão em pedaços de 2000 m; caixa d'água numa superfície só
+      mundo/mato.gd ............. pedaços de 64 m
+      mundo/estande_tiro.gd ..... alvos desenhados em 2 MultiMesh
+      menu/config.gd ............ versão 0.79
+      ferramentas/testes/ ....... teste_infectados_colisao.gd e teste_ombro.gd (NOVOS); rodar.sh roda os dois
+  · PUBLICADA: atualizacoes/pacote_0.79.pck (o que mudou desde o APK 0.75, 0,8 MB) + manifesto; os celulares com o
+    APK 0.75 baixam sozinhos (o pacote 0.78 saiu da pasta). servidor_windows.zip (raiz) refeito na 0.79.
+
 ATUALIZAÇÃO 0.78 · LOCAIS NOVOS: DELEGACIAS, ESCOLAS, ESTAÇÕES DO METRÔ E QUARTÉIS DA GUARDA NACIONAL
   · 14 LOCAIS ESPECIAIS NOVOS (zonas de PvP, com loot próprio, infectados, aviso ao entrar, luz/som do gerador e
     nome/cor/letra no mapa). Agora são 42 no total:
@@ -1461,6 +1506,7 @@ TOQUE (vários dedos ao mesmo tempo)
 - ATIRAR / GOLPEAR (segurar; dá para arrastar o dedo em cima dele para mirar enquanto atira) · CORRER (segurar)
 - PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga) · RECARREGAR · ARMA (troca coldre/ombro) · PEGAR
   (aparece perto de um item; perto de uma PORTA: abrir / fechar / tirar tábua) · INV · II (pausa) · CAM (1ª/3ª pessoa) · VOO (câmera livre: SOBE / DESCE / VEL)
+  · OMBRO (0.79): troca a câmera de ombro (direito <-> esquerdo).
   · BALÃO (só no multijogador): mensagens rápidas.
 - CARRO (0.76): PEGAR perto de um carro que funciona = ENTRAR; joystick frente/trás = acelerar/freio e ré, lados =
   virar; PULAR = freio de mão; PEGAR = SAIR. PC: W/S/A/D (setas), Espaço freio de mão, E sair.
@@ -1469,7 +1515,8 @@ TOQUE (vários dedos ao mesmo tempo)
 PC (todas as teclas trocáveis em Opções › Teclado e mouse)
 - WASD/setas andar · Shift correr · Alt andar devagar · Espaço pular · C agachar · mouse esquerdo atirar/golpear ·
   mouse direito mirar · R recarregar · X ou rodinha trocar arma · Q roda do inventário rápido · 1..8 atalhos ·
-  E pegar / abrir e fechar porta · Tab inventário · M mapa · Esc/P pausa · F 1ª/3ª pessoa · V câmera livre (E sobe, Q desce) ·
+  E pegar / abrir e fechar porta · Tab inventário · M mapa · Esc/P pausa · F 1ª/3ª pessoa · botão do meio do mouse
+  trocar de ombro · V câmera livre (E sobe, Q desce) ·
   T mensagens rápidas (multijogador; 1..8 escolhe) · F11 tela cheia.
 
 -----------------------------------------------------------------------------------------------------
@@ -1670,6 +1717,11 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - DELEGACIA, ESCOLA, ESTAÇÃO DO METRÔ e
   QUARTEL por dentro e por fora (0.78) .. mundo/local_novos.gd (usa as peças do mundo/local.gd)
 - letreiros e pichações dos locais ...... mundo/local.gd (_texto) e mundo/local_novos.gd
+- trocar de ombro (câmera) .............. jogador/jogador.gd (trocar_ombro) · botão em jogador/controles.gd
+- quando o infectado usa física de
+  verdade (não atravessa nada) .......... inimigos/vago.gd (DIST_FISICA, DIST_FISICA_CACANDO, _bate)
+- juntar partes dos modelos do cenário
+  (menos draw calls) .................... mundo/cenario.gd (_juntar_iguais)
 - converter jogo salvo antigo (números
   dos prédios mudaram) ................. menu/salvamento.gd (MAPA_PREDIOS) e mundo/cidade.gd (remapa_v2/v3)
 - prédios por dentro (cômodos, portas,

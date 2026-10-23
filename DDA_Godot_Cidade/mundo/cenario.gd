@@ -8,6 +8,9 @@ extends RefCounted
 # malha(nome) devolve UMA malha (todas as peças juntas), com a ORIGEM EMBAIXO NO MEIO, no tamanho pedido (ALTURA) e
 # virada como os modelos feitos por código (braço do poste/semáforo para +X), pronta para MultiMesh: os materiais
 # aceitam a cor de cada instância (tom, sujeira, outono). Feita uma vez e guardada.
+# 0.79 · MENOS DRAW CALLS: as partes do modelo que têm só COR (ou a MESMA textura) viram UMA superfície (a cor de cada
+# parte vai para os vértices). Cada superfície = 1 desenho por bloco: semáforo 5 -> 1, poste 3 -> 1, placas 3/4 -> 1,
+# lixeira e carro coberto 2 -> 1. (Árvores: tronco e folhas têm texturas diferentes, ficam 2.)
 # Quem usa: mundo/abandono.gd (rua) e mundo/cidade.gd (árvores e plantas dos parques e terrenos).
 # Mexa AQUI para: qual arquivo é cada modelo, o tamanho e o giro.
 
@@ -121,6 +124,7 @@ static func _montar(nome: String) -> ArrayMesh:
 			giro += atan2(braco.y, braco.x)
 		centro = Vector3(pe.x, mn.y, pe.z)
 	var final := Transform3D(Basis(Vector3.UP, giro).scaled(Vector3.ONE * esc), Vector3.ZERO) * Transform3D(Basis.IDENTITY, -centro)
+	arrays_por_sup = _juntar_iguais(arrays_por_sup)
 	var am := ArrayMesh.new()
 	for par in arrays_por_sup:
 		var a: Array = par[0]
@@ -182,3 +186,69 @@ static func _material(m: Material) -> Material:
 		sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR       # folhas: recorte (mais leve e sem erro de ordem)
 		sm.alpha_scissor_threshold = 0.5
 	return sm
+
+# ---------- 0.79: juntar superfícies ----------
+# [arrays, material] -> mesma lista, mas as partes com o mesmo "jeito" de material (sem textura, ou a mesma textura,
+# mesma transparência e mesmo lado desenhado) viram uma parte só, com a cor de cada material nos vértices
+static func _chave(m: Material) -> String:
+	if not (m is BaseMaterial3D):
+		return "outro:%d" % (m.get_instance_id() if m != null else 0)
+	var b := m as BaseMaterial3D
+	var tex := b.albedo_texture
+	return "%s|%d|%d" % [tex.get_rid().get_id() if tex != null else 0, b.transparency, b.cull_mode]
+
+static func _juntar_iguais(sups: Array) -> Array:
+	var grupos := {}
+	var ordem: Array = []
+	for par in sups:
+		var k := _chave(par[1])
+		if not grupos.has(k):
+			grupos[k] = []
+			ordem.append(k)
+		grupos[k].append(par)
+	if ordem.size() == sups.size():
+		return sups                                   # nada para juntar
+	var saida: Array = []
+	for k in ordem:
+		var lista: Array = grupos[k]
+		if lista.size() == 1 or k.begins_with("outro"):
+			saida.append_array(lista)
+			continue
+		var v := PackedVector3Array()
+		var n := PackedVector3Array()
+		var uv := PackedVector2Array()
+		var c := PackedColorArray()
+		var tem_uv := false
+		for par in lista:
+			tem_uv = tem_uv or par[0][Mesh.ARRAY_TEX_UV] != null
+		for par in lista:
+			var a: Array = par[0]
+			var mat = par[1]
+			var cor: Color = (mat as BaseMaterial3D).albedo_color if mat is BaseMaterial3D else Color.WHITE
+			var av: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+			var an = a[Mesh.ARRAY_NORMAL]
+			var au = a[Mesh.ARRAY_TEX_UV]
+			var ac = a[Mesh.ARRAY_COLOR]
+			var ids = a[Mesh.ARRAY_INDEX]
+			var ordem_v: PackedInt32Array = ids if ids != null else PackedInt32Array(range(av.size()))
+			for i in ordem_v:
+				v.append(av[i])
+				n.append(an[i] if an != null else Vector3.UP)
+				if tem_uv:
+					uv.append(au[i] if au != null else Vector2.ZERO)
+				c.append(cor * (ac[i] if ac != null else Color.WHITE))
+		var arr := []
+		arr.resize(Mesh.ARRAY_MAX)
+		arr[Mesh.ARRAY_VERTEX] = v
+		arr[Mesh.ARRAY_NORMAL] = n
+		arr[Mesh.ARRAY_COLOR] = c
+		if tem_uv:
+			arr[Mesh.ARRAY_TEX_UV] = uv
+		var st := SurfaceTool.new()                   # reaproveita os vértices iguais (com índice)
+		st.create_from_arrays(arr)
+		st.index()
+		arr = st.commit_to_arrays()
+		var m0: BaseMaterial3D = (lista[0][1] as BaseMaterial3D).duplicate()
+		m0.albedo_color = Color.WHITE                 # a cor de cada parte já está nos vértices
+		saida.append([arr, m0])
+	return saida

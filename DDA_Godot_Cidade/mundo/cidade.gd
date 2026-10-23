@@ -197,7 +197,7 @@ func _tri(v: PackedVector3Array, a: Vector3, b: Vector3, c: Vector3) -> void:
 # OTIMIZAÇÃO: o chão (terra, parques, lagos, calçadas, asfalto, faixas) era UMA malha para a cidade inteira, que a
 # placa de vídeo processava toda em todo quadro. Agora cada malha é cortada em PEDAÇOS de PEDACO_CHAO metros
 # (cada triângulo vai para o pedaço do seu centro): só os pedaços que aparecem na câmera são desenhados.
-const PEDACO_CHAO := 1000.0                 # 2 x 2 chunks (mundo/chunks.gd): chão é barato em triângulos, caro em chamadas de desenho
+const PEDACO_CHAO := 2000.0                 # 0.79: 4 x 4 chunks (antes 1000): chão é barato em triângulos, caro em chamadas de desenho
 const PEDACO_FAIXAS := 500.0                # faixas somem a LONGE_FAIXAS do centro do pedaço: pedaço pequeno
 const LONGE_FAIXAS := 700.0                  # faixas pintadas somem de longe (nem dá para ver)
 
@@ -1080,8 +1080,26 @@ func _abandono() -> void:
 	print("Carros: ", abandono.carros.size(), " · obstáculos: ", abandono.obstaculos.size() / 7)
 
 # junta várias malhas prontas (cilindro, cone...) numa só, deslocadas, cada uma com seu material
-static func _juntar(partes: Array) -> ArrayMesh:
+# uma = true (0.79): tudo numa superfície só, a cor de cada material nos vértices (1 desenho em vez de um por parte)
+static func _juntar(partes: Array, uma := false) -> ArrayMesh:
 	var am := ArrayMesh.new()
+	if uma:
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		for p in partes:
+			var arr: Array = (p[0] as PrimitiveMesh).get_mesh_arrays()
+			var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+			var ns: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+			var cor: Color = (p[2] as StandardMaterial3D).albedo_color
+			var ids: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+			for i in ids:
+				st.set_color(cor)
+				st.set_normal(ns[i])
+				st.add_vertex(vs[i] + p[1])
+		st.commit(am)
+		var m := _mat_simples(Color.WHITE, 0.8, true)
+		am.surface_set_material(0, m)
+		return am
 	for p in partes:
 		var arr: Array = (p[0] as PrimitiveMesh).get_mesh_arrays()
 		var vs: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
@@ -1116,7 +1134,7 @@ func _malha_caixa_dagua() -> ArrayMesh:
 	teto.rings = 1
 	var base := BoxMesh.new()
 	base.size = Vector3(3.6, 2.0, 3.6)
-	return _juntar([[base, Vector3(0, 1.0, 0), ferro], [corpo, Vector3(0, 4.0, 0), madeira], [teto, Vector3(0, 6.7, 0), ferro]])
+	return _juntar([[base, Vector3(0, 1.0, 0), ferro], [corpo, Vector3(0, 4.0, 0), madeira], [teto, Vector3(0, 6.7, 0), ferro]], true)
 
 # ---------- árvores nos parques ----------
 const MAX_ARVORES := 9000

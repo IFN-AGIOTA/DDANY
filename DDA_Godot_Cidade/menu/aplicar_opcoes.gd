@@ -76,6 +76,7 @@ func aplicar() -> void:
 		j.giro_zero = o.get("gyro_zero", Vector3.ZERO)
 		j.distancia_camera = DIST_CAMERA.get(o["dist"], 2.35)
 		j.lateral_camera = LADO.get(o["pos"], 0.32)
+		j.ombro = -1.0 if o["pos"] == "right" else 1.0         # 0.79: lado da câmera (e do ombro ao mirar)
 		j.fov_camera = float(o["fov"])
 		j.primeira_pessoa = int(o.get("cam", 0)) == 1     # 0.65: 1ª pessoa
 		j.armas.vibrar = bool(o["vib"])

@@ -48,6 +48,8 @@ func ligar(cid, mun, jog: Node3D, lm, vg) -> void:
 	jogador = jog
 	loot = lm
 	vagos = vg
+	if vagos != null:
+		vagos.veiculos = self             # 0.79: os infectados sem física desviam dos carros que funcionam
 	ab = cidade.abandono if cidade != null else null
 	_ids.clear()
 	_hash.clear()

@@ -15,6 +15,7 @@ extends Node3D
 # física perto DELE, com os mesmos dados da cidade): os infectados perto do amigo andam com física, batem nas paredes e
 # portas dos prédios abertos lá. tem_chao_fisico() vale para todas as cópias.
 
+const LocaisCls := preload("res://mundo/locais.gd")   # 0.79: terreno dos locais especiais (perto_de_aberto)
 const ALT_MAR := -0.5
 const ALT_TERRA := 0.0
 const ALT_LAGO := 0.2
@@ -691,7 +692,11 @@ func tem_chao_fisico(x: float, z: float) -> bool:
 	return false
 
 # true se (x, z) está a menos de "margem" metros de um prédio com interior aberto (paredes de física)
+# 0.79: ou de um LOCAL ESPECIAL montado (mundo/locais.gd: paredes, móveis, carros e grades de física)
 func perto_de_aberto(x: float, z: float, margem := 8.0) -> bool:
+	for i in locais_abertos:
+		if LocaisCls.retangulo(int(i), margem).has_point(Vector2(x, z)):
+			return true
 	for idx in abertos:
 		var o: int = int(idx) * 5
 		if absf(x - _pred[o]) < _pred[o + 2] * 0.5 + margem and absf(z - _pred[o + 1]) < _pred[o + 3] * 0.5 + margem:

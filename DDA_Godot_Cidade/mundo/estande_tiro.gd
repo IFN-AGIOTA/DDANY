@@ -3,12 +3,18 @@ extends Node3D
 # Alvos em forma de silhueta a 15, 25, 40 e 60 m: vida 100 como os infectados (pistola 34 · M4 21 · cabeça x3).
 # Caem ao "morrer" e levantam sozinhos depois de 3 s. Placar em cima do estande.
 # Cada alvo usa o mesmo contrato que os inimigos vão usar: receber_tiro(dano, ponto, direcao, forma, atirador).
+# 0.79 · DESENHO: todos os alvos em 2 MultiMesh (silhuetas e pés) = 2 desenhos no total (antes 4 por alvo); o tombo
+# e o brilho do acerto mudam a transformação/cor de cada instância.
 
 var mundo = null            # colisao_mundo.gd (para assentar os alvos no chão)
 var acertos := 0
 var cabecas := 0
 var abates := 0
 var _placar: Label3D
+var _alvos: Array = []
+var _mm_corpo: MultiMesh
+var _mm_pe: MultiMesh
+const COR_ALVO := Color(0.85, 0.55, 0.2)
 
 class Alvo extends StaticBody3D:
 	const VIDA := 100.0
@@ -17,7 +23,6 @@ class Alvo extends StaticBody3D:
 	var caido := 0.0          # 0 em pé · 1 deitado
 	var volta := 0.0
 	var _piv: Node3D
-	var _mat: StandardMaterial3D
 	var _flash := 0.0
 	var estande: Node3D
 
@@ -25,17 +30,8 @@ class Alvo extends StaticBody3D:
 		estande = e
 		collision_layer = 4     # camada 3 = inimigos/alvos
 		collision_mask = 0
-		_piv = Node3D.new()
+		_piv = Node3D.new()                     # o desenho (silhueta) segue este pivô: estande._process
 		add_child(_piv)
-		_mat = StandardMaterial3D.new()
-		_mat.albedo_color = Color(0.85, 0.55, 0.2)
-		_mat.roughness = 0.9
-		var poste := StandardMaterial3D.new()
-		poste.albedo_color = Color(0.25, 0.25, 0.27)
-		_caixa(_piv, Vector3(0.5, 1.3, 0.06), Vector3(0, 0.85, 0), _mat)        # corpo
-		_caixa(_piv, Vector3(0.26, 0.28, 0.06), Vector3(0, 1.66, 0), _mat)      # cabeça
-		_caixa(self, Vector3(0.06, 0.2, 0.06), Vector3(0, 0.1, 0), poste)        # pé
-		_caixa(self, Vector3(0.6, 0.04, 0.3), Vector3(0, 0.02, 0), poste)
 		# formas de colisão: 0 = corpo · 1 = cabeça
 		var cs := CollisionShape3D.new()
 		var bs := BoxShape3D.new()
@@ -50,14 +46,11 @@ class Alvo extends StaticBody3D:
 		ch.position = Vector3(0, 1.66, 0)
 		add_child(ch)
 
-	func _caixa(p: Node3D, tam: Vector3, pos: Vector3, m: Material) -> void:
-		var mi := MeshInstance3D.new()
-		var bm := BoxMesh.new()
-		bm.size = tam
-		mi.mesh = bm
-		mi.material_override = m
-		mi.position = pos
-		p.add_child(mi)
+	func cor() -> Color:
+		return COR_ALVO.lerp(Color(1, 1, 1), _flash)
+
+	func pivo() -> Node3D:
+		return _piv
 
 	func receber_tiro(dano: float, _ponto: Vector3, _dir: Vector3, forma: int, _atirador: Node) -> Dictionary:
 		if vida <= 0.0:
@@ -76,7 +69,6 @@ class Alvo extends StaticBody3D:
 
 	func _process(dt: float) -> void:
 		_flash = maxf(0.0, _flash - dt * 6.0)
-		_mat.albedo_color = Color(0.85, 0.55, 0.2).lerp(Color(1, 1, 1), _flash)
 		var alvo_c := 1.0 if vida <= 0.0 else 0.0
 		caido += (alvo_c - caido) * minf(1.0, dt * 10.0)
 		_piv.rotation.x = -caido * PI * 0.48
@@ -106,6 +98,8 @@ func montar(centro: Vector2, atirador: Vector2) -> void:
 				y = mundo.altura(p.x, p.y)
 			a.global_position = Vector3(p.x, y, p.y)
 			a.rotation.y = atan2(frente.x, frente.y)
+			_alvos.append(a)
+	_montar_desenho()
 	_placar = Label3D.new()
 	_placar.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	_placar.font_size = 64
@@ -127,3 +121,46 @@ func registrar(cabeca: bool, morreu: bool) -> void:
 func _atualizar_placar() -> void:
 	if _placar != null:
 		_placar.text = "ESTANDE DE TIRO\nacertos %d · cabeça %d · derrubados %d" % [acertos, cabecas, abates]
+
+# 0.79: silhuetas (corpo + cabeça) numa MultiMesh e pés na outra
+func _montar_desenho() -> void:
+	_mm_corpo = _mm([[Vector3(0.5, 1.3, 0.06), Vector3(0, 0.85, 0)], [Vector3(0.26, 0.28, 0.06), Vector3(0, 1.66, 0)]], 0.9)
+	_mm_pe = _mm([[Vector3(0.06, 0.2, 0.06), Vector3(0, 0.1, 0)], [Vector3(0.6, 0.04, 0.3), Vector3(0, 0.02, 0)]], 0.7)
+	var inv := global_transform.affine_inverse()
+	for k in _alvos.size():
+		var a: Node3D = _alvos[k]
+		_mm_pe.set_instance_transform(k, inv * a.global_transform)
+		_mm_pe.set_instance_color(k, Color(0.25, 0.25, 0.27))
+		_mm_corpo.set_instance_transform(k, inv * a.pivo().global_transform)
+		_mm_corpo.set_instance_color(k, a.cor())
+
+func _mm(caixas: Array, aspereza: float) -> MultiMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for c in caixas:
+		var bm := BoxMesh.new()
+		bm.size = c[0]
+		st.append_from(bm, 0, Transform3D(Basis.IDENTITY, c[1]))
+	var mat := StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = aspereza
+	var malha := st.commit()
+	malha.surface_set_material(0, mat)
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.mesh = malha
+	mm.instance_count = _alvos.size()
+	var mi := MultiMeshInstance3D.new()
+	mi.multimesh = mm
+	add_child(mi)
+	return mm
+
+func _process(_dt: float) -> void:
+	if _mm_corpo == null:
+		return
+	var inv := global_transform.affine_inverse()
+	for k in _alvos.size():
+		var a = _alvos[k]                               # 8 alvos: atualizar todo quadro é barato
+		_mm_corpo.set_instance_transform(k, inv * a.pivo().global_transform)
+		_mm_corpo.set_instance_color(k, a.cor())

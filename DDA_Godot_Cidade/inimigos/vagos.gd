@@ -54,6 +54,7 @@ var ativo := true:
 			limpar()
 var clima = null
 var mato = null                        # mundo/mato.gd (agachado no capim alto = quase invisível)
+var veiculos = null                    # 0.79: mundo/veiculos.gd (carros que funcionam: obstáculo para quem anda sem física)
 var abates := 0
 var cidade = null
 var mundo = null
@@ -505,3 +506,21 @@ func _ao_morrer(v: Node, cabeca: bool) -> void:
 		var velho = corpos.pop_front()
 		if is_instance_valid(velho):
 			velho.queue_free()
+
+# 0.79: (x, z) cai dentro de um carro que funciona (estacionado ou dirigido)? O carro largado comum é obstáculo do
+# mapa (mundo/colisao_mundo.gd), mas o que virou veículo perde esse obstáculo: sem física, o infectado o atravessava.
+func dentro_de_veiculo(x: float, z: float, margem := 0.0) -> bool:
+	if veiculos == null:
+		return false
+	for v in veiculos.nos.values():
+		if not is_instance_valid(v):
+			continue
+		var d: Vector3 = Vector3(x, 0.0, z) - (v as Node3D).global_position
+		if d.x * d.x + d.z * d.z > 16.0:
+			continue
+		var b: Basis = (v as Node3D).global_basis
+		var lx := d.dot(b.x)
+		var lz := d.dot(b.z)
+		if absf(lx) < 1.0 + margem and absf(lz) < 2.4 + margem:
+			return true
+	return false

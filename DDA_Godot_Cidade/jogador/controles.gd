@@ -20,6 +20,7 @@ extends CanvasLayer
 
 signal voo_pedido
 signal camera_pedida               # 0.65: 1ª/3ª pessoa (botão CAM, tecla F)
+signal ombro_pedido                # 0.79: trocar de ombro (botão OMBRO, botão do meio do mouse)
 signal vel_pedida
 signal agachar_pedido
 signal mirar_pedido
@@ -126,6 +127,7 @@ func _ready() -> void:
 	_bt("MIRAR", "MIRAR", "br", Vector2(355, 335), 46, Color(0.95, 0.95, 0.95), "tocar", false, false)
 	_bt("RECARREGAR", "RECARREGAR", "br", Vector2(362, 168), 40, Color(0.23, 0.63, 1.0), "tocar", false, false)
 	_bt("ARMA", "ARMA", "br", Vector2(482, 282), 44, Color(1.0, 0.71, 0.0), "tocar", false, false)
+	_bt("OMBRO", "OMBRO", "br", Vector2(445, 405), 32, Color(0.8, 0.8, 0.95), "tocar", false, false)
 	_bt("PEGAR", "PEGAR", "br", Vector2(500, 150), 40, Color(0.35, 0.85, 0.45), "tocar", false, false)
 	_bt("VOO", "VOO", "tr", Vector2(56, 46), 30, Color(0.6, 0.6, 0.6), "tocar", false, false)
 	_bt("INV", "INV", "tr", Vector2(132, 46), 30, Color(1.0, 0.71, 0.0), "tocar", false, false)
@@ -414,6 +416,9 @@ func _acao(acao: String, apertou: bool) -> void:
 		"camera":
 			if not modo_voo:
 				camera_pedida.emit()
+		"ombro":
+			if not modo_voo:
+				ombro_pedido.emit()
 		"voo_vel":
 			if modo_voo:
 				vel_pedida.emit()
@@ -509,6 +514,7 @@ func _tocou(id: String) -> void:
 		"PAUSA": pausa_pedida.emit()
 		"PEGAR": pegar_pedido.emit()
 		"CAM": camera_pedida.emit()
+		"OMBRO": ombro_pedido.emit()
 		"MSG": mensagem_pedida.emit()
 
 # OTIMIZAÇÃO: redesenha só quando algo que aparece mudou (botão aceso, texto, botão escondido, bloqueio).

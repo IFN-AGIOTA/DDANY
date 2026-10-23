@@ -163,10 +163,12 @@ static func casca(tipo: String) -> Array:
 	return []
 
 # está dentro de um prédio de algum local (volumes grandes da casca)? Para não nascer infectado/caixa dentro das paredes
-static var _volumes: Array[Rect2] = []
+# e (0.79) para os infectados sem física não atravessarem as construções. Grade de 100 m (é chamada muitas vezes).
+const CEL_VOL := 100.0
+static var _vol_hash := {}            # Vector2i -> Array[Rect2]
 
 static func em_construcao(p: Vector2, margem := 0.0) -> bool:
-	if _volumes.is_empty():
+	if _vol_hash.is_empty():
 		for i in LOCAIS.size():
 			for v in casca(LOCAIS[i][0]):
 				var c3: Vector3 = v[0]
@@ -175,10 +177,23 @@ static func em_construcao(p: Vector2, margem := 0.0) -> bool:
 					continue
 				var a := local_para_mundo(i, Vector2(c3.x, c3.z) - Vector2(t3.x, t3.z) * 0.5)
 				var b := local_para_mundo(i, Vector2(c3.x, c3.z) + Vector2(t3.x, t3.z) * 0.5)
-				_volumes.append(Rect2(Vector2(minf(a.x, b.x), minf(a.y, b.y)), (a - b).abs()))
-	for r in _volumes:
-		if r.grow(margem).has_point(p):
-			return true
+				var r := Rect2(Vector2(minf(a.x, b.x), minf(a.y, b.y)), (a - b).abs())
+				for cz in range(floori(r.position.y / CEL_VOL), floori(r.end.y / CEL_VOL) + 1):
+					for cx in range(floori(r.position.x / CEL_VOL), floori(r.end.x / CEL_VOL) + 1):
+						var k := Vector2i(cx, cz)
+						if not _vol_hash.has(k):
+							_vol_hash[k] = []
+						_vol_hash[k].append(r)
+	var k0 := Vector2i(floori(p.x / CEL_VOL), floori(p.y / CEL_VOL))
+	var alcance := ceili(margem / CEL_VOL)
+	for dz in range(-alcance, alcance + 1):
+		for dx in range(-alcance, alcance + 1):
+			var lista = _vol_hash.get(k0 + Vector2i(dx, dz))
+			if lista == null:
+				continue
+			for r in lista:
+				if (r as Rect2).grow(margem).has_point(p):
+					return true
 	return false
 
 # 0.74: volumes grandes de todos os locais no MUNDO (caixas alinhadas), para o tiro de longe (mundo/colisao_mundo.gd
