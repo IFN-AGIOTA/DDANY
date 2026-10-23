@@ -14,6 +14,9 @@ extends Node
 #                         CÓLERA (água suja: sede dobrada e vômito · antibióticos curam)
 #                         INTOXICAÇÃO (comida estragada: vômito · carvão ativado cura ou passa sozinha)
 #   FOGUEIRA perto ...... esquenta e seca a roupa
+#   ÁGUA (0.72) ......... entrar na água molha a roupa (até a altura da água); NADAR gasta estamina (peso pesa muito);
+#                         boiando parado ela volta se não estiver pesado. Sem estamina afunda (jogador.gd) e o FÔLEGO
+#                         (0-100) acaba em ~8 s embaixo d'água; depois disso, afoga (morte "afogado").
 # Morte: vida 0 ou sangue < 500 -> sinal "morreu". As roupas protegem (campo "protecao" em itens.gd).
 # Mexa AQUI para: velocidade da fome/sede, dano do sangramento, frio, regeneração.
 
@@ -53,6 +56,8 @@ var _t_tosse := 20.0
 var _t_vomito := 40.0
 var parado := 0.0                    # segundos sem se mexer (vômito)
 var gas := 0.0                       # 0.65: 0..1 quanto gás tóxico tem aqui (mundo/eventos.gd: ZONA CONTAMINADA)
+var folego := 100.0                  # 0.72: ar embaixo d'água
+var _t_aviso_ar := 0.0
 var _t_gas := 0.0
 
 var jogador: CharacterBody3D
@@ -152,6 +157,12 @@ func _process(dt: float) -> void:
 				break
 	if perto_fogo:
 		molhado = maxf(0.0, molhado - dt / 40.0)
+	# 0.72: na água a roupa molha até onde a água chega (nadando: inteira)
+	var prof: float = float(jogador.get("prof_agua")) if jogador.get("prof_agua") != null else 0.0
+	if bool(jogador.get("nadando")):
+		molhado = 1.0
+	elif prof > 0.1:
+		molhado = maxf(molhado, clampf(prof / 1.3, 0.0, 1.0))
 	var calor := _soma_roupas("calor")
 	var alvo := 35.2 + (ar - 10.0) * 0.08 + calor * 2.6 - molhado * 1.6 + (0.6 if v > 5.0 else 0.0) + (2.6 if perto_fogo else 0.0)
 	alvo = clampf(alvo, 33.5, 39.5)
@@ -347,13 +358,25 @@ func _condicoes(dt: float, v: float, p: Vector3) -> void:
 	_gas(dt, p)
 	var peso: float = _peso()
 	estamina_max = clampf(100.0 - maxf(0.0, peso - 18.0) * 2.5, 35.0, 100.0)
-	if v > 5.0:
+	if bool(jogador.get("nadando")):
+		# 0.72: nadar (rápido gasta muito; o peso da mochila puxa para baixo) · boiando parado descansa
+		var pesado := maxf(0.0, peso - 15.0)
+		if v > 1.9:
+			estamina -= dt * (5.0 + peso * 0.1)
+		elif v > 0.3:
+			estamina -= dt * (0.35 + pesado * 0.12)
+		else:
+			estamina += dt * (2.0 - pesado * 0.2)
+		_afogar(dt)
+	elif v > 5.0:
 		estamina -= dt * (13.0 + peso * 0.15)
 	elif v > 2.5:
 		estamina += dt * 4.0
 	else:
 		estamina += dt * 9.0
 	estamina = clampf(estamina, 0.0, estamina_max)
+	if not bool(jogador.get("nadando")):
+		folego = minf(100.0, folego + dt * 30.0)
 	desmaiado = maxf(0.0, desmaiado - dt)
 	parado = maxf(0.0, parado - dt)
 	if sangue < 2400.0 and desmaiado <= 0.0 and randf() < dt * 0.025:
@@ -391,6 +414,20 @@ func _condicoes(dt: float, v: float, p: Vector3) -> void:
 			parado = 2.5
 			tossiu.emit(p)
 			aviso.emit("VOCÊ VOMITOU")
+
+# 0.72: afundando (cabeça embaixo d'água) o fôlego acaba; sem fôlego, afoga
+func _afogar(dt: float) -> void:
+	if not bool(jogador.get("afundando")):
+		folego = minf(100.0, folego + dt * 30.0)
+		return
+	folego = maxf(0.0, folego - dt * 12.0)
+	if folego <= 0.0:
+		_dano(dt * 9.0, "afogado")
+		_t_aviso_ar -= dt
+		if _t_aviso_ar <= 0.0:
+			_t_aviso_ar = 3.0
+			ferido.emit(9.0)
+			aviso.emit("SEM AR! VOCÊ ESTÁ SE AFOGANDO")
 
 # queda: jogador.gd chama ao pousar com a velocidade vertical (negativa)
 func queda(vel_y: float) -> void:
@@ -435,6 +472,7 @@ func reiniciar() -> void:
 	tempo_vivo = 0.0
 	causa = ""
 	estamina = 100.0
+	folego = 100.0
 	perna_quebrada = false
 	desmaiado = 0.0
 	gripe = 0.0

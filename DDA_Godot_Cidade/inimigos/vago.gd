@@ -143,6 +143,8 @@ var _t_predio := 0.0
 var _t_chao := 0.0
 var _t_modo := 0.0
 var _y_chao := 0.0
+var _seco := Vector3.INF               # 0.72: último ponto em terra (não entram na água funda: param na margem)
+const Y_AGUA := -0.12                  # 0.72: chão abaixo disso = fundo do mar/lago (mundo/colisao_mundo.gd)
 var _vel_xz := Vector3.ZERO
 var _vel_h := 0.0
 var _quadro := 0
@@ -822,6 +824,13 @@ func _mover(dt: float) -> void:
 				_y_chao = gerente.mundo.altura(g.x, g.z)
 			else:
 				_y_chao = (r["position"] as Vector3).y
+			if _y_chao < Y_AGUA and _seco != Vector3.INF:
+				g = Vector3(_seco.x, g.y, _seco.z)          # entrou na água funda: volta para a margem
+				global_position = g
+				_y_chao = _seco.y
+				_vel_xz = Vector3.ZERO
+			elif _y_chao >= Y_AGUA:
+				_seco = Vector3(g.x, _y_chao, g.z)
 		if absf(g.y - _y_chao) > 0.002:
 			g.y = lerpf(g.y, _y_chao, minf(1.0, dt * 12.0))
 			global_position = g
@@ -842,6 +851,12 @@ func _mover(dt: float) -> void:
 		if _t_chao <= 0.0:
 			_t_chao = 0.3
 			_y_chao = gerente.mundo.altura(np.x, np.z)
+			if (_y_chao < Y_AGUA or absf(_y_chao - 0.2) < 0.001) and _seco != Vector3.INF:
+				np = Vector3(_seco.x, np.y, _seco.z)        # água (mar -0,5 / lago 0,2): não entra
+				_y_chao = _seco.y
+				_vel_xz = Vector3.ZERO
+			else:
+				_seco = Vector3(np.x, _y_chao, np.z)
 		np.y = lerpf(p.y, _y_chao, minf(1.0, dt * 8.0))
 		_vel_h = Vector2(np.x - p.x, np.z - p.z).length() / maxf(dt, 0.0001)
 		global_position = np

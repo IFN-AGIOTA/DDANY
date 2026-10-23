@@ -200,6 +200,10 @@ func atualizar(dt: float, j) -> void:
 	_arma = str(j.armas.atual) if j.armas != null else ""
 	_mancando = bool(j.get("mancando")) if "mancando" in j else false
 	_fp = bool(j.get("primeira_pessoa")) if "primeira_pessoa" in j else false
+	# 0.72: nadando (jogador/jogador.gd): a braçada no lugar de tudo
+	if bool(j.get("nadando")):
+		_nadar(j.vel_horizontal, bool(j.get("afundando")))
+		return
 	_arma_ocupada = false
 	if j.armas != null:
 		for campo in ["golpe", "rel", "draw"]:
@@ -207,6 +211,20 @@ func atualizar(dt: float, j) -> void:
 			if valor != null and float(valor) > 0.0:
 				_arma_ocupada = true
 	atualizar_estado(dt, j.vel_horizontal, j.is_on_floor(), j.velocity.y, mira, tiro_recente, j.morto, j.agachado)
+
+# nado de peito (animação "nadar"): parado boiando = braçada lenta; afundando = braçada desesperada
+func _nadar(vel_h: float, afundando: bool) -> void:
+	_t_acao = 0.0
+	_vel_h = vel_h
+	_no_chao = false
+	_atual = Estado.PARADO
+	var nome := "nadar" if _tem("nadar") else _nome_para(Estado.PARADO)
+	if nome != "" and nome != _nome_atual:
+		_nome_atual = nome
+		_ap.play(nome, 0.35)
+	_ap.speed_scale = clampf(0.35 + vel_h / 1.5, 0.35, 1.7) * (1.7 if afundando else 1.0)
+	if _postura != null:
+		_postura.usar("", false)
 
 var _dir := Vector2.ZERO      # (lado, frente) da velocidade em relação ao corpo
 var _fp := false             # 0.65: 1ª pessoa (o corpo fica virado para a câmera: pernas em 8 direções sempre)

@@ -8,6 +8,8 @@ extends Node
 #   - DE PERTO (até RAIO_ABRIR m da borda do terreno): o local inteiro é montado (numa thread, como os interiores)
 #     com móveis, colisão, loot e infectados; a casca some. Longe de novo (RAIO_FECHAR): desmonta e guarda o chão.
 #   - No mapa: cada local aparece com a cor e o nome (hud/mapa.gd).
+#   - 0.72: os infectados VOLTAM: a cada CICLO_INFECTADOS horas de jogo o local enche de novo quando você chega
+#     (se os de antes já morreram ou foram embora). O loot volta pelo ciclo do mundo/loot_mundo.gd (CICLO_LOCAL).
 # Mexa AQUI para: quantos/onde (LOCAIS), nomes, cores no mapa, distâncias e quantos infectados.
 
 const LocalCls := preload("res://mundo/local.gd")
@@ -55,6 +57,7 @@ const RAIO_ABRIR := 140.0              # da borda do terreno
 const RAIO_FECHAR := 200.0
 const MAX_ABERTOS := 2
 const PERTO_INFECTADO := 14.0          # não nasce infectado mais perto que isso de você
+const CICLO_INFECTADOS := 4.0          # 0.72: horas de jogo (4 h = 8 min de verdade)
 
 # terreno no MUNDO (alinhado aos eixos)
 static func retangulo(i: int, margem := 0.0) -> Rect2:
@@ -138,7 +141,7 @@ var hud = null                         # armas/hud_combate.gd (aviso ao entrar)
 var abertos := {}                      # índice -> Node3D
 var ativo := true
 var usar_thread := true
-var _infestados := {}
+var _infestados := {}                  # local -> ciclo em que foi enchido (nesta partida)
 var _dentro := -1
 var _t := 0.0
 var _tarefa := -1
@@ -231,14 +234,27 @@ func _terminar(i: int, prep) -> void:
 	_infestar(i, no, prep.infectados)
 
 func _infestar(i: int, no: Node3D, pontos: Array) -> void:
-	if vagos == null or _infestados.has(i) or not bool(vagos.get("ativo")):
+	if vagos == null or not bool(vagos.get("ativo")):
 		return
-	_infestados[i] = true
+	var c := ciclo_infectados(i)
+	if int(_infestados.get(i, -1)) >= c:
+		return
+	_infestados[i] = c
+	var t: Vector2 = TAMANHO[LOCAIS[i][0]]
+	var ainda: int = vagos.vivos_perto(no.global_position, maxf(t.x, t.y) * 0.5 + 10.0)
+	var falta := pontos.size() - ainda          # só completa o que falta (os de antes ainda estão por aí)
 	for lp in pontos:
+		if falta <= 0:
+			break
 		var gp: Vector3 = no.global_transform * (lp as Vector3)
 		if jogador != null and gp.distance_to(jogador.global_position) < PERTO_INFECTADO:
 			continue
 		vagos._criar(gp + Vector3(0, 0.05, 0), Vector3.INF)
+		falta -= 1
+
+func ciclo_infectados(i: int) -> int:
+	var h: float = loot.horas() if loot != null else 0.0
+	return floori((h + fposmod(i * 0.618034, 1.0) * CICLO_INFECTADOS) / CICLO_INFECTADOS)
 
 func fechar(i: int) -> void:
 	if not abertos.has(i):

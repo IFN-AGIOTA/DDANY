@@ -28,7 +28,7 @@ const RECURSOS := [
 		"CC0 1.0 (domínio público)", "kaylousberg.itch.io/kaykit-character-animations · kaylousberg.com"],
 	["Submetralhadora MP5 (modelo 3D e texturas)", "Gintoki1234 · \"MP5 A2\" (reduzido para o jogo)",
 		"CC BY 4.0 (Creative Commons Atribuição 4.0)", "gintoki1234.itch.io/mp5-a2"],
-	["Caminhadas (devagar, normal, apressada, trote, de lado, de costas, agachado, mancando), jeitos de andar dos infectados, comer, beber e tomar remédio · captura de movimento real",
+	["Caminhadas (devagar, normal, apressada, trote, de lado, de costas, agachado, mancando), jeitos de andar dos infectados, comer, beber, tomar remédio e nadar (nado de peito) · captura de movimento real",
 		"Carnegie Mellon University · \"CMU Graphics Lab Motion Capture Database\" (mocap.cs.cmu.edu; BVH de Bruce Hahne/cgspeed; convertidas para o esqueleto do jogo)",
 		"Uso livre, inclusive comercial · dados obtidos de mocap.cs.cmu.edu, criados com recursos da NSF EIA-0196217", "mocap.cs.cmu.edu · github.com/una-dinosauria/cmu-mocap"],
 	["Conexão pela internet no multijogador (WebRTC)", "Godot Engine contributors · \"webrtc-native\" (com libdatachannel, libjuice, usrsctp, libsrtp, Mbed TLS e plog)",

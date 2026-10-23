@@ -45,7 +45,8 @@ func _montar() -> void:
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(t)
 	var motivo: String = {"infectados": "Os infectados pegaram você.", "fome": "Morreu de fome.", "sede": "Morreu de sede.",
-		"frio": "Morreu de frio.", "sangue": "Perdeu sangue demais.", "infecção": "A infecção venceu.", "queda": "A queda foi alta demais."}.get(causa, "")
+		"frio": "Morreu de frio.", "sangue": "Perdeu sangue demais.", "infecção": "A infecção venceu.", "queda": "A queda foi alta demais.",
+		"afogado": "Afogou-se."}.get(causa, "")
 	if causa.begins_with("baleado por ") or causa.begins_with("golpeado por "):   # 0.71: PvP
 		motivo = ("Baleado por " if causa.begins_with("baleado") else "Golpeado por ") + causa.get_slice(" por ", 1) + "."
 	var s := int(tempo_vivo)

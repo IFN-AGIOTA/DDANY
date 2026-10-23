@@ -1,9 +1,15 @@
 extends RefCounted
 # LOOT DA CIDADE (estilo DayZ): o que aparece em cada móvel, no chão dos prédios e nos porta-malas dos carros.
 # Cada lugar tem uma TABELA (abaixo). O conteúdo é sorteado na 1ª vez que o prédio é aberto, sempre igual para o
-# mesmo lugar (semente = id do lugar), e depois fica GUARDADO: o que você pegou não volta, o que você deixou fica.
+# mesmo lugar (semente = id do lugar), e depois fica GUARDADO: o que você deixou fica.
 # Cidade abandonada: muita coisa já foi saqueada (CHANCE_VAZIO).
-# Mexa AQUI para: o que aparece em cada lugar, raridade (peso), quantidades, estado dos itens e quão vazia a cidade está.
+# 0.72 · O LOOT VOLTA (estilo DayZ): passado um CICLO no relógio do jogo (dia/hora do mundo/clima.gd, igual para
+# todos na partida em rede), o lugar ganha um sorteio novo na próxima vez que abrir. Nada é apagado: o sorteio novo
+# só COMPLETA até a quantidade dele (o que já está lá, inclusive o que você guardou, conta). Cada lugar tem o seu
+# momento (fase sorteada pelo id), então a cidade não enche toda de uma vez. Os locais especiais (zonas de PvP)
+# voltam mais rápido (CICLO_LOCAL).
+# Mexa AQUI para: o que aparece em cada lugar, raridade (peso), quantidades, estado dos itens, quão vazia a cidade
+# está e de quanto em quanto tempo o loot volta.
 
 const ItemCls := preload("res://inventario/item.gd")
 const GradeCls := preload("res://inventario/grade.gd")
@@ -14,6 +20,8 @@ const CHANCE_VAZIO := 0.35            # móvel já saqueado
 const CHANCE_VAZIO_LOCAL := 0.15      # 0.68: locais especiais (posto, hospital, supermercado, armazém) têm mais coisa
 const CHANCE_CHAO := 0.45             # chance de cada ponto livre do chão ter alguma coisa
 const MAX_CHAO := 4                   # itens soltos por prédio
+const CICLO := 16.0                   # 0.72: horas de JOGO para o loot de um prédio/carro voltar (16 h = 32 min de verdade)
+const CICLO_LOCAL := 10.0             # 0.72: postos, hospitais, supermercados e armazéns (10 h = 20 min)
 
 # [id, peso (raridade relativa), qtd mínima, qtd máxima]
 const TABELAS := {
@@ -147,16 +155,46 @@ var _chao := {}                       # id do prédio -> [[item.gd, Vector3 loca
 # pegou: não aparecem mais em nenhum aparelho · grade_criada avisa a sessão quando um móvel é sorteado (conteúdo base)
 var pegos := {}
 var grade_criada := Callable()
+var grade_reabastecida := Callable()  # 0.72: o loot de uma grade voltou aqui (a sessão manda o conteúdo novo para todos)
+# 0.72: relógio do jogo em horas (main.gd liga no clima) e em que ciclo cada lugar foi sorteado/reabastecido
+var relogio := Callable()
+var _ciclo := {}                      # id da grade -> ciclo
+var _ciclo_chao := {}                 # id do prédio -> ciclo do chão
+
+func horas() -> float:
+	return float(relogio.call()) if relogio.is_valid() else 0.0
+
+# em que ciclo o lugar está agora (cada lugar com a sua fase: não volta tudo junto)
+func ciclo(id: String) -> int:
+	var c := CICLO_LOCAL if id.begins_with("L") else CICLO
+	var fase := float(absi(hash(id + "fase")) % 1000) / 1000.0 * c
+	return floori((horas() + fase) / c)
+
+# o relógio pulou (o cliente recebeu a hora do host): o que já foi sorteado conta como deste ciclo
+func sincronizar_ciclos() -> void:
+	for id in _grades:
+		_ciclo[id] = ciclo(id)
+	for id in _ciclo_chao:
+		_ciclo_chao[id] = ciclo(id)
 
 # grade de um móvel / porta-malas (sorteada na 1ª vez, depois a mesma)
 func grade(id: String, tabela: String, nome: String, tam: Vector2i, vazio := CHANCE_VAZIO):
 	if _grades.has(id):
 		var g0 = _grades[id]
 		g0.nome = nome
+		_reabastecer(id, g0, tabela, tam, vazio)
 		return g0
 	var g = GradeCls.new(tam.x, tam.y, nome, null)
+	_encher(g, tabela, tam, vazio, hash(id) ^ semente)
+	_grades[id] = g
+	_ciclo[id] = ciclo(id)
+	if grade_criada.is_valid():
+		grade_criada.call(id, g)
+	return g
+
+func _encher(g, tabela: String, tam: Vector2i, vazio: float, sem: int) -> void:
 	var r := RandomNumberGenerator.new()
-	r.seed = hash(id) ^ semente
+	r.seed = sem
 	if r.randf() >= vazio:
 		var n := r.randi_range(1, clampi(tam.x * tam.y / 5, 1, 4))
 		for k in n:
@@ -169,33 +207,77 @@ func grade(id: String, tabela: String, nome: String, tam: Vector2i, vazio := CHA
 				if v.x >= 0:
 					g.colocar(it, v.x, v.y, v.z == 1)
 					break
-	_grades[id] = g
-	if grade_criada.is_valid():
-		grade_criada.call(id, g)
-	return g
+
+# 0.72: passou um ciclo desde o último sorteio deste lugar -> sorteio novo, que só COMPLETA (não apaga nada)
+func _reabastecer(id: String, g, tabela: String, tam: Vector2i, vazio: float) -> void:
+	var agora := ciclo(id)
+	var antes: int = _ciclo.get(id, agora)
+	_ciclo[id] = agora
+	if agora <= antes:
+		return
+	var novo = GradeCls.new(tam.x, tam.y, "", null)
+	_encher(novo, tabela, tam, vazio, (hash(id) ^ semente) + agora * 7919)
+	var alvo: int = novo.itens.size()
+	var n: int = g.itens.size()
+	var mudou := false
+	for it in novo.itens.duplicate():
+		if n >= alvo:
+			break
+		novo.remover(it)
+		var v: Vector3i = g.achar_vaga(it)
+		if v.x >= 0:
+			g.colocar(it, v.x, v.y, v.z == 1)
+			n += 1
+			mudou = true
+	if mudou and grade_reabastecida.is_valid():
+		grade_reabastecida.call(id, g)
 
 # itens soltos no chão de um prédio (pontos = meta "pontos_chao" do interior: [[Vector3 local, cômodo], ...])
 func espalhar_chao(id: String, uso: String, pontos: Array, pai: Node3D) -> void:
+	var agora := ciclo(id)
 	if not _chao.has(id):
-		var lista := []
-		var r := RandomNumberGenerator.new()
-		r.seed = hash(id + "chao") ^ semente
-		var tabela: String = CHAO_DO_USO.get(uso, "chao_residencial")
-		for p in pontos:
-			if lista.size() >= MAX_CHAO:
-				break
-			if r.randf() < CHANCE_CHAO:
-				var it = _sortear(tabela, r)
-				if it != null:
-					it.uid = "%s:%d" % [id, lista.size()]     # igual em todos os aparelhos (mesma semente)
-					lista.append([it, p[0]])
-		_chao[id] = lista
+		_chao[id] = _sortear_chao(id, uso, pontos, 0, MAX_CHAO, [])
+		_ciclo_chao[id] = agora
+	elif int(_ciclo_chao.get(id, agora)) < agora:
+		# 0.72: o chão do prédio ganha coisa nova (até MAX_CHAO contando o que ainda está lá)
+		var ficou: Array = []
+		for par in _chao[id]:
+			if not pegos.has(par[0].uid):
+				ficou.append(par)
+		_chao[id] = ficou + _sortear_chao(id, uso, pontos, agora, MAX_CHAO - ficou.size(), ficou)
+		_ciclo_chao[id] = agora
+	else:
+		_ciclo_chao[id] = agora
 	for par in _chao[id]:
 		var it = par[0]
 		if it.no_mundo != null or it.onde != null or it.slot != "" or pegos.has(it.uid):
 			continue
 		ItemMundoCls.soltar(pai, it, pai.global_transform * (par[1] as Vector3), false)
 	_chao[id] = []                    # agora os itens estão no mundo; ao fechar o prédio, guardar_chao devolve
+
+# sorteio do chão · ciclo 0 = o 1º (uid "p12:3", como antes) · ciclos seguintes têm uid próprio ("p12:5:0")
+func _sortear_chao(id: String, uso: String, pontos: Array, c: int, maximo: int, ocupados: Array) -> Array:
+	var lista := []
+	var r := RandomNumberGenerator.new()
+	r.seed = (hash(id + "chao") ^ semente) + c * 7919
+	var tabela: String = CHAO_DO_USO.get(uso, "chao_residencial")
+	for p in pontos:
+		if lista.size() >= maximo:
+			break
+		if r.randf() < CHANCE_CHAO:
+			var it = _sortear(tabela, r)
+			if it == null:
+				continue
+			var livre := true
+			for par in ocupados:
+				if (par[1] as Vector3).distance_to(p[0]) < 0.6:
+					livre = false
+					break
+			if not livre:
+				continue
+			it.uid = ("%s:%d" % [id, lista.size()]) if c == 0 else ("%s:%d:%d" % [id, c, lista.size()])   # igual em todos os aparelhos
+			lista.append([it, p[0]])
+	return lista
 
 # o prédio vai fechar: guarda o que ainda está no chão dele (posição local)
 func guardar_chao(id: String, pai: Node3D) -> void:
@@ -233,6 +315,7 @@ func definir_conteudo(id: String, larg: int, alt: int, nome: String, itens: Arra
 		var it = ItemCls.de_dict(od)
 		if it != null:
 			g.colocar(it, it.x, it.y, it.rot)
+	_ciclo[id] = ciclo(id)                 # veio da rede: já é deste ciclo (não reabastece de novo aqui)
 	return g
 
 func _sortear(tabela: String, r: RandomNumberGenerator, tam := Vector2i(99, 99)):
@@ -312,12 +395,14 @@ func salvar(abertos := {}, locais_abertos := {}) -> Dictionary:
 				var p: Vector3 = no.global_transform.affine_inverse() * n.global_position
 				lista.append([n.item.para_dict(), p.x, p.y, p.z])
 		c["L%d" % i] = lista
-	return {"semente": semente, "grades": g, "chao": c}
+	return {"semente": semente, "grades": g, "chao": c, "ciclos": _ciclo.duplicate(), "ciclos_chao": _ciclo_chao.duplicate()}
 
 func carregar(d: Dictionary) -> void:
 	semente = int(d.get("semente", semente))
 	_grades.clear()
 	_chao.clear()
+	_ciclo.clear()
+	_ciclo_chao.clear()
 	var g: Dictionary = d.get("grades", {})
 	for id in g:
 		var gr = GradeCls.new(12, 12, "", null)
@@ -334,3 +419,10 @@ func carregar(d: Dictionary) -> void:
 			if it != null:
 				lista.append([it, Vector3(e[1], e[2], e[3])])
 		_chao[id] = lista
+	# 0.72: ciclo de cada lugar (save antigo não tem: conta como do ciclo de agora, volta no próximo)
+	var cg: Dictionary = d.get("ciclos", {})
+	for id in _grades:
+		_ciclo[id] = int(cg[id]) if cg.has(id) else ciclo(id)
+	var cc: Dictionary = d.get("ciclos_chao", {})
+	for id in _chao:
+		_ciclo_chao[id] = int(cc[id]) if cc.has(id) else ciclo(id)

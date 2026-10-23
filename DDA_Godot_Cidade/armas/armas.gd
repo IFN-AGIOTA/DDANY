@@ -73,6 +73,7 @@ var draw := 0.0                       # animação de sacar (1 -> 0)
 var rec := 0.0                        # coice da arma
 var dry := 0.0
 var gatilho := false                  # o jogador está segurando o gatilho
+var escondida := false                # 0.72: nadando, a arma da mão some (não dá para usar na água)
 var _prev := false
 var _pend := false                    # um tiro pedido (toque) que ainda vai sair
 var _pend_t := 0.0                    # o pedido vale por este tempo, mesmo depois de soltar o dedo
@@ -105,7 +106,7 @@ func _ready() -> void:
 
 func reiniciar() -> void:
 	for t in nos:
-		(nos[t] as Node3D).visible = (t == atual)
+		(nos[t] as Node3D).visible = (t == atual) and not escondida
 	cd = 0.0
 	rel = 0.0
 	gatilho = false
@@ -147,7 +148,7 @@ func _sincronizar() -> void:
 	cd = 0.22
 	draw = 1.0
 	for t in nos:
-		(nos[t] as Node3D).visible = (t == atual)
+		(nos[t] as Node3D).visible = (t == atual) and not escondida
 	_mostrar_acessorios()
 	if k != "" and k != "punhos":
 		_vibrar(15)
@@ -217,7 +218,7 @@ func anexar(modelo: Node3D, ponto_mao: Node3D) -> void:
 			modelo.segurar_arma(k, n)
 		elif ponto_mao != null:
 			ponto_mao.add_child(n)
-		n.visible = (k == atual)
+		n.visible = (k == atual) and not escondida
 
 func cano() -> Node3D:
 	var n: Node3D = nos.get(atual)
@@ -652,3 +653,14 @@ func _tipo_chao(p: Vector3) -> int:
 func _vibrar(ms: int) -> void:
 	if vibrar and OS.has_feature("mobile"):
 		Input.vibrate_handheld(ms)
+
+# 0.72: esconde/mostra a arma da mão (jogador/jogador.gd: nadando)
+func esconder_arma(sim: bool) -> void:
+	if escondida == sim:
+		return
+	escondida = sim
+	for t in nos:
+		(nos[t] as Node3D).visible = (t == atual) and not escondida
+	if sim:
+		gatilho = false
+		aim = 0.0

@@ -24,7 +24,7 @@ Animações extras (0.26), em animacoes.res, convertidas para este esqueleto por
 Animações de captura de movimento real (0.59), em animacoes.res, convertidas para este esqueleto por
 ferramentas/retarget_cmu.gd: andar_lento (07_04), andar_normal (08_01), andar_rapido (07_12), andar_espreita (77_30),
 mancar (77_19), comer (79_15), beber (80_40), tomar_remedio (79_15); 0.61: trote (09_01), andar_tras (69_38),
-andar_lado_esq / andar_lado_dir (69_43, a da direita espelhada):
+andar_lado_esq / andar_lado_dir (69_43, a da direita espelhada); 0.72: nadar (126_03, nado de peito):
   Carnegie Mellon University, "CMU Graphics Lab Motion Capture Database" - http://mocap.cs.cmu.edu
   (dados criados com recursos da NSF EIA-0196217). Conversão para BVH: Bruce Hahne (cgspeed), cópia em
   https://github.com/una-dinosauria/cmu-mocap

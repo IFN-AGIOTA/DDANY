@@ -460,6 +460,17 @@ func _planejar(pj: Vector3) -> void:
 	else:
 		_fila.append([p, Vector3.INF])
 
+# 0.72: quantos infectados vivos a até "raio" metros (no plano) de p (prédio/local só volta a ter se esvaziou)
+func vivos_perto(p: Vector3, raio: float) -> int:
+	var n := 0
+	var r2 := raio * raio
+	for v in vivos:
+		if is_instance_valid(v):
+			var d := Vector2(v.global_position.x - p.x, v.global_position.z - p.z)
+			if d.length_squared() < r2:
+				n += 1
+	return n
+
 func _criar(p: Vector3, destino: Vector3) -> void:
 	if espelho:
 		return            # 0.70: no cliente quem cria é o host (prédio infestado, local, missão e evento chamam aqui)

@@ -4,6 +4,9 @@ extends Node3D
 #  - CHÃO: um HeightMapShape3D de ~96 m centrado no jogador. A altura de cada ponto vem dos MESMOS dados
 #    que desenham o chão (rua 0.6 · calçada 0.55 · parque 0.4 · lago 0.2 · terra 0.0 · mar -0.5), então o pé encosta no que se vê.
 #    O recálculo roda aos poucos (poucas linhas por quadro) para não travar o celular.
+#    0.72 · ÁGUA FUNDA: no mar e nos lagos o chão de física fica ABAIXO da superfície (rampa a partir da margem até
+#    PROF_MAR / PROF_LAGO), então dá para entrar andando e, mais para dentro, NADAR (jogador/jogador.gd).
+#    nivel_agua(x, z) diz a altura da superfície (ou -INF se não é água).
 #  - PRÉDIOS: um pequeno conjunto (pool) de caixas reaproveitadas, posicionadas só nos prédios próximos
 #    (menos os que estão com o interior montado: esses têm paredes de verdade, ver mundo/interiores.gd).
 #  - OBSTÁCULOS: carros, barreiras, caçambas e entulho perto do jogador (outro pool de caixas giradas).
@@ -17,6 +20,9 @@ const ALT_RUA := 0.6
 const ALT_CALCADA := 0.55
 const CALCADA := 5.0         # largura da calçada (igual a mundo/cidade.gd)
 const BASE_PREDIO := 0.6
+const PROF_MAR := 3.4        # 0.72: fundo do mar (m abaixo da superfície), longe da margem
+const PROF_LAGO := 2.4       # 0.72: fundo dos lagos
+const RAMPA_AGUA := 7.0      # 0.72: metros da margem até a profundidade toda
 
 const ESPACO := 2.0          # metros entre amostras do chão
 const MEIO := 24
@@ -319,6 +325,65 @@ func tipo_piso(x: float, z: float) -> String:
 		return "agua"
 	return "grama"
 
+# 0.72: altura da superfície da água em (x, z): ALT_MAR, ALT_LAGO ou -INF (não é água: terra, rua, ponte, lote)
+func nivel_agua(x: float, z: float) -> float:
+	var a := altura(x, z)
+	if a == ALT_MAR:
+		return ALT_MAR
+	if absf(a - ALT_LAGO) < 0.0005:
+		return ALT_LAGO
+	return -INF
+
+# 0.72: no mapa de alturas pronto (N x N), afunda o mar e os lagos pela distância até a margem (2 passadas de
+# "distância chanfrada" na grade: barato). Fora da grade conta como água (longe da margem).
+func _aprofundar(d: PackedFloat32Array) -> void:
+	var tem := false
+	var dist := PackedFloat32Array()
+	dist.resize(N * N)
+	for i in N * N:
+		var v := d[i]
+		var agua := v == ALT_MAR or absf(v - ALT_LAGO) < 0.0005
+		dist[i] = 1.0e6 if agua else 0.0
+		tem = tem or agua
+	if not tem:
+		return
+	const D1 := ESPACO
+	const D2 := ESPACO * 1.41421
+	for r in N:
+		for c in N:
+			var i := r * N + c
+			var m := dist[i]
+			if m == 0.0:
+				continue
+			if c > 0:
+				m = minf(m, dist[i - 1] + D1)
+			if r > 0:
+				m = minf(m, dist[i - N] + D1)
+				if c > 0:
+					m = minf(m, dist[i - N - 1] + D2)
+				if c < N - 1:
+					m = minf(m, dist[i - N + 1] + D2)
+			dist[i] = m
+	for r in range(N - 1, -1, -1):
+		for c in range(N - 1, -1, -1):
+			var i := r * N + c
+			var m := dist[i]
+			if m == 0.0:
+				continue
+			if c < N - 1:
+				m = minf(m, dist[i + 1] + D1)
+			if r < N - 1:
+				m = minf(m, dist[i + N] + D1)
+				if c < N - 1:
+					m = minf(m, dist[i + N + 1] + D2)
+				if c > 0:
+					m = minf(m, dist[i + N - 1] + D2)
+			dist[i] = m
+	for i in N * N:
+		if dist[i] > 0.0:
+			var prof := PROF_MAR if d[i] == ALT_MAR else PROF_LAGO
+			d[i] -= prof * clampf((dist[i] - 1.0) / RAMPA_AGUA, 0.0, 1.0)
+
 # terra, parque, lago ou mar (ignorando as ruas)
 func altura_sem_rua(x: float, z: float) -> float:
 	var p := Vector2(x, z)
@@ -360,6 +425,7 @@ func _calcular_linhas(max_linhas: int) -> void:
 		_linha += 1
 		feitas += 1
 	if _linha >= N:
+		_aprofundar(_novo_dados)
 		_mapa.map_data = _novo_dados
 		_chao_forma.transform = Transform3D(Basis.from_scale(Vector3(ESPACO, 1.0, ESPACO)), Vector3(_novo_centro.x, 0.0, _novo_centro.y))
 		_centro = _novo_centro

@@ -25,6 +25,8 @@ var vel_horizontal := 0.0
 var mirando := false
 var agachado := false
 var mancando := false
+var nadando := false                           # 0.72
+var afundando := false
 var mira_pitch := 0.0
 var morto := false
 var armas := _Armas.new()
@@ -109,6 +111,8 @@ func receber_estado(d: Array) -> void:
 	morto = b & 4 != 0
 	_no_chao = b & 8 == 0
 	mancando = b & 16 != 0
+	nadando = b & 32 != 0
+	afundando = b & 64 != 0
 	armas.aim = float(d[5])
 	armas.since = float(d[6])
 	mira_pitch = float(d[7]) if d.size() > 7 else 0.0
@@ -146,7 +150,7 @@ func _mostrar_arma(tipo: String) -> void:
 		modelo.segurar_arma(tipo, n)
 		_armas_3d[tipo] = n
 	for t in _armas_3d:
-		(_armas_3d[t] as Node3D).visible = t == tipo
+		(_armas_3d[t] as Node3D).visible = t == tipo and not nadando
 
 # ---------- movimento suave ----------
 func _process(dt: float) -> void:
@@ -164,6 +168,8 @@ func _process(dt: float) -> void:
 		global_position = global_position.lerp(_amostras[0][1], minf(1.0, dt * 10.0))
 		rotation.y = lerp_angle(rotation.y, float(_amostras[0][2]), minf(1.0, dt * 10.0))
 	armas.since += dt
+	if _arma_atual != "" and _armas_3d.has(_arma_atual) and (_armas_3d[_arma_atual] as Node3D).visible == nadando:
+		(_armas_3d[_arma_atual] as Node3D).visible = not nadando      # 0.72: nadando, a arma some
 	if alvo != null:
 		alvo.atualizar(agachado, visible and not morto)
 	if not _pausado:

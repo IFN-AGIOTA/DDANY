@@ -6,7 +6,9 @@ extends Node
 #   - no máximo MAX_ABERTOS ao mesmo tempo e UM montado por vez (sem travadas).
 #   - o que ficou no chão do prédio volta para o loot guardado (mundo/loot_mundo.gd) quando ele fecha.
 #   - PORTA-MALAS: carros a até RAIO_CARRO metros ganham um contêiner invisível atrás (loot de carro).
-# Mexa AQUI para: distâncias, quantos prédios abertos de uma vez.
+#   - 0.72: os INFECTADOS presos lá dentro voltam: a cada CICLO_INFECTADOS horas de jogo o prédio sorteia de novo
+#     (se os de antes já morreram ou foram embora). O loot volta sozinho (mundo/loot_mundo.gd, CICLO).
+# Mexa AQUI para: distâncias, quantos prédios abertos de uma vez, de quanto em quanto tempo os infectados voltam.
 
 const InteriorCls := preload("res://mundo/interior.gd")
 const CaixaMundoCls := preload("res://inventario/caixa_mundo.gd")
@@ -25,7 +27,8 @@ var loot = null
 var abertos := {}                     # índice do prédio -> Node3D do interior
 var vagos = null                      # inimigos/vagos.gd: às vezes há infectados presos dentro do prédio
 const CHANCE_INFESTADO := 0.33
-var _infestados := {}                 # prédios já sorteados nesta partida
+const CICLO_INFECTADOS := 6.0         # 0.72: horas de jogo (6 h = 12 min de verdade)
+var _infestados := {}                 # prédio -> ciclo em que foi sorteado (nesta partida)
 var ativo := true
 var _hash := {}                       # Vector2i -> PackedInt32Array (prédios com entrada)
 var _hash_carros := {}                # Vector2i -> PackedInt32Array (carros)
@@ -163,11 +166,17 @@ func _terminar(i: int, prep) -> void:
 
 # um ou dois infectados presos lá dentro (saquear não é sempre seguro)
 func _infestar(i: int, no: Node3D) -> void:
-	if vagos == null or _infestados.has(i) or not no.has_meta("pontos_chao") or not bool(vagos.get("ativo")):
+	if vagos == null or not no.has_meta("pontos_chao") or not bool(vagos.get("ativo")):
 		return
-	_infestados[i] = true
+	var c := ciclo_infectados(i)
+	if int(_infestados.get(i, -1)) >= c:
+		return
+	_infestados[i] = c
+	var inf: Dictionary = cidade.predio_info[i]
+	if vagos.vivos_perto(no.global_position, maxf(float(inf["sx"]), float(inf["sz"])) * 0.5 + 6.0) > 0:
+		return                            # os de antes ainda estão por aí
 	var r := RandomNumberGenerator.new()
-	r.seed = i * 7349 + (loot.semente if loot != null else 0)
+	r.seed = i * 7349 + (loot.semente if loot != null else 0) + c * 104729
 	if r.randf() >= CHANCE_INFESTADO:
 		return
 	var pontos: Array = no.get_meta("pontos_chao")
@@ -180,6 +189,10 @@ func _infestar(i: int, no: Node3D) -> void:
 		if jogador != null and gp.distance_to(jogador.global_position) < 7.0:
 			continue
 		vagos._criar(gp + Vector3(0, 0.05, 0), Vector3.INF)
+
+func ciclo_infectados(i: int) -> int:
+	var h: float = loot.horas() if loot != null else 0.0
+	return floori((h + fposmod(i * 0.618034, 1.0) * CICLO_INFECTADOS) / CICLO_INFECTADOS)
 
 func fechar(i: int) -> void:
 	if not abertos.has(i):

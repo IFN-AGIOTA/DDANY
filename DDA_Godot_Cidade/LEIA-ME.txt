@@ -39,6 +39,55 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.72 · LOOT E INFECTADOS QUE VOLTAM · NADAR, AFUNDAR E AFOGAR
+  · O LOOT VOLTA (estilo DayZ): passado um tempo no relógio do jogo, cada lugar ganha um sorteio novo na próxima
+    vez que você chega perto (móveis, porta-malas e itens soltos no chão dos prédios). Prédios e carros: a cada
+    16 h de jogo (~32 min de verdade); POSTOS, HOSPITAIS, SUPERMERCADOS e ARMAZÉNS (zonas de PvP): a cada 10 h
+    (~20 min). Nada é apagado: o sorteio novo só COMPLETA até a quantidade dele (o que você guardou num armário
+    fica e conta). Cada lugar tem o seu momento, então a cidade não enche toda de uma vez. Fica salvo no jogo.
+  · OS INFECTADOS VOLTAM: os presos dentro dos prédios sorteiam de novo a cada 6 h de jogo (~12 min) e os dos
+    locais especiais a cada 4 h (~8 min), quando você chega, se os de antes já morreram ou foram embora (num local
+    especial ele só completa os que faltam).
+  · Multijogador: o relógio é a hora do host; quando um móvel enche de novo num aparelho, o conteúdo vai para
+    todos e ninguém enche de novo por cima.
+  · ÁGUA DE VERDADE (o mar e os lagos não são mais "chão"): perto da margem a água é rasa (anda mais devagar,
+    passos chapinhando, a roupa molha até onde a água chega); mais para dentro o fundo desce até 3,4 m no mar e
+    2,4 m nos lagos e você NADA:
+      - nado de peito (animação de captura real), a arma vai para as costas (não dá para mirar, atirar,
+        recarregar, agachar, pular nem usar atalhos); botão CORRER = nadar rápido;
+      - nadar gasta ESTAMINA (rápido gasta muito; peso acima de 15 kg pesa bastante); boiando parado ela volta,
+        se você não estiver pesado demais;
+      - estamina zerada = AFUNDA ("VOCÊ ESTÁ AFUNDANDO! SOLTE PESO OU NADE PARA A MARGEM"): a cabeça vai para
+        baixo d'água (tela azul-esverdeada), o FÔLEGO acaba em ~8 s e depois você se AFOGA (tela de morte:
+        "Afogou-se."). Com a estamina voltando um pouco, volta a boiar;
+      - a roupa fica encharcada (frio e gripe, como na chuva).
+  · Os INFECTADOS não entram na água funda: param na margem.
+  · Testado: loot voltando no ciclo certo, item do jogador mantido, chão com itens novos, salvar/carregar com o
+    ciclo; no jogo: nadar no mar fundo, boiar descansando, afundar, perder o fôlego, se afogar, voltar a boiar,
+    andar na margem, infectado parando na margem. Teste geral do jogo sem falhas.
+  · ARQUIVOS MEXIDOS:
+      mundo/loot_mundo.gd ....... ciclo do loot (CICLO, CICLO_LOCAL), reabastecer grades e chão, salva os ciclos
+      mundo/interiores.gd ....... infectados dos prédios voltam (CICLO_INFECTADOS)
+      mundo/locais.gd ........... infectados dos locais especiais voltam (CICLO_INFECTADOS, completa os que faltam)
+      inimigos/vagos.gd ......... vivos_perto (quantos infectados vivos perto de um ponto)
+      inimigos/vago.gd .......... não entra na água funda (para na margem)
+      main.gd ................... relógio do loot = dia/hora do clima
+      rede/sessao_rede.gd ....... loot que volta pela rede; manda "nadando/afundando" no estado
+      rede/jogador_remoto.gd .... o amigo aparece nadando (sem a arma na mão)
+      mundo/colisao_mundo.gd .... fundo do mar/lagos (PROF_MAR, PROF_LAGO, RAMPA_AGUA) e nivel_agua()
+      jogador/jogador.gd ........ água rasa, nadar, afundar, braçadas, tela embaixo d'água
+      jogador/sobrevivencia.gd .. estamina na água, fôlego, afogamento, roupa molhada na água
+      jogador/animador_modelo.gd  animação "nadar"
+      jogador/sobrevivente/animacoes.res  animação "nadar" (CMU 126_03, nado de peito)
+      jogador/sobrevivente/LICENCA.txt    crédito da animação nova
+      armas/armas.gd ............ esconder_arma (nadando)
+      menu/tela_morte.gd ........ "Afogou-se."
+      menu/creditos.gd .......... crédito da CMU inclui o nado
+      menu/config.gd ............ versão 0.72
+      ferramentas/retarget_cmu.gd opção "corpo" (nado: frente pela cabeça) e o clipe "nadar"
+  · PUBLICADA: atualizacoes/pacote_0.72.pck (acumulado desde o APK 0.48) + manifesto; os celulares baixam
+    sozinhos. servidor_windows.zip (raiz) refeito na 0.72.
+
 ATUALIZAÇÃO 0.71 · PvP, AMIGOS NO MAPA, COLISÃO ENTRE JOGADORES E MENSAGENS RÁPIDAS
   · PvP DE VERDADE no multijogador: tiro e golpe acertam o boneco do amigo (corpo e CABEÇA) e o dano é aplicado
     no aparelho dele. Cabeça = dano x2,5 (com CAPACETE x1,4); COLETE segura 45% no corpo; tiro tira sangue e
@@ -1221,6 +1270,14 @@ SOBREVIVÊNCIA
   bem alimentado (> 50) e sem sangrar: vida e sangue voltam devagar
   temperatura do corpo vai para: clima + roupas (calor) - molhado; < 35 °C perde vida e a mira treme
   molha com chuva sem teto (roupa impermeável protege); seca em 2,5–4 min
+  ÁGUA (0.72): fundo do mar 3,4 m · lagos 2,4 m · rampa de 7 m a partir da margem · nada com mais de 1,35 m de água
+  (volta a andar com menos de 1,15 m) · nado 1,4 m/s · nado rápido 2,3 m/s · afundando 45% da velocidade
+  estamina nadando: -0,35/s (+0,12/s por kg acima de 15 kg) · rápido -5/s (+0,1/s por kg) · boiando parado +2/s
+  (-0,2/s por kg acima de 15 kg) · afunda com estamina 0, volta a boiar com 12 · fôlego 100 = ~8 s embaixo
+  d'água, depois -9 de vida por segundo
+LOOT E INFECTADOS QUE VOLTAM (0.72, relógio do jogo: 1 dia = 48 min): loot de prédios/carros a cada 16 h (~32 min),
+  dos locais especiais a cada 10 h (~20 min) · infectados presos nos prédios a cada 6 h (~12 min), nos locais
+  especiais a cada 4 h (~8 min)
 
 CLIMA: 22 °C às 15h e 9 °C às 3h com céu limpo; chuva até -6 °C, nublado -1,5 °C.
 
@@ -1257,7 +1314,8 @@ LOOT (mundo/loot_mundo.gd; tabelas no topo, com raridade e quantidades)
   de cada um ("chao_posto", "chao_hospital", "chao_super", "chao_armazem"). Só 15% dos móveis vazios.
 - ITENS SOLTOS no chão dos prédios (até 4 por prédio, conforme o uso).
 - 35% dos móveis já foram saqueados. Armas vêm com pente pela metade (ou sem pente). Itens vêm gastos.
-- O conteúdo é sorteado na 1ª visita e fica guardado (e salvo): o que você pega não volta.
+- O conteúdo é sorteado na 1ª visita e fica guardado (e salvo). 0.72: depois de um tempo (16 h de jogo nos
+  prédios e carros, 10 h nos locais especiais) o lugar ganha um sorteio novo, que só completa o que falta.
 - No jogo novo: loot de teste na base (itens no chão + CAIXA MILITAR) em mundo/loot.gd.
 
 -----------------------------------------------------------------------------------------------------
@@ -1351,6 +1409,12 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - aparência do mar, chão, asfalto,
   janelas, interiores (shaders) ....... mundo/materiais_cidade.gd
 - colisão com chão/prédios/carros e tiros mundo/colisao_mundo.gd
+- fundo do mar e dos lagos (profundidade) mundo/colisao_mundo.gd (PROF_MAR, PROF_LAGO, RAMPA_AGUA)
+- nadar, afundar, água rasa ........... jogador/jogador.gd (NADO_*, VEL_NADO) + jogador/sobrevivencia.gd (estamina
+                                        na água, fôlego, afogar) + animação "nadar" (ferramentas/retarget_cmu.gd)
+- de quanto em quanto tempo o loot volta mundo/loot_mundo.gd (CICLO, CICLO_LOCAL)
+- de quanto em quanto tempo os infectados
+  dos prédios/locais voltam ............ mundo/interiores.gd e mundo/locais.gd (CICLO_INFECTADOS)
 - cidade abandonada (carros, entulho) . mundo/abandono.gd
 - modelos baixados do cenário (postes,
   placas, semáforo, lixo, vegetação) .. mundo/cenario.gd (arquivos em mundo/cenario/, licenças no LICENCA.txt)
@@ -1559,10 +1623,9 @@ MÚSICA (pasta audio/)
 - A gangue VAGOS (Edy, V), Alyce, Nick, Mônica e Carlos ainda não aparecem no jogo (são do Ato 2 em diante).
 - Só abrem até o 3º andar; o telhado só nos prédios de até 3 andares (nos mais altos, o resto fica fechado).
 - História: apagada na 0.63, vai ser refeita do zero (menu mostra "Em breve").
-- O mar é "caminhável" (dá para andar na água como se fosse chão); a base militar ainda não tem os
-  prédios/pistas do HTML.
-- Locais especiais (0.68): de longe (mais de 140 m) a casca não tem colisão (tiro de longe atravessa); o loot e os
-  infectados deles não voltam (só uma vez por partida).
+- Água (0.72): não dá para mergulhar de propósito nem nadar por baixo das pontes (o fundo sobe até a ponte); os
+  itens largados nadando vão para o fundo. A base militar ainda não tem os prédios/pistas do HTML.
+- Locais especiais (0.68): de longe (mais de 140 m) a casca não tem colisão (tiro de longe atravessa).
 - Transformação em carro e jato do HTML foi descartada: o jogo é só a pé.
 - Os blocos de cima das torres escalonadas também mostram "térreo" (vitrines/placas) na base deles.
 - Sobrevivente: rosto liso de manequim.

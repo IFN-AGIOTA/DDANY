@@ -17,6 +17,8 @@ extends Node
 #     prédios, base) já têm uid fixo; os pegos ficam em loot_mundo.pegos e não voltam a aparecer.
 #   · CAIXAS, MÓVEIS E PORTA-MALAS: quando o conteúdo muda aqui, "grade" manda o conteúdo novo para todos.
 #   · Quem chega recebe do host "mundo_itens": as grades mexidas, os pegos e os itens largados.
+#   · 0.72: o LOOT QUE VOLTA (mundo/loot_mundo.gd) segue a hora do host; quando uma grade é reabastecida aqui, o
+#     conteúdo novo vai para todos ("grade") e eles não reabastecem de novo. O chão novo tem uid próprio por ciclo.
 # AINDA NÃO: dano entre jogadores, salvar a partida em rede, missões do rádio (cada um tem as suas), infectados
 # não entram em prédio atrás de um amigo (o host não tem as paredes do interior onde o amigo está).
 # Mexa AQUI para: o que vai em cada mensagem e de quanto em quanto tempo.
@@ -88,6 +90,7 @@ func _exit_tree() -> void:
 	ItemMundo.por_uid.clear()
 	if main != null and main.loot_mundo != null:
 		main.loot_mundo.grade_criada = Callable()
+		main.loot_mundo.grade_reabastecida = Callable()
 
 # ---------- jogadores ----------
 func _criar(id: int) -> Node3D:
@@ -143,7 +146,7 @@ func _physics_process(dt: float) -> void:
 func estado_local() -> Array:
 	var j = jogador
 	var bits := (1 if j.agachado else 0) | (2 if j.mirando else 0) | (4 if j.morto else 0) | (0 if j.is_on_floor() else 8) \
-		| (16 if j.mancando else 0)
+		| (16 if j.mancando else 0) | (32 if j.nadando else 0) | (64 if j.afundando else 0)
 	return [j.global_position, j.rotation.y, j.velocity, bits, str(j.armas.atual), snappedf(j.armas.aim, 0.01), minf(j.armas.since, 9.0),
 		snappedf(j.mira_pitch, 0.02)]
 
@@ -255,6 +258,8 @@ func _aplicar_mundo(d: Dictionary) -> void:
 	if not _mundo_recebido:
 		_mundo_recebido = true
 		cl.carregar(c)                        # 1ª vez: copia tudo
+		if main.loot_mundo != null:
+			main.loot_mundo.sincronizar_ciclos()   # 0.72: a hora pulou; o que já abriu aqui não "volta" por isso
 	else:
 		# depois: só corrige a hora se escapou e troca o tempo com a transição normal (sem pulo no céu)
 		var dh := absf(angle_difference(float(c.get("hora", cl.hora)) * TAU / 24.0, cl.hora * TAU / 24.0)) * 24.0 / TAU
@@ -293,6 +298,10 @@ func _ligar_mundo() -> void:
 	var lm = main.loot_mundo
 	if lm != null:
 		lm.grade_criada = func(gid: String, g) -> void: _sig[gid] = LootMundo.assinatura(g)
+		lm.grade_reabastecida = func(gid: String, g) -> void:
+			_sig[gid] = LootMundo.assinatura(g)
+			_mexidas[gid] = true
+			Rede.enviar_evento("grade", {"i": gid, "w": g.largura, "h": g.altura, "n": g.nome, "l": LootMundo.conteudo(g)})
 		for gid in lm._grades:
 			_sig[gid] = LootMundo.assinatura(lm._grades[gid])
 		# caixas da base (mundo/loot.gd): entram na lista das grades com o nome "base_N"

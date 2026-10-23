@@ -491,6 +491,8 @@ func _criar_jogo() -> void:
 	LootCls.espalhar(jogo, mundo, SPAWN)
 	loot_mundo = LootMundoCls.new()
 	loot_mundo.semente = randi()                      # cada jogo novo tem o loot em lugares diferentes
+	# 0.72: o loot volta pelo relógio do jogo (horas desde o 1º dia; na rede a hora é a do host)
+	loot_mundo.relogio = func() -> float: return (float(clima.dia) - 1.0) * 24.0 + float(clima.hora) if clima != null else 0.0
 	interiores = InterioresCls.new()
 	interiores.name = "Interiores"
 	jogo.add_child(interiores)

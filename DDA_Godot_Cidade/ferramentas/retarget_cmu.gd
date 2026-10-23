@@ -26,6 +26,7 @@ const MAPA := {"Hips": "pelvis", "LowerBack": "spine_01", "Spine": "spine_02", "
 
 # [arquivo, nome no jogo, laço, de (s), até (s), ciclo mín (s), ciclo máx (s), base dos dedos, volta (s), "pes"?]
 # "pes" no fim: o corpo fica virado para onde os PÉS apontam (andar de lado), não para onde ele anda.
+# "corpo" no fim (0.72, nado): a frente é para onde a CABEÇA aponta (corpo deitado, sem avanço).
 # laço = true: procura dentro de [de, até] o melhor ciclo com duração entre mín e máx.
 # laço = false: usa exatamente [de, até] e, se volta > 0, acrescenta esse tempo voltando à pose do começo.
 const CLIPES := [
@@ -43,6 +44,8 @@ const CLIPES := [
 	["79_15", "comer", false, 0.4, 3.3, 0.0, 0.0, "parado", 0.5],
 	["80_40", "beber", false, 1.4, 3.9, 0.0, 0.0, "parado", 0.35],
 	["79_15", "tomar_remedio", false, 0.4, 1.7, 0.0, 0.0, "parado", 0.45],
+	# 0.72: NADAR (nado de peito, gravado deitado num banco: fica no lugar) · jogador/animador_modelo.gd
+	["126_03", "nadar", true, 1.0, 20.0, 1.0, 2.2, "parado", 0.0, "corpo"],
 ]
 
 # 0.61 · JEITOS DE ANDAR DOS INFECTADOS (inimigos/modelo_infectado.gd sorteia um por infectado)
@@ -271,14 +274,23 @@ func converter(bvh: Dictionary, c: Array) -> Animation:
 	var desl: Vector3 = (amostras[ib][h] as Transform3D).origin - (amostras[ia][h] as Transform3D).origin
 	desl.y = 0.0
 	var pelos_pes: bool = c.size() > 9 and String(c[9]).contains("pes")
+	var pelo_corpo: bool = c.size() > 9 and String(c[9]).contains("corpo")
 	var frente := frente_pes(amostras[ia], pe_e, pt_e, pe_d, pt_d)
+	if pelo_corpo:
+		# corpo deitado: quadril -> cabeça (média do trecho), no plano do chão
+		var hd := idx(bvh, "Head")
+		frente = Vector3.ZERO
+		for f in range(ia, ib + 1):
+			frente += (amostras[f][hd] as Transform3D).origin - (amostras[f][h] as Transform3D).origin
+		frente.y = 0.0
+		frente = frente.normalized()
 	if pelos_pes:
 		# média dos pés no trecho todo (a cada passo de lado eles giram um pouco)
 		frente = Vector3.ZERO
 		for f in range(ia, ib + 1):
 			frente += frente_pes(amostras[f], pe_e, pt_e, pe_d, pt_d)
 		frente = frente.normalized()
-	var r := girar_para_frente(desl.normalized() if laco and desl.length() > 0.2 and not pelos_pes else frente)
+	var r := girar_para_frente(desl.normalized() if laco and desl.length() > 0.2 and not pelos_pes and not pelo_corpo else frente)
 	# altura do quadril -> escala
 	var chao := minf((g_t[pt_e] as Transform3D).origin.y, (g_t[pt_d] as Transform3D).origin.y)
 	# chão da animação: o ponto mais baixo das pontas dos pés no trecho (alguns arquivos têm a raiz deslocada no quadro 0)

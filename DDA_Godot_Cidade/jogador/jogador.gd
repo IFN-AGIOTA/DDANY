@@ -9,6 +9,11 @@ extends CharacterBody3D
 # INVENTÁRIO (estilo DayZ): nó "Inventario" criado no _ready (inventario/inventario.gd). A arma usada é a que está
 # nas MÃOS; atalhos 1..8, botão ARMA (coldre <-> ombro) e PEGAR passam por ele.
 #
+# ÁGUA (0.72): na água rasa anda mais devagar; na funda NADA (animação "nadar", arma guardada, sem mirar/atirar/
+# agachar/pular). Nadar gasta ESTAMINA (mais com peso e nadando rápido = botão correr); parado boiando ela volta,
+# se não estiver pesado demais. Estamina zerada = AFUNDA: a cabeça vai para baixo d'água, o fôlego acaba e você se
+# afoga (jogador/sobrevivencia.gd). Solte peso ou nade para a margem. Profundidade do mar/lagos: mundo/colisao_mundo.gd.
+#
 # MODELO 3D: o nó "Modelo" é o encaixe. Se existir res://modelos/personagem.glb (ou .tscn/.fbx) ele substitui o
 # soldado original, com as animações (ver modelos/LEIA-ME.txt). Por código: jogador.trocar_modelo(no).
 
@@ -25,6 +30,13 @@ const VEL_MIRANDO := 2.2
 const VEL_MIRANDO_LADO := 1.1         # 0.61: mirando e andando de lado (passos laterais) ou de costas
 const MIRA_NEUTRA := 0.12            # inclinação da câmera em que a arma fica reta (a câmera fica acima do ombro)
 const FORCA_PULO := 5.2
+# 0.72 · água
+const NADO_ALTURA := 0.66            # nadando, a origem (pés) fica isso abaixo da superfície (corpo deitado na linha d'água)
+const FUNDO_NADAR := 1.35            # água mais funda que isso (da superfície ao chão) = nada
+const FUNDO_ANDAR := 1.15            # nadando, o chão a menos que isso da superfície = volta a andar
+const AFUNDAR := 1.2                 # afundando: o corpo desce isso (cabeça embaixo d'água)
+const VEL_NADO := 1.4
+const VEL_NADO_RAPIDO := 2.3
 const ALTURA_EM_PE := 1.8
 const ALTURA_AGACHADO := 1.3
 const EXTENSOES_MODELO := ["tscn", "scn", "glb", "gltf", "fbx"]
@@ -77,6 +89,13 @@ var sens_mouse := 1.0                # 0.62: Opções › Teclado e mouse (menu/
 var sens_mouse_mira := 0.7
 var inverter_y_mouse := false       # 0.62: eixo vertical do mouse invertido
 var vel_horizontal := 0.0
+var nadando := false                # 0.72: na água funda
+var afundando := false              # 0.72: nadando sem estamina (cabeça embaixo d'água)
+var nivel_agua := -INF              # 0.72: superfície da água aqui (-INF = seco)
+var prof_agua := 0.0                # 0.72: metros de água acima dos pés (andando) · nadando = fundo do lugar
+var _t_agua := 0.0
+var _fundo := 0.0                   # da superfície até o chão, aqui
+var _tela_agua: ColorRect = null    # câmera embaixo d'água: tela azul-esverdeada
 var fator_agachado := 0.0           # 0 em pé · 1 agachado (suavizado, para a câmera)
 var fator_mira := 0.0
 
@@ -152,13 +171,15 @@ func ligar_controles(c) -> void:
 	c.agachar_pedido.connect(alternar_agachar)
 	c.mirar_pedido.connect(func(): _mirar_ligado = not _mirar_ligado)
 	c.camera_pedida.connect(alternar_camera)
-	c.recarregar_pedido.connect(func(): armas.recarregar())
+	c.recarregar_pedido.connect(func():
+		if not nadando:
+			armas.recarregar())
 	c.trocar_arma_pedido.connect(func(): armas.proxima_arma())
 	c.atalho_pedido.connect(_usar_atalho)
 	c.pegar_pedido.connect(_pegar_do_chao)
 
 func _usar_atalho(i: int) -> void:
-	if ativo and not morto:
+	if ativo and not morto and not nadando:
 		inventario.usar_atalho(i)
 
 func _pegar_do_chao() -> void:
@@ -231,7 +252,7 @@ func _passos(delta: float) -> void:
 	if _clima == null or not is_instance_valid(_clima):
 		_clima = get_tree().current_scene.get("clima") if get_tree().current_scene != null else null
 	var cl = _clima
-	var molhado: bool = cl != null and is_instance_valid(cl) and float(cl.molhado) > 0.4
+	var molhado: bool = (cl != null and is_instance_valid(cl) and float(cl.molhado) > 0.4) or prof_agua > 0.08
 	# 0.49: o som muda com o chão (colisao_mundo.tipo_piso): asfalto/calçada, grama/terra, dentro de prédio
 	var piso := "concreto"
 	if mundo != null and mundo.has_method("tipo_piso"):
@@ -249,8 +270,72 @@ func _passos(delta: float) -> void:
 		gravado = SonsBaixados.sortear("jogador/passo")
 	_som_passo.stream = gravado if gravado != null and not molhado else SonsCorpo.passo(_n_passo, molhado)
 	_som_passo.pitch_scale = randf_range(0.9, 1.1)
-	_som_passo.volume_db = (-14.0 if agachado else (-3.0 if vel_horizontal > 5.0 else -8.0))
+	_som_passo.volume_db = (-14.0 if agachado else (-3.0 if vel_horizontal > 5.0 else -8.0)) + (4.0 if prof_agua > 0.3 else 0.0)
 	_som_passo.play()
+
+# ---------- ÁGUA (0.72) ----------
+# 10 vezes por segundo: tem água aqui? quão funda? entra/sai do nado
+func _agua(delta: float) -> void:
+	_t_agua -= delta
+	if _t_agua <= 0.0:
+		_t_agua = 0.1
+		nivel_agua = mundo.nivel_agua(global_position.x, global_position.z) if mundo != null and mundo.has_method("nivel_agua") else -INF
+		_fundo = 0.0
+		if nivel_agua > -INF:
+			var q := PhysicsRayQueryParameters3D.create(Vector3(global_position.x, nivel_agua + 0.3, global_position.z),
+				Vector3(global_position.x, nivel_agua - 8.0, global_position.z), 1, [get_rid()])
+			var r := get_world_3d().direct_space_state.intersect_ray(q)
+			_fundo = nivel_agua - ((r["position"] as Vector3).y if not r.is_empty() else nivel_agua - 8.0)
+	var era := nadando
+	if nivel_agua <= -INF or morto:
+		nadando = false
+	elif not nadando and _fundo > FUNDO_NADAR and global_position.y < nivel_agua - NADO_ALTURA + 0.25:
+		nadando = true
+	elif nadando and _fundo < FUNDO_ANDAR:
+		nadando = false
+	prof_agua = maxf(0.0, nivel_agua - global_position.y) if nivel_agua > -INF else 0.0
+	# afunda sem estamina; volta a boiar quando ela sobe um pouco
+	if nadando and sobrevivencia != null:
+		if not afundando and sobrevivencia.estamina <= 0.5:
+			afundando = true
+			sobrevivencia.aviso.emit("VOCÊ ESTÁ AFUNDANDO! SOLTE PESO OU NADE PARA A MARGEM")
+		elif afundando and sobrevivencia.estamina > 12.0:
+			afundando = false
+	else:
+		afundando = false
+	if nadando != era:
+		armas.esconder_arma(nadando)
+		Sons.tocar("impactos/bala_agua", -4.0 if nadando else -12.0, 0.55)
+		if nadando and velocity.y < -4.0:
+			Sons.tocar("impactos/bala_agua", 0.0, 0.4)           # caiu de cima: tchibum
+
+# som das braçadas (mais rápido nadando rápido)
+var _t_bracada := 0.0
+func _bracadas(delta: float) -> void:
+	_t_bracada -= delta * clampf(0.4 + vel_horizontal / 1.5, 0.4, 1.8)
+	if _t_bracada <= 0.0:
+		_t_bracada = 1.8
+		if _som_passo != null:
+			_som_passo.stream = SonsCorpo.passo(_n_passo, true)
+			_n_passo += 1
+			_som_passo.pitch_scale = randf_range(0.6, 0.75)
+			_som_passo.volume_db = -10.0
+			_som_passo.play()
+
+# câmera embaixo d'água (afundando, ou olhando de baixo): tela azul-esverdeada
+func _tela_submersa() -> void:
+	var sub: bool = nivel_agua > -INF and camera.global_position.y < nivel_agua - 0.05 and not morto
+	if sub and _tela_agua == null:
+		var cl := CanvasLayer.new()
+		cl.layer = 3
+		add_child(cl)
+		_tela_agua = ColorRect.new()
+		_tela_agua.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_tela_agua.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_tela_agua.color = Color(0.04, 0.18, 0.2, 0.82)
+		cl.add_child(_tela_agua)
+	if _tela_agua != null:
+		_tela_agua.visible = sub
 
 var _clima = null                   # mundo/clima.gd (guardado: antes procurava a cada passo)
 
@@ -368,6 +453,14 @@ func _physics_process(delta: float) -> void:
 		quer_pular = false
 		sprint = false
 		armas.gatilho = false
+	_agua(delta)
+	if nadando:
+		quer_pular = false
+		_mirar_ligado = false
+		armas.gatilho = false
+		if agachado:
+			agachado = false
+			_aplicar_capsula()
 	if sobrevivencia != null and not sobrevivencia.pode_correr():
 		sprint = false                   # sem estamina ou perna quebrada
 	var perna: bool = sobrevivencia != null and sobrevivencia.perna_quebrada
@@ -380,7 +473,7 @@ func _physics_process(delta: float) -> void:
 		if agachado and not _levantar():
 			sprint = false
 		_mirar_ligado = false
-	mirando = (_mirar_ligado or (controles != null and controles.mirando_segurado())) and not morto
+	mirando = (_mirar_ligado or (controles != null and controles.mirando_segurado())) and not morto and not nadando
 	if mirando:
 		sprint = false
 	var dir := Vector3.ZERO
@@ -403,11 +496,19 @@ func _physics_process(delta: float) -> void:
 			vmax = minf(vmax, lerpf(VEL_MIRANDO, VEL_MIRANDO_LADO, smoothstep(0.4, 0.9, maxf(de_lado, de_costas))))
 		if perna:
 			vmax = minf(vmax, 0.9)          # mancando
+		if nadando:
+			vmax = (VEL_NADO_RAPIDO if sprint else VEL_NADO) * (0.45 if afundando else 1.0)
+		elif prof_agua > 0.35:
+			vmax = minf(vmax, lerpf(3.2, 1.1, clampf((prof_agua - 0.35) / 0.8, 0.0, 1.0)))   # andando na água
 	var no_chao := is_on_floor()
-	var k := minf(1.0, delta * (9.0 if no_chao else 2.5))
+	var k := minf(1.0, delta * (9.0 if no_chao else (2.0 if nadando else 2.5)))
 	velocity.x += (dir.x * vmax - velocity.x) * k
 	velocity.z += (dir.z * vmax - velocity.z) * k
-	if no_chao:
+	if nadando:
+		# boia: o corpo vai para a linha d'água (afundando, mais para baixo); sem gravidade nem pulo
+		var alvo_y := nivel_agua - NADO_ALTURA - (AFUNDAR if afundando else 0.0)
+		velocity.y = clampf((alvo_y - global_position.y) * 3.0, -2.5, 1.5)
+	elif no_chao:
 		if quer_pular and not _pulo_ant:
 			if agachado:
 				_levantar()             # pular agachado = levantar
@@ -428,6 +529,8 @@ func _physics_process(delta: float) -> void:
 		if vy_antes < -3.0:
 			Sons.tocar("jogador/aterrissar", clampf(-22.0 - vy_antes * 1.6, -18.0, -2.0))
 	vel_horizontal = Vector2(velocity.x, velocity.z).length()
+	if nadando:
+		_bracadas(delta)
 	_passos(delta)
 	_sons_corpo(delta)
 	atirando = armas.since < 1.6 or armas.aim > 0.5
@@ -513,4 +616,5 @@ func _process(delta: float) -> void:
 	var frac := _braco.get_hit_length() / maxf(dist, 0.01)
 	camera.position.x = lerpf(dist * meia_largura * lateral_camera, ombro_mirando, fator_mira) * frac
 	_camera_primeira_pessoa(delta, fov_alvo)
+	_tela_submersa()
 	animador.atualizar(delta, self)
