@@ -4,6 +4,7 @@
 #   GODOT=... ferramentas/testes/rodar.sh rede                     (dois jogos conectados: infectados perto do amigo)
 #   GODOT=... ferramentas/testes/rodar.sh rede_carro               (dois jogos conectados: amigo dirigindo)
 #   GODOT=... ferramentas/testes/rodar.sh rede_save                (salvar em rede: duas sessões seguidas)
+#   GODOT=... ferramentas/testes/rodar.sh rede_turn                (0.85: amigo entra pelo retransmissor TURN)
 #   GODOT=... ferramentas/testes/rodar.sh teste_agua               (só um)
 # Sem monitor (servidor/CI) usa xvfb-run. Cada teste imprime "falhas: N"; o script termina com erro se algum falhar.
 # Os testes usam uma pasta de dados própria (não mexem no seu jogo salvo).
@@ -28,6 +29,13 @@ rodar() {   # nome, com_tela(0/1)
 	echo "[$1] falhas: $n"
 	[ "$n" = 0 ] || falhou=1
 }
+rodar_turn() {   # 0.85: cliente TURN em GDScript contra o retransmissor de mentira (sem tela)
+	TURN_FALSO_TEMPO=60 python3 ferramentas/testes/turn_falso.py 3612 teste segredo > /dev/null 2>&1 &
+	local pid=$!
+	sleep 1
+	DDA_TURN_PORTA=3612 rodar teste_turn 0
+	kill $pid 2>/dev/null
+}
 alvo="${1:-todos}"
 if [ "$alvo" = rede_save ]; then
 	for fase in 1 2; do
@@ -47,6 +55,20 @@ elif [ "$alvo" = rede_carro ]; then
 	grep -E "HOST:|SCRIPT ERROR" "$DADOS/host.txt"
 	grep -E "CLI:|SCRIPT ERROR" "$DADOS/cli.txt"
 	grep -q "estacionado guardado true" "$DADOS/host.txt" && grep -q "andou [1-9]" "$DADOS/host.txt" || falhou=1
+elif [ "$alvo" = rede_turn ]; then
+	# 0.85: amigo entra pelo RETRANSMISSOR (TURN de mentira: ferramentas/testes/turn_falso.py, sem internet)
+	TURN_FALSO_TEMPO=200 python3 ferramentas/testes/turn_falso.py 3611 teste segredo > "$DADOS/turn.txt" 2>&1 &
+	sleep 1
+	export DDA_TURN="127.0.0.1:3611:teste:segredo" DDA_ARQ="$DADOS/relay.txt"
+	XDG_DATA_HOME="$DADOS/h" timeout 180 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_turn_host.gd > "$DADOS/host.txt" 2>&1 &
+	sleep 2
+	XDG_DATA_HOME="$DADOS/c" timeout 180 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_turn_cliente.gd > "$DADOS/cli.txt" 2>&1
+	wait %2 2>/dev/null
+	kill %1 2>/dev/null
+	grep -E "HOST:|SCRIPT ERROR" "$DADOS/host.txt"
+	grep -E "CLI:|SCRIPT ERROR" "$DADOS/cli.txt"
+	grep -E "ALLOCATE|PERMISS|CANAL|SENHA" "$DADOS/turn.txt" | sort | uniq -c | head
+	grep -q "amigo pelo retransmissor: true" "$DADOS/host.txt" && grep -q "CLI: ligado true · semente 77" "$DADOS/cli.txt" && grep -q "vê o host true" "$DADOS/cli.txt" || falhou=1
 elif [ "$alvo" = rede ]; then
 	XDG_DATA_HOME="$DADOS/h" timeout 240 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_amigo_host.gd > "$DADOS/host.txt" 2>&1 &
 	sleep 2
@@ -72,6 +94,7 @@ elif [ "$alvo" = todos ]; then
 	rodar teste_ombro 1
 	rodar teste_bunkers 1
 	rodar teste_graficos 1
+	rodar_turn
 else
 	rodar "$alvo" 1
 fi

@@ -39,6 +39,44 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.85 · MULTIJOGADOR PELA INTERNET NO ESTILO "CONVIDAR AMIGO" (SEM WebRTC, SEM SERVIDOR PRÓPRIO)
+  · Igual ao Sons of the Forest: um jogador abre o mundo (host) e o amigo aceita o convite e entra no grupo, de
+    qualquer rede (outro Wi-Fi, 4G, CGNAT dos dois lados). Não precisa abrir porta, VPN nem servidor ligado 24h.
+  · Como funciona (o Sons of the Forest faz o mesmo com os retransmissores da Steam; aqui é a Metered):
+      1. o host pega um ENDEREÇO PÚBLICO num retransmissor TURN (rede/turn.gd: o protocolo TURN escrito em GDScript,
+         conta da Metered em rede/turn.cfg) e avisa no convite que aceita entrar por ele;
+      2. o amigo toca na partida: descobre o próprio IP da internet (STUN) e pede para entrar pelo Firebase
+         (sinal/{host}/{amigo}, o mesmo caminho do convite — as regras do banco não mudaram);
+      3. o host libera o IP do amigo no retransmissor e responde o endereço; o amigo conecta o ENet NORMAL nele;
+      4. no host, cada amigo que chega pelo retransmissor vira um cliente ENet comum (rede/ponte_turn.gd): sala,
+         mundo, PvP, carros e o salvar em rede funcionam igual.
+  · Por que não o WebRTC: a biblioteca nativa de WebRTC não inicia no Android (0.54/0.55). Agora o caminho pela
+    internet não depende de biblioteca nenhuma (só UDP e o multijogador da própria Godot). O WebRTC continua só
+    como reserva para host de versão antiga.
+  · GASTO: pelo retransmissor passam ~21 MB por hora com 1 amigo (medido no teste). O plano grátis da Metered hoje
+    é de 500 MB por mês (entrada + saída): dá umas ~10-20 horas de jogo a dois por mês. Mais que isso: plano pago
+    da Metered ou um retransmissor próprio (coturn) numa máquina grátis; basta trocar rede/turn.cfg.
+  · Mesmo Wi-Fi e código/IP continuam direto (sem retransmissor, sem gasto).
+  · Testes novos: teste_turn (o cliente TURN contra um retransmissor de mentira: endereço, senha, permissão, dados
+    nos dois sentidos, canal, renovação com nonce velho, STUN, senha errada) e rede_turn (dois jogos: o amigo entra
+    pelo retransmissor, recebe o mundo e os dois se veem). O retransmissor de mentira (turn_falso.py) foi conferido
+    com o cliente TURN da biblioteca aioice.
+  · Arquivos:
+      rede/turn.gd .............. NOVO (cliente TURN/STUN em GDScript: Allocate com senha, Refresh, CreatePermission,
+                                  ChannelBind, Send/Data, ChannelData; ip_publico do amigo; lê rede/turn.cfg)
+      rede/ponte_turn.gd ........ NOVO (host: endereço público, atende o pedido do amigo no Firebase, liga cada
+                                  amigo ao ENet do jogo; conta o tráfego)
+      rede/rede.gd .............. host abre a ponte; amigo entra pelo retransmissor (entrar_amigo por_turn,
+                                  entrar_relay); aceita_turn
+      rede/conta.gd ............. convite e lista de servidores dizem "turn" (aceita pelo retransmissor)
+      menu/tela_multijogador.gd . entra pelo retransmissor quando o host aceita
+      menu/config.gd ............ versão 0.85
+      ferramentas/testes/turn_falso.py ............ NOVO (retransmissor TURN de mentira, só Python padrão)
+      ferramentas/testes/teste_turn.gd ............ NOVO
+      ferramentas/testes/rede_turn_host.gd ........ NOVO
+      ferramentas/testes/rede_turn_cliente.gd ..... NOVO
+      ferramentas/testes/rodar.sh ................. modo rede_turn e o teste_turn na bateria
+
 ATUALIZAÇÃO 0.84 · GRÁFICOS: AS OPÇÕES QUE ESTAVAM "EM BREVE" FUNCIONAM
   · Opções › Gráficos — tudo agora muda o jogo de verdade (nada mais escrito "em breve"):
       - DETALHES DAS TEXTURAS: nitidez das texturas do chão (LEVE mais borrado e leve ... ULTRA nítido) e, onde a
@@ -2026,6 +2064,9 @@ MULTIJOGADOR (pasta rede/ · modo livre)
 - conta (Google/convidado), amigos e
   partidas dos amigos (Firebase) ...... rede/conta.gd (autoload "Conta")
 - chaves do Firebase / regras do banco  rede/firebase_config.cfg / rede/firebase_regras.json
+- internet pelo RETRANSMISSOR (0.85,
+  estilo convidar amigo, sem WebRTC) .. rede/turn.gd (protocolo) · rede/ponte_turn.gd (host) · rede/rede.gd
+                                          (_entrar_por_turn, amigo) · conta do retransmissor: rede/turn.cfg
 - internet com WebRTC (achar o amigo
   pelo Firebase e conectar direto) .... rede/rtc.gd (servidores STUN/TURN no topo)
 - host com Wi-Fi/código + WebRTC ...... rede/peer_misto.gd
@@ -2161,8 +2202,9 @@ MÚSICA (pasta audio/)
 - MULTIJOGADOR: infectados, itens e caixas iguais para todos (0.44); PvP, amigos no mapa, colisão entre
   jogadores e mensagens rápidas (0.71); prédios, infectados e física perto do amigo mesmo com o host longe
   (0.74); salvar em rede: personagem de cada um e o mundo do host (0.77; a posição não volta: todos nascem na
-  base). Falta: chat escrito. Internet sem roteador/VPN (servidor próprio de "ponte"/relay, que
-  precisa de um servidor ligado 24h) e abrir o jogo direto por um link (precisa de plugin Android).
+  base). Falta: chat escrito e abrir o jogo direto por um link (precisa de plugin Android). 0.85: pela
+  internet funciona pelo retransmissor da Metered (plano grátis = 500 MB/mês, ~10-20 h de jogo a dois); o amigo
+  com internet só IPv6 ainda não entra pelo retransmissor.
 - Ideias para depois: loot por região, lugares
   especiais (quarentena), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,
   outros sobreviventes (NPCs), o modo história novo.

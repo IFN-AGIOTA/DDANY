@@ -17,6 +17,9 @@ extends Node
 # PELA INTERNET COM A CONTA (0.33): o host aceita também conexões WEBRTC (rede/rtc.gd + rede/peer_misto.gd):
 # o amigo toca na "Partida de Fulano" e Rede.entrar_amigo(uid) conecta direto, sem abrir porta nem VPN.
 #
+# 0.85 · PELA INTERNET SEM WebRTC (rede/turn.gd + rede/ponte_turn.gd): o host ganha um endereço público num
+# RETRANSMISSOR (TURN, rede/turn.cfg) e o amigo conecta o ENet normal nele (entrar_amigo(uid, nome, true)).
+#
 # SERVIDOR DEDICADO (0.50, rede/servidor.gd): o PC abre a partida SEM ser jogador (servidor_dedicado = true):
 # não entra na lista de jogadores, não manda posição/roupa e a partida já começa aberta (quem entra vai direto
 # para a cidade). Os celulares entram pelo IP do PC (mesmo Wi-Fi, porta aberta no roteador ou Tailscale).
@@ -60,6 +63,10 @@ var _upnp: UPNP = null
 var _thread: Thread = null
 const ALFABETO := "0123456789ABCDEFGHJKMNPQRSTVWXYZ"   # base 32 sem I, L, O, U (não confunde ao digitar)
 const RtcCls := preload("res://rede/rtc.gd")
+const TurnCls := preload("res://rede/turn.gd")
+const PonteCls := preload("res://rede/ponte_turn.gd")
+var ponte: Node = null                         # 0.85: host: ponte pelo retransmissor (rede/ponte_turn.gd)
+var _turn_sessao := ""                         # 0.85: amigo: pedido de entrada pelo retransmissor em andamento
 const PeerMistoCls := preload("res://rede/peer_misto.gd")
 var rtc: Node                                  # rede/rtc.gd (WebRTC pela internet)
 var _com_rtc := false                          # host: aceita amigos pelo WebRTC
@@ -97,6 +104,7 @@ func criar_partida(meu_nome: String, semente_loot: int) -> void:
 	if e != OK:
 		_falhar("Não deu para abrir a partida (porta %d ocupada?)." % PORTA)
 		return
+	_iniciar_ponte()                            # 0.85: internet pelo retransmissor (sem WebRTC)
 	_com_rtc = RtcCls.disponivel() and (not servidor_dedicado or Conta.logado)   # servidor do PC: com a conta de convidado (0.51)
 	if _com_rtc:
 		multiplayer.multiplayer_peer = PeerMistoCls.new(p, rtc.comecar_host())   # Wi-Fi/código + internet (WebRTC)
@@ -127,26 +135,108 @@ func entrar(endereco: String, meu_nome: String) -> void:
 		return
 	multiplayer.multiplayer_peer = p           # "ligado" só quando o host aceitar (_aceito)
 
-# entra na partida de um AMIGO da conta pela internet (WebRTC, rede/rtc.gd)
-func entrar_amigo(host_uid: String, meu_nome: String) -> void:
+# entra na partida de um AMIGO da conta pela internet: 0.85 pelo RETRANSMISSOR (por_turn, quando o host aceita)
+# ou, se não, pelo WebRTC (rede/rtc.gd)
+func entrar_amigo(host_uid: String, meu_nome: String, por_turn := false) -> void:
 	sair()
 	nome = _limpar_nome(meu_nome)
 	if not Conta.logado:
 		_falhar("Entre na sua conta para jogar com amigos pela internet.")
+		return
+	if por_turn and not TurnCls.config().is_empty():
+		_entrar_por_turn(host_uid)
 		return
 	if not RtcCls.disponivel():
 		_falhar("Este aparelho não tem a conexão pela internet (WebRTC).")
 		return
 	multiplayer.multiplayer_peer = rtc.conectar(host_uid)   # "ligado" só quando o host aceitar (_aceito)
 
-# o host aceita amigos pela internet (WebRTC)?
+# 0.85: conecta o ENet no endereço público do host no retransmissor ("ip:porta"), da porta local do pedido
+func entrar_relay(relay: String, porta_local: int) -> void:
+	var rp := relay.split(":")
+	var p := ENetMultiplayerPeer.new()
+	var e := p.create_client(rp[0], int(rp[1]), 0, 0, 0, porta_local)
+	if e != OK:
+		_falhar("Não deu para conectar no retransmissor (%d)." % e)
+		return
+	multiplayer.multiplayer_peer = p           # "ligado" só quando o host aceitar (_aceito)
+
+# o host aceita amigos pela internet (WebRTC ou, 0.85, retransmissor)?
 func aceita_rtc() -> bool:
-	return eh_host() and _com_rtc
+	return eh_host() and (_com_rtc or aceita_turn())
+
+# 0.85: o host já tem o endereço público no retransmissor?
+func aceita_turn() -> bool:
+	return eh_host() and ponte != null and String(ponte.get("endereco")) != ""
+
+func _iniciar_ponte() -> void:
+	if ponte != null:
+		ponte.parar()
+		ponte.queue_free()
+		ponte = null
+	var cfg := TurnCls.config()
+	if cfg.is_empty():
+		return
+	ponte = PonteCls.new()
+	ponte.name = "PonteTurn"
+	ponte.aceita_qualquer = servidor_dedicado
+	add_child(ponte)
+	ponte.pronto.connect(func(end: String):
+		print("PONTE: endereço público no retransmissor ", end)
+		if Conta.logado:
+			Conta.publicar_partida() if not servidor_dedicado else Conta.publicar_servidor())
+	ponte.falhou.connect(func(m: String): push_warning("PONTE: " + m))
+	ponte.iniciar(PORTA, cfg)
+
+# 0.85 · AMIGO: entra pelo retransmissor do host (o ENet normal, no endereço público dele)
+#   1. descobre o próprio IP da internet (STUN) com a porta que o ENet vai usar
+#   2. pede para entrar (sinal/{host}/{eu}/c = {modo turn, sessao, ip}) e espera a resposta (h.relay)
+#   3. conecta o ENet nesse endereço, da mesma porta
+func _entrar_por_turn(host_uid: String) -> void:
+	var cfg := TurnCls.config()
+	var sessao := str(randi()) + str(Time.get_ticks_usec())
+	_turn_sessao = sessao
+	var porta_local := randi_range(40000, 60999)
+	var ip: String = await TurnCls.ip_publico_async(self, cfg["stun"][0], int(cfg["stun"][1]), porta_local)
+	if sessao != _turn_sessao:
+		return
+	if ip == "":
+		_turn_sessao = ""
+		_falhar("Não deu para falar com o retransmissor (esta rede bloqueia UDP?).")
+		return
+	var caminho := "sinal/%s/%s" % [host_uid, Conta.uid]
+	if not await Conta.db_put(caminho + "/c", {"modo": "turn", "sessao": sessao, "ip": ip, "t": {".sv": "timestamp"}}):
+		if sessao == _turn_sessao:
+			_turn_sessao = ""
+			_falhar("Não deu para chamar o host (sem internet?).")
+		return
+	var t0 := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < 30000:
+		await get_tree().create_timer(1.2).timeout
+		if sessao != _turn_sessao:
+			return
+		var h = await Conta.db_get(caminho + "/h")
+		if sessao != _turn_sessao:
+			return
+		if h is Dictionary and str(h.get("sessao", "")) == sessao and str(h.get("relay", "")).contains(":"):
+			Conta.db_del(caminho + "/c")
+			_turn_sessao = ""
+			print("REDE: entrando pelo retransmissor ", h["relay"], " (meu IP ", ip, ")")
+			entrar_relay(str(h["relay"]), porta_local)
+			return
+	Conta.db_del(caminho + "/c")
+	_turn_sessao = ""
+	_falhar("O host não respondeu pela internet (está na sala? na mesma versão?).")
 
 func sair() -> void:
 	if rtc != null:
 		rtc.parar()
 	_com_rtc = false
+	_turn_sessao = ""                          # cancela um pedido de entrada pelo retransmissor
+	if ponte != null:
+		ponte.parar()
+		ponte.queue_free()
+		ponte = null
 	if multiplayer.has_multiplayer_peer() and not (multiplayer.multiplayer_peer is OfflineMultiplayerPeer):
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()

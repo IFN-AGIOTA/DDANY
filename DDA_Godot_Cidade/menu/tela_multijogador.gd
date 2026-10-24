@@ -528,10 +528,10 @@ func entrar_na_sala(c: Dictionary) -> void:
 		if str(k[0]) == "Túnel":
 			_entrar(str(k[1]))
 			return
-	if bool(c.get("rtc", false)) and Conta.logado:   # internet com WebRTC
+	if bool(c.get("rtc", false)) and Conta.logado:   # internet (0.85: retransmissor; antes WebRTC)
 		_reserva = _codigo_de_longe(cods)
 		_esperando = true
-		Rede.entrar_amigo(str(c["uid"]), _meu_nome())
+		Rede.entrar_amigo(str(c["uid"]), _meu_nome(), bool(c.get("turn", false)))   # 0.85: pelo retransmissor quando o host aceita
 		return
 	var cod := _codigo_de_longe(cods)
 	if cod == "" and not cods.is_empty():

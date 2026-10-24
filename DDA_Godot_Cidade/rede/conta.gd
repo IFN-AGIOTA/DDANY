@@ -436,7 +436,7 @@ func atualizar_convites() -> void:
 				continue
 			if agora - float(c.get("t", 0)) > VALIDADE_CONVITE * 1000.0:
 				continue
-			var item := {"uid": host, "nome": str(c.get("nome", "?")), "codigos": c.get("codigos", []), "rtc": bool(c.get("rtc", false)),
+			var item := {"uid": host, "nome": str(c.get("nome", "?")), "codigos": c.get("codigos", []), "rtc": bool(c.get("rtc", false)), "turn": bool(c.get("turn", false)),
 				"n": int(c.get("n", 1)), "versao": str(c.get("versao", "")), "avatar": int(c.get("avatar", 0)),
 				"chamou": float(c.get("chamou", 0)), "comecou": bool(c.get("comecou", false))}
 			lista.append(item)
@@ -462,7 +462,7 @@ func atualizar_servidores() -> void:
 			if not (c is Dictionary) or host == uid or agora - float(c.get("t", 0)) > VALIDADE_CONVITE * 1000.0:
 				continue
 			lista.append({"uid": host, "nome": str(c.get("nome", "Servidor")), "codigos": c.get("codigos", []),
-				"rtc": bool(c.get("rtc", false)), "n": int(c.get("n", 0)), "versao": str(c.get("versao", "")),
+				"rtc": bool(c.get("rtc", false)), "turn": bool(c.get("turn", false)), "n": int(c.get("n", 0)), "versao": str(c.get("versao", "")),
 				"avatar": 0, "comecou": true, "servidor": true})
 	lista.sort_custom(func(a, b): return int(a["n"]) > int(b["n"]))
 	servidores = lista
@@ -472,7 +472,7 @@ func publicar_servidor() -> void:
 	if not logado or not Rede.eh_host():
 		return
 	await _db(HTTPClient.METHOD_PUT, "servidores/" + uid, {"nome": nome_servidor, "codigos": Rede.codigos(), "n": Rede.jogadores.size(),
-		"versao": Config.VERSAO, "rtc": Rede.aceita_rtc(), "t": {".sv": "timestamp"}})
+		"versao": Config.VERSAO, "rtc": Rede.aceita_rtc(), "turn": Rede.aceita_turn(), "t": {".sv": "timestamp"}})
 	_publicado = true
 
 func retirar_servidor() -> void:
@@ -481,7 +481,7 @@ func retirar_servidor() -> void:
 
 func _convite() -> Dictionary:
 	return {"nome": nome, "avatar": avatar, "codigos": Rede.codigos(), "n": Rede.jogadores.size(), "versao": Config.VERSAO,
-		"rtc": Rede.aceita_rtc(), "comecou": Rede.partida_comecou, "t": {".sv": "timestamp"}}
+		"rtc": Rede.aceita_rtc(), "turn": Rede.aceita_turn(), "comecou": Rede.partida_comecou, "t": {".sv": "timestamp"}}
 
 func publicar_partida() -> void:
 	if not logado or not Rede.eh_host():
