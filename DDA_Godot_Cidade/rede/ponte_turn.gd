@@ -1,7 +1,7 @@
 extends Node
 # PONTE DO HOST PELO RETRANSMISSOR (0.85) · multijogador pela internet no estilo "convidar amigo" (host + convite),
 # sem servidor próprio e sem WebRTC. Criado por rede/rede.gd quando o host abre a partida com a conta.
-#   1. pega um endereço público no retransmissor TURN (rede/turn.gd, conta da Metered em rede/turn.cfg);
+#   1. pega um endereço público no retransmissor TURN (rede/turn.gd; o seu, a Cloudflare ou a Metered em rede/turn.cfg);
 #   2. quando um amigo pede para entrar (pelo Firebase: rede/rtc.gd lê sinal/{host}/{amigo}/c com modo "turn" e o
 #      IP dele), libera o IP do amigo no retransmissor e responde o endereço público (h.relay);
 #   3. o amigo conecta o ENet NORMAL nesse endereço. Cada amigo que chega pelo retransmissor ganha aqui um "soquete
@@ -22,7 +22,7 @@ var _espelhos := {}                            # "ip:porta" do amigo -> {"udp": 
 var bytes_recebidos := 0                       # pelo retransmissor (o plano grátis da Metered conta entrada + saída)
 var bytes_enviados := 0
 
-var _lista: Array = []                         # 0.87: retransmissores a tentar (o seu primeiro, a Metered de reserva)
+var _lista: Array = []                         # retransmissores a tentar, em ordem (0.87/0.88: o seu, a Cloudflare, a Metered)
 var servidor_usado := ""                       # qual deu certo (host:porta)
 
 func iniciar(porta: int, cfg := {}) -> bool:
@@ -41,6 +41,18 @@ func _tentar(i: int) -> void:
 	var c: Dictionary = _lista[i]
 	turn.fechar()
 	turn = Turn.new()
+	if c.has("cloudflare") and str(c["usuario"]) == "":
+		# 0.88: a Cloudflare não tem senha fixa: pede uma de 24 h agora (se a API não responder, vai para a reserva)
+		var cred: Dictionary = await Turn.credenciais_cloudflare(self, c["cloudflare"][0], c["cloudflare"][1])
+		if not is_inside_tree():
+			return
+		if cred.is_empty():
+			push_warning("PONTE: a Cloudflare não deu a senha do retransmissor")
+			_tentar(i + 1)
+			return
+		c = c.duplicate()
+		c["usuario"] = cred["usuario"]
+		c["senha"] = cred["senha"]
 	turn.pronto.connect(func(ip: String, p: int):
 		endereco = "%s:%d" % [ip, p]
 		servidor_usado = "%s:%d" % [c["turn"][0], int(c["turn"][1])]

@@ -39,6 +39,29 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.88 · RETRANSMISSOR DA CLOUDFLARE (1000 GB GRÁTIS) NO LUGAR DO LIMITE DE 500 MB
+  · Quando a ligação direta entre os celulares não dá, os dados agora passam pelo retransmissor da CLOUDFLARE
+    (Realtime TURN, conta do dono do jogo): 1000 GB grátis, contra 500 MB por mês da Metered (~40 mil horas de
+    jogo a dois em vez de ~20). A Metered continua de RESERVA: se a Cloudflare não responder, o jogo usa a
+    Metered sozinho. Para quem joga não muda nada.
+  · A Cloudflare não tem senha fixa: ao abrir a partida, o host pede à API dela (rtc.live.cloudflare.com) um
+    usuário/senha que vale 24 h, com a chave guardada em rede/turn.cfg [turn_cloudflare] (id + token). Se a API
+    recusar ou não responder (10 s), vai direto para a reserva. O amigo descobre o próprio IP no
+    stun.cloudflare.com (sem senha).
+  · Ordem dos retransmissores (os que estiverem em rede/turn.cfg): [turn_proprio] (Oracle, 0.87, ainda sem
+    máquina) > [turn_cloudflare] > [turn] (Metered).
+  · Testado com uma API da Cloudflare de mentira (ferramentas/testes/cf_falso.py, TURN_CF=1 rodar.sh rede_turn:
+    pediu a senha e o amigo entrou pelo retransmissor; TURN_CF=cai: a API recusou e o amigo entrou pela reserva)
+    e a API de verdade respondeu à chave do jogo (usuário/senha de 24 h).
+  · Arquivos:
+      rede/turn.gd .............. lê [turn_cloudflare]; credenciais_cloudflare() pede a senha à API;
+                                  DDA_TURN aceita "ip:porta:cf:id" e DDA_CF_API (testes)
+      rede/ponte_turn.gd ........ pede a senha da Cloudflare antes de alocar; se não vier, usa a reserva
+      rede/turn_exemplo.cfg ..... modelo da seção [turn_cloudflare]
+      menu/config.gd ............ versão 0.88
+      ferramentas/testes/cf_falso.py ............. NOVO (API da Cloudflare de mentira)
+      ferramentas/testes/rodar.sh ................ rede_turn com TURN_CF=1 / TURN_CF=cai
+
 ATUALIZAÇÃO 0.87 · RETRANSMISSOR PRÓPRIO NA ORACLE CLOUD (GRÁTIS, SEM O LIMITE DE 500 MB) + RESERVA AUTOMÁTICA
   · O jogo aceita DOIS retransmissores: o SEU (coturn numa máquina grátis da Oracle) primeiro e a Metered de
     reserva. Se o seu não responder (~9 s), a partida abre pela Metered sozinha; o amigo também pergunta o próprio
@@ -2120,6 +2143,9 @@ MULTIJOGADOR (pasta rede/ · modo livre)
 - conta (Google/convidado), amigos e
   partidas dos amigos (Firebase) ...... rede/conta.gd (autoload "Conta")
 - chaves do Firebase / regras do banco  rede/firebase_config.cfg / rede/firebase_regras.json
+- retransmissor da Cloudflare (0.88) .. rede/turn.cfg [turn_cloudflare] (id + token da chave em
+                                          dash.cloudflare.com > Realtime > TURN Server) · senha de 24 h:
+                                          rede/turn.gd credenciais_cloudflare()
 - retransmissor próprio na Oracle (0.87) .. ../servidor_turn/ (instalar_turn.sh, LEIA-ME_ORACLE.txt) ·
                                           endereço/senha: rede/turn.cfg [turn_proprio]
 - ligação direta entre os celulares
@@ -2264,7 +2290,8 @@ MÚSICA (pasta audio/)
   (0.74); salvar em rede: personagem de cada um e o mundo do host (0.77; a posição não volta: todos nascem na
   base). Falta: chat escrito e abrir o jogo direto por um link (precisa de plugin Android). 0.86: pela
   internet tenta a LIGAÇÃO DIRETA e, se a rede não deixar (NAT simétrico, comum no 4G), vai pelo retransmissor
-  da Metered (plano grátis = 500 MB/mês, ~10-20 h de jogo a dois); o amigo com internet só IPv6 ainda não entra
+  (0.88: o da Cloudflare, 1000 GB grátis; a Metered, 500 MB/mês, fica de reserva; a senha da Cloudflare vale
+  24 h: uma partida aberta por mais de 24 h seguidas perde o retransmissor e precisa ser reaberta); o amigo com internet só IPv6 ainda não entra
   pela internet.
 - Ideias para depois: loot por região, lugares
   especiais (quarentena), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,

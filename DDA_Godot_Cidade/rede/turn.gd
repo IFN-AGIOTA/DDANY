@@ -1,7 +1,7 @@
 extends RefCounted
 # CLIENTE TURN EM GDSCRIPT (0.85) · RFC 5766/8656 (TURN) e 5389 (STUN), por UDP.
 # Substitui o WebRTC (biblioteca nativa que não inicia no Android) no multijogador pela internet:
-#   · o HOST pede ao retransmissor (Metered, rede/turn.cfg) um ENDEREÇO PÚBLICO (Allocate) e libera o IP de cada
+#   · o HOST pede ao retransmissor (o seu, a Cloudflare ou a Metered: rede/turn.cfg) um ENDEREÇO PÚBLICO (Allocate) e libera o IP de cada
 #     amigo (CreatePermission). O que o amigo manda para esse endereço chega aqui (Data/ChannelData) e o que o
 #     host manda vai pelo retransmissor (Send/ChannelData). rede/ponte_turn.gd liga isso ao ENet do jogo.
 #   · o AMIGO não precisa de TURN: descobre o próprio IP da internet com um pedido STUN (ip_publico) e conecta o
@@ -372,13 +372,16 @@ static func pedido_binding() -> PackedByteArray:
 
 # endereço do retransmissor (UDP) e do STUN a partir de rede/turn.cfg ("turn:host:porta", "stun:host:porta")
 static func config() -> Dictionary:
-	# testes (ferramentas/testes/rede_turn_*.gd): DDA_TURN="ip:porta:usuario:senha" troca o retransmissor
+	# testes (ferramentas/testes/rede_turn_*.gd): DDA_TURN="ip:porta:usuario:senha" (ou "ip:porta:cf:id") troca o retransmissor
 	# (vários separados por ";": o 1º é o principal, os outros são reservas)
 	var env := OS.get_environment("DDA_TURN")
 	if env != "":
 		var lista: Array = []
 		for s in env.split(";", false):
 			var x := s.split(":")
+			if x[2] == "cf":                          # "ip:porta:cf:id": senha pedida à API (DDA_CF_API) como na Cloudflare
+				lista.append({"turn": [x[0], int(x[1])], "stun": [x[0], int(x[1])], "usuario": "", "senha": "", "cloudflare": [x[3], "teste"]})
+				continue
 			lista.append({"turn": [x[0], int(x[1])], "stun": [x[0], int(x[1])], "usuario": x[2], "senha": x[3]})
 		var r: Dictionary = lista[0]
 		r["reservas"] = lista.slice(1)
@@ -386,15 +389,22 @@ static func config() -> Dictionary:
 	var cf := ConfigFile.new()
 	if cf.load("res://rede/turn.cfg") != OK:
 		return {}
-	# 0.87: [turn_proprio] = o SEU retransmissor (coturn na Oracle: servidor_turn/), usado primeiro; [turn] (Metered)
-	# vira a reserva (d["reservas"]). Sem [turn_proprio], é como antes.
-	var proprio := {}
+	# ordem (0.88): [turn_proprio] (o SEU coturn, servidor_turn/) > [turn_cloudflare] (Cloudflare Realtime TURN,
+	# 1000 GB grátis) > [turn] (Metered, 500 MB/mês). O 1º que existir é o principal; os outros vão em d["reservas"].
+	var lista2: Array = []
 	var url_p := str(cf.get_value("turn_proprio", "url", "")).strip_edges()
 	if url_p.begins_with("turn:") and str(cf.get_value("turn_proprio", "usuario", "")).strip_edges() != "":
 		var hp0 := url_p.substr(5).split("?")[0].split(":")
-		proprio = {"turn": [hp0[0], int(hp0[1]) if hp0.size() > 1 else 3478], "usuario": str(cf.get_value("turn_proprio", "usuario", "")).strip_edges(),
+		var proprio := {"turn": [hp0[0], int(hp0[1]) if hp0.size() > 1 else 3478], "usuario": str(cf.get_value("turn_proprio", "usuario", "")).strip_edges(),
 			"senha": str(cf.get_value("turn_proprio", "senha", "")).strip_edges()}
 		proprio["stun"] = proprio["turn"]
+		lista2.append(proprio)
+	# Cloudflare não tem senha fixa: guarda a chave e a senha temporária é pedida na hora (credenciais_cloudflare)
+	var cf_id := str(cf.get_value("turn_cloudflare", "id", "")).strip_edges()
+	var cf_token := str(cf.get_value("turn_cloudflare", "token", "")).strip_edges()
+	if cf_id != "" and cf_token != "":
+		lista2.append({"turn": ["turn.cloudflare.com", 3478], "stun": ["stun.cloudflare.com", 3478], "usuario": "", "senha": "",
+			"cloudflare": [cf_id, cf_token]})
 	var d := {"usuario": str(cf.get_value("turn", "usuario", "")).strip_edges(), "senha": str(cf.get_value("turn", "senha", "")).strip_edges()}
 	for u in str(cf.get_value("turn", "urls", "")).split(",", false):
 		u = u.strip_edges()
@@ -406,8 +416,45 @@ static func config() -> Dictionary:
 			d["stun"] = [hp2[0], int(hp2[1]) if hp2.size() > 1 else 3478]
 	if not d.has("stun") and d.has("turn"):
 		d["stun"] = d["turn"]
-	var metered: Dictionary = d if d.has("turn") and d["usuario"] != "" else {}
-	if proprio.is_empty():
-		return metered
-	proprio["reservas"] = [metered] if not metered.is_empty() else []
-	return proprio
+	if d.has("turn") and d["usuario"] != "":
+		lista2.append(d)
+	if lista2.is_empty():
+		return {}
+	var r2: Dictionary = lista2[0]
+	r2["reservas"] = lista2.slice(1)
+	return r2
+
+# 0.88 · CLOUDFLARE: pede um usuário/senha temporários (24 h) à API da Cloudflare com a chave do [turn_cloudflare].
+# Devolve {"usuario", "senha"} ou {} se não deu. DDA_CF_API troca o endereço da API (testes).
+const CF_API := "https://rtc.live.cloudflare.com/v1/turn/keys/%s/credentials/generate"
+const CF_VALIDADE := 86400
+static func credenciais_cloudflare(no: Node, id: String, token: String) -> Dictionary:
+	if not is_instance_valid(no) or not no.is_inside_tree():
+		return {}
+	var url := OS.get_environment("DDA_CF_API")
+	url = (url + "/%s") % id if url != "" else CF_API % id
+	var h := HTTPRequest.new()
+	h.timeout = 10.0
+	no.add_child(h)
+	var e := h.request(url, ["Authorization: Bearer " + token, "Content-Type: application/json"], HTTPClient.METHOD_POST,
+		JSON.stringify({"ttl": CF_VALIDADE}))
+	if e != OK:
+		h.queue_free()
+		return {}
+	var res: Array = await h.request_completed
+	h.queue_free()
+	if int(res[0]) != HTTPRequest.RESULT_SUCCESS or int(res[1]) / 100 != 2:
+		push_warning("TURN: Cloudflare respondeu %d/%d" % [int(res[0]), int(res[1])])
+		return {}
+	var j = JSON.parse_string((res[3] as PackedByteArray).get_string_from_utf8())
+	if not (j is Dictionary):
+		return {}
+	var srv = j.get("iceServers", j)                # .../generate devolve {"iceServers": {username, credential}}
+	if srv is Array:
+		for x in srv:
+			if x is Dictionary and x.has("username"):
+				srv = x
+				break
+	if not (srv is Dictionary) or str(srv.get("username", "")) == "":
+		return {}
+	return {"usuario": str(srv["username"]), "senha": str(srv["credential"])}
