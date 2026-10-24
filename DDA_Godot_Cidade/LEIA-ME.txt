@@ -39,6 +39,31 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.87 · RETRANSMISSOR PRÓPRIO NA ORACLE CLOUD (GRÁTIS, SEM O LIMITE DE 500 MB) + RESERVA AUTOMÁTICA
+  · O jogo aceita DOIS retransmissores: o SEU (coturn numa máquina grátis da Oracle) primeiro e a Metered de
+    reserva. Se o seu não responder (~9 s), a partida abre pela Metered sozinha; o amigo também pergunta o próprio
+    endereço à reserva se o seu estiver fora.
+  · servidor_turn/ (raiz do repositório, NOVO): instalar_turn.sh (cola-se em "Initialization script" ao criar a
+    máquina Ubuntu na Oracle: instala o coturn, configura com usuário/senha, bloqueia a rede interna, abre o
+    firewall da máquina e liga o serviço) e LEIA-ME_ORACLE.txt (passo a passo: conta, máquina, portas UDP 3478 e
+    49152-65535 na Security List, mandar o IP). A senha de verdade NÃO vai para o git: o instalar_turn.sh do
+    repositório tem __SENHA__; a cópia preenchida foi entregue ao dono do jogo.
+  · rede/turn.cfg ganha a seção [turn_proprio] (url, usuario, senha) — modelo em rede/turn_exemplo.cfg.
+  · Testado com o coturn DE VERDADE (o mesmo programa da Oracle): direto na máquina, atrás de NAT simétrico de
+    mentira e rodando o próprio instalar_turn.sh na "internet" de mentira (TURN_REAL=oracle
+    ferramentas/testes/rede_nat.sh simetrico): o amigo entrou pelo retransmissor nos três. Reserva testada com o
+    retransmissor principal desligado: trocou para a reserva e o amigo entrou.
+  · Arquivos:
+      rede/turn.gd .............. lê [turn_proprio] (principal) + [turn] (reserva); tentativas por servidor;
+                                  DDA_TURN aceita vários (";")
+      rede/ponte_turn.gd ........ tenta o principal e passa para a reserva se ele não responder
+      rede/rede.gd .............. STUN do host e do amigo também pela reserva
+      rede/turn_exemplo.cfg ..... modelo da seção [turn_proprio]
+      menu/config.gd ............ versão 0.87
+      ferramentas/testes/rede_nat.sh .............. TURN_REAL=1 (coturn) e TURN_REAL=oracle (o script da Oracle)
+      ../servidor_turn/instalar_turn.sh ........... NOVO (fora da pasta do jogo)
+      ../servidor_turn/LEIA-ME_ORACLE.txt ......... NOVO (fora da pasta do jogo)
+
 ATUALIZAÇÃO 0.86 · LIGAÇÃO DIRETA ENTRE OS CELULARES ("SINCRONIZAR OS IPs", COMO O RADMIN/TAILSCALE FAZEM)
   · Ao aceitar o convite, o jogo SINCRONIZA os dois aparelhos: cada um descobre o seu IP e PORTA da internet
     (STUN), eles trocam isso pelo convite e, ao mesmo tempo, mandam pacotes um para o outro. Os dois roteadores
@@ -2095,6 +2120,8 @@ MULTIJOGADOR (pasta rede/ · modo livre)
 - conta (Google/convidado), amigos e
   partidas dos amigos (Firebase) ...... rede/conta.gd (autoload "Conta")
 - chaves do Firebase / regras do banco  rede/firebase_config.cfg / rede/firebase_regras.json
+- retransmissor próprio na Oracle (0.87) .. ../servidor_turn/ (instalar_turn.sh, LEIA-ME_ORACLE.txt) ·
+                                          endereço/senha: rede/turn.cfg [turn_proprio]
 - ligação direta entre os celulares
   (0.86, furar o NAT) ................ rede/rede.gd (atender_amigo, entrar_direto_ou_relay, _manter_nat)
 - internet pelo RETRANSMISSOR (0.85,

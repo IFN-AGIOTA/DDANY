@@ -22,18 +22,39 @@ var _espelhos := {}                            # "ip:porta" do amigo -> {"udp": 
 var bytes_recebidos := 0                       # pelo retransmissor (o plano grátis da Metered conta entrada + saída)
 var bytes_enviados := 0
 
+var _lista: Array = []                         # 0.87: retransmissores a tentar (o seu primeiro, a Metered de reserva)
+var servidor_usado := ""                       # qual deu certo (host:porta)
+
 func iniciar(porta: int, cfg := {}) -> bool:
 	porta_jogo = porta
 	var c: Dictionary = cfg if not cfg.is_empty() else Turn.config()
 	if c.is_empty():
 		return false
+	_lista = [c] + (c.get("reservas", []) as Array)
+	_tentar(0)
+	return true
+
+func _tentar(i: int) -> void:
+	if i >= _lista.size():
+		falhou.emit("nenhum retransmissor respondeu")
+		return
+	var c: Dictionary = _lista[i]
+	turn.fechar()
+	turn = Turn.new()
 	turn.pronto.connect(func(ip: String, p: int):
 		endereco = "%s:%d" % [ip, p]
+		servidor_usado = "%s:%d" % [c["turn"][0], int(c["turn"][1])]
 		pronto.emit(endereco))
-	turn.falhou.connect(func(m: String): falhou.emit(m))
+	turn.falhou.connect(func(m: String):
+		push_warning("PONTE: retransmissor %s: %s" % [str(c["turn"][0]), m])
+		if i + 1 < _lista.size():
+			_tentar(i + 1)                         # o seu servidor caiu: vai para a reserva
+		else:
+			falhou.emit(m))
 	turn.recebido.connect(_do_amigo)
+	if i + 1 < _lista.size():
+		turn.tentativas = 5                         # ~9 s sem resposta e já tenta a reserva
 	turn.alocar(c["turn"][0], int(c["turn"][1]), c["usuario"], c["senha"])
-	return true
 
 # o amigo com esse IP da internet pode mandar pacotes para o nosso endereço público
 func permitir(ip: String) -> void:

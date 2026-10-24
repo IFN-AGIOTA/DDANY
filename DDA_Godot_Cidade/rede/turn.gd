@@ -63,6 +63,7 @@ var _canal_de := {}                            # número -> [ip, porta]
 var _prox_canal := 0x4000
 var _t_renovar := 0.0
 var _rng := RandomNumberGenerator.new()
+var tentativas := TENTATIVAS                   # 0.87: menos quando há um retransmissor de reserva (troca mais rápido)
 
 # ---------------- bytes ----------------
 static func _u16(b: PackedByteArray, i: int) -> int:
@@ -211,7 +212,7 @@ func poll(dt: float) -> void:
 		q["t"] -= dt
 		if q["t"] <= 0.0:
 			q["n"] += 1
-			if q["n"] >= TENTATIVAS:
+			if q["n"] >= tentativas:
 				_pendentes.erase(id)
 				if q["tipo"] == ALLOCATE:
 					falhou.emit("o retransmissor não respondeu")
@@ -372,13 +373,28 @@ static func pedido_binding() -> PackedByteArray:
 # endereço do retransmissor (UDP) e do STUN a partir de rede/turn.cfg ("turn:host:porta", "stun:host:porta")
 static func config() -> Dictionary:
 	# testes (ferramentas/testes/rede_turn_*.gd): DDA_TURN="ip:porta:usuario:senha" troca o retransmissor
+	# (vários separados por ";": o 1º é o principal, os outros são reservas)
 	var env := OS.get_environment("DDA_TURN")
 	if env != "":
-		var x := env.split(":")
-		return {"turn": [x[0], int(x[1])], "stun": [x[0], int(x[1])], "usuario": x[2], "senha": x[3]}
+		var lista: Array = []
+		for s in env.split(";", false):
+			var x := s.split(":")
+			lista.append({"turn": [x[0], int(x[1])], "stun": [x[0], int(x[1])], "usuario": x[2], "senha": x[3]})
+		var r: Dictionary = lista[0]
+		r["reservas"] = lista.slice(1)
+		return r
 	var cf := ConfigFile.new()
 	if cf.load("res://rede/turn.cfg") != OK:
 		return {}
+	# 0.87: [turn_proprio] = o SEU retransmissor (coturn na Oracle: servidor_turn/), usado primeiro; [turn] (Metered)
+	# vira a reserva (d["reservas"]). Sem [turn_proprio], é como antes.
+	var proprio := {}
+	var url_p := str(cf.get_value("turn_proprio", "url", "")).strip_edges()
+	if url_p.begins_with("turn:") and str(cf.get_value("turn_proprio", "usuario", "")).strip_edges() != "":
+		var hp0 := url_p.substr(5).split("?")[0].split(":")
+		proprio = {"turn": [hp0[0], int(hp0[1]) if hp0.size() > 1 else 3478], "usuario": str(cf.get_value("turn_proprio", "usuario", "")).strip_edges(),
+			"senha": str(cf.get_value("turn_proprio", "senha", "")).strip_edges()}
+		proprio["stun"] = proprio["turn"]
 	var d := {"usuario": str(cf.get_value("turn", "usuario", "")).strip_edges(), "senha": str(cf.get_value("turn", "senha", "")).strip_edges()}
 	for u in str(cf.get_value("turn", "urls", "")).split(",", false):
 		u = u.strip_edges()
@@ -390,4 +406,8 @@ static func config() -> Dictionary:
 			d["stun"] = [hp2[0], int(hp2[1]) if hp2.size() > 1 else 3478]
 	if not d.has("stun") and d.has("turn"):
 		d["stun"] = d["turn"]
-	return d if d.has("turn") and d["usuario"] != "" else {}
+	var metered: Dictionary = d if d.has("turn") and d["usuario"] != "" else {}
+	if proprio.is_empty():
+		return metered
+	proprio["reservas"] = [metered] if not metered.is_empty() else []
+	return proprio

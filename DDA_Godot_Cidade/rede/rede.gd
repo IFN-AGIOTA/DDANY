@@ -108,6 +108,11 @@ func criar_partida(meu_nome: String, semente_loot: int) -> void:
 	if not cfg_t.is_empty():
 		direto_publico = TurnCls.endereco_publico(cfg_t["stun"][0], int(cfg_t["stun"][1]), PORTA, 1.2)
 		_stun = cfg_t["stun"]
+		for res in cfg_t.get("reservas", []):     # 0.87: o retransmissor próprio não respondeu: pergunta à reserva
+			if direto_publico != "":
+				break
+			direto_publico = TurnCls.endereco_publico(res["stun"][0], int(res["stun"][1]), PORTA, 1.2)
+			_stun = res["stun"]
 		print("REDE: endereço público da partida (ligação direta): ", direto_publico if direto_publico != "" else "não achei")
 	var p := ENetMultiplayerPeer.new()
 	var e := p.create_server(PORTA, MAX_JOGADORES - 1)
@@ -290,6 +295,10 @@ func _entrar_por_turn(host_uid: String) -> void:
 	var porta_local := randi_range(40000, 60999)
 	sincronizando.emit("Descobrindo o seu endereço na internet…")
 	var meu: String = await TurnCls.endereco_publico_async(self, cfg["stun"][0], int(cfg["stun"][1]), porta_local)
+	for res in cfg.get("reservas", []):           # 0.87: o retransmissor próprio não respondeu: pergunta à reserva
+		if meu != "" or sessao != _turn_sessao:
+			break
+		meu = await TurnCls.endereco_publico_async(self, res["stun"][0], int(res["stun"][1]), porta_local)
 	var ip := meu.get_slice(":", 0)
 	if sessao != _turn_sessao:
 		return
