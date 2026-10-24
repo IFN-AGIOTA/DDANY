@@ -82,6 +82,7 @@ ATUALIZAÇÃO 0.83 · BUNKERS (UM POR ILHA) E CARTÕES DE ACESSO
       inventario/itens.gd ....... 4 cartões de acesso
       inventario/modelos_itens.gd  modelo dos cartões
       inventario/modelos/cartao_bunker_1..4.glb ... NOVOS (modelo "3D Keycard", CC0, com a textura repintada)
+      inventario/modelos/cartao_bunker_N_cartao_bunker_N.jpg (1..4) ... NOVOS (textura de cada cartão, tirada do .glb)
       inventario/modelos/LICENCA.txt  crédito do cartão
       inventario/icones/cartao_bunker_1..4.png .... NOVOS (ícones do inventário)
       inventario/tela_inventario.gd  botão PEGAR mostra "ABRIR BUNKER N" / "SUBIR ELEVADOR"
