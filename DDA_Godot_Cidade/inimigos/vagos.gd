@@ -12,7 +12,7 @@ extends Node
 # - MANADA: quem está parado/à toa e vê outro infectado caçando perto (14 m) vai atrás dele (as hordas crescem).
 # - PUXAR PARA O CHÃO: 3 infectados te acertando juntos (1,6 s) te derrubam (morte), se a opção estiver ligada.
 # - Alguém perseguindo = a música aperta (Musica.adicionar_tensao).
-# - ativo = false: some com todos e para de criar (a história usa antes do surto).
+# - ativo = false: some com todos e para de criar (os testes usam).
 # - clima (opcional): objeto com escuridao() -> 0..1; à noite os Vagos enxergam menos.
 #
 # Uso (main.gd, _criar_jogo):

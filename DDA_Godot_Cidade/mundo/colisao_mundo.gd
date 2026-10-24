@@ -150,7 +150,7 @@ func _ready() -> void:
 		_pool_forma.append(bs)
 
 # dados = conteúdo de data/city.json · predios = x, z, tam_x, tam_z, altura (5 floats por prédio)
-# pode ser chamada de novo (a história tira os carros largados antes do colapso e põe de volta depois)
+# pode ser chamada de novo (troca a lista inteira de obstáculos)
 func configurar_obstaculos(lista: PackedFloat32Array) -> void:
 	_obst = lista
 	# OTIMIZAÇÃO: cos/sin do giro e o raio de cada obstáculo calculados uma vez (antes: a cada consulta)

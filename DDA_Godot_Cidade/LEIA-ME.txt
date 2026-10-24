@@ -39,6 +39,16 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.89.2 · LIMPEZA: SAEM OS RESTOS DO MODO HISTÓRIA ANTIGO
+  · Nada muda para quem joga: o botão "História · Em breve" do menu continua. Não tem pacote novo (vai junto no
+    próximo). O que sobrava do modo história apagado na 0.63 saiu:
+      - historia/abertura/ e audio/abertura.ogg.import: restos da abertura (só arquivos .import, sem a imagem/som);
+      - mundo/clima.gd: o "congelar a hora" da história não vai mais no jogo salvo (ficou só para os testes);
+      - comentários que falavam da história em inimigos/vagos.gd, mundo/colisao_mundo.gd, mundo/clima.gd e
+        jogador/sobrevivencia.gd.
+  · Arquivos: mundo/clima.gd · inimigos/vagos.gd · mundo/colisao_mundo.gd · jogador/sobrevivencia.gd (comentários)
+    · historia/ e audio/abertura.ogg.import APAGADOS (não estavam no git) · LEIA-ME.txt.
+
 ATUALIZAÇÃO 0.89.1 · LIMPEZA: SAEM OS ARQUIVOS DA VERSÃO HTML
   · Nada muda no jogo (não tem pacote novo). Saíram da pasta principal do repositório os restos da versão em HTML,
     que a Godot não usa: index-1.html (o jogo HTML), setup.js, package.json e capacitor.config.json (o APK do HTML

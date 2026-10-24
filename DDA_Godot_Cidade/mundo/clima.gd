@@ -142,7 +142,7 @@ void fragment() {
 # ---------- estado público ----------
 var hora := HORA_INICIAL             # 0..24
 var dia := 1                         # quantos dias se passaram (conta ao passar da meia-noite)
-var parado := false                  # história pode congelar a hora (e a troca automática do tempo)
+var parado := false                  # os testes congelam a hora e o tempo (não vai no jogo salvo)
 var chuva := 0.0                     # 0..1 (força da chuva agora)
 var nuvens := 0.0                    # 0..1 (céu coberto)
 var estado := "limpo"                # limpo · nublado · chuva · tempestade
@@ -282,7 +282,7 @@ func escuridao() -> float:
 
 func salvar() -> Dictionary:
 	return {"hora": hora, "dia": dia, "chuva": chuva, "nuvens": nuvens, "estado": estado,
-		"t_estado": _t_estado, "parado": parado, "molhado": molhado}
+		"t_estado": _t_estado, "molhado": molhado}
 
 func carregar(d: Dictionary) -> void:
 	hora = fposmod(float(d.get("hora", HORA_INICIAL)), 24.0)
@@ -295,7 +295,6 @@ func carregar(d: Dictionary) -> void:
 	chuva = clampf(float(d.get("chuva", _alvo_chuva)), 0.0, 1.0)
 	nuvens = clampf(float(d.get("nuvens", _alvo_nuvens)), 0.0, 1.0)
 	_t_estado = float(d.get("t_estado", 300.0))
-	parado = bool(d.get("parado", false))
 	molhado = clampf(float(d.get("molhado", chuva)), 0.0, 1.0)
 	if _ligado:
 		_atualizar_ceu()
@@ -773,7 +772,7 @@ func _aplicar_subsolo(sol: DirectionalLight3D, env: Environment) -> void:
 		env.ambient_light_source = _amb_fonte_antes
 		_reflexo_antes = -1
 
-# um relâmpago agora (a história pode chamar). perto = 0..1 (1 = clarão forte e trovão logo depois)
+# um relâmpago agora (a tempestade chama). perto = 0..1 (1 = clarão forte e trovão logo depois)
 func relampago(perto := -1.0) -> void:
 	if perto < 0.0:
 		perto = _rng.randf()
