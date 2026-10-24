@@ -143,7 +143,7 @@ func _r():
 	# passos atrás da parede: ouve (vai ver o lugar), não persegue
 	inf = await _criar(y.call(c + Vector3(meia - 2.0, 0, 0)))
 	inf.vagar()
-	m.vagos.barulho(pa, m.vagos.RUIDO_CORRENDO, true)
+	m.vagos.barulho(pa, m.vagos.raio_passos(7.0, false), true)
 	await q(3)
 	ok(inf.estado in [inf.DESCONFIADO, inf.INVESTIGANDO] and not inf.esta_cacando(), "4c. ouviu passos atrás da parede: vai ver (estado %d), não persegue" % inf.estado)
 	# 4d. já perseguindo, colado do outro lado da parede: não morde através dela
