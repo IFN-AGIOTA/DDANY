@@ -1,0 +1,4 @@
+Coloque aqui as animações prontas em arquivos separados (.glb, .gltf, .fbx ou .tscn).
+Cada arquivo com UMA animação vira uma animação com o nome do arquivo (ex.: "Rifle Run.glb" -> "Rifle Run").
+O jogo as adiciona ao personagem sozinho e escolhe a de cada estado pelo nome (veja ../LEIA-ME.txt).
+Elas devem ser do mesmo esqueleto do res://modelos/personagem.glb.

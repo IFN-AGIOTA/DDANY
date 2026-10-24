@@ -1,0 +1,26 @@
+Modelos 3D das armas. Os realistas (.glb) foram preparados por ferramentas/preparar_itens_realistas.py
+(no Blender: tamanho real, cano para a frente, origem na empunhadura, menos triângulos e texturas menores).
+
+REALISTAS (.glb):
+- pistola: Mateusz Sadek, "Service Pistol" - CC0 1.0 - https://polyhaven.com/a/service_pistol
+- rifle_caca: Mateusz Sadek, "Bolt Action Rifle 7.62" - CC0 1.0 - https://polyhaven.com/a/bolt_action_rifle_7_62
+- m4: nisu, "M4A1 Assault Rifle" - CC0 1.0 - https://opengameart.org/content/m4a1-assault-rifle
+- ak: LonesomeDucky, "AKM" - CC0 1.0 - https://opengameart.org/content/akm
+- espingarda: MikeMoon, "Shotgun" (Remington 870; cores dos materiais ajustadas) - CC0 1.0 - https://opengameart.org/content/shotgun-1
+- faca: Mateusz Sadek, "Fish Knife" - CC0 1.0 - https://polyhaven.com/a/fish_knife
+- facao: Ulan Cabanilla, "Machete" - CC0 1.0 - https://polyhaven.com/a/machete
+- taco: Enrique Martín, "Baseball Bat" - CC0 1.0 - https://polyhaven.com/a/baseball_bat
+- machado: James Ray Cock e Ulan Cabanilla, "Hatchet" - CC0 1.0 - https://polyhaven.com/a/hatchet
+- pe_de_cabra: Alexander Otterbeck, "Crowbar 01" - CC0 1.0 - https://polyhaven.com/a/crowbar_01
+- mp5 (0.61): Gintoki1234, "MP5 A2" - CC BY 4.0 (Creative Commons Atribuição 4.0: pode usar, mudar e vender, dando o
+  crédito) - https://gintoki1234.itch.io/mp5-a2 · https://creativecommons.org/licenses/by/4.0/
+  Mudanças: só a arma e o pente (sem as balas soltas), menos triângulos (28.705 -> 9.000), texturas de 4096 para
+  512 px, tamanho real (0,68 m), cano para a frente e origem na empunhadura.
+
+LOW POLY (.scn, antigos, convertidos por ferramentas/preparar_equipamentos.gd):
+- lanca: Hernandack, "Low Poly Survival Toolkit (weapon)" - CC0 1.0 - https://opengameart.org/content/low-poly-survival-toolkit-weapon
+Silenciador, mira e luneta (equipamentos/modelos/): Quaternius, "Ultimate Gun Pack" - CC0 1.0 - https://opengameart.org/content/low-poly-guns-pack
+Cano de ferro: feito por código (armas/modelos_armas.gd).
+
+CC0 1.0 = domínio público: https://creativecommons.org/publicdomain/zero/1.0/
+CC BY 4.0 = livre com crédito ao autor: https://creativecommons.org/licenses/by/4.0/

@@ -1,0 +1,256 @@
+extends RefCounted
+# JOGO SALVO (user://save.json): onde o jogador está, vida/fome/sede..., tudo o que ele carrega, a hora e o tempo,
+# o que já foi saqueado nos prédios/carros (mundo/loot_mundo.gd) e os itens largados no chão.
+# Salva sozinho a cada 2 minutos, ao pausar, ao voltar ao menu e quando o celular sai do jogo.
+# No menu principal aparece "Continuar" quando existe um jogo salvo.
+# 0.77 · MULTIJOGADOR (user://save_rede.json, separado: não mexe no jogo salvo sozinho): cada aparelho guarda o seu
+# PERSONAGEM da partida em rede (o que carrega, vida/fome/sede..., abates); o HOST guarda também o MUNDO (semente do
+# loot, o que foi saqueado e pego do chão, portas, carros, hora/tempo). Na próxima sala, o personagem volta e o host
+# continua o mesmo mundo (os amigos recebem). "Começar mundo novo" (tela Multijogador) apaga só o mundo.
+# Mexa AQUI para: o que é salvo (e a versão do arquivo, se mudar o formato).
+
+const ItemCls := preload("res://inventario/item.gd")
+const ItemMundoCls := preload("res://inventario/item_mundo.gd")
+
+const ARQUIVO := "user://save.json"
+const ARQUIVO_REDE := "user://save_rede.json"
+const VERSAO := 1
+const MAX_CHAO := 300                 # itens largados no chão guardados (os mais perto do jogador)
+
+static func existe() -> bool:
+	return FileAccess.file_exists(ARQUIVO)
+
+# texto curto para o botão "Continuar" ("" = não tem jogo salvo)
+static func resumo() -> String:
+	var d := ler()
+	if d.is_empty():
+		return ""
+	var s := int(d.get("tempo_jogo", 0.0))
+	var h := float(d.get("clima", {}).get("hora", 8.0))
+	return "Dia %d · %02d:%02d · %d min jogados" % [int(d.get("clima", {}).get("dia", 1)), int(h), int(fmod(h, 1.0) * 60.0), s / 60]
+
+static func ler() -> Dictionary:
+	if not existe():
+		return {}
+	var f := FileAccess.open(ARQUIVO, FileAccess.READ)
+	if f == null:
+		return {}
+	var d = JSON.parse_string(f.get_as_text())
+	if not (d is Dictionary) or int(d.get("versao", 0)) != VERSAO:
+		return {}
+	return d
+
+static func apagar() -> void:
+	if existe():
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(ARQUIVO))
+
+# main = main.gd com o jogo rodando
+# morto = true: grava a morte (os itens ficaram no chão) para "Continuar" não desfazer a morte
+static func salvar(main, morto := false) -> bool:
+	var j = main.jogador
+	if j == null or not is_instance_valid(j) or (j.morto and not morto):
+		return false
+	var p: Vector3 = j.global_position
+	var d := {
+		"versao": VERSAO,
+		"tempo_jogo": main._tempo_jogo,
+		"abates": main.abates,
+		"jogador": {"x": p.x, "y": p.y, "z": p.z, "yaw": j.cam_yaw},
+		"sobrevivencia": j.sobrevivencia.salvar(),
+		"inventario": j.inventario.salvar(),
+		"morto": morto,
+		"loot": main.loot_mundo.salvar(main.interiores.abertos if main.interiores != null else {},
+			main.locais.abertos if main.get("locais") != null else {}) if main.loot_mundo != null else {},
+		"clima": main.clima.salvar() if main.clima != null and main.clima.has_method("salvar") else {},
+		"missoes": main.missoes.salvar() if main.get("missoes") != null else {},
+		"chao": _chao(main, p),
+		"mapa_predios": MAPA_PREDIOS,
+	}
+	var f := FileAccess.open(ARQUIVO, FileAccess.WRITE)
+	if f == null:
+		return false
+	f.store_string(JSON.stringify(d))
+	return true
+
+# NUMERAÇÃO DOS PRÉDIOS: a 0.43 tirou os prédios em cima da água/rua (mundo/cidade.gd _predio_ruim) e os
+# números mudaram. O loot dos prédios é salvo por número ("p12" = chão do prédio 12, "p12_3" = móvel 3 dele):
+# save de antes (sem "mapa_predios") é convertido com cidade.remapa_predios (número antigo -> novo; -1 = sumiu).
+# A 0.68 tirou os prédios que ficavam nos terrenos dos locais especiais (mundo/locais.gd): save da 0.43..0.67
+# ("mapa_predios" = 2) é convertido com cidade.remapa_v2.
+# A 0.78 tirou os prédios dos terrenos dos locais NOVOS (delegacias, escolas, metrôs): save da 0.68..0.77
+# ("mapa_predios" = 3) é convertido com cidade.remapa_v3 (também o do multijogador, que não tinha o número).
+const MAPA_PREDIOS := 4
+
+# id de algo de um prédio ("p12", "p12_3", "p12:3") com o número trocado pelo novo ("" = o prédio sumiu);
+# ids que não são de prédio (carros "c..", locais "L..") voltam iguais
+static func _remapear_id(s: String, remapa: PackedInt32Array) -> String:
+	if not s.begins_with("p") or not s.substr(1, 1).is_valid_int():
+		return s
+	var k := 1
+	while k < s.length() and s.substr(k, 1).is_valid_int():
+		k += 1
+	var i := int(s.substr(1, k - 1))
+	if i < 0 or i >= remapa.size() or remapa[i] < 0:
+		return ""
+	return "p%d%s" % [remapa[i], s.substr(k)]
+
+static func _remapear_loot(loot: Dictionary, remapa: PackedInt32Array) -> Dictionary:
+	var o := loot.duplicate(true)
+	for parte in ["grades", "chao", "ciclos", "ciclos_chao", "portas"]:
+		var velho: Dictionary = loot.get(parte, {})
+		var novo := {}
+		for id in velho:
+			var n := _remapear_id(String(id), remapa)
+			if n != "":                               # prédio removido: o loot dele some
+				novo[n] = velho[id]
+		o[parte] = novo
+	return o
+
+# a tabela certa para converter um save com essa versão do mapa (vazia = não precisa)
+static func _remapa_de(main, versao_mapa: int) -> PackedInt32Array:
+	if versao_mapa < 2:
+		return main.cidade.remapa_predios
+	if versao_mapa < 3:
+		return main.cidade.remapa_v2
+	if versao_mapa < MAPA_PREDIOS:
+		return main.cidade.remapa_v3
+	return PackedInt32Array()
+
+# itens largados pelo jogador (filhos do nó Jogo; os dos prédios ficam no loot_mundo)
+static func _chao(main, p: Vector3) -> Array:
+	var lista := []
+	for n in main.jogo.get_children():
+		if n.is_in_group("itens_chao") and not n.is_queued_for_deletion() and n.item != null:
+			var q: Vector3 = n.global_position
+			lista.append([q.distance_squared_to(p), [n.item.para_dict(), q.x, q.y, q.z]])
+	lista.sort_custom(func(a, b): return a[0] < b[0])
+	var r := []
+	for k in mini(lista.size(), MAX_CHAO):
+		r.append(lista[k][1])
+	return r
+
+# chamado logo depois de _criar_jogo (o jogo novo já existe; aqui ele vira o salvo)
+static func carregar(main, d: Dictionary) -> void:
+	var j = main.jogador
+	main._tempo_jogo = float(d.get("tempo_jogo", 0.0))
+	main.abates = int(d.get("abates", 0))
+	if main.loot_mundo != null:
+		var loot: Dictionary = d.get("loot", {})
+		var remapa := _remapa_de(main, int(d.get("mapa_predios", 1)))
+		if not remapa.is_empty():
+			loot = _remapear_loot(loot, remapa)
+		main.loot_mundo.carregar(loot)
+		if main.get("veiculos") != null:
+			main.veiculos.sincronizar()           # 0.76: carros já mexidos (some o largado original)
+	j.inventario.carregar(d.get("inventario", {}))
+	j.sobrevivencia.carregar(d.get("sobrevivencia", {}))
+	if main.clima != null and main.clima.has_method("carregar") and d.has("clima"):
+		main.clima.carregar(d["clima"])
+	# tira o loot de teste da base (já foi pego/mexido no jogo salvo) e põe os itens largados
+	for n in main.jogo.get_children():
+		if n.is_in_group("itens_chao"):
+			n.free()
+		elif n.is_in_group("conteineres_mundo") and n.grade != null:
+			n.grade.itens.clear()
+	for e in d.get("chao", []):
+		var it = ItemCls.de_dict(e[0])
+		if it != null:
+			ItemMundoCls.soltar(main.jogo, it, Vector3(e[1], e[2], e[3]))
+	var jd: Dictionary = d.get("jogador", {})
+	if not jd.is_empty():
+		var pos := Vector3(float(jd["x"]), float(jd["y"]), float(jd["z"]))
+		main.mundo.forcar(Vector2(pos.x, pos.z))
+		if main.interiores != null:
+			main.interiores.abrir_agora(Vector2(pos.x, pos.z))     # se salvou dentro de um prédio
+		if main.get("locais") != null:
+			main.locais.abrir_agora(Vector2(pos.x, pos.z))         # ou dentro de um local especial (0.68)
+		j.teleportar(pos + Vector3(0, 0.05, 0), float(jd.get("yaw", 0.0)))
+	if main.get("missoes") != null and d.has("missoes"):
+		main.missoes.carregar(d["missoes"])
+
+# ================= 0.77: PARTIDA EM REDE =================
+static func ler_rede() -> Dictionary:
+	if not FileAccess.file_exists(ARQUIVO_REDE):
+		return {}
+	var f := FileAccess.open(ARQUIVO_REDE, FileAccess.READ)
+	if f == null:
+		return {}
+	var d = JSON.parse_string(f.get_as_text())
+	return d if d is Dictionary and int(d.get("versao", 0)) == VERSAO else {}
+
+static func _gravar_rede(d: Dictionary) -> bool:
+	d["versao"] = VERSAO
+	var f := FileAccess.open(ARQUIVO_REDE, FileAccess.WRITE)
+	if f == null:
+		return false
+	f.store_string(JSON.stringify(d))
+	return true
+
+# semente do loot para uma sala nova: a do mundo salvo (continua o mesmo mundo) ou uma nova
+static func semente_rede() -> int:
+	var m: Dictionary = ler_rede().get("mundo", {})
+	return int(m["semente"]) if m.has("semente") else randi()
+
+# resumo do mundo salvo ("" = não tem): para a tela Multijogador
+static func resumo_mundo_rede() -> String:
+	var m: Dictionary = ler_rede().get("mundo", {})
+	if m.is_empty():
+		return ""
+	var c: Dictionary = m.get("clima", {})
+	return "Dia %d" % int(c.get("dia", 1))
+
+static func apagar_mundo_rede() -> void:
+	var d := ler_rede()
+	if d.erase("mundo"):
+		_gravar_rede(d)
+
+# salva o personagem (todos) e o mundo (só o host). morto = morreu: o personagem volta do zero
+static func salvar_rede(main, morto := false) -> bool:
+	var j = main.jogador
+	if j == null or not is_instance_valid(j) or (j.morto and not morto):
+		return false
+	var rede = main.get_node_or_null("/root/Rede")
+	var d := ler_rede()
+	if not bool(j.get("servidor")):          # o "jogador" do servidor do PC não é gente
+		d["personagem"] = {"sobrevivencia": j.sobrevivencia.salvar(), "inventario": j.inventario.salvar(),
+			"abates": main.abates, "tempo_jogo": main._tempo_jogo, "morto": morto}
+	if rede != null and rede.eh_host() and main.loot_mundo != null:
+		var lm = main.loot_mundo
+		d["mundo"] = {"semente": lm.semente,
+			"loot": lm.salvar(main.interiores.abertos if main.interiores != null else {}, main.locais.abertos if main.get("locais") != null else {}),
+			"pegos": lm.pegos.keys(),
+			"mapa_predios": MAPA_PREDIOS,
+			"clima": main.clima.salvar() if main.clima != null and main.clima.has_method("salvar") else {}}
+	return _gravar_rede(d)
+
+# ao começar a partida em rede (main.gd _ligar_rede): o personagem volta; o host continua o mundo salvo
+static func carregar_rede(main) -> String:
+	var d := ler_rede()
+	var avisos := PackedStringArray()
+	var j = main.jogador
+	var pj: Dictionary = d.get("personagem", {})
+	if not pj.is_empty() and not bool(pj.get("morto", false)) and not bool(j.get("servidor")):
+		j.inventario.carregar(pj.get("inventario", {}))
+		j.sobrevivencia.carregar(pj.get("sobrevivencia", {}))
+		main.abates = int(pj.get("abates", 0))
+		main._tempo_jogo = float(pj.get("tempo_jogo", 0.0))
+		avisos.append("SEU PERSONAGEM DA PARTIDA EM REDE VOLTOU")
+	var rede = main.get_node_or_null("/root/Rede")
+	var m: Dictionary = d.get("mundo", {})
+	if rede != null and rede.eh_host() and not m.is_empty() and main.loot_mundo != null and int(m.get("semente", -1)) == main.loot_mundo.semente:
+		var remapa := _remapa_de(main, int(m.get("mapa_predios", 3)))      # o da 0.77 não tinha o número: era o 3
+		var loot: Dictionary = m.get("loot", {})
+		if not remapa.is_empty():
+			loot = _remapear_loot(loot, remapa)
+		main.loot_mundo.carregar(loot)
+		main.loot_mundo.semente = int(m["semente"])
+		for u in m.get("pegos", []):
+			var id := _remapear_id(str(u), remapa) if not remapa.is_empty() else str(u)
+			if id != "":
+				main.loot_mundo.pegos[id] = true
+		if main.clima != null and m.has("clima"):
+			main.clima.carregar(m["clima"])
+		if main.get("veiculos") != null:
+			main.veiculos.sincronizar()
+		avisos.append("O MUNDO DA SUA ÚLTIMA SALA CONTINUA")
+	return " · ".join(avisos)

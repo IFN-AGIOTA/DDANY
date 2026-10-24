@@ -1,0 +1,267 @@
+extends RefCounted
+# BANCO DE ITENS (estilo DayZ). Cada item ocupa um retângulo de células (w x h) nas grades.
+# Campos:
+#   nome / sigla (texto curto desenhado no ícone) / desc
+#   w, h ......... tamanho na grade (células) · peso (kg por unidade)
+#   max .......... quantidade máxima na pilha (1 = não empilha)
+#   cat .......... categoria (cor do ícone): arma, branca, municao, pente, acessorio, medico, comida, bebida, roupa,
+#                  mochila, ferramenta, diverso
+#   slot ......... onde pode ser VESTIDO/GUARDADO no corpo: cabeca, camisa, colete, calca, cinto, mochila, ombro, coldre
+#   grade ........ [largura, altura] se o item tem espaço dentro (roupas, mochilas)
+#   arma ......... tipo em armas.gd (WDEF) quando o item é uma arma · municao (id) e pente (balas no pente)
+#   usa_pente .... pente (item) que encaixa na arma · acess = encaixes de acessório ("cano", "mira")
+#   pente_de/cap . pentes: munição que aceitam e quantas balas cabem
+#   encaixe/serve  acessórios: onde encaixam e em quais armas
+#   usar ......... texto da ação de uso (consumíveis) · some ao usar quando "consome" = true
+#   efeito ....... o que o consumível faz (jogador/sobrevivencia.gd): fome, sede, vida, sangue, sangrar, doenca,
+#                  reparo_arma, reparo_roupa
+#   calor/imperm/protecao  roupas: frio, chuva e proteção contra mordidas/golpes (0 a 1)
+# Todo item tem ESTADO (item.gd): perfeito, gasto, danificado, muito danificado, arruinado.
+# Para criar um item novo basta acrescentar uma linha aqui e usar Item.novo("id").
+
+const CORES := {
+	"arma": Color(0.36, 0.38, 0.33),
+	"municao": Color(0.55, 0.45, 0.20),
+	"pente": Color(0.42, 0.40, 0.30),
+	"acessorio": Color(0.30, 0.33, 0.36),
+	"branca": Color(0.45, 0.36, 0.30),
+	"bebida": Color(0.25, 0.42, 0.58),
+	"medico": Color(0.62, 0.22, 0.22),
+	"comida": Color(0.45, 0.50, 0.22),
+	"roupa": Color(0.32, 0.36, 0.42),
+	"mochila": Color(0.30, 0.38, 0.26),
+	"ferramenta": Color(0.40, 0.40, 0.44),
+	"diverso": Color(0.55, 0.35, 0.50),
+}
+
+const DB := {
+	# ----- armas de fogo (arma = tipo em armas/armas.gd · usa_pente = pente que encaixa; sem ele a munição vai direto) -----
+	"pistola": {"nome": "PISTOLA M9", "sigla": "M9", "w": 3, "h": 2, "peso": 0.9, "max": 1, "cat": "arma", "slot": "coldre",
+		"arma": "pistola", "municao": "mun_9mm", "pente": 12, "usa_pente": "pente_pistola", "acess": ["cano"],
+		"desc": "Semiautomática 9 mm. Usa o PENTE DE PISTOLA (12). Aceita silenciador."},
+	"m4": {"nome": "M4A1", "sigla": "M4A1", "w": 7, "h": 3, "peso": 3.4, "max": 1, "cat": "arma", "slot": "ombro",
+		"arma": "m4", "municao": "mun_556", "pente": 30, "usa_pente": "pente_stanag", "acess": ["cano", "mira"],
+		"desc": "Fuzil automático 5,56 mm. Usa o pente STANAG (30). Aceita silenciador e mira."},
+	"mp5": {"nome": "SUBMETRALHADORA MP5", "sigla": "MP5", "w": 5, "h": 2, "peso": 2.5, "max": 1, "cat": "arma", "slot": "ombro",
+		"arma": "mp5", "municao": "mun_9mm", "pente": 30, "usa_pente": "pente_mp5", "acess": ["cano"],
+		"desc": "Submetralhadora 9 mm: rajada rápida e pouco coice. Usa a mesma munição da pistola."},
+	"ak": {"nome": "AKM", "sigla": "AKM", "w": 7, "h": 3, "peso": 3.6, "max": 1, "cat": "arma", "slot": "ombro",
+		"arma": "ak", "municao": "mun_762", "pente": 30, "usa_pente": "pente_ak", "acess": ["cano", "mira"],
+		"desc": "Fuzil automático 7,62 mm. Coice forte e muito dano. Usa o PENTE DE AK (30)."},
+	"espingarda": {"nome": "ESPINGARDA 12", "sigla": "ESPING.", "w": 7, "h": 2, "peso": 3.2, "max": 1, "cat": "arma", "slot": "ombro",
+		"arma": "espingarda", "municao": "mun_12", "pente": 6,
+		"desc": "Calibre 12, de bomba. Devastadora de perto. Carrega 6 cartuchos (sem pente)."},
+	"rifle_caca": {"nome": "RIFLE DE CAÇA", "sigla": "RIFLE", "w": 8, "h": 2, "peso": 4.0, "max": 1, "cat": "arma", "slot": "ombro",
+		"arma": "rifle_caca", "municao": "mun_308", "pente": 5, "acess": ["mira"],
+		"desc": "Ferrolho .308. Lento, preciso e mortal de longe. Carrega 5 balas. Aceita luneta."},
+	# ----- armas brancas (corpo a corpo com o botão ATIRAR) -----
+	"faca": {"nome": "FACA DE COMBATE", "sigla": "FACA", "w": 1, "h": 3, "peso": 0.3, "max": 1, "cat": "branca", "slot": "",
+		"arma": "faca", "desc": "Rápida e silenciosa. Golpe com o botão ATIRAR."},
+	"taco": {"nome": "TACO DE BEISEBOL", "sigla": "TACO", "w": 1, "h": 5, "peso": 1.0, "max": 1, "cat": "branca", "slot": "ombro",
+		"arma": "taco", "desc": "Golpe forte que derruba."},
+	"machado": {"nome": "MACHADO", "sigla": "MACHADO", "w": 2, "h": 5, "peso": 1.8, "max": 1, "cat": "branca", "slot": "ombro",
+		"arma": "machado", "desc": "Lento, mas mata com um ou dois golpes."},
+	"cano": {"nome": "CANO DE FERRO", "sigla": "CANO", "w": 1, "h": 4, "peso": 1.2, "max": 1, "cat": "branca", "slot": "ombro",
+		"arma": "cano", "desc": "Achado no entulho. Pesado e confiável."},
+	"lanca": {"nome": "LANÇA IMPROVISADA", "sigla": "LANÇA", "w": 1, "h": 6, "peso": 0.9, "max": 1, "cat": "branca", "slot": "ombro",
+		"arma": "lanca", "desc": "Galho com a faca amarrada na ponta. Alcança longe."},
+	"facao": {"nome": "FACÃO", "sigla": "FACÃO", "w": 1, "h": 4, "peso": 0.7, "max": 1, "cat": "branca", "slot": "ombro",
+		"arma": "facao", "desc": "Lâmina longa. Rápido e corta fundo."},
+	"pe_de_cabra": {"nome": "PÉ DE CABRA", "sigla": "PÉ CABRA", "w": 1, "h": 4, "peso": 1.4, "max": 1, "cat": "branca", "slot": "ombro",
+		"arma": "pe_de_cabra", "desc": "Ferramenta e arma ao mesmo tempo."},
+	# ----- munição (solta) -----
+	"mun_9mm": {"nome": "MUNIÇÃO 9MM", "sigla": "9mm", "w": 1, "h": 1, "peso": 0.01, "max": 50, "cat": "municao", "slot": "",
+		"desc": "Pistola. Arraste em cima de um pente para encher."},
+	"mun_556": {"nome": "MUNIÇÃO 5.56", "sigla": "5.56", "w": 1, "h": 1, "peso": 0.012, "max": 60, "cat": "municao", "slot": "",
+		"desc": "M4A1. Arraste em cima de um pente STANAG para encher."},
+	"mun_762": {"nome": "MUNIÇÃO 7.62", "sigla": "7.62", "w": 1, "h": 1, "peso": 0.016, "max": 40, "cat": "municao", "slot": "",
+		"desc": "AKM. Arraste em cima de um pente de AK para encher."},
+	"mun_12": {"nome": "CARTUCHOS 12", "sigla": "12", "w": 1, "h": 1, "peso": 0.04, "max": 20, "cat": "municao", "slot": "",
+		"desc": "Espingarda calibre 12."},
+	"mun_308": {"nome": "MUNIÇÃO .308", "sigla": ".308", "w": 1, "h": 1, "peso": 0.025, "max": 20, "cat": "municao", "slot": "",
+		"desc": "Rifle de caça."},
+	# ----- pentes (guardam balas; "cap" = capacidade · "pente_de" = munição que aceita) -----
+	"pente_pistola": {"nome": "PENTE DE PISTOLA", "sigla": "PENTE", "w": 1, "h": 2, "peso": 0.08, "max": 1, "cat": "pente", "slot": "",
+		"pente_de": "mun_9mm", "cap": 12, "desc": "12 balas de 9 mm. USAR = encher com a munição que você carrega."},
+	"pente_stanag": {"nome": "PENTE STANAG", "sigla": "STANAG", "w": 1, "h": 2, "peso": 0.12, "max": 1, "cat": "pente", "slot": "",
+		"pente_de": "mun_556", "cap": 30, "desc": "30 balas de 5,56. USAR = encher com a munição que você carrega."},
+	"pente_mp5": {"nome": "PENTE DE MP5", "sigla": "PENTE MP5", "w": 1, "h": 2, "peso": 0.1, "max": 1, "cat": "pente", "slot": "",
+		"pente_de": "mun_9mm", "cap": 30, "desc": "30 balas de 9 mm. USAR = encher com a munição que você carrega."},
+	"pente_ak": {"nome": "PENTE DE AK", "sigla": "PENTE AK", "w": 1, "h": 2, "peso": 0.2, "max": 1, "cat": "pente", "slot": "",
+		"pente_de": "mun_762", "cap": 30, "desc": "30 balas de 7,62. USAR = encher com a munição que você carrega."},
+	# ----- acessórios (arraste em cima da arma para encaixar) -----
+	"silenciador": {"nome": "SILENCIADOR", "sigla": "SILENC.", "w": 2, "h": 1, "peso": 0.3, "max": 1, "cat": "acessorio", "slot": "",
+		"encaixe": "cano", "serve": ["pistola", "mp5", "m4", "ak"], "desc": "Tiro bem mais baixo: os infectados só ouvem de bem perto."},
+	"mira_acog": {"nome": "MIRA 4X", "sigla": "MIRA", "w": 2, "h": 1, "peso": 0.4, "max": 1, "cat": "acessorio", "slot": "",
+		"encaixe": "mira", "serve": ["m4", "ak"], "zoom": 2.0, "desc": "Aproxima bem mais ao mirar (M4A1 e AKM)."},
+	"luneta": {"nome": "LUNETA", "sigla": "LUNETA", "w": 3, "h": 1, "peso": 0.5, "max": 1, "cat": "acessorio", "slot": "",
+		"encaixe": "mira", "serve": ["rifle_caca"], "zoom": 3.4, "desc": "Para o rifle de caça. Mira de longe."},
+	# ----- médico (efeito: sangrar = estanca · sangue/vida = recupera) -----
+	"bandagem": {"nome": "ATADURA", "sigla": "ATAD.", "w": 1, "h": 1, "peso": 0.05, "max": 4, "cat": "medico", "slot": "",
+		"usar": "Fez um curativo.", "consome": true, "efeito": {"sangrar": 1}, "desc": "Estanca um sangramento."},
+	"trapos": {"nome": "TRAPOS", "sigla": "TRAPOS", "w": 1, "h": 1, "peso": 0.05, "max": 6, "cat": "medico", "slot": "",
+		"usar": "Amarrou os trapos no ferimento.", "consome": true, "efeito": {"sangrar": 1},
+		"desc": "Pano velho. Estanca um sangramento. Para fazer: arraste a FACA em cima de uma roupa."},
+	"analgesico": {"nome": "ANALGÉSICOS", "sigla": "ANALG.", "w": 1, "h": 1, "peso": 0.05, "max": 1, "cat": "medico", "slot": "",
+		"usar": "Tomou analgésicos.", "consome": true, "efeito": {"vida": 15}, "desc": "Alivia a dor (+15 de vida)."},
+	"soro": {"nome": "SORO FISIOLÓGICO", "sigla": "SORO", "w": 1, "h": 2, "peso": 0.3, "max": 1, "cat": "medico", "slot": "",
+		"usar": "Aplicou o soro.", "consome": true, "efeito": {"sangue": 1200}, "desc": "Repõe o sangue perdido."},
+	"kit_medico": {"nome": "KIT DE PRIMEIROS SOCORROS", "sigla": "KIT", "w": 2, "h": 2, "peso": 0.6, "max": 1, "cat": "medico", "slot": "",
+		"usar": "Usou o kit de primeiros socorros.", "consome": true, "efeito": {"sangrar": 9, "vida": 40, "sangue": 400},
+		"desc": "Estanca todos os sangramentos e cura bastante."},
+	"vitaminas": {"nome": "VITAMINAS", "sigla": "VIT.", "w": 1, "h": 1, "peso": 0.05, "max": 1, "cat": "medico", "slot": "",
+		"usar": "Tomou vitaminas.", "consome": true, "efeito": {"vida": 5, "cura": ["gripe"]}, "desc": "Reforça a imunidade. Cura a GRIPE."},
+	"antibiotico": {"nome": "ANTIBIÓTICOS", "sigla": "ANTIB.", "w": 1, "h": 1, "peso": 0.05, "max": 1, "cat": "medico", "slot": "",
+		"usar": "Tomou antibióticos.", "consome": true, "efeito": {"cura": ["infeccao", "colera"]}, "desc": "Cura a INFECÇÃO de feridas e a CÓLERA."},
+	"carvao": {"nome": "CARVÃO ATIVADO", "sigla": "CARVÃO", "w": 1, "h": 1, "peso": 0.05, "max": 1, "cat": "medico", "slot": "",
+		"usar": "Tomou carvão ativado.", "consome": true, "efeito": {"cura": ["intoxicacao"]}, "desc": "Cura a INTOXICAÇÃO (comida estragada)."},
+	"pastilha": {"nome": "PASTILHAS PURIFICADORAS", "sigla": "PASTILHA", "w": 1, "h": 1, "peso": 0.01, "max": 10, "cat": "medico", "slot": "",
+		"desc": "Arraste em cima da ÁGUA SUJA para deixar potável."},
+	"tala": {"nome": "TALA", "sigla": "TALA", "w": 1, "h": 3, "peso": 0.3, "max": 1, "cat": "medico", "slot": "",
+		"usar": "Imobilizou a perna.", "consome": true, "efeito": {"tala": 1}, "desc": "Conserta a PERNA QUEBRADA. Faça com 2 trapos + galho."},
+	# ----- comida e bebida (efeito: fome / sede = quanto enche, em %) -----
+	"feijao": {"nome": "LATA DE FEIJÃO", "sigla": "FEIJÃO", "w": 1, "h": 2, "peso": 0.4, "max": 1, "cat": "comida", "slot": "",
+		"usar": "Comeu a lata de feijão.", "consome": true, "efeito": {"fome": 35, "sede": -3}, "desc": "Comida enlatada."},
+	"atum": {"nome": "LATA DE ATUM", "sigla": "ATUM", "w": 1, "h": 1, "peso": 0.2, "max": 1, "cat": "comida", "slot": "",
+		"usar": "Comeu o atum.", "consome": true, "efeito": {"fome": 25}, "desc": "Proteína em lata."},
+	"sardinha": {"nome": "SARDINHAS", "sigla": "SARD.", "w": 1, "h": 1, "peso": 0.15, "max": 1, "cat": "comida", "slot": "",
+		"usar": "Comeu as sardinhas.", "consome": true, "efeito": {"fome": 20, "sede": -4}, "desc": "Salgadas."},
+	"pessego": {"nome": "TOMATES EM LATA", "sigla": "TOMATE", "w": 1, "h": 2, "peso": 0.4, "max": 1, "cat": "comida", "slot": "",
+		"usar": "Comeu os tomates.", "consome": true, "efeito": {"fome": 22, "sede": 15}, "desc": "Tomates pelados no próprio suco. Matam a sede."},
+	"leite_condensado": {"nome": "LEITE CONDENSADO", "sigla": "LEITE C.", "w": 1, "h": 1, "peso": 0.4, "max": 1, "cat": "comida", "slot": "",
+		"usar": "Tomou o leite condensado.", "consome": true, "efeito": {"fome": 28, "sede": -6}, "desc": "Lata russa, muito doce. Muita energia."},
+	"biscoito": {"nome": "PACOTE DE BISCOITOS", "sigla": "BISC.", "w": 2, "h": 1, "peso": 0.2, "max": 1, "cat": "comida", "slot": "",
+		"usar": "Comeu os biscoitos.", "consome": true, "efeito": {"fome": 18, "sede": -5}, "desc": "Secos, mas enchem."},
+	"barra": {"nome": "BARRA DE CEREAL", "sigla": "BARRA", "w": 1, "h": 1, "peso": 0.05, "max": 3, "cat": "comida", "slot": "",
+		"usar": "Comeu uma barra de cereal.", "consome": true, "efeito": {"fome": 10}, "desc": "Leve."},
+	"salgadinho": {"nome": "SALGADINHO", "sigla": "SALG.", "w": 2, "h": 2, "peso": 0.1, "max": 1, "cat": "comida", "slot": "",
+		"usar": "Comeu o salgadinho.", "consome": true, "efeito": {"fome": 12, "sede": -8}, "desc": "Dá sede."},
+	"maca": {"nome": "MAÇÃ", "sigla": "MAÇÃ", "w": 1, "h": 1, "peso": 0.15, "max": 1, "cat": "comida", "slot": "",
+		"usar": "Comeu a maçã.", "consome": true, "efeito": {"fome": 8, "sede": 6}, "desc": "Ainda está boa."},
+	"agua": {"nome": "GARRAFA D'ÁGUA", "sigla": "ÁGUA", "w": 1, "h": 2, "peso": 0.5, "max": 1, "cat": "bebida", "slot": "",
+		"usar": "Bebeu água.", "consome": true, "efeito": {"sede": 40}, "vira": "garrafa_vazia", "desc": "Água potável. A garrafa vazia pode ser enchida de novo."},
+	"agua_suja": {"nome": "ÁGUA SUJA", "sigla": "SUJA", "w": 1, "h": 2, "peso": 0.5, "max": 1, "cat": "bebida", "slot": "",
+		"usar": "Bebeu água suja...", "consome": true, "efeito": {"sede": 35, "suja": 1}, "vira": "garrafa_vazia",
+		"desc": "Água de lago. Pode dar CÓLERA. Use PASTILHA ou FERVA perto de uma fogueira."},
+	"garrafa_vazia": {"nome": "GARRAFA VAZIA", "sigla": "VAZIA", "w": 1, "h": 2, "peso": 0.05, "max": 1, "cat": "bebida", "slot": "",
+		"desc": "ENCHER perto de um lago (água suja) ou de uma pia/torneira (água limpa)."},
+	"refrigerante": {"nome": "REFRIGERANTE", "sigla": "REFRI", "w": 1, "h": 1, "peso": 0.35, "max": 1, "cat": "bebida", "slot": "",
+		"usar": "Bebeu o refrigerante.", "consome": true, "efeito": {"sede": 22, "fome": 4}, "desc": "Quente e sem gás."},
+	"suco": {"nome": "LEITE EM CAIXA", "sigla": "LEITE", "w": 1, "h": 1, "peso": 0.25, "max": 1, "cat": "bebida", "slot": "",
+		"usar": "Bebeu o leite.", "consome": true, "efeito": {"sede": 20, "fome": 6}, "desc": "Leite longa vida. Ainda dentro da validade."},
+	# ----- ferramentas / diversos -----
+	"fita": {"nome": "FITA ADESIVA", "sigla": "FITA", "w": 1, "h": 1, "peso": 0.1, "max": 1, "cat": "ferramenta", "slot": "",
+		"usar": "Remendou a roupa com fita.", "consome": true, "efeito": {"reparo_roupa": 0.3}, "desc": "Conserta um pouco a roupa que você veste."},
+	"kit_armas": {"nome": "KIT DE LIMPEZA DE ARMAS", "sigla": "KIT ARMA", "w": 2, "h": 1, "peso": 0.4, "max": 1, "cat": "ferramenta", "slot": "",
+		"usar": "Limpou a arma.", "consome": true, "efeito": {"reparo_arma": 0.4}, "desc": "Conserta a arma que está nas MÃOS (menos travamentos)."},
+	"kit_costura": {"nome": "KIT DE COSTURA", "sigla": "COSTURA", "w": 1, "h": 1, "peso": 0.1, "max": 1, "cat": "ferramenta", "slot": "",
+		"usar": "Costurou a roupa.", "consome": true, "efeito": {"reparo_roupa": 0.5}, "desc": "Conserta as roupas que você veste."},
+	"lanterna": {"nome": "LANTERNA", "sigla": "LANT.", "w": 1, "h": 2, "peso": 0.25, "max": 1, "cat": "ferramenta", "slot": "", "pilha": true,
+		"desc": "Segure nas MÃOS para iluminar. Gasta a PILHA (arraste uma PILHA em cima para trocar)."},
+	"lanterna_cabeca": {"nome": "LANTERNA DE CABEÇA", "sigla": "LANT. CAB.", "w": 2, "h": 1, "peso": 0.2, "max": 1, "cat": "roupa", "slot": "cabeca",
+		"pilha": true, "desc": "Vista na CABEÇA: ilumina com as mãos livres. Gasta a PILHA (arraste uma PILHA em cima)."},
+	"corda": {"nome": "CORDA", "sigla": "CORDA", "w": 2, "h": 2, "peso": 0.8, "max": 1, "cat": "ferramenta", "slot": "",
+		"desc": "Corda de náilon."},
+	"radio": {"nome": "RÁDIO", "sigla": "RÁDIO", "w": 1, "h": 2, "peso": 0.4, "max": 1, "cat": "ferramenta", "slot": "", "pilha": true,
+		"desc": "Rádio portátil. USAR = LIGAR/DESLIGAR. Ligado (com PILHA) recebe os chamados de suprimento e gasta a pilha."},
+	"mascara_gas": {"nome": "MÁSCARA DE GÁS", "sigla": "MÁSCARA", "w": 2, "h": 2, "peso": 0.6, "max": 1, "cat": "roupa", "slot": "rosto",
+		"desc": "Vista no ROSTO para entrar nas ZONAS CONTAMINADAS. O filtro gasta lá dentro (o estado cai)."},
+	"pilha": {"nome": "PILHA 9V", "sigla": "PILHA", "w": 1, "h": 1, "peso": 0.05, "max": 1, "cat": "ferramenta", "slot": "",
+		"desc": "Arraste em cima da LANTERNA, LANTERNA DE CABEÇA ou RÁDIO (a pilha velha sai)."},
+	"isqueiro": {"nome": "ISQUEIRO", "sigla": "ISQ.", "w": 1, "h": 1, "peso": 0.05, "max": 1, "cat": "ferramenta", "slot": "",
+		"desc": "Arraste em cima de 3 GALHOS para acender uma FOGUEIRA."},
+	"galao": {"nome": "GALÃO DE GASOLINA", "sigla": "GALÃO", "w": 2, "h": 3, "peso": 1.0, "max": 1, "cat": "ferramenta", "slot": "",
+		"desc": "Até 10 L. USAR perto de um CARRO = ABASTECER. Vazio: PEGAR perto de uma BOMBA de posto enche (algumas estão secas)."},
+	"tabuas": {"nome": "TÁBUAS COM PREGOS", "sigla": "TÁBUAS", "w": 1, "h": 3, "peso": 1.5, "max": 3, "cat": "ferramenta", "slot": "",
+		"desc": "USAR perto de uma porta FECHADA = BARRICAR (até 3 tábuas: ninguém abre, os infectados demoram para quebrar). Com PÉ DE CABRA ou MACHADO dá para tirar (PEGAR na porta)."},
+	"galho": {"nome": "GALHOS", "sigla": "GALHO", "w": 1, "h": 3, "peso": 0.3, "max": 5, "cat": "ferramenta", "slot": "",
+		"desc": "Lenha. 3 galhos + isqueiro = fogueira · 2 trapos + galho = tala · faca + galho = lança."},
+	"ursinho": {"nome": "URSINHO DE PELÚCIA", "sigla": "URSO", "w": 2, "h": 2, "peso": 0.2, "max": 1, "cat": "diverso", "slot": "",
+		"desc": "Não serve para nada. Mas é fofo."},
+	"revista": {"nome": "REVISTA VELHA", "sigla": "REVISTA", "w": 2, "h": 2, "peso": 0.2, "max": 1, "cat": "diverso", "slot": "",
+		"desc": "\"O FIM ESTÁ PRÓXIMO?\" diz a capa."},
+	"dinheiro": {"nome": "MAÇO DE DÓLARES", "sigla": "US$", "w": 1, "h": 1, "peso": 0.05, "max": 20, "cat": "diverso", "slot": "",
+		"desc": "Não compra mais nada."},
+	"celular": {"nome": "CELULAR QUEBRADO", "sigla": "CEL.", "w": 1, "h": 1, "peso": 0.15, "max": 1, "cat": "diverso", "slot": "",
+		"desc": "Tela trincada. Sem sinal."},
+	# 0.83: CARTÕES DE ACESSO DOS BUNKERS (só existe um de cada; aparecem nas áreas militares) · mundo/porta_bunker.gd
+	"cartao_bunker_1": {"nome": "CARTÃO DE ACESSO · BUNKER 1", "sigla": "B1", "w": 1, "h": 1, "peso": 0.01, "max": 1, "cat": "diverso", "slot": "",
+		"desc": "Cartão militar do BUNKER 1. Abre a porta blindada dele (basta estar com você). Só existe este."},
+	"cartao_bunker_2": {"nome": "CARTÃO DE ACESSO · BUNKER 2", "sigla": "B2", "w": 1, "h": 1, "peso": 0.01, "max": 1, "cat": "diverso", "slot": "",
+		"desc": "Cartão militar do BUNKER 2. Abre a porta blindada dele (basta estar com você). Só existe este."},
+	"cartao_bunker_3": {"nome": "CARTÃO DE ACESSO · BUNKER 3", "sigla": "B3", "w": 1, "h": 1, "peso": 0.01, "max": 1, "cat": "diverso", "slot": "",
+		"desc": "Cartão militar do BUNKER 3. Abre a porta blindada dele (basta estar com você). Só existe este."},
+	"cartao_bunker_4": {"nome": "CARTÃO DE ACESSO · BUNKER 4", "sigla": "B4", "w": 1, "h": 1, "peso": 0.01, "max": 1, "cat": "diverso", "slot": "",
+		"desc": "Cartão militar do BUNKER 4. Abre a porta blindada dele (basta estar com você). Só existe este."},
+	# ----- roupas (calor = protege do frio · imperm = protege da chuva · protecao = segura mordidas/golpes) -----
+	"capacete": {"nome": "CAPACETE TÁTICO", "sigla": "CAPACETE", "w": 3, "h": 2, "peso": 1.2, "max": 1, "cat": "roupa", "slot": "cabeca",
+		"calor": 0.05, "protecao": 0.5, "desc": "Protege a cabeça."},
+	"gorro": {"nome": "GORRO DE LÃ", "sigla": "GORRO", "w": 2, "h": 1, "peso": 0.1, "max": 1, "cat": "roupa", "slot": "cabeca",
+		"calor": 0.15, "desc": "Esquenta bem."},
+	"bone": {"nome": "BONÉ", "sigla": "BONÉ", "w": 2, "h": 1, "peso": 0.1, "max": 1, "cat": "roupa", "slot": "cabeca",
+		"calor": 0.03, "imperm": 0.05, "desc": "Um boné de beisebol."},
+	"camiseta": {"nome": "CAMISETA", "sigla": "CAMISETA", "w": 2, "h": 2, "peso": 0.2, "max": 1, "cat": "roupa", "slot": "camisa",
+		"grade": [2, 2], "calor": 0.08, "desc": "Fina, quase sem bolso."},
+	"moletom": {"nome": "MOLETOM", "sigla": "MOLETOM", "w": 3, "h": 3, "peso": 0.6, "max": 1, "cat": "roupa", "slot": "camisa",
+		"grade": [4, 3], "grade_nome": "BOLSO CANGURU", "calor": 0.3, "desc": "Quente, com bolso na frente."},
+	"jaqueta": {"nome": "JAQUETA ACOLCHOADA", "sigla": "JAQUETA", "w": 3, "h": 3, "peso": 1.1, "max": 1, "cat": "roupa", "slot": "camisa",
+		"grade": [3, 3], "grade_nome": "BOLSO ESQUERDO", "bolsos": [[3, 3, "BOLSO DIREITO"], [2, 3, "BOLSO INTERNO"]],
+		"calor": 0.45, "imperm": 0.4, "protecao": 0.1, "desc": "Quente e com muitos bolsos (esquerdo, direito e interno)."},
+	"capa_chuva": {"nome": "CAPA DE CHUVA", "sigla": "CAPA", "w": 3, "h": 3, "peso": 0.5, "max": 1, "cat": "roupa", "slot": "camisa",
+		"grade": [2, 3], "grade_nome": "BOLSO ESQUERDO", "bolsos": [[2, 3, "BOLSO DIREITO"], [2, 2, "BOLSO INTERNO"]],
+		"calor": 0.15, "imperm": 0.9, "desc": "Não deixa a chuva molhar você."},
+	"colete": {"nome": "COLETE TÁTICO", "sigla": "COLETE", "w": 3, "h": 3, "peso": 1.6, "max": 1, "cat": "roupa", "slot": "colete",
+		"grade": [4, 2], "grade_nome": "PORTA-PENTES", "bolsos": [[2, 2, "BOLSO"]], "calor": 0.05, "protecao": 0.15,
+		"desc": "Porta-pentes na frente e um bolso."},
+	"colete_policia": {"nome": "COLETE À PROVA DE BALAS", "sigla": "COLETE PM", "w": 3, "h": 3, "peso": 3.0, "max": 1, "cat": "roupa", "slot": "colete",
+		"grade": [2, 2], "calor": 0.08, "protecao": 0.45, "desc": "Da polícia. Aguenta mordidas e golpes."},
+	"calca": {"nome": "CALÇA CARGO", "sigla": "CALÇA", "w": 3, "h": 3, "peso": 0.8, "max": 1, "cat": "roupa", "slot": "calca",
+		"grade": [2, 3], "grade_nome": "BOLSO LATERAL ESQ.", "bolsos": [[2, 3, "BOLSO LATERAL DIR."], [3, 2, "BOLSOS DA FRENTE"], [2, 1, "BOLSO DE TRÁS"]],
+		"calor": 0.2, "protecao": 0.05, "desc": "Calça com bolsos laterais, da frente e de trás."},
+	"jeans": {"nome": "CALÇA JEANS", "sigla": "JEANS", "w": 3, "h": 3, "peso": 0.7, "max": 1, "cat": "roupa", "slot": "calca",
+		"grade": [3, 2], "grade_nome": "BOLSOS DA FRENTE", "bolsos": [[3, 1, "BOLSOS DE TRÁS"]], "calor": 0.15, "protecao": 0.05,
+		"desc": "Resistente."},
+	"pochete": {"nome": "POCHETE", "sigla": "POCHETE", "w": 2, "h": 2, "peso": 0.2, "max": 1, "cat": "mochila", "slot": "cinto",
+		"grade": [3, 2], "desc": "Pequena, vai na cintura."},
+	"mochila_escolar": {"nome": "MOCHILA ESCOLAR", "sigla": "MOCHILA", "w": 4, "h": 4, "peso": 0.6, "max": 1, "cat": "mochila", "slot": "mochila",
+		"grade": [6, 5], "desc": "Mochila simples."},
+	"mochila_trilha": {"nome": "MOCHILA DE TRILHA", "sigla": "MOCHILA", "w": 5, "h": 5, "peso": 1.2, "max": 1, "cat": "mochila", "slot": "mochila",
+		"grade": [7, 6], "calor": 0.05, "desc": "Grande e confortável."},
+	"mochila_combate": {"nome": "MOCHILA DE COMBATE", "sigla": "MOCHILA", "w": 5, "h": 5, "peso": 1.5, "max": 1, "cat": "mochila", "slot": "mochila",
+		"grade": [8, 7], "desc": "Mochila grande do exército."},
+}
+
+# nomes dos lugares do corpo (na ordem em que aparecem na coluna do meio)
+const SLOTS := {
+	"cabeca": "CABEÇA", "rosto": "ROSTO", "camisa": "CAMISA", "colete": "COLETE", "cinto": "CINTO",
+	"ombro": "OMBRO", "coldre": "COLDRE", "calca": "CALÇA", "mochila": "MOCHILA", "maos": "MÃOS",
+}
+
+static func def(id: String) -> Dictionary:
+	return DB.get(id, {})
+
+# estado (0..1) -> nome e cor, como no DayZ
+static func nome_estado(e: float) -> String:
+	if e > 0.7:
+		return "PERFEITO"
+	if e > 0.5:
+		return "GASTO"
+	if e > 0.3:
+		return "DANIFICADO"
+	if e > 0.0:
+		return "MUITO DANIFICADO"
+	return "ARRUINADO"
+
+static func cor_estado(e: float) -> Color:
+	if e > 0.7:
+		return Color(0.45, 0.85, 0.4)
+	if e > 0.5:
+		return Color(0.85, 0.85, 0.35)
+	if e > 0.3:
+		return Color(0.95, 0.6, 0.2)
+	if e > 0.0:
+		return Color(0.9, 0.25, 0.15)
+	return Color(0.5, 0.1, 0.1)
+
+static func cor(id: String) -> Color:
+	return CORES.get(def(id).get("cat", "diverso"), Color(0.4, 0.4, 0.4))

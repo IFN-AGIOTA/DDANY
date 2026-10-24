@@ -1,0 +1,10 @@
+Modelos 3D dos equipamentos (convertidos por ferramentas/preparar_equipamentos.gd: cores nos vértices, tamanho real):
+- capacete.res: hc, "Combat helmet" - CC-BY 3.0 (https://creativecommons.org/licenses/by/3.0/)
+  https://opengameart.org/content/combat-helmet  (modificado: cores assadas nos vértices e escala)
+- bone.res: Teh_Bucket, "Hats & clothing props" (snapback) - CC0 1.0 - https://opengameart.org/content/hats-clothing-props
+  (simplificado e recolorido)
+- mochila_trilha.res, mochila_combate.res: Quaternius, "Survival Pack" - CC0 1.0 - https://opengameart.org/content/lowpoly-survival-pack
+- mochila_escolar.res: Saraskau, "Low poly camping assets" - CC0 1.0 - https://opengameart.org/content/low-poly-camping-assets
+- silenciador.res, mira_acog.res, luneta.res: Quaternius, "Ultimate Gun Pack" - CC0 1.0
+Gorro, lanterna de cabeça e pochete: feitos por código (equipamentos/modelos_equip.gd).
+Coletes: feitos a partir do corpo do sobrevivente (jogador/modelo_sobrevivente.gd).
