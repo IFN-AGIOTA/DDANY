@@ -5,6 +5,7 @@
 #   GODOT=... ferramentas/testes/rodar.sh rede_carro               (dois jogos conectados: amigo dirigindo)
 #   GODOT=... ferramentas/testes/rodar.sh rede_save                (salvar em rede: duas sessões seguidas)
 #   GODOT=... ferramentas/testes/rodar.sh rede_turn                (0.85: amigo entra pelo retransmissor TURN)
+#   GODOT=... sudo ferramentas/testes/rodar.sh rede_nat            (0.86: ligação direta atrás de NAT de mentira)
 #   GODOT=... ferramentas/testes/rodar.sh teste_agua               (só um)
 # Sem monitor (servidor/CI) usa xvfb-run. Cada teste imprime "falhas: N"; o script termina com erro se algum falhar.
 # Os testes usam uma pasta de dados própria (não mexem no seu jogo salvo).
@@ -55,6 +56,13 @@ elif [ "$alvo" = rede_carro ]; then
 	grep -E "HOST:|SCRIPT ERROR" "$DADOS/host.txt"
 	grep -E "CLI:|SCRIPT ERROR" "$DADOS/cli.txt"
 	grep -q "estacionado guardado true" "$DADOS/host.txt" && grep -q "andou [1-9]" "$DADOS/host.txt" || falhou=1
+elif [ "$alvo" = rede_nat ]; then
+	# 0.86: ligação direta atrás de roteadores de mentira (precisa de root + iproute2/iptables): cone e simétrico
+	for tipo in cone simetrico; do
+		GODOT="$GODOT" ferramentas/testes/rede_nat.sh $tipo | grep -E "CLI: via|amigo entrou|TUDO|ALGUM"
+		GODOT="$GODOT" true
+	done | tee "$DADOS/nat.txt"
+	grep -q "TUDO CERTO (cone)" "$DADOS/nat.txt" && grep -q "TUDO CERTO (simetrico)" "$DADOS/nat.txt" || falhou=1
 elif [ "$alvo" = rede_turn ]; then
 	# 0.85: amigo entra pelo RETRANSMISSOR (TURN de mentira: ferramentas/testes/turn_falso.py, sem internet)
 	TURN_FALSO_TEMPO=200 python3 ferramentas/testes/turn_falso.py 3611 teste segredo > "$DADOS/turn.txt" 2>&1 &

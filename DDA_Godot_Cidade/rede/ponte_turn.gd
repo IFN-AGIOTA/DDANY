@@ -80,9 +80,10 @@ func _vigiar() -> void:
 		if agora - float(c.get("t", 0)) > VALIDADE * 1000.0 or _atendidos.get(cli, "") == sessao:
 			continue
 		_atendidos[cli] = sessao
-		permitir(str(c.get("ip", "")))
-		Conta.db_put("sinal/%s/%s/h" % [Conta.uid, cli], {"sessao": sessao, "relay": endereco, "modo": "turn"})
-		print("PONTE: %s pediu para entrar (IP %s) -> respondi %s" % [str(cli).left(6), str(c.get("ip", "")), endereco])
+		# 0.86: Rede libera no retransmissor E começa a furar o NAT (ligação direta); a resposta leva os dois caminhos
+		var r: Dictionary = Rede.atender_amigo(str(c.get("ip", "")), int(c.get("porta", 0)))
+		Conta.db_put("sinal/%s/%s/h" % [Conta.uid, cli], {"sessao": sessao, "relay": endereco, "direto": r.get("direto", ""), "modo": "turn"})
+		print("PONTE: %s pediu para entrar (%s:%d) -> retransmissor %s · direto %s" % [str(cli).left(6), str(c.get("ip", "")), int(c.get("porta", 0)), endereco, r.get("direto", "")])
 
 func _process(dt: float) -> void:
 	turn.poll(dt)

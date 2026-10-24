@@ -41,7 +41,8 @@ func _ready() -> void:
 	_sinais = [[Rede.pronto, _pronto], [Rede.falhou, _falhou], [Rede.caiu, _falhou], [Rede.partida_achada, _achou],
 		[Rede.internet, _redesenhar], [Rede.jogador_entrou, _redesenhar], [Rede.jogador_saiu, _redesenhar], [Rede.comecou, _comecou],
 		[Conta.mudou, _redesenhar], [Conta.convites_mudaram, _redesenhar], [Conta.amigos_atualizados, _redesenhar],
-		[Conta.aviso, _aviso], [Conta.resposta, _resposta], [Conta.servidores_mudaram, _redesenhar]]
+		[Conta.aviso, _aviso], [Conta.resposta, _resposta], [Conta.servidores_mudaram, _redesenhar],
+		[Rede.sincronizando, _sincronizando]]
 	for s in _sinais:
 		(s[0] as Signal).connect(s[1])
 	Rede.procurar(true)
@@ -65,6 +66,11 @@ func _redesenhar(_a = null, _b = null, _c = null) -> void:
 func _aviso(t: String) -> void:
 	if _status != null:
 		_status.text = t
+
+# 0.86: entrando pela internet: "Sincronizando com Fulano…", "Ligação direta…", "Conectando pelo retransmissor…"
+func _sincronizando(t: String) -> void:
+	if _status != null:
+		_status.text = t.replace("o host", _destino) if _destino != "" else t
 
 # ======================================================================
 func _montar() -> void:
@@ -608,6 +614,8 @@ func _pronto() -> void:
 		return
 	modo = "sala"
 	_status.text = "Sala criada! Chame seus amigos." if Rede.eh_host() else ""
+	if not Rede.eh_host() and Rede.via != "":     # 0.86: por onde entrou
+		_status.text = "Conectado: ligação direta (sem retransmissor)." if Rede.via == "direta" else "Conectado pelo retransmissor (a ligação direta não passou nesta rede)."
 	Conta.atualizar_amigos()
 	_montar()
 

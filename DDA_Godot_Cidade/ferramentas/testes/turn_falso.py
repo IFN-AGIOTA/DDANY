@@ -64,7 +64,8 @@ def erro(tp, tid, cod, motivo=b"erro", com_nonce=True):
     return resposta(tp | 0x0110, tid, at)
 
 ctl = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-ctl.bind(("127.0.0.1", PORTA))
+IP_PUBLICO = os.environ.get("TURN_FALSO_IP", "127.0.0.1")    # 0.86: na rede de mentira (rede_nat.sh) é o IP da "internet"
+ctl.bind((IP_PUBLICO, PORTA))
 alocs = {}            # endereço do cliente -> {"relay": sock, "perm": set(ip), "canal": {n: (ip,p)}, "canal_de": {(ip,p): n}}
 relay_de = {}         # sock -> endereço do cliente
 refresh_438 = [True]
@@ -111,7 +112,7 @@ while time.time() < fim:
             ctl.sendto(erro(tp, tid, 401, b"senha errada"), de); log("SENHA ERRADA tipo %04x" % tp); continue
         if tp == 0x0003:                                    # Allocate
             if de not in alocs:
-                r = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); r.bind(("127.0.0.1", 0))
+                r = socket.socket(socket.AF_INET, socket.SOCK_DGRAM); r.bind((IP_PUBLICO, 0))
                 alocs[de] = {"relay": r, "perm": set(), "canal": {}, "canal_de": {}}; relay_de[r] = de
             rp = alocs[de]["relay"].getsockname()
             log("ALLOCATE ok ->", rp)

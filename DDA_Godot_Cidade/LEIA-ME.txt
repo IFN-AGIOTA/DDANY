@@ -39,6 +39,37 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.86 · LIGAÇÃO DIRETA ENTRE OS CELULARES ("SINCRONIZAR OS IPs", COMO O RADMIN/TAILSCALE FAZEM)
+  · Ao aceitar o convite, o jogo SINCRONIZA os dois aparelhos: cada um descobre o seu IP e PORTA da internet
+    (STUN), eles trocam isso pelo convite e, ao mesmo tempo, mandam pacotes um para o outro. Os dois roteadores
+    "abrem o caminho" (furar o NAT) e a partida fica DIRETA, celular com celular: de graça, sem limite e com menos
+    atraso. A tela mostra: "Sincronizando com Fulano…" -> "Ligação direta com Fulano…" -> "Conectado: ligação
+    direta" (ou "Conectado pelo retransmissor").
+  · Se em 6 segundos a ligação direta não passar (operadora com NAT "simétrico", comum no 4G), o jogo entra
+    SOZINHO pelo retransmissor da 0.85. Para quem joga é um toque só.
+  · O retransmissor agora só é gasto quando a ligação direta não dá (os 500 MB grátis por mês rendem muito mais).
+  · Como funciona por dentro: antes de abrir a partida o host descobre o endereço público da PORTA do jogo (STUN) e,
+    a cada 15 s, manda um pedido STUN pelo próprio soquete do ENet (o roteador não esquece o caminho). Quando o
+    amigo pede para entrar (convite: IP + porta dele), o host manda pacotes para ele por 8 s
+    (ENetConnection.socket_send) enquanto o amigo conecta o ENet direto no endereço público do host, da mesma porta
+    do STUN.
+  · Testado com ROTEADORES DE MENTIRA no Linux (ferramentas/testes/rede_nat.sh, namespaces de rede + NAT do
+    iptables): roteadores comuns -> LIGAÇÃO DIRETA (o retransmissor nem foi usado); roteador simétrico (como
+    alguns 4G) -> caiu sozinho no retransmissor e entrou do mesmo jeito.
+  · Arquivos:
+      rede/rede.gd .............. host: endereço público da porta do jogo, mantém o NAT aberto, atender_amigo (fura
+                                  o NAT + libera no retransmissor); amigo: entrar_direto_ou_relay, sinal
+                                  "sincronizando", via (direta/retransmissor); o "olá" não vai duas vezes
+      rede/turn.gd .............. endereco_publico (IP + porta), pedido_binding
+      rede/ponte_turn.gd ........ a resposta do convite leva os dois caminhos (direto e retransmissor)
+      menu/tela_multijogador.gd . mostra "Sincronizando…", "Ligação direta…" e por onde conectou
+      menu/config.gd ............ versão 0.86
+      ferramentas/testes/turn_falso.py ............ pode ouvir num IP escolhido (TURN_FALSO_IP)
+      ferramentas/testes/rede_nat.sh .............. NOVO (roteadores de mentira: cone e simétrico)
+      ferramentas/testes/rede_direto_host.gd ...... NOVO
+      ferramentas/testes/rede_direto_cliente.gd ... NOVO
+      ferramentas/testes/rodar.sh ................. modo rede_nat
+
 ATUALIZAÇÃO 0.85 · MULTIJOGADOR PELA INTERNET NO ESTILO "CONVIDAR AMIGO" (SEM WebRTC, SEM SERVIDOR PRÓPRIO)
   · Igual ao Sons of the Forest: um jogador abre o mundo (host) e o amigo aceita o convite e entra no grupo, de
     qualquer rede (outro Wi-Fi, 4G, CGNAT dos dois lados). Não precisa abrir porta, VPN nem servidor ligado 24h.
@@ -2064,6 +2095,8 @@ MULTIJOGADOR (pasta rede/ · modo livre)
 - conta (Google/convidado), amigos e
   partidas dos amigos (Firebase) ...... rede/conta.gd (autoload "Conta")
 - chaves do Firebase / regras do banco  rede/firebase_config.cfg / rede/firebase_regras.json
+- ligação direta entre os celulares
+  (0.86, furar o NAT) ................ rede/rede.gd (atender_amigo, entrar_direto_ou_relay, _manter_nat)
 - internet pelo RETRANSMISSOR (0.85,
   estilo convidar amigo, sem WebRTC) .. rede/turn.gd (protocolo) · rede/ponte_turn.gd (host) · rede/rede.gd
                                           (_entrar_por_turn, amigo) · conta do retransmissor: rede/turn.cfg
@@ -2202,9 +2235,10 @@ MÚSICA (pasta audio/)
 - MULTIJOGADOR: infectados, itens e caixas iguais para todos (0.44); PvP, amigos no mapa, colisão entre
   jogadores e mensagens rápidas (0.71); prédios, infectados e física perto do amigo mesmo com o host longe
   (0.74); salvar em rede: personagem de cada um e o mundo do host (0.77; a posição não volta: todos nascem na
-  base). Falta: chat escrito e abrir o jogo direto por um link (precisa de plugin Android). 0.85: pela
-  internet funciona pelo retransmissor da Metered (plano grátis = 500 MB/mês, ~10-20 h de jogo a dois); o amigo
-  com internet só IPv6 ainda não entra pelo retransmissor.
+  base). Falta: chat escrito e abrir o jogo direto por um link (precisa de plugin Android). 0.86: pela
+  internet tenta a LIGAÇÃO DIRETA e, se a rede não deixar (NAT simétrico, comum no 4G), vai pelo retransmissor
+  da Metered (plano grátis = 500 MB/mês, ~10-20 h de jogo a dois); o amigo com internet só IPv6 ainda não entra
+  pela internet.
 - Ideias para depois: loot por região, lugares
   especiais (quarentena), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,
   outros sobreviventes (NPCs), o modo história novo.

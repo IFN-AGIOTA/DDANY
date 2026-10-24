@@ -80,7 +80,9 @@ func _ready() -> void:
 	multiplayer.peer_connected.connect(_peer_conectou)
 	multiplayer.peer_disconnected.connect(_peer_saiu)
 	multiplayer.connected_to_server.connect(_conectou_no_host)
-	multiplayer.connection_failed.connect(func(): _falhar("Não deu para conectar (confira o IP e a rede Wi-Fi)."))
+	multiplayer.connection_failed.connect(func():
+		if not _tentando_direto:
+			_falhar("Não deu para conectar (confira o IP e a rede Wi-Fi)."))
 	multiplayer.server_disconnected.connect(func(): _encerrar("A partida acabou (o host saiu ou a conexão caiu)."))
 
 func eh_host() -> bool:
@@ -99,11 +101,20 @@ func nome_de(id: int) -> String:
 func criar_partida(meu_nome: String, semente_loot: int) -> void:
 	sair()
 	nome = _limpar_nome(meu_nome)
+	# 0.86 · LIGAÇÃO DIRETA: antes de abrir o ENet, descobre o endereço público da PORTA do jogo (STUN); o amigo
+	# conecta direto nele (furando o NAT) e só usa o retransmissor se não der
+	direto_publico = ""
+	var cfg_t := TurnCls.config()
+	if not cfg_t.is_empty():
+		direto_publico = TurnCls.endereco_publico(cfg_t["stun"][0], int(cfg_t["stun"][1]), PORTA, 1.2)
+		_stun = cfg_t["stun"]
+		print("REDE: endereço público da partida (ligação direta): ", direto_publico if direto_publico != "" else "não achei")
 	var p := ENetMultiplayerPeer.new()
 	var e := p.create_server(PORTA, MAX_JOGADORES - 1)
 	if e != OK:
 		_falhar("Não deu para abrir a partida (porta %d ocupada?)." % PORTA)
 		return
+	_enet = p
 	_iniciar_ponte()                            # 0.85: internet pelo retransmissor (sem WebRTC)
 	_com_rtc = RtcCls.disponivel() and (not servidor_dedicado or Conta.logado)   # servidor do PC: com a conta de convidado (0.51)
 	if _com_rtc:
@@ -151,6 +162,86 @@ func entrar_amigo(host_uid: String, meu_nome: String, por_turn := false) -> void
 		return
 	multiplayer.multiplayer_peer = rtc.conectar(host_uid)   # "ligado" só quando o host aceitar (_aceito)
 
+# ---------- 0.86 · LIGAÇÃO DIRETA (furar o NAT, como o Radmin/Tailscale fazem por dentro) ----------
+# HOST: o roteador só deixa entrar resposta de quem a porta do jogo já "chamou". Então, quando o amigo pede para
+# entrar, o host manda alguns pacotes para o endereço público dele (ENetConnection.socket_send, da porta do ENet)
+# enquanto o amigo tenta conectar: os dois roteadores abrem o caminho e a ligação fica direta, sem retransmissor.
+# A cada MANTER s o host manda um pedido STUN da mesma porta: o roteador não esquece o endereço público.
+# Não funciona com NAT "simétrico" (alguns 4G): aí o amigo cai no retransmissor sozinho.
+const MANTER := 15.0
+const FURAR_POR := 8.0                         # s mandando pacotes para o amigo
+const TENTAR_DIRETO := 6.0                     # s que o amigo tenta a ligação direta antes do retransmissor
+signal sincronizando(texto: String)            # amigo: o que está acontecendo (a tela mostra)
+var _enet: ENetMultiplayerPeer = null          # host: o ENet do jogo (o soquete dele fura o NAT)
+var direto_publico := ""                       # host: "ip:porta" público da porta do jogo ("" = não achou)
+var _stun: Array = []
+var _stun_ip := ""
+var _t_manter := 0.0
+var _furos: Array = []                         # [[ip, porta, tempo restante], ...]
+var via := ""                                  # amigo: "direta" ou "retransmissor" (a tela mostra)
+var _tentando_direto := false                  # amigo: falha da tentativa direta não é falha da entrada
+
+func _manter_nat(dt: float) -> void:
+	if _enet == null or not eh_host() or _enet.host == null:
+		return
+	if direto_publico != "" and not _stun.is_empty():
+		_t_manter -= dt
+		if _t_manter <= 0.0:
+			_t_manter = MANTER
+			if _stun_ip == "":
+				_stun_ip = _stun[0] if String(_stun[0]).is_valid_ip_address() else IP.resolve_hostname(_stun[0], IP.TYPE_IPV4)
+			if _stun_ip != "":
+				_enet.host.socket_send(_stun_ip, int(_stun[1]), TurnCls.pedido_binding())
+	for f in _furos.duplicate():
+		f[2] -= dt
+		if f[2] <= 0.0:
+			_furos.erase(f)
+			continue
+		_enet.host.socket_send(f[0], f[1], PackedByteArray([0x44, 0x44, 0x41, 0x21]))   # "DDA!" (o ENet do amigo ignora)
+
+# host: um amigo (IP e porta da internet dele) pediu para entrar. Libera no retransmissor, começa a furar o NAT e
+# devolve a resposta para ele: {"relay": endereço no retransmissor, "direto": endereço público da partida}
+func atender_amigo(ip: String, porta: int) -> Dictionary:
+	if ponte != null:
+		ponte.permitir(ip)
+	if direto_publico != "" and porta > 0 and ip.is_valid_ip_address():
+		_furos.append([ip, porta, FURAR_POR])
+	return {"relay": String(ponte.endereco) if ponte != null else "", "direto": direto_publico}
+
+# amigo: tenta DIRETO no host por TENTAR_DIRETO s (da mesma porta do pedido); se não der, vai pelo retransmissor
+func entrar_direto_ou_relay(direto: String, relay: String, porta_local: int) -> void:
+	via = ""
+	if direto.contains(":"):
+		sincronizando.emit("Ligação direta com o host…")
+		var p := ENetMultiplayerPeer.new()
+		var dp := direto.split(":")
+		if p.create_client(dp[0], int(dp[1]), 0, 0, 0, porta_local) == OK:
+			# o peer já vai para o multijogador (ele precisa ver o host "conectar" para o aperto de mão funcionar)
+			_tentando_direto = true
+			multiplayer.multiplayer_peer = p
+			var t0 := Time.get_ticks_msec()
+			while Time.get_ticks_msec() - t0 < int(TENTAR_DIRETO * 1000.0) and multiplayer.multiplayer_peer == p:
+				if p.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED:
+					_tentando_direto = false
+					via = "direta"
+					print("REDE: LIGAÇÃO DIRETA com o host ", direto)
+					sincronizando.emit("Conectado: ligação direta (sem retransmissor).")
+					return
+				await get_tree().process_frame
+			_tentando_direto = false
+			if multiplayer.multiplayer_peer != p:
+				return                                  # saiu/cancelou no meio
+			multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
+			p.close()
+			await get_tree().create_timer(0.2).timeout   # solta a porta local
+	if relay.contains(":"):
+		via = "retransmissor"
+		print("REDE: entrando pelo retransmissor ", relay)
+		sincronizando.emit("Conectando pelo retransmissor…")
+		entrar_relay(relay, porta_local)
+		return
+	_falhar("Não deu para ligar direto com o host e ele não tem retransmissor.")
+
 # 0.85: conecta o ENet no endereço público do host no retransmissor ("ip:porta"), da porta local do pedido
 func entrar_relay(relay: String, porta_local: int) -> void:
 	var rp := relay.split(":")
@@ -197,7 +288,9 @@ func _entrar_por_turn(host_uid: String) -> void:
 	var sessao := str(randi()) + str(Time.get_ticks_usec())
 	_turn_sessao = sessao
 	var porta_local := randi_range(40000, 60999)
-	var ip: String = await TurnCls.ip_publico_async(self, cfg["stun"][0], int(cfg["stun"][1]), porta_local)
+	sincronizando.emit("Descobrindo o seu endereço na internet…")
+	var meu: String = await TurnCls.endereco_publico_async(self, cfg["stun"][0], int(cfg["stun"][1]), porta_local)
+	var ip := meu.get_slice(":", 0)
 	if sessao != _turn_sessao:
 		return
 	if ip == "":
@@ -205,7 +298,8 @@ func _entrar_por_turn(host_uid: String) -> void:
 		_falhar("Não deu para falar com o retransmissor (esta rede bloqueia UDP?).")
 		return
 	var caminho := "sinal/%s/%s" % [host_uid, Conta.uid]
-	if not await Conta.db_put(caminho + "/c", {"modo": "turn", "sessao": sessao, "ip": ip, "t": {".sv": "timestamp"}}):
+	sincronizando.emit("Sincronizando com o host…")
+	if not await Conta.db_put(caminho + "/c", {"modo": "turn", "sessao": sessao, "ip": ip, "porta": int(meu.get_slice(":", 1)), "t": {".sv": "timestamp"}}):
 		if sessao == _turn_sessao:
 			_turn_sessao = ""
 			_falhar("Não deu para chamar o host (sem internet?).")
@@ -221,14 +315,15 @@ func _entrar_por_turn(host_uid: String) -> void:
 		if h is Dictionary and str(h.get("sessao", "")) == sessao and str(h.get("relay", "")).contains(":"):
 			Conta.db_del(caminho + "/c")
 			_turn_sessao = ""
-			print("REDE: entrando pelo retransmissor ", h["relay"], " (meu IP ", ip, ")")
-			entrar_relay(str(h["relay"]), porta_local)
+			entrar_direto_ou_relay(str(h.get("direto", "")), str(h["relay"]), porta_local)
 			return
 	Conta.db_del(caminho + "/c")
 	_turn_sessao = ""
 	_falhar("O host não respondeu pela internet (está na sala? na mesma versão?).")
 
 func sair() -> void:
+	_enet = null
+	_furos.clear()
 	if rtc != null:
 		rtc.parar()
 	_com_rtc = false
@@ -423,6 +518,7 @@ func procurar(ligar: bool) -> void:
 		_escuta = null
 
 func _process(dt: float) -> void:
+	_manter_nat(dt)
 	if _anuncio != null and eh_host():
 		_t_anuncio -= dt
 		if _t_anuncio <= 0.0:
@@ -438,7 +534,12 @@ func _process(dt: float) -> void:
 				partida_achada.emit(ip, str(d.get("nome", "?")), int(d.get("n", 1)))
 
 # ---------- entrada na partida (aperto de mão) ----------
+var _ola_peer: Object = null                   # 0.86: o "olá" já foi para este peer (a ligação direta chama na mão)
+
 func _conectou_no_host() -> void:
+	if _ola_peer == multiplayer.multiplayer_peer:
+		return
+	_ola_peer = multiplayer.multiplayer_peer
 	_ola.rpc_id(1, nome, PROTOCOLO, Config.VERSAO, Conta.avatar, Conta.uid)
 
 # ---------- sala ----------

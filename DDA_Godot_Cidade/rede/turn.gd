@@ -289,6 +289,10 @@ func _resposta(d: Dictionary) -> void:
 # ---------------- STUN (o amigo descobre o próprio IP da internet) ----------------
 # usa a porta local "porta_local" (a mesma que o ENet vai usar depois) · devolve "" se não deu
 static func ip_publico(host: String, porta: int, porta_local: int, espera := 3.0) -> String:
+	return endereco_publico(host, porta, porta_local, espera).get_slice(":", 0)
+
+# 0.86: "ip:porta" deste aparelho visto pela internet, a partir da porta local (furar o NAT precisa da porta também)
+static func endereco_publico(host: String, porta: int, porta_local: int, espera := 3.0) -> String:
 	var ip := host if host.is_valid_ip_address() else IP.resolve_hostname(host, IP.TYPE_IPV4)
 	if ip == "":
 		return ""
@@ -314,13 +318,18 @@ static func ip_publico(host: String, porta: int, porta_local: int, espera := 3.0
 			if not d.is_empty() and d["id"] == id:
 				var a: Dictionary = d["attrs"]
 				var e := _ler_xor_end(a.get(A_XOR_MAPPED, PackedByteArray()))
-				achou = e[0]
+				if e[0] != "":
+					achou = "%s:%d" % [e[0], e[1]]
 		OS.delay_msec(20)
 	u.close()
 	return achou
 
 # o mesmo, sem travar a tela (espera os quadros do "no")
 static func ip_publico_async(no: Node, host: String, porta: int, porta_local: int, espera := 4.0) -> String:
+	var e: String = await endereco_publico_async(no, host, porta, porta_local, espera)
+	return e.get_slice(":", 0)
+
+static func endereco_publico_async(no: Node, host: String, porta: int, porta_local: int, espera := 4.0) -> String:
 	var ip := host if host.is_valid_ip_address() else IP.resolve_hostname(host, IP.TYPE_IPV4)
 	if ip == "":
 		return ""
@@ -344,10 +353,21 @@ static func ip_publico_async(no: Node, host: String, porta: int, porta_local: in
 		while u.get_available_packet_count() > 0:
 			var d := ler(u.get_packet())
 			if not d.is_empty() and d["id"] == id:
-				achou = _ler_xor_end((d["attrs"] as Dictionary).get(A_XOR_MAPPED, PackedByteArray()))[0]
+				var e2 := _ler_xor_end((d["attrs"] as Dictionary).get(A_XOR_MAPPED, PackedByteArray()))
+				if e2[0] != "":
+					achou = "%s:%d" % [e2[0], e2[1]]
 		await no.get_tree().process_frame
 	u.close()
 	return achou
+
+# 0.86: pedido STUN pronto (o host manda pelo soquete do ENet a cada pouco: o roteador mantém o caminho aberto)
+static func pedido_binding() -> PackedByteArray:
+	var r := RandomNumberGenerator.new()
+	r.randomize()
+	var m := _p16(BINDING) + _p16(0) + _p32(MAGIC)
+	for i in 12:
+		m.append(r.randi() & 0xFF)
+	return m
 
 # endereço do retransmissor (UDP) e do STUN a partir de rede/turn.cfg ("turn:host:porta", "stun:host:porta")
 static func config() -> Dictionary:
