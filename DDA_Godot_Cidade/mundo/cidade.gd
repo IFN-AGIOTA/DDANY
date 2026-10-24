@@ -142,6 +142,14 @@ func aplicar_detalhes(nivel_shaders: int, nivel_distancia: int, agua_completa :=
 		if is_instance_valid(d):
 			d.visibility_range_end = float(d.get_meta("alcance", 120.0)) * fator
 
+# 0.84: Opções › Gráficos "Detalhes das texturas" (0..3) e "Filtragem anisotrópica" (1, 2, 4, 8, 16) no chão
+const VIES_TEX := [1.5, 0.8, 0.3, 0.0]
+func aplicar_texturas(nivel_tex: int, aniso: int) -> void:
+	for m in mats_chao:
+		if is_instance_valid(m):
+			m.set_shader_parameter("vies_tex", VIES_TEX[clampi(nivel_tex, 0, 3)])
+			m.set_shader_parameter("aniso", float(clampi(aniso, 1, 16)))
+
 # ---------- ambiente ----------
 func _env() -> void:
 	var sm := ProceduralSkyMaterial.new()

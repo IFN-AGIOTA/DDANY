@@ -167,13 +167,39 @@ uniform sampler2D tex_terra : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D tex_grama : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D tex_areia : source_color, filter_linear_mipmap, repeat_enable;
 uniform sampler2D tex_lama : source_color, filter_linear_mipmap, repeat_enable;
+// 0.84: Opções › Gráficos · "Filtragem anisotrópica" (1 = desligada; 2..16: o chão de longe fica nítido: várias
+// amostras ao longo da direção em que a textura "estica") e "Detalhes das texturas" (vies_tex > 0 = mais borrado e leve)
+uniform float aniso = 1.0;
+uniform float vies_tex = 0.0;
 """ + COMUM + CHAO + VERTICE_CAMADA + """
 vec2 giro(vec2 p, float a) { return vec2(p.x * cos(a) - p.y * sin(a), p.x * sin(a) + p.y * cos(a)); }
+// dx/dy = derivadas do uv calculadas FORA dos "if" (dentro deles a placa não garante as derivadas)
+vec3 amostra(sampler2D t, vec2 p, vec2 dx, vec2 dy) {
+	dx *= exp2(vies_tex);
+	dy *= exp2(vies_tex);
+	if (aniso <= 1.01) return textureGrad(t, p, dx, dy).rgb;
+	float lx = length(dx);
+	float ly = length(dy);
+	vec2 maior = lx > ly ? dx : dy;
+	float razao = clamp(max(lx, ly) / max(min(lx, ly), 1e-7), 1.0, aniso);
+	int n = int(clamp(floor(log2(aniso)) + 1.0, 1.0, 4.0));
+	n = min(n, int(ceil(razao)));
+	vec2 dx2 = lx > ly ? dx / razao : dx;
+	vec2 dy2 = lx > ly ? dy : dy / razao;
+	vec3 s = vec3(0.0);
+	for (int i = 0; i < n; i++) {
+		float o = (float(i) + 0.5) / float(n) - 0.5;
+		s += textureGrad(t, p + maior * o, dx2, dy2).rgb;
+	}
+	return s / float(n);
+}
 // relevo pela própria textura: mais claro que a média = mais alto (pedrinhas, placas), mais escuro = mais baixo (juntas)
 float relevo(vec3 c, float media, float desvio) { return clamp(0.5 + (dot(c, vec3(0.3, 0.59, 0.11)) - media) / (desvio * 3.0), 0.0, 1.0); }
 void fragment() {
 	float dist = length(wp - CAMERA_POSITION_WORLD);
 	float perto = (1.0 - smoothstep(35.0, 90.0, dist)) * detalhe;
+	vec2 dwx = dFdx(wp.xz);
+	vec2 dwy = dFdy(wp.xz);
 	// ---- normal de verdade pela própria geometria (rampas dos lotes): inclinação
 	vec3 nw = normalize(cross(dFdy(wp), dFdx(wp)));
 	if (nw.y < 0.0) nw = -nw;
@@ -211,10 +237,10 @@ void fragment() {
 	vec3 t_arei = vec3(0.51, 0.448, 0.358);
 	float com_tex = 1.0 - smoothstep(170.0, 250.0, dist);
 	if (com_tex > 0.0) {
-		t_conc = mix(t_conc, texture(tex_concreto, giro(wp.xz, 0.37) / 4.5).rgb, com_tex);
-		t_terr = mix(t_terr, texture(tex_terra, giro(wp.xz, 2.3) / 3.2).rgb, com_tex);
-		t_gram = mix(t_gram, texture(tex_grama, giro(wp.xz, 1.1) / 3.6).rgb, com_tex);
-		if (areia > 0.01) t_arei = mix(t_arei, texture(tex_areia, giro(wp.xz, 0.7) / 5.0).rgb, com_tex);
+		t_conc = mix(t_conc, amostra(tex_concreto, giro(wp.xz, 0.37) / 4.5, giro(dwx, 0.37) / 4.5, giro(dwy, 0.37) / 4.5), com_tex);
+		t_terr = mix(t_terr, amostra(tex_terra, giro(wp.xz, 2.3) / 3.2, giro(dwx, 2.3) / 3.2, giro(dwy, 2.3) / 3.2), com_tex);
+		t_gram = mix(t_gram, amostra(tex_grama, giro(wp.xz, 1.1) / 3.6, giro(dwx, 1.1) / 3.6, giro(dwy, 1.1) / 3.6), com_tex);
+		if (areia > 0.01) t_arei = mix(t_arei, amostra(tex_areia, giro(wp.xz, 0.7) / 5.0, giro(dwx, 0.7) / 5.0, giro(dwy, 0.7) / 5.0), com_tex);
 	}
 	float rach = 0.0;
 	if (perto > 0.001) rach = rachas(wp.xz * 0.22, 0.025) * perto * smoothstep(0.52, 0.7, fbm(wp.xz * 0.045 + 5.0));   // rachaduras tortas, só em partes
@@ -243,7 +269,7 @@ void fragment() {
 	// lama: chão baixo e úmido (pé das rampas, perto da água, poças com chuva)
 	float lama = clamp(baixo * 0.35 + (1.0 - beira) * 0.4, 0.0, 1.0) * (1.0 - w4 / soma) * smoothstep(0.35, 0.7, ruido(wp.xz * 0.05 + 1.0));
 	vec3 c_lama = cor_lama;
-	if (lama > 0.01 && com_tex > 0.0) c_lama = mix(c_lama, texture(tex_lama, giro(wp.xz, 1.9) / 3.5).rgb * 0.75, com_tex);
+	if (lama > 0.01 && com_tex > 0.0) c_lama = mix(c_lama, amostra(tex_lama, giro(wp.xz, 1.9) / 3.5, giro(dwx, 1.9) / 3.5, giro(dwy, 1.9) / 3.5) * 0.75, com_tex);
 	cor = mix(cor, c_lama, lama * (0.5 + 0.5 * molhado));
 	if (perto > 0.001) {
 		vec4 fo = folhas(wp.xz + vec2(n1, n2) * 0.6, 0.02 + 0.06 * w.x / soma) * perto * (1.0 - w4 / soma);

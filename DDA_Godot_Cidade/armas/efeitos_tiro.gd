@@ -28,6 +28,7 @@ var _clarao_tam := 1.0
 var _mat_fum: Array[StandardMaterial3D] = []
 var camera: Camera3D = null      # para engrossar a traçante com a distância
 var detalhe_marcas := true
+var nivel_fx := 2                 # 0.84: Opções › Gráficos "Detalhes dos efeitos" (0 = sem poeira/fumacinha dos tiros)
 
 func _tex_radial(c0: Color, c1: Color) -> GradientTexture2D:
 	var gr := Gradient.new()
@@ -188,10 +189,12 @@ func impacto(p: Vector3, n: Vector3, k: int) -> void:
 	s["vida"] = 0.09
 	(s["no"] as Node3D).position = p + n * 0.1
 	(s["no"] as Node3D).visible = true
-	fumaca(p + n * 0.2, Color(0.73, 0.66, 0.55) if k == 1 else Color(0.74, 0.74, 0.74), 0.45, 0.6)
-	if not detalhe_marcas:
+	if nivel_fx >= 1:
+		fumaca(p + n * 0.2, Color(0.73, 0.66, 0.55) if k == 1 else Color(0.74, 0.74, 0.74), 0.45, 0.6)
+	if not detalhe_marcas or nivel_fx <= 0:
 		return
-	_di = (_di + 1) % _marcas.size()
+	# MÉDIO: metade das marcas de bala ficam (as mais antigas somem antes)
+	_di = (_di + 1) % (_marcas.size() if nivel_fx >= 2 else maxi(1, _marcas.size() / 2))
 	var m := _marcas[_di]
 	var z := n.normalized()
 	var up := Vector3.UP if absf(z.y) < 0.95 else Vector3.FORWARD

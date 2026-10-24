@@ -42,6 +42,12 @@ var _mm_bloco := {}                       # 0.76: tipo -> bloco -> [MultiMesh pe
 var _inst := {}                          # nome do modelo -> {Vector2i: [[Transform3D, Color, cor de longe], ...]}
 var baixados := true                     # usar os modelos baixados (falso = só os de código, para comparar)
 var nos: Array[GeometryInstance3D] = []
+# 0.84: fios entre os postes e halos das lâmpadas/semáforos (mundo/luzes_rua.gd) · Opções › Gráficos
+const LuzesRua := preload("res://mundo/luzes_rua.gd")
+var fios: Array = []                     # [[a, b], ...] topo de dois postes seguidos
+var halos: Array = []                    # [[posição, semáforo], ...]
+var nos_fios: Array = []
+var nos_halos: Array = []
 
 func construir(cidade, ruinas: Array, dens: float) -> void:
 	cid = cidade
@@ -54,6 +60,31 @@ func construir(cidade, ruinas: Array, dens: float) -> void:
 	_mobiliario_urbano()
 	_entulho(ruinas)
 	_montar()
+	nos_fios = LuzesRua.montar_fios(fios)
+	nos_halos = LuzesRua.montar_halos(halos)
+	for n in nos_fios + nos_halos:
+		nos.append(n)
+
+# 0.84: Opções › Gráficos "Detalhes dos modelos": até onde carros, postes, árvores e objetos da rua aparecem (e onde
+# trocam para a versão simples) · nível 0..3
+const FATOR_MODELOS := [0.55, 0.75, 1.0, 1.3]
+func aplicar_modelos(nivel: int) -> void:
+	var f: float = FATOR_MODELOS[clampi(nivel, 0, 3)]
+	for n in nos:
+		if not is_instance_valid(n) or n in nos_fios or n in nos_halos:
+			continue
+		if not n.has_meta("alc"):
+			n.set_meta("alc", Vector2(n.visibility_range_begin, n.visibility_range_end))
+		var a: Vector2 = n.get_meta("alc")
+		n.visibility_range_begin = a.x * f
+		n.visibility_range_end = a.y * f
+
+# 0.84: fios de poste e halos de luz ligados/desligados
+func aplicar_luzes(com_fios: bool, com_halos: bool) -> void:
+	for n in nos_fios:
+		if is_instance_valid(n):
+			n.visible = com_fios
+	LuzesRua.ligar_halos(com_halos)          # de dia ficam escondidos de qualquer jeito
 
 # ---------- modelos ----------
 static func modelo(nome: String) -> ArrayMesh:
@@ -447,6 +478,7 @@ func _mobiliario_urbano() -> void:
 				var t := (ra + 6.0 if ra >= 0.0 else 6.0) + rng.randf_range(0.0, 8.0)
 				var fim := l - (rb + 6.0 if rb >= 0.0 else 6.0)
 				var k := 0
+				var anterior := Vector3.INF          # 0.84: topo do poste anterior deste lado (fios)
 				while t < fim:
 					var p: Vector2 = a + dir * t + nrm * lado * (hw + 1.0)
 					var giro := _giro(-nrm * lado)          # braço do poste por cima da rua
@@ -455,12 +487,17 @@ func _mobiliario_urbano() -> void:
 							# poste caído atravessado na rua
 							var bb := Basis(Vector3.UP, giro) * Basis(Vector3.FORWARD, -PI * 0.47)
 							_por("poste", Transform3D(bb, Vector3(p.x, Y + 0.1, p.y)), Color.WHITE)
+							anterior = Vector3.INF
 						elif poste_antigo:
-							_por("poste_duplo", Transform3D(Basis(Vector3.UP, giro + PI * 0.5) * Basis(Vector3.FORWARD, rng.randf_range(-0.03, 0.03)), Vector3(p.x, Y - 0.05, p.y)), Color.WHITE * rng.randf_range(0.8, 1.0))
+							var tp := Transform3D(Basis(Vector3.UP, giro + PI * 0.5) * Basis(Vector3.FORWARD, rng.randf_range(-0.03, 0.03)), Vector3(p.x, Y - 0.05, p.y))
+							_por("poste_duplo", tp, Color.WHITE * rng.randf_range(0.8, 1.0))
 							_obstaculo(Vector3(p.x, Y, p.y), giro, Vector3(0.45, 7.5, 0.45))
+							anterior = _poste_luzes(p, tp, anterior, [Vector3(0, 6.6, 0.95), Vector3(0, 6.6, -0.95)], 6.9)
 						else:
-							_por("poste", Transform3D(Basis(Vector3.UP, giro) * Basis(Vector3.FORWARD, rng.randf_range(-0.04, 0.04)), Vector3(p.x, Y - 0.05, p.y)), Color.WHITE)
+							var tp := Transform3D(Basis(Vector3.UP, giro) * Basis(Vector3.FORWARD, rng.randf_range(-0.04, 0.04)), Vector3(p.x, Y - 0.05, p.y))
+							_por("poste", tp, Color.WHITE)
 							_obstaculo(Vector3(p.x, Y, p.y), giro, Vector3(0.35, 8.0, 0.35))
+							anterior = _poste_luzes(p, tp, anterior, [Vector3(1.75, 7.55, 0)], 7.3)
 					elif com_arvores:
 						var q: Vector2 = a + dir * t + nrm * lado * (hw + 3.2)
 						var verde := Color(0.24, 0.36, 0.15) * rng.randf_range(0.7, 1.2)
@@ -543,8 +580,22 @@ func _mobiliario_urbano() -> void:
 			var torto := Basis.IDENTITY
 			if rng.randf() < 0.2:
 				torto = Basis(Vector3.FORWARD, rng.randf_range(-0.35, 0.35))
-			_por("semaforo", Transform3D(Basis(Vector3.UP, giro) * torto, Vector3(p.x, Y - 0.05, p.y)), Color.WHITE)
+			var ts := Transform3D(Basis(Vector3.UP, giro) * torto, Vector3(p.x, Y - 0.05, p.y))
+			_por("semaforo", ts, Color.WHITE)
 			_obstaculo(Vector3(p.x, Y, p.y), 0.0, Vector3(0.3, 6.0, 0.3))
+			for lx in [2.2, 4.6]:                        # 0.84: halo amarelo piscando nas duas caixas de luz
+				halos.append([ts * Vector3(lx, 5.3, 0.3), true])
+
+# 0.84: fio do poste anterior até este (se perto) e halo nas lâmpadas dos postes que ainda acendem (sempre os
+# mesmos: sorteio pela posição, sem mexer no sorteio do resto da cidade). Devolve o topo deste poste.
+func _poste_luzes(p: Vector2, tp: Transform3D, anterior: Vector3, lampadas: Array, topo: float) -> Vector3:
+	var ponta := Vector3(p.x, Y + topo, p.y)
+	if anterior != Vector3.INF and anterior.distance_to(ponta) < 60.0:
+		fios.append([anterior, ponta])
+	if absi(hash(Vector2i(roundi(p.x * 4.0), roundi(p.y * 4.0)))) % 1000 < int(LuzesRua.CHANCE_ACESO * 1000.0):
+		for lp in lampadas:
+			halos.append([tp * (lp as Vector3), false])
+	return ponta
 
 func _entulho(ruinas: Array) -> void:
 	for r in ruinas:

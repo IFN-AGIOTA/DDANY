@@ -92,3 +92,12 @@ func montar(cidade: Node3D) -> void:
 		mi.position = Vector3(float(ru[0]), 0.6 + float(ru[4]) * 0.6, float(ru[1]))
 		add_child(mi)
 		colunas += 1
+
+# 0.84: Opções › Gráficos "Detalhes dos efeitos": LEVE sem colunas, MÉDIO metade, ALTO/ULTRA todas
+func aplicar(nivel: int) -> void:
+	var n := 0 if nivel <= 0 else (colunas / 2 if nivel == 1 else colunas)
+	var i := 0
+	for c in get_children():
+		if c is MeshInstance3D:
+			c.visible = i < n
+			i += 1

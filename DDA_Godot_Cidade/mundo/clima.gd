@@ -301,6 +301,7 @@ func carregar(d: Dictionary) -> void:
 		_atualizar_ceu()
 
 const CidadeCls := preload("res://mundo/cidade.gd")
+const LuzesRua := preload("res://mundo/luzes_rua.gd")
 
 # quanto de água (mar, rio, lago) existe num raio de ~350 m do jogador (0..1)
 func _medir_agua() -> float:
@@ -658,6 +659,7 @@ func _atualizar_ceu() -> void:
 		_refletir_ceu([topo.r, topo.g, topo.b, hor.r, hor.g, hor.b, nev.r, nev.g, nev.b,
 			cor_luz.r * energia, cor_luz.g * energia, cor_luz.b * energia, dir.x, dir.y, dir.z])
 	_escuridao = clampf(float(k["esc"]) + (1.0 - float(k["esc"])) * (0.12 * n + 0.1 * c), 0.0, 1.0)
+	LuzesRua.noite(_escuridao)                 # 0.84: halos dos postes e semáforos (mundo/luzes_rua.gd)
 	if _mat_chuva != null:
 		var b := lerpf(0.22, 0.78, luz_dia) * (1.0 - 0.25 * n)
 		_mat_chuva.set_shader_parameter("cor", Color(b * 0.92, b * 0.96, b, lerpf(0.22, 0.32, c)))

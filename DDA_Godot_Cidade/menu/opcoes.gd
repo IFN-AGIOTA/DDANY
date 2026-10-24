@@ -15,7 +15,6 @@ const UI := preload("res://menu/ui.gd")
 const Teclas := preload("res://jogador/teclas.gd")
 const ABAS := ["Controles", "Teclado e mouse", "Câmera", "HUD", "Gráficos", "Vídeo e som", "Ajuda"]
 const NIVEIS := [[0, "MUITO BAIXO"], [1, "BAIXO"], [2, "MÉDIO"], [3, "ALTO"]]
-const EM_BREVE := "  (em breve)"
 
 var aba := 0
 var _raiz: Control
@@ -507,16 +506,16 @@ func _pagina_graficos(v: float) -> Control:
 	_gfx_widgets["q"] = q
 	_rotulo_preset = _linha_gfx(lista, "Predefinição", "", q, v)
 	_gfx_seg(lista, "shd", "Detalhes dos shaders", "fachadas: janelas, andares e lojas", NIVEIS, v)
-	_gfx_seg(lista, "tex", "Detalhes das texturas", "suavização das texturas" + EM_BREVE, NIVEIS, v)
-	_gfx_seg(lista, "models", "Detalhes dos modelos", "distância em que os prédios simplificam" + EM_BREVE, NIVEIS, v)
+	_gfx_seg(lista, "tex", "Detalhes das texturas", "nitidez das texturas do chão (menos = mais leve)", NIVEIS, v)
+	_gfx_seg(lista, "models", "Detalhes dos modelos", "até onde carros, postes, árvores e objetos da rua aparecem completos", NIVEIS, v)
 	_gfx_seg(lista, "detd", "Distância dos detalhes", "árvores e caixas d'água nos telhados", NIVEIS, v)
-	_gfx_seg(lista, "fx", "Detalhes dos efeitos", "fumaça, poeira, nuvens, brilho do sol e marcas de bala" + EM_BREVE, NIVEIS, v)
+	_gfx_seg(lista, "fx", "Detalhes dos efeitos", "colunas de fumaça no horizonte, poeira dos tiros e marcas de bala", NIVEIS, v)
 	_gfx_seg(lista, "shad", "Sombras", "Simples: mancha sob o personagem · Alta: sombra em tempo real (usa mais GPU)",
 		[[0, "DESLIGADAS"], [1, "SIMPLES"], [2, "ALTA"]], v)
 	_gfx_seg(lista, "den", "Densidade do cenário abandonado", "quantidade de carros largados, entulho e capim", [[0, "BAIXA"], [1, "MÉDIA"], [2, "ALTA"]], v)
 	_gfx_seg(lista, "wtr", "Água", "ondas, espuma na praia e brilho do sol", [[false, "SIMPLES"], [true, "COMPLETA"]], v)
-	_gfx_seg(lista, "wire", "Fios de poste", EM_BREVE.strip_edges(), [[false, "DESLIGADOS"], [true, "LIGADOS"]], v)
-	_gfx_seg(lista, "halo", "Halos de luz", "semáforos e luzes dos postes à noite" + EM_BREVE, [[false, "DESLIGADOS"], [true, "LIGADOS"]], v)
+	_gfx_seg(lista, "wire", "Fios de poste", "fios caídos entre os postes das ruas", [[false, "DESLIGADOS"], [true, "LIGADOS"]], v)
+	_gfx_seg(lista, "halo", "Halos de luz", "brilho dos postes que ainda acendem e dos semáforos piscando, à noite", [[false, "DESLIGADOS"], [true, "LIGADOS"]], v)
 	_gfx_seg(lista, "dist", "Distância de visão", "quanto da cidade é desenhado", NIVEIS, v)
 	_gfx_passo(lista, "chk", "Raio de chunks", "pedaços de 500 m da cidade em volta da câmera (menor = mais leve; AUTO segue a distância de visão)",
 		[[0, "AUTO"], [1, "1 (±500 m)"], [2, "2 (±1 km)"], [3, "3 (±1,5 km)"], [4, "4 (±2 km)"], [6, "6 (±3 km)"], [8, "8 (±4 km)"], [10, "10 (±5 km)"]], v)
@@ -526,7 +525,7 @@ func _pagina_graficos(v: float) -> Control:
 	_gfx_desl(lista, "rp", "Ajuste fino da resolução", "35% = automático pelo nível acima", 35, 100, v)
 	_gfx_seg(lista, "dyn", "Resolução dinâmica", "reduz a resolução sozinha se o FPS cair", [[true, "LIGADA"], [false, "DESLIGADA"]], v)
 	_gfx_passo(lista, "aa", "Anti-aliasing", "serrilhado nas bordas", [[0, "Desligado"], [1, "MSAA 2x"], [2, "MSAA 4x"], [3, "MSAA 8x"]], v)
-	_gfx_passo(lista, "aniso", "Filtragem anisotrópica", "nitidez do chão e das ruas à distância" + EM_BREVE,
+	_gfx_passo(lista, "aniso", "Filtragem anisotrópica", "nitidez do chão e das ruas à distância (mais amostras = mais GPU)",
 		[[1, "Desligada"], [2, "2x"], [4, "4x"], [8, "8x"], [16, "16x"]], v)
 	_gfx_passo(lista, "cap", "Limite de FPS", "economiza bateria", [[0, "Sem limite"], [30, "30"], [45, "45"], [60, "60"]], v)
 	_gfx_desl(lista, "bri", "Brilho", "", 70, 130, v)

@@ -1,7 +1,7 @@
 extends Node
 # APLICA AS OPÇÕES (menu/config.gd) no jogo: câmera, sensibilidade, vibração, HUD, som, tela,
 # resolução (com resolução dinâmica), anti-aliasing, limite de FPS, sombras, neblina, distância de visão,
-# brilho/contraste/saturação e vinheta. Roda de novo sempre que uma opção muda.
+# brilho/contraste/saturação e vinheta; 0.84: texturas, filtragem anisotrópica, modelos, efeitos, fios e halos. Roda de novo sempre que uma opção muda.
 # Mexa AQUI para: o que cada opção faz de verdade no jogo (números de distância, neblina etc.).
 
 const FiltroCls := preload("res://menu/filtro_tela.gd")
@@ -62,6 +62,8 @@ func aplicar() -> void:
 	var vp := get_viewport()
 	vp.msaa_3d = MSAA[clampi(int(g["aa"]), 0, 3)]
 	vp.use_occlusion_culling = bool(g.get("ocl", true))     # não desenha o que está escondido atrás dos prédios
+	vp.mesh_lod_threshold = [6.0, 3.0, 1.5, 1.0][clampi(int(g.get("models", 2)), 0, 3)]   # 0.84: modelos com LOD simplificam antes
+	vp.texture_mipmap_bias = [1.0, 0.5, 0.0, 0.0][clampi(int(g.get("tex", 3)), 0, 3)]     # 0.84: detalhe das texturas
 	_aplicar_resolucao()
 	filtro.definir(float(g["bri"]) / 100.0, float(g["con"]) / 100.0, float(g["sat"]) / 100.0, bool(g["vig"]))
 	if main == null:
@@ -87,6 +89,14 @@ func aplicar() -> void:
 		var sf = j.find_child("SombraFalsa", true, false)
 		if sf != null:
 			sf.visible = int(g["shad"]) >= 1
+	# 0.84: detalhes dos efeitos (fumaça no horizonte, poeira e marcas dos tiros)
+	var jg = main.get("jogo")
+	if jg != null and is_instance_valid(jg):
+		var fu = jg.get_node_or_null("Fumaca")
+		if fu != null and fu.has_method("aplicar"):
+			fu.aplicar(int(g.get("fx", 2)))
+	if j != null and is_instance_valid(j) and j.get("armas") != null and j.armas.get("efeitos") != null:
+		j.armas.efeitos.nivel_fx = int(g.get("fx", 2))
 	var c = main.get("controles")
 	if c != null and is_instance_valid(c):
 		c.aplicar_layout(Config.hud_pos, float(o["sc"]) / 100.0, float(o["op"]) / 100.0)
@@ -105,6 +115,13 @@ func aplicar() -> void:
 			cid.sol.shadow_enabled = int(g["shad"]) >= 2
 		if cid.has_method("aplicar_detalhes"):
 			cid.aplicar_detalhes(int(g["shd"]), int(g["detd"]), bool(g["wtr"]))     # janelas dos prédios · árvores/caixas d'água
+		# 0.84: as opções que estavam "em breve"
+		if cid.has_method("aplicar_texturas"):
+			cid.aplicar_texturas(int(g.get("tex", 3)), int(g.get("aniso", 1)))   # texturas e filtragem anisotrópica do chão
+		var ab = cid.get("abandono")
+		if ab != null:
+			ab.aplicar_modelos(int(g.get("models", 2)))                       # até onde os objetos da rua aparecem
+			ab.aplicar_luzes(bool(g.get("wire", true)), bool(g.get("halo", true)))   # fios de poste · halos de luz
 		if cid.ambiente != null:
 			# raio de chunks menor que a distância de visão: mais neblina, para a borda do mundo carregado não aparecer
 			var corte: float = ALCANCE[clampi(int(g["dist"]), 0, 3)] / alcance_visao()

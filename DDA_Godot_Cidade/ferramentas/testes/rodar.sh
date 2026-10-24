@@ -71,6 +71,7 @@ elif [ "$alvo" = todos ]; then
 	rodar teste_camera_paredes 1
 	rodar teste_ombro 1
 	rodar teste_bunkers 1
+	rodar teste_graficos 1
 else
 	rodar "$alvo" 1
 fi

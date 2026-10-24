@@ -39,6 +39,38 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.84 · GRÁFICOS: AS OPÇÕES QUE ESTAVAM "EM BREVE" FUNCIONAM
+  · Opções › Gráficos — tudo agora muda o jogo de verdade (nada mais escrito "em breve"):
+      - DETALHES DAS TEXTURAS: nitidez das texturas do chão (LEVE mais borrado e leve ... ULTRA nítido) e, onde a
+        placa aceita, o detalhe de todas as texturas;
+      - FILTRAGEM ANISOTRÓPICA (desligada, 2x, 4x, 8x, 16x): o chão e as ruas de longe ficam nítidos (o shader do
+        chão tira várias amostras na direção em que a textura "estica", como a placa de vídeo faz; mais = mais GPU).
+        Na Godot 4.3 a anisotrópica da placa não muda com o jogo aberto, por isso é feita no shader;
+      - DETALHES DOS MODELOS: até onde carros, postes, árvores e objetos da rua aparecem (e onde trocam pela versão
+        simples): LEVE 55% · MÉDIO 75% · ALTO 100% · ULTRA 130% da distância; os modelos com LOD simplificam antes;
+      - DETALHES DOS EFEITOS: colunas de fumaça no horizonte (LEVE nenhuma · MÉDIO metade · ALTO/ULTRA todas),
+        poeira/fumacinha onde a bala bate e marcas de bala (LEVE nenhuma · MÉDIO metade);
+      - FIOS DE POSTE (NOVO no mundo): 2 fios caídos em curva entre os postes seguidos do mesmo lado da rua (poste
+        caído = a linha para ali). Aparecem até ~320 m;
+      - HALOS DE LUZ (NOVO no mundo): à noite, brilho nas lâmpadas dos postes que ainda têm energia (3 em cada 10,
+        sempre os mesmos) e nos SEMÁFOROS, piscando em amarelo. De dia nem são desenhados.
+  · Poucas draw calls: fios e halos vão em blocos de 500 m (uma malha / um MultiMesh por bloco).
+  · Predefinições: anisotrópica 2x no AUTO e no MÉDIO (celular), 8x no ALTO, 16x no ULTRA.
+  · Teste novo: teste_graficos (cada opção muda o que deve; halos só à noite).
+  · Arquivos:
+      mundo/luzes_rua.gd ........ NOVO (fios de poste e halos de luz: malhas, shader do halo, noite)
+      mundo/abandono.gd ......... anota os postes (fios) e lâmpadas/semáforos (halos); aplicar_modelos, aplicar_luzes
+      mundo/materiais_cidade.gd . shader do chão: amostra() com anisotrópica e detalhe das texturas
+      mundo/cidade.gd ........... aplicar_texturas (texturas e anisotrópica no chão)
+      mundo/fumaca.gd ........... aplicar (quantas colunas de fumaça no horizonte)
+      mundo/clima.gd ............ avisa os halos quando escurece
+      armas/efeitos_tiro.gd ..... nivel_fx (poeira e marcas de bala)
+      menu/aplicar_opcoes.gd .... aplica texturas, anisotrópica, modelos, efeitos, fios e halos
+      menu/opcoes.gd ............ textos das opções (sem "em breve")
+      menu/config.gd ............ anisotrópica das predefinições · versão 0.84
+      ferramentas/testes/teste_graficos.gd ........ NOVO
+      ferramentas/testes/rodar.sh ................. roda o teste novo
+
 ATUALIZAÇÃO 0.83 · BUNKERS (UM POR ILHA) E CARTÕES DE ACESSO
   · 4 BUNKERS, um em cada ilha (Nova York tem 4 ilhas com ruas), numerados de 1 a 4. No mapa: bolinha "B1".."B4"
     e o nome "BUNKER N". Todos com a MESMA estrutura (só o número muda), e cada bunker é UMA draw call (tudo numa
@@ -1423,9 +1455,10 @@ OPÇÕES (iguais às do HTML; salvas no aparelho em user://opcoes.cfg)
   minimapa (visível/oculto), som, volume, música ligada/desligada e volume da música, manter tela ligada, tela
   cheia, sombras, distância de visão, neblina, resolução (+ dinâmica), anti-aliasing, limite de FPS, brilho,
   contraste, saturação, vinheta e as predefinições (automático/baixo/médio/alto/ultra).
-- "(em breve)" (ficam salvas, sem efeito ainda): shaders, texturas, modelos, distância dos detalhes, efeitos,
-  água, fios, halos, anisotrópica, cockpit, aceleração. ("Densidade do cenário" já muda a quantidade de carros
-  e entulho quando a cidade é montada.)
+- Gráficos (0.84: todas funcionam): detalhes dos shaders, das texturas, dos modelos e dos efeitos, distância dos
+  detalhes, sombras, densidade do cenário (quando a cidade é montada), água, fios de poste, halos de luz,
+  distância de visão, raio de chunks, ocultar o que está atrás, neblina, resolução, anti-aliasing, anisotrópica,
+  limite de FPS e as cores.
 
 PAUSA: botão II, P ou Esc · Continuar · Opções · Voltar ao início (jogo novo) · Menu principal (salva antes).
 
@@ -1919,6 +1952,9 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   nas fachadas ........................ mundo/fachadas.gd
 - oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd
 - chunks de 500 m (o que fica na cena, raio) ....... mundo/chunks.gd (+ Opções › Gráficos › Raio de chunks)
+- fios de poste e halos de luz (0.84) ............. mundo/luzes_rua.gd (onde ficam: mundo/abandono.gd _poste_luzes)
+- o que cada opção de Gráficos faz ................ menu/aplicar_opcoes.gd (textos: menu/opcoes.gd · predefinições:
+                                                    menu/config.gd GFX_PRESETS)
 - roda de armas (botão ARMA, tecla Q) .............. hud/roda_armas.gd (+ jogador/controles.gd)
 - TESTES AUTOMÁTICOS (rodar antes de publicar) ..... ferramentas/testes/rodar.sh (instruções no topo de cada teste)
 - colisão em volta dos amigos (host) ............. mundo/colisao_mundo.gd (criar_extra) + rede/sessao_rede.gd
