@@ -71,10 +71,10 @@ elif [ "$alvo" = rede_turn ]; then
 	sleep 1
 	export DDA_TURN="127.0.0.1:3611:teste:segredo" DDA_ARQ="$DADOS/relay.txt"
 	# 0.88: TURN_CF=1 pede a senha à API da Cloudflare de mentira (cf_falso.py); TURN_CF=cai: a API recusa e usa a reserva
-	if [ -n "$TURN_CF" ]; then
+	if [ -n "${TURN_CF:-}" ]; then
 		python3 ferramentas/testes/cf_falso.py 8787 teste segredo > "$DADOS/cf.txt" 2>&1 &
 		export DDA_CF_API="http://127.0.0.1:8787"
-		[ "$TURN_CF" = cai ] && DDA_TURN="127.0.0.1:3611:cf:errada;127.0.0.1:3611:teste:segredo" || DDA_TURN="127.0.0.1:3611:cf:abc"
+		[ "${TURN_CF:-}" = cai ] && DDA_TURN="127.0.0.1:3611:cf:errada;127.0.0.1:3611:teste:segredo" || DDA_TURN="127.0.0.1:3611:cf:abc"
 	fi
 	XDG_DATA_HOME="$DADOS/h" timeout 180 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_turn_host.gd > "$DADOS/host.txt" 2>&1 &
 	pid_host=$!
@@ -82,7 +82,7 @@ elif [ "$alvo" = rede_turn ]; then
 	XDG_DATA_HOME="$DADOS/c" timeout 180 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_turn_cliente.gd > "$DADOS/cli.txt" 2>&1
 	wait $pid_host 2>/dev/null
 	kill $pid_turn 2>/dev/null
-	[ -n "$TURN_CF" ] && { pkill -f cf_falso.py; grep -E "CF:" "$DADOS/cf.txt"; grep -q "CF: .*-> ok" "$DADOS/cf.txt" || [ "$TURN_CF" = cai ] || falhou=1; }
+	[ -n "${TURN_CF:-}" ] && { pkill -f cf_falso.py; grep -E "CF:" "$DADOS/cf.txt"; grep -q "CF: .*-> ok" "$DADOS/cf.txt" || [ "${TURN_CF:-}" = cai ] || falhou=1; }
 	grep -E "HOST:|SCRIPT ERROR" "$DADOS/host.txt"
 	grep -E "CLI:|SCRIPT ERROR" "$DADOS/cli.txt"
 	grep -E "ALLOCATE|PERMISS|CANAL|SENHA" "$DADOS/turn.txt" | sort | uniq -c | head
