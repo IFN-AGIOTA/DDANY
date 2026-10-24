@@ -184,6 +184,15 @@ const DB := {
 		"desc": "Não compra mais nada."},
 	"celular": {"nome": "CELULAR QUEBRADO", "sigla": "CEL.", "w": 1, "h": 1, "peso": 0.15, "max": 1, "cat": "diverso", "slot": "",
 		"desc": "Tela trincada. Sem sinal."},
+	# 0.83: CARTÕES DE ACESSO DOS BUNKERS (só existe um de cada; aparecem nas áreas militares) · mundo/porta_bunker.gd
+	"cartao_bunker_1": {"nome": "CARTÃO DE ACESSO · BUNKER 1", "sigla": "B1", "w": 1, "h": 1, "peso": 0.01, "max": 1, "cat": "diverso", "slot": "",
+		"desc": "Cartão militar do BUNKER 1. Abre a porta blindada dele (basta estar com você). Só existe este."},
+	"cartao_bunker_2": {"nome": "CARTÃO DE ACESSO · BUNKER 2", "sigla": "B2", "w": 1, "h": 1, "peso": 0.01, "max": 1, "cat": "diverso", "slot": "",
+		"desc": "Cartão militar do BUNKER 2. Abre a porta blindada dele (basta estar com você). Só existe este."},
+	"cartao_bunker_3": {"nome": "CARTÃO DE ACESSO · BUNKER 3", "sigla": "B3", "w": 1, "h": 1, "peso": 0.01, "max": 1, "cat": "diverso", "slot": "",
+		"desc": "Cartão militar do BUNKER 3. Abre a porta blindada dele (basta estar com você). Só existe este."},
+	"cartao_bunker_4": {"nome": "CARTÃO DE ACESSO · BUNKER 4", "sigla": "B4", "w": 1, "h": 1, "peso": 0.01, "max": 1, "cat": "diverso", "slot": "",
+		"desc": "Cartão militar do BUNKER 4. Abre a porta blindada dele (basta estar com você). Só existe este."},
 	# ----- roupas (calor = protege do frio · imperm = protege da chuva · protecao = segura mordidas/golpes) -----
 	"capacete": {"nome": "CAPACETE TÁTICO", "sigla": "CAPACETE", "w": 3, "h": 2, "peso": 1.2, "max": 1, "cat": "roupa", "slot": "cabeca",
 		"calor": 0.05, "protecao": 0.5, "desc": "Protege a cabeça."},

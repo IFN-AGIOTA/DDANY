@@ -649,11 +649,12 @@ func _amigos() -> Array:
 	return l
 
 # local especial: círculo escuro, aro na cor do tipo e a letra (P, H, S, A)
-func _icone_local(ci: CanvasItem, c: Vector2, r: float, tipo: String) -> void:
+func _icone_local(ci: CanvasItem, c: Vector2, r: float, tipo: String, i := -1) -> void:
 	var cor: Color = Locais.CORES_MAPA[tipo]
 	UI.circulo(ci, c, r, Color(0.03, 0.05, 0.08, 0.9))
 	UI.aro(ci, c, r + 1.0, maxf(2.0, r * 0.22), cor)
-	_texto(ci, Locais.SIGLAS[tipo], c, int(r * 1.25), cor)
+	var n := Locais.numero_bunker(i) if i >= 0 else 0           # 0.83: bunker mostra o número (B1, B2...)
+	_texto(ci, Locais.SIGLAS[tipo] + (str(n) if n > 0 else ""), c, int(r * (1.0 if n > 0 else 1.25)), cor)
 
 # losango do objetivo
 func _losango(ci: CanvasItem, c: Vector2, tam: float, cor: Color) -> void:
@@ -706,7 +707,7 @@ func _desenhar_minimapa(vh: float) -> void:
 			continue
 		var p := Vector2(d.dot(direita), -d.dot(frente)) * esc
 		if p.length() <= r - 1.2 * vh:
-			_icone_local(ci, c + p, 1.1 * vh, e[0])
+			_icone_local(ci, c + p, 1.1 * vh, e[0], i)
 	# amigos (multijogador): bolinha verde; fora do alcance, na borda
 	for a in _amigos():
 		var d2: Vector2 = a[0] - _pos
@@ -883,9 +884,9 @@ func _desenhar_mapa() -> void:
 		var pl := _mundo_para_tela(Vector2(e[1], e[2]))
 		if not Rect2(Vector2.ZERO, vs).grow(3.0 * vh).has_point(pl):
 			continue
-		_icone_local(ci, pl, 1.5 * vh, e[0])
+		_icone_local(ci, pl, 1.5 * vh, e[0], i)
 		if _mpp < 9.0:
-			_texto(ci, Locais.NOMES[e[0]], pl + Vector2(0, 2.8 * vh), tl, Locais.CORES_MAPA[e[0]])
+			_texto(ci, Locais.nome(i), pl + Vector2(0, 2.8 * vh), tl, Locais.CORES_MAPA[e[0]])
 	# amigos (multijogador)
 	for a in _amigos():
 		var pa := _mundo_para_tela(a[0])

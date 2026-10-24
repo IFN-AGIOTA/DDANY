@@ -166,6 +166,16 @@ var _chuva_visual := 0.0             # chuva mostrada (some dentro dos prédios)
 var _amb_base := 0.9
 var _nevoa_base := 0.0006
 var _nevoa_posta := -1.0
+# 0.83: o jogador está lá embaixo de um BUNKER (mundo/locais.gd liga/desliga): ESCURO TOTAL — sem sol/lua, sem luz
+# ambiente, sem reflexo do céu e sem neblina (só a lanterna ilumina). Ao sair volta tudo no próximo tique.
+var subsolo := false:
+	set(v):
+		if v != subsolo:
+			subsolo = v
+			if cidade != null and is_instance_valid(cidade):
+				_atualizar_ceu()
+var _reflexo_antes := -1
+var _amb_fonte_antes := -1
 var _rng := RandomNumberGenerator.new()
 var _assinatura_reflexo: Array = []
 var refletiu := 0                    # quantas vezes o reflexo do céu foi refeito (para testes)
@@ -639,6 +649,7 @@ func _atualizar_ceu() -> void:
 		var lum := nev.r * 0.3 + nev.g * 0.55 + nev.b * 0.15
 		env.fog_light_color = nev.lerp(Color(lum * 1.0, lum * 1.03, lum * 1.08), neblina_manha * 0.8)
 		cidade.set_meta("_clima_nevoa", [_nevoa_base, _nevoa_posta])
+	_aplicar_subsolo(sol, env)
 	for m in cidade.mats_agua:
 		if is_instance_valid(m):
 			m.set_shader_parameter("cor_ceu", hor)
@@ -730,7 +741,7 @@ func _atualizar_trovoes(dt: float) -> void:
 			_flash = 0.0
 		_relampago.visible = _flash > 0.01
 		_relampago.light_energy = _flash * 1.8 * (1.0 if not _coberto else 0.4)
-		if cidade != null and is_instance_valid(cidade) and cidade.ambiente != null:
+		if cidade != null and is_instance_valid(cidade) and cidade.ambiente != null and not subsolo:
 			cidade.ambiente.ambient_light_energy = _amb_base + _flash * 0.9
 	if _trovao_em >= 0.0:
 		_trovao_em -= dt
@@ -738,6 +749,27 @@ func _atualizar_trovoes(dt: float) -> void:
 			_som_trovao.volume_db = linear_to_db(_trovao_vol * (0.6 if _coberto else 1.0))
 			_som_trovao.pitch_scale = _rng.randf_range(0.8, 1.08)
 			_som_trovao.play()
+
+func _aplicar_subsolo(sol: DirectionalLight3D, env: Environment) -> void:
+	if subsolo:
+		if sol != null:
+			sol.light_energy = 0.0
+		if _relampago != null:
+			_relampago.visible = false
+		if env != null:
+			env.ambient_light_energy = 0.0
+			env.fog_density = 0.0
+			_nevoa_posta = 0.0
+			# no renderizador do celular a energia 0 não apaga a parte do céu: desliga a fonte da luz ambiente
+			if _reflexo_antes < 0:
+				_reflexo_antes = env.reflected_light_source
+				_amb_fonte_antes = env.ambient_light_source
+			env.reflected_light_source = Environment.REFLECTION_SOURCE_DISABLED
+			env.ambient_light_source = Environment.AMBIENT_SOURCE_DISABLED
+	elif env != null and _reflexo_antes >= 0:
+		env.reflected_light_source = _reflexo_antes
+		env.ambient_light_source = _amb_fonte_antes
+		_reflexo_antes = -1
 
 # um relâmpago agora (a história pode chamar). perto = 0..1 (1 = clarão forte e trovão logo depois)
 func relampago(perto := -1.0) -> void:

@@ -22,6 +22,9 @@ const CHANCE_CHAO := 0.45             # chance de cada ponto livre do chão ter 
 const MAX_CHAO := 4                   # itens soltos por prédio
 const CICLO := 16.0                   # 0.72: horas de JOGO para o loot de um prédio/carro voltar (16 h = 32 min de verdade)
 const CICLO_LOCAL := 10.0             # 0.72: postos, hospitais, supermercados e armazéns (10 h = 20 min)
+const CHANCE_VAZIO_BUNKER := 0.03     # 0.83: bunkers: quase nada foi saqueado (muito loot)
+const MAX_CHAO_USO := {"bunker": 14}  # 0.83: itens soltos no chão (os outros: MAX_CHAO)
+const CHANCE_CARTAO := 0.12           # 0.83: chance de cada ÁREA MILITAR ter o cartão de um bunker (a cada ciclo do loot)
 
 # [id, peso (raridade relativa), qtd mínima, qtd máxima]
 const TABELAS := {
@@ -202,13 +205,36 @@ const TABELAS := {
 		["taco", 1, 1, 1], ["ursinho", 1, 1, 1], ["celular", 1, 1, 1], ["bandagem", 1, 1, 1], ["mun_9mm", 1, 3, 8]],
 	"chao_metro": [["garrafa_vazia", 3, 1, 1], ["revista", 2, 1, 1], ["celular", 2, 1, 1], ["dinheiro", 2, 1, 6], ["trapos", 3, 1, 2], ["cano", 2, 1, 1],
 		["galho", 1, 1, 2], ["refrigerante", 1, 1, 1], ["mun_9mm", 1, 3, 10], ["pe_de_cabra", 1, 1, 1]],
+	# ---- 0.83: BUNKERS (mundo/local_bunker.gd): muito loot, militar e de sobrevivência ----
+	"bunker_arsenal": [["m4", 4, 1, 1], ["ak", 4, 1, 1], ["mp5", 3, 1, 1], ["pistola", 3, 1, 1], ["espingarda", 2, 1, 1], ["rifle_caca", 2, 1, 1],
+		["pente_stanag", 5, 1, 1], ["pente_ak", 5, 1, 1], ["pente_mp5", 4, 1, 1], ["pente_pistola", 4, 1, 1], ["mun_556", 6, 30, 90],
+		["mun_762", 6, 30, 90], ["mun_9mm", 5, 20, 60], ["mun_12", 3, 8, 24], ["mun_308", 3, 10, 30], ["silenciador", 2, 1, 1],
+		["mira_acog", 2, 1, 1], ["luneta", 2, 1, 1], ["kit_armas", 3, 1, 1]],
+	"bunker_militar": [["colete", 3, 1, 1], ["capacete", 3, 1, 1], ["mochila_combate", 3, 1, 1], ["mascara_gas", 3, 1, 1], ["kit_medico", 3, 1, 1],
+		["mun_556", 4, 20, 60], ["mun_762", 4, 20, 60], ["pente_stanag", 2, 1, 1], ["pente_ak", 2, 1, 1], ["radio", 2, 1, 1], ["pilha", 4, 1, 2],
+		["lanterna", 2, 1, 1], ["lanterna_cabeca", 2, 1, 1], ["agua", 3, 1, 1], ["feijao", 3, 1, 1], ["barra", 3, 2, 4], ["m4", 1, 1, 1], ["ak", 1, 1, 1]],
+	"bunker_med": [["kit_medico", 5, 1, 1], ["soro", 5, 1, 1], ["antibiotico", 5, 1, 1], ["bandagem", 5, 2, 4], ["tala", 3, 1, 1], ["analgesico", 4, 1, 1],
+		["vitaminas", 3, 1, 1], ["carvao", 3, 1, 1], ["pastilha", 3, 2, 8], ["mascara_gas", 2, 1, 1]],
+	"bunker_comida": [["feijao", 5, 1, 1], ["atum", 5, 1, 1], ["sardinha", 4, 1, 1], ["pessego", 4, 1, 1], ["leite_condensado", 4, 1, 1],
+		["biscoito", 4, 1, 1], ["barra", 5, 2, 4], ["agua", 6, 1, 1], ["suco", 3, 1, 1], ["refrigerante", 2, 1, 1]],
+	"bunker_deposito": [["agua", 4, 1, 1], ["feijao", 4, 1, 1], ["atum", 3, 1, 1], ["pilha", 5, 1, 2], ["lanterna", 3, 1, 1], ["lanterna_cabeca", 2, 1, 1],
+		["radio", 2, 1, 1], ["corda", 3, 1, 1], ["fita", 3, 1, 1], ["tabuas", 2, 1, 2], ["galao", 2, 1, 1], ["mochila_trilha", 2, 1, 1],
+		["mochila_combate", 1, 1, 1], ["jaqueta", 2, 1, 1], ["calca", 2, 1, 1], ["capa_chuva", 2, 1, 1], ["gorro", 2, 1, 1],
+		["kit_costura", 2, 1, 1], ["isqueiro", 3, 1, 1], ["mascara_gas", 2, 1, 1], ["kit_medico", 1, 1, 1]],
+	"bunker_alojamento": [["camiseta", 2, 1, 1], ["calca", 2, 1, 1], ["jaqueta", 2, 1, 1], ["moletom", 2, 1, 1], ["gorro", 2, 1, 1], ["bone", 2, 1, 1],
+		["mochila_combate", 1, 1, 1], ["pistola", 1, 1, 1], ["pente_pistola", 2, 1, 1], ["mun_9mm", 3, 10, 30], ["revista", 2, 1, 1],
+		["barra", 3, 1, 3], ["agua", 2, 1, 1], ["lanterna", 2, 1, 1], ["pilha", 3, 1, 1], ["faca", 2, 1, 1]],
+	"bunker_controle": [["radio", 4, 1, 1], ["pilha", 4, 1, 2], ["lanterna", 2, 1, 1], ["revista", 2, 1, 1], ["mun_9mm", 2, 10, 30], ["pistola", 1, 1, 1],
+		["pente_pistola", 2, 1, 1], ["celular", 2, 1, 1], ["lanterna_cabeca", 1, 1, 1], ["agua", 1, 1, 1]],
+	"chao_bunker": [["mun_556", 4, 5, 20], ["mun_762", 3, 5, 20], ["mun_9mm", 3, 5, 15], ["pilha", 3, 1, 1], ["bandagem", 3, 1, 2], ["agua", 2, 1, 1],
+		["barra", 2, 1, 2], ["feijao", 2, 1, 1], ["pente_stanag", 1, 1, 1], ["trapos", 2, 1, 2], ["lanterna", 1, 1, 1]],
 	"chao_quartel": [["mun_556", 4, 5, 20], ["mun_762", 3, 5, 15], ["mun_9mm", 2, 4, 12], ["pente_stanag", 1, 1, 1], ["bandagem", 3, 1, 2], ["trapos", 2, 1, 2],
 		["agua", 2, 1, 1], ["barra", 2, 1, 2], ["feijao", 1, 1, 1], ["garrafa_vazia", 2, 1, 1]],
 }
 const CHAO_DO_USO := {"residencial": "chao_residencial", "loja": "chao_comercio", "mercado": "chao_comercio",
 	"restaurante": "chao_comercio", "escritorio": "chao_comercio", "farmacia": "chao_saude", "clinica": "chao_saude",
 	"delegacia": "chao_policia", "posto": "chao_posto", "hospital": "chao_hospital", "supermercado": "chao_super", "armazem": "chao_armazem",
-	"escola": "chao_escola", "metro": "chao_metro", "quartel": "chao_quartel"}
+	"escola": "chao_escola", "metro": "chao_metro", "quartel": "chao_quartel", "bunker": "chao_bunker"}
 
 var semente := 1234                   # muda o loot do mundo inteiro (salvo junto com o jogo)
 var _grades := {}                     # id do lugar -> grade (já sorteada; o que o jogador mexeu fica aqui)
@@ -309,7 +335,7 @@ func _reabastecer(id: String, g, tabela: String, tam: Vector2i, vazio: float) ->
 func espalhar_chao(id: String, uso: String, pontos: Array, pai: Node3D) -> void:
 	var agora := ciclo(id)
 	if not _chao.has(id):
-		_chao[id] = _sortear_chao(id, uso, pontos, 0, MAX_CHAO, [])
+		_chao[id] = _sortear_chao(id, uso, pontos, 0, int(MAX_CHAO_USO.get(uso, MAX_CHAO)), [])
 		_ciclo_chao[id] = agora
 	elif int(_ciclo_chao.get(id, agora)) < agora:
 		# 0.72: o chão do prédio ganha coisa nova (até MAX_CHAO contando o que ainda está lá)
@@ -317,7 +343,7 @@ func espalhar_chao(id: String, uso: String, pontos: Array, pai: Node3D) -> void:
 		for par in _chao[id]:
 			if not pegos.has(par[0].uid):
 				ficou.append(par)
-		_chao[id] = ficou + _sortear_chao(id, uso, pontos, agora, MAX_CHAO - ficou.size(), ficou)
+		_chao[id] = ficou + _sortear_chao(id, uso, pontos, agora, int(MAX_CHAO_USO.get(uso, MAX_CHAO)) - ficou.size(), ficou)
 		_ciclo_chao[id] = agora
 	else:
 		_ciclo_chao[id] = agora
@@ -361,6 +387,80 @@ func guardar_chao(id: String, pai: Node3D) -> void:
 			it.no_mundo = null
 			lista.append([it, pai.global_transform.affine_inverse() * n.global_position])
 	_chao[id] = lista
+
+# ---------- 0.83: CARTÕES DE ACESSO DOS BUNKERS ----------
+# Cada vez que uma ÁREA MILITAR (mundo/locais.gd AREAS_MILITARES) é montada num ciclo novo do loot, CHANCE_CARTAO de
+# um cartão aparecer numa das caixas militares dela. Só existe UM cartão de cada bunker: depois de sorteado ele fica
+# registrado em "cartoes" (vai no jogo salvo) e só volta a poder aparecer se sumir de vez do mundo (jogando sozinho:
+# não está em nenhum móvel, chão ou com o jogador). Em rede só o host sorteia (o cliente recebe a caixa pronta).
+var cartoes := {}                     # "3" -> true: o cartão do bunker 3 já apareceu
+var _ciclo_cartao := {}               # id da área -> ciclo em que já tentou
+var sorteia_cartoes := true           # main.gd: false no cliente em rede
+var verifica_perdidos := true         # main.gd: false em rede (não dá para ver o inventário dos outros)
+var procurar_item := Callable()       # main.gd: (id) -> bool: está no chão do mundo ou com o jogador?
+
+func tentar_cartao(area: String, ids: Array, n_bunkers: int) -> int:
+	if not sorteia_cartoes or ids.is_empty() or n_bunkers <= 0:
+		return 0
+	var agora := ciclo(area)
+	if int(_ciclo_cartao.get(area, -999999)) >= agora:
+		return 0
+	_ciclo_cartao[area] = agora
+	var r := RandomNumberGenerator.new()
+	r.seed = (hash(area + "cartao") ^ semente) + agora * 7919
+	if r.randf() >= CHANCE_CARTAO:
+		return 0
+	var livres: Array = []
+	for k in range(1, n_bunkers + 1):
+		if not cartoes.has(str(k)) or (verifica_perdidos and not cartao_existe(k)):
+			livres.append(k)
+	if livres.is_empty():
+		return 0
+	var num: int = livres[r.randi() % livres.size()]
+	var it = ItemCls.novo("cartao_bunker_%d" % num)
+	var ordem := ids.duplicate()
+	for i in range(ordem.size() - 1, 0, -1):
+		var j := r.randi_range(0, i)
+		var tmp = ordem[i]
+		ordem[i] = ordem[j]
+		ordem[j] = tmp
+	for gid in ordem:
+		var g = _grades.get(gid)
+		if g == null:
+			continue
+		var v: Vector3i = g.achar_vaga(it)
+		if v.x < 0:
+			continue
+		g.colocar(it, v.x, v.y, v.z == 1)
+		cartoes[str(num)] = true
+		if grade_reabastecida.is_valid():
+			grade_reabastecida.call(gid, g)
+		return num
+	return 0
+
+# o cartão do bunker n ainda existe em algum lugar (móvel, chão guardado, chão do mundo, com o jogador)?
+func cartao_existe(n: int) -> bool:
+	var id := "cartao_bunker_%d" % n
+	for gid in _grades:
+		if _grade_tem(_grades[gid], id):
+			return true
+	for k in _chao:
+		for par in _chao[k]:
+			if par[0].id == id:
+				return true
+	return procurar_item.is_valid() and bool(procurar_item.call(id))
+
+static func _grade_tem(g, id: String) -> bool:
+	if g == null:
+		return false
+	for it in g.itens:
+		if it.id == id:
+			return true
+		if it.has_method("grades"):
+			for g2 in it.grades():
+				if _grade_tem(g2, id):
+					return true
+	return false
 
 # ---------- multijogador: conteúdo das grades pela rede ----------
 # "assinatura" curta do conteúdo (muda quando alguém põe/tira/gira/gasta algo)
@@ -470,7 +570,8 @@ func salvar(abertos := {}, locais_abertos := {}) -> Dictionary:
 				var p: Vector3 = no.global_transform.affine_inverse() * n.global_position
 				lista.append([n.item.para_dict(), p.x, p.y, p.z])
 		c["L%d" % i] = lista
-	return {"semente": semente, "grades": g, "chao": c, "ciclos": _ciclo.duplicate(), "ciclos_chao": _ciclo_chao.duplicate(), "portas": portas.duplicate(), "veiculos": veiculos.duplicate(true)}
+	return {"semente": semente, "grades": g, "chao": c, "ciclos": _ciclo.duplicate(), "ciclos_chao": _ciclo_chao.duplicate(), "portas": portas.duplicate(), "veiculos": veiculos.duplicate(true),
+		"cartoes": cartoes.duplicate(), "ciclo_cartao": _ciclo_cartao.duplicate()}
 
 func carregar(d: Dictionary) -> void:
 	semente = int(d.get("semente", semente))
@@ -480,6 +581,8 @@ func carregar(d: Dictionary) -> void:
 	_ciclo_chao.clear()
 	portas = (d.get("portas", {}) as Dictionary).duplicate()
 	veiculos = (d.get("veiculos", {}) as Dictionary).duplicate(true)
+	cartoes = (d.get("cartoes", {}) as Dictionary).duplicate()
+	_ciclo_cartao = (d.get("ciclo_cartao", {}) as Dictionary).duplicate()
 	var g: Dictionary = d.get("grades", {})
 	for id in g:
 		var gr = GradeCls.new(12, 12, "", null)

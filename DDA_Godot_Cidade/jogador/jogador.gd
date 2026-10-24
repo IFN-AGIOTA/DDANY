@@ -51,6 +51,7 @@ const SonsBaixados := preload("res://audio/sons_baixados.gd")
 const InventarioCls := preload("res://inventario/inventario.gd")
 const SobrevivenciaCls := preload("res://jogador/sobrevivencia.gd")
 const PortaCls := preload("res://mundo/porta.gd")
+const PortaBunkerCls := preload("res://mundo/porta_bunker.gd")
 
 @export_group("Câmera")
 @export var distancia_camera := 2.35
@@ -218,6 +219,13 @@ func _pegar_do_chao() -> void:
 			if m2 != "":
 				inventario.aviso.emit(m2)
 			return
+	# 0.83: porta blindada / elevador do bunker (mundo/porta_bunker.gd)
+	var pb = PortaBunkerCls.perto(global_position)
+	if pb != null:
+		var mb: String = pb.usar(inventario, self)
+		if mb != "":
+			inventario.aviso.emit(mb)
+		return
 	# 0.73: sem item perto: a porta (abrir, fechar, tirar tábua)
 	var pt = PortaCls.perto(global_position)
 	if pt != null:

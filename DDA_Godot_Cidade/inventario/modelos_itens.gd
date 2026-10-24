@@ -36,6 +36,11 @@ const ITENS := {
 	"kit_armas": ["caixa_ferramentas", 0.75, false],
 	"kit_costura": ["pote_plastico", 0.8, false],
 	"galho": ["galho", 0.85, false],
+	# 0.83: cartões dos bunkers (já deitados no arquivo: a frente para cima)
+	"cartao_bunker_1": ["cartao_bunker_1", 1.0, false],
+	"cartao_bunker_2": ["cartao_bunker_2", 1.0, false],
+	"cartao_bunker_3": ["cartao_bunker_3", 1.0, false],
+	"cartao_bunker_4": ["cartao_bunker_4", 1.0, false],
 }
 
 static var _cenas := {}

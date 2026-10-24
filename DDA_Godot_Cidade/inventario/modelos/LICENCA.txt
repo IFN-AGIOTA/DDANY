@@ -18,4 +18,7 @@ Todos CC0 1.0 (domínio público: https://creativecommons.org/publicdomain/zero/
 - galho ................. Rico Cilliers, "Dry Branches Medium 01" - https://polyhaven.com/a/dry_branches_medium_01
 - caixa_militar ......... Jack Mava, "Old Military Crate" - https://polyhaven.com/a/old_military_crate
 
+- cartao_bunker_1..4 .... codeinfernogames (Code Inferno Games), "3D Keycard" (CC0) - https://opengameart.org/content/3d-keycard
+                          (0.83: tamanho real, deitado; textura repintada de verde militar com "BUNKER N" e a faixa da cor)
+
 Refrigerante e frascos de remédio: feitos por código (inventario/modelos_itens.gd).

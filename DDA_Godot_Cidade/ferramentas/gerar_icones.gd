@@ -17,7 +17,8 @@ const Sob := preload("res://jogador/modelo_sobrevivente.gd")
 const ModelosItens := preload("res://inventario/modelos_itens.gd")
 # itens com modelo realista que continuam com o ícone desenhado por código (o desenho diferencia melhor:
 # munições de calibres diferentes, água limpa x suja x garrafa vazia)
-const SEM_FOTO := ["mun_9mm", "mun_556", "mun_762", "mun_12", "mun_308", "agua_suja", "garrafa_vazia", "bandagem"]
+const SEM_FOTO := ["mun_9mm", "mun_556", "mun_762", "mun_12", "mun_308", "agua_suja", "garrafa_vazia", "bandagem",
+	"cartao_bunker_1", "cartao_bunker_2", "cartao_bunker_3", "cartao_bunker_4"]   # 0.83: o ícone do cartão é a própria textura (de frente)
 
 const PASTA := "res://inventario/icones/"
 const CEL := 64                        # pixels por célula da grade

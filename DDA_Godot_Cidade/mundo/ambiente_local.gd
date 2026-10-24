@@ -41,7 +41,7 @@ static var _wavs := {}
 
 func _ready() -> void:
 	_rng.seed = indice * 9133 + 17
-	tem_gerador = _rng.randf() < CHANCE_GERADOR
+	tem_gerador = _rng.randf() < CHANCE_GERADOR and tipo != "bunker"      # 0.83: bunker sempre no escuro
 	_t_rangido = _rng.randf_range(4.0, 12.0)
 	if not tem_gerador:
 		return

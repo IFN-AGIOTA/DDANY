@@ -19,6 +19,8 @@ const EQUIPE := [
 ]
 # [o quê, autor, licença, endereço]
 const RECURSOS := [
+	["Cartão de acesso dos bunkers (modelo 3D; textura repintada)", "codeinfernogames (Code Inferno Games) · \"3D Keycard\"",
+		"CC0 1.0 (domínio público)", "opengameart.org/content/3d-keycard"],
 	["Personagem do jogador (corpo, pele, olhos, sobrancelhas, cabelos e barba)", "Quaternius · \"Universal Base Characters\"",
 		"CC0 1.0 (domínio público)", "quaternius.itch.io/universal-base-characters"],
 	["Modelos 3D (manequins) dos infectados e animações", "Quaternius · \"Universal Animation Library\" 1 e 2",

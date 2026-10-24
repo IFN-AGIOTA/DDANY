@@ -39,6 +39,62 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.83 · BUNKERS (UM POR ILHA) E CARTÕES DE ACESSO
+  · 4 BUNKERS, um em cada ilha (Nova York tem 4 ilhas com ruas), numerados de 1 a 4. No mapa: bolinha "B1".."B4"
+    e o nome "BUNKER N". Todos com a MESMA estrutura (só o número muda), e cada bunker é UMA draw call (tudo numa
+    malha só, com um material só, inclusive o número pintado).
+  · EM CIMA: a "cabeça" de concreto do bunker com a PORTA BLINDADA (moldura listrada), o leitor de cartão, o número
+    grande pintado (na frente, nos lados e no teto, com a faixa da cor do bunker), respiros, sacos de areia e cerca.
+    Chegando perto aparece o aviso "BUNKER N · ÁREA RESTRITA".
+  · A PORTA SÓ ABRE COM O CARTÃO DE ACESSO DO MESMO NÚMERO (basta estar com ele em qualquer bolso/mochila; o cartão
+    não some). PEGAR na porta = "ABRIR BUNKER N": sem o cartão, "ACESSO NEGADO"; com ele, a tela escurece e você
+    chega pelo elevador na cabine do NÍVEL 1, 22 m abaixo da rua. Para sair: PEGAR na cabine = "SUBIR ELEVADOR".
+  · 5 ANDARES lá embaixo, ligados por escadas em zigue-zague no canto leste (com grades nos vãos):
+      NÍVEL 1 controle (guarita, armários, sala de comando com consoles) · NÍVEL 2 alojamento (beliches) e
+      refeitório/cozinha · NÍVEL 3 enfermaria e laboratório · NÍVEL 4 depósito de suprimentos (fileiras de
+      prateleiras) · NÍVEL 5 arsenal (armários de armas, caixas militares, cofre) e o gerador desligado.
+  · TOTALMENTE ESCURO: lá embaixo não chega sol, lua, luz ambiente nem reflexo do céu — sem lanterna a tela fica
+    preta. Leve a LANTERNA (ou a lanterna de cabeça) com pilha.
+  · MUITO LOOT: tabelas novas "bunker_arsenal", "bunker_militar", "bunker_med", "bunker_comida", "bunker_deposito",
+    "bunker_alojamento", "bunker_controle" e o chão "chao_bunker"; só 3% dos móveis vazios e até 14 itens soltos
+    no chão. O loot volta como nos outros locais especiais (a cada 10 h de jogo).
+  · Sem infectados lá dentro (por enquanto).
+  · CARTÕES DE ACESSO (itens novos "CARTÃO DE ACESSO · BUNKER 1..4", modelo 3D baixado, CC0): aparecem só nas
+    ÁREAS MILITARES — os 2 quartéis e o posto militar na frente de cada um dos 4 hospitais (6 áreas). Cada vez que
+    uma área é montada num ciclo novo do loot (10 h de jogo), 12% de chance de um cartão aparecer numa das caixas
+    militares dela. Só existe UM cartão de cada bunker: depois que apareceu, aquele número não aparece mais —
+    jogando sozinho, só volta a poder aparecer se o cartão sumir de vez do mundo. Em rede, só o host sorteia.
+  · Os bunkers ficam em terreno vazio: nenhum prédio mudou de lugar (os jogos salvos continuam valendo).
+  · Teste novo: teste_bunkers (um por ilha, nenhum prédio saiu, uma draw call, porta com/sem cartão, em pé nos 5
+    níveis, escadas com rampa e espaço para a cabeça, escuro total, elevador de volta, 12% e um cartão de cada).
+  · Arquivos:
+      mundo/local_bunker.gd ..... NOVO (o bunker por fora e os 5 andares; tudo numa malha só)
+      mundo/porta_bunker.gd ..... NOVO (porta blindada e elevador: checa o cartão, desce/sobe, escurece a tela)
+      mundo/locais.gd ........... 4 bunkers na lista LOCAIS, tipo "bunker" (tamanho, nome, cor, sigla, casca),
+                                  numero_bunker/nome, aviso ao chegar, liga o escuro do subsolo, sorteio do cartão
+                                  nas áreas militares (AREAS_MILITARES, TABELAS_MILITARES)
+      mundo/local.gd ............ monta o bunker (mundo/local_bunker.gd), cria a porta/elevador, móveis do bunker
+                                  quase nunca vazios
+      mundo/loot_mundo.gd ....... tabelas bunker_*, chao_bunker, CHANCE_VAZIO_BUNKER, MAX_CHAO_USO, cartões
+                                  (CHANCE_CARTAO, tentar_cartao, cartao_existe; vão no jogo salvo)
+      mundo/clima.gd ............ "subsolo": escuro total lá embaixo (sem sol/lua, luz ambiente, reflexo e neblina)
+      mundo/ambiente_local.gd ... bunker nunca tem gerador
+      inventario/itens.gd ....... 4 cartões de acesso
+      inventario/modelos_itens.gd  modelo dos cartões
+      inventario/modelos/cartao_bunker_1..4.glb ... NOVOS (modelo "3D Keycard", CC0, com a textura repintada)
+      inventario/modelos/LICENCA.txt  crédito do cartão
+      inventario/icones/cartao_bunker_1..4.png .... NOVOS (ícones do inventário)
+      inventario/tela_inventario.gd  botão PEGAR mostra "ABRIR BUNKER N" / "SUBIR ELEVADOR"
+      jogador/jogador.gd ........ PEGAR usa a porta/elevador do bunker
+      hud/mapa.gd ............... bunkers com o número no mapa e no minimapa
+      main.gd ................... cartões: procura se o cartão ainda existe; em rede só o host sorteia
+      menu/creditos.gd .......... crédito do modelo do cartão
+      menu/config.gd ............ versão 0.83
+      ferramentas/escolher_bunkers.gd ............. NOVO (escolhe o lugar dos bunkers: um por ilha, terreno vazio)
+      ferramentas/gerar_icones.gd ................. não refaz os ícones dos cartões (são a própria textura)
+      ferramentas/testes/teste_bunkers.gd ......... NOVO
+      ferramentas/testes/rodar.sh ................. roda o teste novo
+
 ATUALIZAÇÃO 0.82 · CHÃO DOS PRÉDIOS E FAIXAS DA RUA NÃO PISCAM MAIS
   · O chão de dentro dos prédios ficava exatamente na mesma altura do chão do lote embaixo dele, e as faixas
     pintadas na mesma altura do asfalto. A placa de vídeo não sabia qual desenhar por cima e ficava trocando
@@ -1639,6 +1695,9 @@ PORTAS (0.73): porta 100 de vida, cada tábua mais 140 (até 3) · golpe de infe
 LOCAIS ESPECIAIS (0.78): 42 = 12 postos, 4 hospitais, 6 supermercados, 6 armazéns, 4 delegacias, 4 escolas,
   4 estações do metrô (plataformas a 7,1 m; trilhos a 6 m) e 2 quartéis (torres de vigia a 6 m) · 6 em cada 10
   com gerador · só 15% dos móveis vazios
+BUNKERS (0.83): 4 (um por ilha) · 5 níveis de 3,9 m (NÍVEL 1 a 22 m e NÍVEL 5 a ~38 m abaixo da rua) · escuro
+  total · 3% dos móveis vazios · até 14 itens no chão · CARTÃO: 12% por área militar (6 áreas: 2 quartéis + 4
+  postos militares dos hospitais) a cada ciclo do loot (10 h de jogo), um só de cada bunker · usar a porta até 1,7 m
 LOOT E INFECTADOS QUE VOLTAM (0.72, relógio do jogo: 1 dia = 48 min): loot de prédios/carros a cada 16 h (~32 min),
   dos locais especiais a cada 10 h (~20 min) · infectados presos nos prédios a cada 6 h (~12 min), nos locais
   especiais a cada 4 h (~8 min)
@@ -1663,7 +1722,9 @@ ITENS (inventario/itens.gd; item novo = 1 linha na tabela DB)
 - Roupas (calor / chuva / proteção): capacete tático, gorro, boné, lanterna de cabeça, camiseta, moletom,
   jaqueta acolchoada, capa de chuva, colete tático, colete à prova de balas, calça cargo, jeans.
 - Mochilas: pochete, mochila escolar, de trilha, de combate.
-- Diversos: ursinho, revista velha, maço de dólares, celular quebrado.
+- Diversos: ursinho, revista velha, maço de dólares, celular quebrado, CARTÃO DE ACESSO · BUNKER 1..4 (0.83: abre
+  a porta do bunker do mesmo número; só existe um de cada; aparece nas caixas militares dos quartéis e dos postos
+  militares dos hospitais).
 - ESTADO de todo item: PERFEITO > GASTO > DANIFICADO > MUITO DANIFICADO > ARRUINADO. Roupas gastam com mordidas.
 
 LOOT (mundo/loot_mundo.gd; tabelas no topo, com raridade e quantidades)
@@ -1687,6 +1748,10 @@ LOOT (mundo/loot_mundo.gd; tabelas no topo, com raridade e quantidades)
   munição 5.56/7.62, colete, capacete, miras, silenciador, mochila de combate), "quartel_alojamento" (roupas,
   mochila, lanterna, munição) e as caixas "militar"/"militar_med". Chão: "chao_policia", "chao_escola",
   "chao_metro", "chao_quartel".
+- BUNKERS (0.83): "bunker_arsenal" (M4, AK, MP5, pistola, espingarda, rifle, pentes, muita munição, miras,
+  silenciador, kit de armas), "bunker_militar" (colete, capacete, mochila de combate, máscara, kit médico,
+  munição, rádio, pilhas, lanternas, comida), "bunker_med", "bunker_comida", "bunker_deposito", "bunker_alojamento",
+  "bunker_controle" e o chão "chao_bunker". Só 3% dos móveis vazios.
 - ITENS SOLTOS no chão dos prédios (até 4 por prédio, conforme o uso).
 - 35% dos móveis já foram saqueados. Armas vêm com pente pela metade (ou sem pente). Itens vêm gastos.
 - O conteúdo é sorteado na 1ª visita e fica guardado (e salvo). 0.72: depois de um tempo (16 h de jogo nos
@@ -1819,6 +1884,12 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   (preenchimento: parede atrás, longe de
   portas/janelas, altura dos móveis) .. mundo/interior.gd (_muros, _vaos, ALTO, _parede_atras, _livre)
 - câmera não atravessar parede .......... jogador/jogador.gd (FOLGA_CAMERA) + esfera em jogador/jogador.tscn
+- BUNKERS (0.83): planta e andares ...... mundo/local_bunker.gd · onde ficam: mundo/locais.gd (LOCAIS) e
+                                          ferramentas/escolher_bunkers.gd
+- porta do bunker / elevador / cartão ... mundo/porta_bunker.gd · itens: inventario/itens.gd ("cartao_bunker_N")
+- onde/quanto o cartão aparece .......... mundo/loot_mundo.gd (CHANCE_CARTAO, tentar_cartao) · áreas militares:
+                                          mundo/locais.gd (AREAS_MILITARES)
+- escuro do subsolo ...................... mundo/clima.gd (subsolo, _aplicar_subsolo)
 - chão/faixas piscando (camadas do chão,
   z-fighting) ........................ mundo/materiais_cidade.gd (camada) · mundo/cidade.gd (CAMADA,
                                           FAIXA_ACIMA) · mundo/interior.gd (PISO_Y)
@@ -2043,6 +2114,9 @@ MÚSICA (pasta audio/)
 - Veículos (0.76): só sedã, táxi e van; não dá para levar passageiro; as rodas não giram no desenho; o motor
   estragado ainda não tem conserto. (A transformação em carro e jato do HTML continua descartada.)
 - Os blocos de cima das torres escalonadas também mostram "térreo" (vitrines/placas) na base deles.
+- Bunkers (0.83): ainda sem infectados lá dentro; a descida é pelo elevador (a tela escurece: não dá para descer
+  andando, o chão do mapa é uma peça só); em rede, um cartão perdido (por exemplo, com um amigo que saiu) não volta
+  a aparecer.
 - Sobrevivente: rosto liso de manequim.
 - Infectados: os rostos são simples (manequim, olhos pintados).
 - MULTIJOGADOR: infectados, itens e caixas iguais para todos (0.44); PvP, amigos no mapa, colisão entre

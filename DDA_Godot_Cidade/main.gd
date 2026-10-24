@@ -266,6 +266,8 @@ func _ligar_rede() -> void:
 	if not Rede.ligado or jogo == null:
 		return
 	loot_mundo.semente = int(Rede.mundo.get("semente", loot_mundo.semente))
+	loot_mundo.sorteia_cartoes = not Rede.eh_cliente()      # 0.83: em rede só o host sorteia os cartões dos bunkers
+	loot_mundo.verifica_perdidos = false
 	var voltou := Salvamento.carregar_rede(self)        # 0.77: personagem (e, no host, o mundo) da última partida em rede
 	if voltou != "" and hud != null:
 		hud.mostrar_aviso(voltou, 5.0)
@@ -503,6 +505,8 @@ func _criar_jogo() -> void:
 	loot_mundo.semente = randi()                      # cada jogo novo tem o loot em lugares diferentes
 	# 0.72: o loot volta pelo relógio do jogo (horas desde o 1º dia; na rede a hora é a do host)
 	loot_mundo.relogio = func() -> float: return (float(clima.dia) - 1.0) * 24.0 + float(clima.hora) if clima != null else 0.0
+	# 0.83: cartões dos bunkers: um só de cada (o loot procura se ele ainda existe no chão ou com o jogador)
+	loot_mundo.procurar_item = _item_existe
 	# 0.73: portas (mundo/porta.gd): o estado mexido fica no loot (jogo salvo e rede); abrir/fechar/martelar faz barulho
 	PortaCls.ao_mudar = func(pt) -> void: loot_mundo.mudar_porta(pt.id, pt.estado())
 	PortaCls.barulho = func(pos: Vector3, raio: float) -> void:
@@ -548,6 +552,27 @@ func _criar_jogo() -> void:
 	Musica.definir_modo("jogo")
 	jogador.armas.disparou.connect(func(_a): Musica.adicionar_tensao(0.05))
 	jogador.armas.acertou.connect(func(_c, matou): Musica.adicionar_tensao(0.12 if matou else 0.03))
+
+# 0.83: o item "id" está no chão do mundo (largado, em qualquer lugar aberto) ou com o jogador?
+func _item_existe(id: String) -> bool:
+	for n in get_tree().get_nodes_in_group("itens_chao"):
+		var it = n.get("item")
+		if it != null and (it.id == id or _tem_dentro(it, id)):
+			return true
+	if jogador != null and jogador.inventario != null:
+		for s in jogador.inventario.slots:
+			var it = jogador.inventario.slots[s]
+			if it != null and (it.id == id or _tem_dentro(it, id)):
+				return true
+	return false
+
+func _tem_dentro(it, id: String) -> bool:
+	if not it.has_method("grades"):
+		return false
+	for g in it.grades():
+		if LootMundoCls._grade_tem(g, id):
+			return true
+	return false
 
 # ---------- morte e renascimento ----------
 func _morreu(causa: String) -> void:

@@ -13,6 +13,9 @@ extends Node
 #     ronco do gerador, bipe no hospital); os outros ficam no escuro, com rangidos.
 #   - 0.72: os infectados VOLTAM: a cada CICLO_INFECTADOS horas de jogo o local enche de novo quando você chega
 #     (se os de antes já morreram ou foram embora). O loot volta pelo ciclo do mundo/loot_mundo.gd (CICLO_LOCAL).
+#   - 0.83: BUNKERS (tipo "bunker", mundo/local_bunker.gd): um por ilha, 5 andares no subsolo, escuro, muito loot,
+#     sem infectados. A porta só abre com o cartão do mesmo número (mundo/porta_bunker.gd). O cartão aparece nas
+#     ÁREAS MILITARES (quartéis e postos militares dos hospitais: CHANCE em mundo/loot_mundo.gd tentar_cartao).
 # Mexa AQUI para: quantos/onde (LOCAIS), nomes, cores no mapa, distâncias e quantos infectados.
 
 const LocalCls := preload("res://mundo/local.gd")
@@ -21,12 +24,15 @@ const Malhas := preload("res://mundo/malhas.gd")
 const Mat := preload("res://mundo/materiais_cidade.gd")
 
 const TAMANHO := {"posto": Vector2(46, 36), "hospital": Vector2(72, 54), "supermercado": Vector2(66, 56), "armazem": Vector2(66, 50),
-	"delegacia": Vector2(56, 44), "escola": Vector2(70, 54), "metro": Vector2(64, 28), "quartel": Vector2(64, 50)}
+	"delegacia": Vector2(56, 44), "escola": Vector2(70, 54), "metro": Vector2(64, 28), "quartel": Vector2(64, 50),
+	"bunker": Vector2(28, 22)}
 const NOMES := {"posto": "POSTO DE GASOLINA", "hospital": "HOSPITAL", "supermercado": "SUPERMERCADO", "armazem": "ARMAZÉM",
-	"delegacia": "DELEGACIA", "escola": "ESCOLA", "metro": "ESTAÇÃO DO METRÔ", "quartel": "QUARTEL DA GUARDA NACIONAL"}
+	"delegacia": "DELEGACIA", "escola": "ESCOLA", "metro": "ESTAÇÃO DO METRÔ", "quartel": "QUARTEL DA GUARDA NACIONAL",
+	"bunker": "BUNKER"}
 const CORES_MAPA := {"posto": Color(0.95, 0.45, 0.15), "hospital": Color(0.9, 0.2, 0.2), "supermercado": Color(0.3, 0.75, 0.35), "armazem": Color(0.35, 0.6, 0.95),
-	"delegacia": Color(0.25, 0.4, 0.95), "escola": Color(0.95, 0.8, 0.2), "metro": Color(0.7, 0.45, 0.9), "quartel": Color(0.5, 0.65, 0.3)}
-const SIGLAS := {"posto": "P", "hospital": "H", "supermercado": "S", "armazem": "A", "delegacia": "D", "escola": "E", "metro": "M", "quartel": "Q"}
+	"delegacia": Color(0.25, 0.4, 0.95), "escola": Color(0.95, 0.8, 0.2), "metro": Color(0.7, 0.45, 0.9), "quartel": Color(0.5, 0.65, 0.3),
+	"bunker": Color(0.85, 0.85, 0.8)}
+const SIGLAS := {"posto": "P", "hospital": "H", "supermercado": "S", "armazem": "A", "delegacia": "D", "escola": "E", "metro": "M", "quartel": "Q", "bunker": "B"}
 # 0.78: os 28 primeiros são os da 0.68 (a ordem não pode mudar: o loot salvo é "L<índice>_..."); os novos vêm depois
 const N_LOCAIS_068 := 28
 
@@ -75,7 +81,41 @@ const LOCAIS := [
 	["metro", -714.0, 2598.0, 3],
 	["metro", -4247.0, -4053.5, 0],
 	["metro", -1636.0, 407.0, 3],
+	# 0.83 (ferramentas/escolher_bunkers.gd): BUNKERS, um por ilha, em terreno vazio (nenhum prédio saiu). A ordem
+	# aqui é o NÚMERO do bunker (e do cartão): 1, 2, 3, 4.
+	["bunker", 1784.5, -3733.5, 0],
+	["bunker", -2751.5, 387.0, 3],
+	["bunker", 3897.5, 1122.5, 0],
+	["bunker", 532.5, -1086.0, 1],
 ]
+
+# 0.83: ÁREAS MILITARES onde o CARTÃO DE ACESSO de um bunker pode aparecer (CHANCE_CARTAO a cada ciclo do loot, numa
+# das caixas militares): os quartéis e o posto militar na frente de cada hospital. Só existe 1 cartão de cada bunker
+# (mundo/loot_mundo.gd tentar_cartao).
+const AREAS_MILITARES := ["quartel", "hospital"]
+const TABELAS_MILITARES := ["militar", "militar_med", "quartel_arsenal"]
+
+# número do bunker (1, 2, 3...) do local i (0 = não é bunker)
+static func numero_bunker(i: int) -> int:
+	if i < 0 or i >= LOCAIS.size() or LOCAIS[i][0] != "bunker":
+		return 0
+	var n := 0
+	for k in i + 1:
+		if LOCAIS[k][0] == "bunker":
+			n += 1
+	return n
+
+static func quantos_bunkers() -> int:
+	var n := 0
+	for e in LOCAIS:
+		if e[0] == "bunker":
+			n += 1
+	return n
+
+# nome para o mapa e os avisos ("BUNKER 3")
+static func nome(i: int) -> String:
+	var n := numero_bunker(i)
+	return "BUNKER %d" % n if n > 0 else String(NOMES[LOCAIS[i][0]])
 
 const RAIO_ABRIR := 140.0              # da borda do terreno
 const RAIO_FECHAR := 200.0
@@ -144,6 +184,8 @@ static func casca(tipo: String) -> Array:
 				for z in [-7.5, 3.5]:
 					m.append([Vector3(-30 + k * 10, 2.6, z), Vector3(0.6, 5.2, 0.6), Color(0.24, 0.32, 0.27)])
 			return m
+		"bunker":
+			return [[Vector3(0, 1.6, -5.0), Vector3(10.0, 3.2, 8.0), Color(0.5, 0.5, 0.48)]]
 		"quartel":
 			var cq := Color(0.5, 0.52, 0.42)
 			var hs := Color(0.62, 0.55, 0.4)
@@ -291,11 +333,20 @@ func _process(dt: float) -> void:
 				melhor = i
 	if melhor >= 0 and abertos.size() < MAX_ABERTOS + centros.size() - 1:
 		abrir(melhor)
+	# 0.83: lá embaixo de um bunker: escuro total (mundo/clima.gd)
+	if clima != null:
+		var sub := false
+		var ib := em(p, 8.0)
+		if ib >= 0 and LOCAIS[ib][0] == "bunker" and jogador.global_position.y < cidade.Y_CALCADA - 4.0:
+			sub = true
+		clima.set("subsolo", sub)
 	# entrou numa zona de PvP: aviso
 	var agora := em(p, 4.0)
 	if agora != _dentro:
 		_dentro = agora
-		if agora >= 0 and hud != null and hud.has_method("mostrar_aviso"):
+		if agora >= 0 and LOCAIS[agora][0] == "bunker" and hud != null and hud.has_method("mostrar_aviso"):
+			hud.mostrar_aviso("%s · ÁREA RESTRITA · a porta só abre com o CARTÃO DE ACESSO %d" % [nome(agora), numero_bunker(agora)], 5.0)
+		elif agora >= 0 and hud != null and hud.has_method("mostrar_aviso"):
 			hud.mostrar_aviso("%s · ZONA DE PvP · loot raro, cuidado com outros sobreviventes" % NOMES[LOCAIS[agora][0]], 5.0)
 			var mus := get_node_or_null("/root/Musica")
 			if mus != null:
@@ -342,6 +393,13 @@ func _terminar(i: int, prep) -> void:
 		casca_no.visible = false
 	if loot != null:
 		loot.espalhar_chao("L%d" % i, String(LOCAIS[i][0]), no.get_meta("pontos_chao"), no)
+		# 0.83: área militar: chance de aparecer o cartão de um bunker numa das caixas militares
+		if LOCAIS[i][0] in AREAS_MILITARES and loot.has_method("tentar_cartao"):
+			var grades: Array = []
+			for k in prep.cont.size():
+				if String(prep.cont[k]["loot"]) in TABELAS_MILITARES:
+					grades.append("L%d_%d" % [i, k])
+			loot.tentar_cartao("L%d" % i, grades, quantos_bunkers())
 	_infestar(i, no, prep.infectados)
 
 func _infestar(i: int, no: Node3D, pontos: Array) -> void:

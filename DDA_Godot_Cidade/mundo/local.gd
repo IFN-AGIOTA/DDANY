@@ -62,7 +62,8 @@ var _malha: ArrayMesh = null
 const NOVOS := ["delegacia", "escola", "metro", "quartel"]
 
 static func preparar(t: String, i: int, gi: int, c: Vector2) -> RefCounted:
-	var m = load("res://mundo/local_novos.gd" if t in NOVOS else "res://mundo/local.gd").new()
+	var arq := "res://mundo/local_bunker.gd" if t == "bunker" else ("res://mundo/local_novos.gd" if t in NOVOS else "res://mundo/local.gd")
+	var m = load(arq).new()
 	m.tipo = t
 	m.idx = i
 	m.giro = gi
@@ -77,7 +78,8 @@ static func preparar(t: String, i: int, gi: int, c: Vector2) -> RefCounted:
 		"escola": m._escola()
 		"metro": m._metro()
 		"quartel": m._quartel()
-	if t in NOVOS:
+		"bunker": m._bunker()             # 0.83: mundo/local_bunker.gd
+	if t in NOVOS or t == "bunker":
 		m._livrar_pontos()
 	m._criar_malha()
 	return m
@@ -176,7 +178,7 @@ func criar(lm, y: float) -> Node3D:
 			cx.invisivel = true
 			cx.nome = c["nome"]
 			cx.tamanho = c["tam"]
-			cx.grade = lm.grade("L%d_%d" % [idx, k], c["loot"], c["nome"], c["tam"], lm.CHANCE_VAZIO_LOCAL)
+			cx.grade = lm.grade("L%d_%d" % [idx, k], c["loot"], c["nome"], c["tam"], lm.CHANCE_VAZIO_BUNKER if tipo == "bunker" else lm.CHANCE_VAZIO_LOCAL)
 			raiz.add_child(cx)
 			cx.position = (c["pos"] as Vector3) + Vector3(0, 0.1, 0)
 	raiz.set_meta("pontos_chao", pontos)
@@ -204,6 +206,19 @@ func criar(lm, y: float) -> Node3D:
 		b.set_meta("id", "L%d:%d" % [idx, k])
 		b.position = bombas[k]
 		raiz.add_child(b)
+	# 0.83: bunker: a porta blindada (desce com o cartão) e o elevador lá embaixo (sobe) · mundo/porta_bunker.gd
+	var elev = get("elevadores")
+	if elev != null:
+		var PortaBunker = load("res://mundo/porta_bunker.gd")
+		for e in elev:
+			var pb = PortaBunker.new()
+			pb.name = "Elevador_%s" % e[1]
+			pb.numero = int(get("numero"))
+			pb.desce = e[1] == "desce"
+			pb.position = e[0]
+			pb.destino_local = e[2]
+			pb.olhar_local = e[3]
+			raiz.add_child(pb)
 	return raiz
 
 # ---------- peças ----------
