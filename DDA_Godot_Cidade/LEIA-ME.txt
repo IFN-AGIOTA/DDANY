@@ -65,6 +65,8 @@ ATUALIZAÇÃO 0.83 · BUNKERS (UM POR ILHA) E CARTÕES DE ACESSO
     militares dela. Só existe UM cartão de cada bunker: depois que apareceu, aquele número não aparece mais —
     jogando sozinho, só volta a poder aparecer se o cartão sumir de vez do mundo. Em rede, só o host sorteia.
   · Os bunkers ficam em terreno vazio: nenhum prédio mudou de lugar (os jogos salvos continuam valendo).
+  · VERSÃO DE PC: jogo_windows.zip refeito na 0.83 (export "Windows"; o LEIA-ME_PC.txt de dentro, que estava na
+    0.62, foi atualizado: teclas de hoje, incluindo trocar de ombro, 1ª/3ª pessoa, mensagens e a porta do bunker).
   · Teste novo: teste_bunkers (um por ilha, nenhum prédio saiu, uma draw call, porta com/sem cartão, em pé nos 5
     níveis, escadas com rampa e espaço para a cabeça, escuro total, elevador de volta, 12% e um cartão de cada).
   · Arquivos:
