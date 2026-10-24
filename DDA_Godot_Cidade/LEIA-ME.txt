@@ -39,6 +39,14 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.88.1 · O PACOTE DO CELULAR LEVA A CHAVE DA CLOUDFLARE
+  · O pacote 0.88 saiu sem o rede/turn.cfg (ele fica fora do git e a lista de arquivos do pacote vem do git): no
+    celular o jogo continuava só com a Metered. O 0.88.1 leva o rede/turn.cfg ([turn_cloudflare] + [turn]).
+    Ao gerar pacotes que mexem no retransmissor, ponha rede/turn.cfg em ARQUIVOS (ferramentas/gerar_pacote.gd).
+  · Arquivos:
+      menu/config.gd ............ versão 0.88.1
+      rede/turn.cfg ............. (fora do git) vai dentro do pacote 0.88.1
+
 ATUALIZAÇÃO 0.88 · RETRANSMISSOR DA CLOUDFLARE (1000 GB GRÁTIS) NO LUGAR DO LIMITE DE 500 MB
   · Quando a ligação direta entre os celulares não dá, os dados agora passam pelo retransmissor da CLOUDFLARE
     (Realtime TURN, conta do dono do jogo): 1000 GB grátis, contra 500 MB por mês da Metered (~40 mil horas de
