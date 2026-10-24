@@ -10,6 +10,8 @@ extends Node3D
 # Por cima da animação: cabeça torta e, correndo, braços para a frente (jeito de infectado).
 # Mesma interface do modelo antigo (o antigo inimigos/modelo_vago.gd, apagado na 0.63):
 #   montar(semente) · atualizar(dt, vel) · atacar() · levar_golpe(forca, lado) · morrer(para_tras) · pos_cabeca()
+# 0.89 (estilo Project Zomboid): cair() (derrubado: cai e fica no chão) · deitado() (fingindo de morto, já no chão)
+#   levantar() (LayToIdle da UAL2: levanta do chão) · rastejante = true (anda de bruços: Swim_Fwd da UAL1 no chão)
 # A frente é -Z (igual à Godot). Altura ~1,75 m.
 # Mexa AQUI para: quais tipos aparecem e quanto (TIPOS), altura e velocidade das animações.
 
@@ -23,6 +25,8 @@ const ALTURA := 1.75
 const VEL_ANDAR_ANIM := 0.9            # m/s em que a animação de andar (zumbi) não "patina"
 const VEL_CORRER_ANIM := 5.0           # idem para a de correr
 const DUR_ATAQUE := 0.95
+const VEL_RASTEJAR_ANIM := 0.3         # 0.89: m/s em que o rastejar casa com o chão
+const DUR_LEVANTAR := 1.5              # 0.89: duração da animação de levantar do chão
 # 0.61 · JEITO DE ANDAR de cada infectado (captura real da CMU, ferramentas/retarget_cmu.gd ALVO=infectados):
 # [animação, velocidade em que os pés casam com o chão (m/s), peso no sorteio]. O infectado anda à toa mais devagar
 # ou mais depressa conforme o jeito dele (fator_vel(), usado em inimigos/vago.gd).
@@ -47,6 +51,10 @@ var _fl := 0.0
 var _corr := 0.0
 var _cab_incl := 0.0
 var _mt := 0.0
+var caido := false                     # 0.89: no chão (derrubado ou fingindo de morto)
+var levantando := 0.0                  # 0.89: > 0 = levantando do chão (segundos que faltam)
+var rastejante := false                # 0.89: rastejante (perna ruim): anda de bruços
+var _y_rastejar := 0.0                 # quanto o corpo desce para o rastejar (a animação é de nado, no ar)
 var _andar := "andar"                  # animação de andar deste infectado (ESTILOS)
 var _ref_andar := VEL_ANDAR_ANIM
 
@@ -156,6 +164,31 @@ func levar_golpe(forca: float, _lado: float = 0.0) -> void:
 	if _at < 0.0:
 		_tocar("golpe", 0.05, true)
 
+# 0.89 · DERRUBADO: cai (mesma queda da morte) e fica no chão até levantar()
+func cair() -> void:
+	if morto:
+		return
+	caido = true
+	levantando = 0.0
+	_at = -1.0
+	_tocar("morte", 0.1, true)
+
+# 0.89 · FINGINDO DE MORTO: já deitado no chão (último quadro da queda), sem animar a queda
+func deitado() -> void:
+	caido = true
+	levantando = 0.0
+	_tocar("morte", 0.0, true)
+	anim.seek(anim.current_animation_length - 0.01, true)
+
+# 0.89: levanta do chão (deitado de costas, como a queda termina); devolve quanto tempo leva
+func levantar() -> float:
+	if morto or not caido:
+		return 0.0
+	caido = false
+	levantando = DUR_LEVANTAR
+	_tocar("levantar", 0.25, true)
+	return DUR_LEVANTAR
+
 func morrer(_para_tras: bool) -> void:
 	if morto:
 		return
@@ -180,6 +213,20 @@ func atualizar(dt: float, vel: float) -> void:
 			anim.speed_scale = 1.0
 			anim.advance(dt)
 		return
+	# 0.89: no chão (derrubado / fingindo de morto): a queda termina e fica parado ali
+	if caido:
+		anim.speed_scale = 1.0
+		if anim.is_playing():
+			anim.advance(dt)
+		return
+	if levantando > 0.0:
+		levantando -= dt
+		anim.speed_scale = 1.0
+		anim.advance(dt)
+		return
+	if rastejante:
+		_rastejar(dt, vel)
+		return
 	_corr = lerpf(_corr, clampf((vel - 2.2) / 2.0, 0.0, 1.0), minf(1.0, dt * 5.0))
 	if _at >= 0.0:
 		_at += dt
@@ -194,7 +241,7 @@ func atualizar(dt: float, vel: float) -> void:
 		else:
 			_tocar("parado", 0.35)
 	if _atual == _andar:
-		anim.speed_scale = clampf(vel / _ref_andar, 0.5, 2.0)
+		anim.speed_scale = clampf(vel / _ref_andar, 0.5, 3.0)       # 0.89: o "rápido" arrasta os pés depressa
 	elif _atual == "correr":
 		anim.speed_scale = clampf(vel / VEL_CORRER_ANIM, 0.75, 1.3)
 	else:
@@ -202,6 +249,21 @@ func atualizar(dt: float, vel: float) -> void:
 	_cabeca_ok = false
 	anim.advance(dt)
 	_postura()
+
+# 0.89 · RASTEJANTE: de bruços no chão. A animação (nado da UAL1) fica no ar: o corpo desce até o peito
+# encostar no chão (medido uma vez pelo osso da bacia).
+func _rastejar(dt: float, vel: float) -> void:
+	if _atual != "rastejar":
+		_tocar("rastejar", 0.0)
+		anim.seek(0.0, true)
+		anim.advance(0.0)
+		var i: int = _osso.get("pelvis", -1)
+		if i >= 0:
+			var bacia := (esqueleto.global_transform * esqueleto.get_bone_global_pose(i)).origin
+			_y_rastejar = maxf(0.0, (bacia - global_position).y - 0.16)
+	corpo.position.y = lerpf(corpo.position.y, -_y_rastejar, minf(1.0, dt * 6.0))
+	anim.speed_scale = clampf(vel / VEL_RASTEJAR_ANIM, 0.15, 1.6)
+	anim.advance(dt)
 
 # jeito de infectado por cima da animação: cabeça torta e, correndo, braços esticados para a frente.
 # OTIMIZADO: lê primeiro as poses globais dos PAIS (o esqueleto é recalculado uma vez só) e depois grava as

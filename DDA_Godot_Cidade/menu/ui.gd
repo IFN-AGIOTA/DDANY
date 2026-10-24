@@ -437,6 +437,7 @@ class Abas extends Control:
 		size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	func _ready() -> void:
 		get_viewport().size_changed.connect(_medir)
+		resized.connect(queue_redraw)
 		_medir()
 	func _medir() -> void:
 		custom_minimum_size.y = 6.6 * UI.vh(self)
@@ -454,21 +455,26 @@ class Abas extends Control:
 	func _draw() -> void:
 		var v := UI.vh(self)
 		var ft := UI.fonte(800)
-		var tp := int(3.1 * v)
+		# 0.89: se as abas não couberem na largura (telas mais quadradas), letra e folgas encolhem juntas
+		var total := 0.0
+		for txt in nomes:
+			total += ft.get_string_size(String(txt), HORIZONTAL_ALIGNMENT_LEFT, -1, int(3.1 * v)).x + 5.6 * v
+		var enc := clampf(size.x / maxf(total, 1.0), 0.6, 1.0) if size.x > 0.0 else 1.0
+		var tp := int(3.1 * v * enc)
 		var x := 0.0
 		var h := 5.4 * v
 		_x.clear()
 		for i in nomes.size():
 			var txt: String = nomes[i]
-			var w := ft.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tp).x + 4.8 * v
+			var w := ft.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tp).x + 4.8 * v * enc
 			var r := Rect2(x, 0, w, h)
 			_x.append(r)
 			var on := i == atual
 			UI.caixa_arredondada(self, r, Color(1.0, 0.478, 0.102, 0.3) if on else Color(1, 1, 1, 0.07), 0.8 * v)
 			if on:
 				draw_rect(Rect2(x, h - 0.5 * v, w, 0.5 * v), UI.LARANJA)
-			draw_string(ft, Vector2(x + 2.4 * v, h * 0.5 + tp * 0.36), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tp, Color.WHITE if on else UI.TEXTO)
-			x += w + 0.8 * v
+			draw_string(ft, Vector2(x + 2.4 * v * enc, h * 0.5 + tp * 0.36), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tp, Color.WHITE if on else UI.TEXTO)
+			x += w + 0.8 * v * enc
 		draw_rect(Rect2(0, h + 1.0 * v, size.x, 0.3 * v), Color(1, 1, 1, 0.18))
 
 const UI := preload("res://menu/ui.gd")

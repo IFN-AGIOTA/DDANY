@@ -590,6 +590,13 @@ func _morreu(causa: String) -> void:
 	else:
 		Salvamento.salvar_rede(self, true)            # 0.77: em rede também (o personagem volta do zero)
 	Musica.adicionar_tensao(1.0)
+	# 0.89 · quem morre pelo VÍRUS levanta como infectado no mesmo lugar (Project Zomboid / lore: a Forma Comum)
+	if causa == "o vírus" and vagos != null and not vagos.espelho:
+		get_tree().create_timer(8.0).timeout.connect(func():
+			if vagos != null and is_instance_valid(vagos):
+				var v = vagos._criar(p + Vector3(0.6, 0.0, 0.0), Vector3.INF)
+				if v != null:
+					v._tocar("rosnado", 0.9, 4.0))
 	await get_tree().create_timer(2.5).timeout
 	if jogador == null or not jogador.morto or tela_morte != null:
 		return

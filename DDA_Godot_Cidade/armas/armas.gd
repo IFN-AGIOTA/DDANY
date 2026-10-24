@@ -21,6 +21,10 @@ signal disparou(arma: String)
 signal barulho(posicao: Vector3, raio: float)   # para os inimigos ouvirem (próximo passo)
 
 const ModelosArmas := preload("res://armas/modelos_armas.gd")
+# 0.89 (estilo Project Zomboid): o tiro se ouve bem mais longe (pistola ~40-60 m, fuzil ~120 m, espingarda ~170 m)
+# e o golpe corpo a corpo também chama quem está perto (faca ~6 m, taco ~10 m, machado ~12 m)
+const MULT_RUIDO_TIRO := 1.4
+const MULT_RUIDO_GOLPE := 2.0
 const EfeitosCls := preload("res://armas/efeitos_tiro.gd")
 const SonsCls := preload("res://armas/sons_armas.gd")
 const Sons := preload("res://audio/sons.gd")
@@ -498,7 +502,7 @@ func _atirar(W: Dictionary) -> void:
 	sons.tocar("tiro_silenciado" if silenciada else "tiro_" + atual)
 	_depois_do_tiro()
 	_vibrar(int(W["vibra"]))
-	barulho.emit(jogador.global_position, float(W["ruido"]) * (0.22 if silenciada else 1.0))
+	barulho.emit(jogador.global_position, float(W["ruido"]) * MULT_RUIDO_TIRO * (0.22 if silenciada else 1.0))
 	disparou.emit(atual)
 	# desgaste e EMPERRAR (0.65, DayZ; nomes do estado em inventario/itens.gd nome_estado): PERFEITA nunca
 	# emperra · GASTA quase nunca (0,5%) · DANIFICADA às vezes (3,5%) · MUITO DANIFICADA muito (12% por tiro).
@@ -611,7 +615,7 @@ func _acertar_golpe(W: Dictionary) -> void:
 	acertou.emit(bool(res.get("cabeca", false)), bool(res.get("morto", false)))
 	sons.tocar("impacto")
 	_vibrar(int(W["vibra"]))
-	barulho.emit(jogador.global_position, W["ruido"])
+	barulho.emit(jogador.global_position, float(W["ruido"]) * MULT_RUIDO_GOLPE)
 	if item_arma != null:
 		item_arma.estado = maxf(0.0, item_arma.estado - float(W.get("desgaste", 0.002)))
 	mudou.emit()

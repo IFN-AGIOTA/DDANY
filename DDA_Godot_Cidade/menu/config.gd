@@ -5,7 +5,7 @@ extends Node
 
 signal mudou(chave: String)          # "gfx" quando os gráficos foram aplicados; "hud" quando a HUD foi editada
 
-const VERSAO := "0.88.1"
+const VERSAO := "0.89"
 const ARQUIVO := "user://opcoes.cfg"
 
 const PADRAO := {
@@ -25,6 +25,18 @@ const PADRAO := {
 	"svol": 100,                          # volume dos efeitos (tiros, passos, infectados, chuva)
 	"dif": 1,                             # dificuldade do modo livre: 0 fácil, 1 normal, 2 difícil
 	"pvp": "zonas",                       # 0.71: PvP quando VOCÊ cria a partida: "zonas", "tudo" ou "desligado"
+	# 0.89 · INFECTADOS no estilo Project Zomboid (Opções › Infectados; números em inimigos/regras_infectados.gd)
+	"z_pop": 1,                           # população: 0 pouca, 1 normal, 2 muita, 3 insana
+	"z_vel": "lentos",                    # "lentos" (lore), "rapidos", "corredores" ou "misto"
+	"z_forca": 1, "z_resist": 1,          # 0 fraca/frágil, 1 normal, 2 sobre-humana/resistente
+	"z_cog": 0,                           # 0 só batem nas portas · 1 abrem portas (sem tábuas)
+	"z_mem": 2,                           # memória: 0 nenhuma, 1 curta, 2 normal, 3 longa
+	"z_visao": 1, "z_audicao": 1,         # 0 ruim, 1 normal, 2 águia/exata
+	"z_trans": 0,                         # vírus: 0 sangue e saliva, 1 só mordida, 2 desligado
+	"z_morte": 2,                         # o vírus mata em: 0 6-12 h, 1 1-2 dias, 2 2-3 dias, 3 uma semana
+	"z_derrubar": true,                   # 3 infectados juntos te puxam para o chão
+	"z_reaparecer": true,                 # lugar esvaziado volta a ter infectados (72 h)
+	"z_ativos": "ambos",                  # "ambos", "dia" ou "noite"
 	"rec_tempo": 0.0, "rec_abates": 0,    # recordes (tela de morte)
 	"nome_rede": "", "ip_rede": "",       # multijogador: seu nome e o último IP digitado (menu/tela_multijogador.gd)
 }

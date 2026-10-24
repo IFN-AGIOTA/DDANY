@@ -64,6 +64,10 @@ const PortaBunkerCls := preload("res://mundo/porta_bunker.gd")
 @export var ombro_mirando := 0.55      # mirando, a câmera vai para cima do ombro direito (metros)
 var ombro := 1.0                        # 0.79: 1 = câmera no ombro DIREITO (personagem à esquerda) · -1 = ombro ESQUERDO
 var _ombro_s := 1.0                     # o mesmo, suavizado (a câmera desliza de um lado para o outro)
+const RAIO_CAM := 0.25                  # 0.89: esfera da câmera (a mesma do braço) contra as paredes
+var _mascara_cam := 1
+var _cast_cam := PhysicsShapeQueryParameters3D.new()
+var _dist_cam := 2.35                   # 0.89: distância da câmera já limitada pela parede (suave ao esticar)
 var _lado_cam := 0.0                    # 0.81: deslocamento lateral do braço da câmera (já limitado pelas paredes)
 @export var sensibilidade := 1.0
 @export var inverter_y := false         # Opções › Controles › Eixo vertical
@@ -132,6 +136,14 @@ func _ready() -> void:
 	camera.fov = fov_camera
 	_near_3p = camera.near
 	_braco.add_excluded_object(get_rid())
+	# 0.89: quem calcula a distância até a parede é o _process (sem tremer); o braço só posiciona a câmera
+	_mascara_cam = _braco.collision_mask
+	_braco.collision_mask = 0
+	var esf := SphereShape3D.new()
+	esf.radius = RAIO_CAM
+	_cast_cam.shape = esf
+	_cast_cam.collision_mask = _mascara_cam
+	_cast_cam.exclude = [get_rid()]
 	_y_cam = global_position.y
 	_capsula = _capsula.duplicate()
 	_colisao.shape = _capsula
@@ -278,11 +290,20 @@ func _vestir() -> void:
 # mordida/golpe de um infectado (inimigos/vago.gd chama aqui)
 var servidor := false               # é o "jogador" invisível do servidor do PC (rede/servidor.gd): não leva dano
 
-func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3) -> void:
+func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3, tipo := "") -> void:
 	if servidor:
 		return
 	if sobrevivencia != null:
-		sobrevivencia.receber_ataque(dano, chance_sangrar, origem)
+		sobrevivencia.receber_ataque(dano, chance_sangrar, origem, tipo)
+
+# 0.89 · AGARRADO (Project Zomboid): um infectado te segurou; por "t" segundos você anda bem devagar
+var agarrado := 0.0
+func agarrar(t: float) -> void:
+	if servidor or morto:
+		return
+	if agarrado <= 0.0 and sobrevivencia != null:
+		sobrevivencia.aviso.emit("AGARRADO!")
+	agarrado = maxf(agarrado, t)
 
 # PASSOS: um a cada passada (mais longa correndo), mais baixo agachado, "chapinhando" com o chão molhado
 func _passos(delta: float) -> void:
@@ -536,6 +557,7 @@ func _cabe_em_pe() -> bool:
 func _physics_process(delta: float) -> void:
 	if not ativo:
 		return
+	agarrado = maxf(0.0, agarrado - delta)
 	if veiculo != null:
 		_dirigir(delta)
 		return
@@ -607,6 +629,8 @@ func _physics_process(delta: float) -> void:
 			vmax = minf(vmax, lerpf(VEL_MIRANDO, VEL_MIRANDO_LADO, smoothstep(0.4, 0.9, maxf(de_lado, de_costas))))
 		if perna:
 			vmax = minf(vmax, 0.9)          # mancando
+		if agarrado > 0.0:
+			vmax = minf(vmax, 0.8)          # 0.89: um infectado está te segurando
 		if nadando:
 			vmax = (VEL_NADO_RAPIDO if sprint else VEL_NADO) * (0.45 if afundando else 1.0)
 		elif prof_agua > 0.35:
@@ -736,30 +760,46 @@ func _process(delta: float) -> void:
 	var dist := lerpf(distancia_camera, distancia_mirando, fator_mira)
 	if veiculo != null:
 		dist = CAMERA_CARRO
-	_braco.spring_length = dist
 	var asp := get_viewport().get_visible_rect().size.aspect()
 	var meia_largura := tan(deg_to_rad(camera.fov) * 0.5) * asp
-	var frac := _braco.get_hit_length() / maxf(dist, 0.01)
 	_ombro_s = move_toward(_ombro_s, ombro, delta * 5.0)
 	# 0.81: o deslocamento para o lado (ombro) vai na ORIGEM do braço, testado por um raio para o lado: assim o braço
 	# (esfera de colisão) sai do ponto já deslocado e a câmera não entra mais nas paredes de lado (corredor, escada)
-	var lado := lerpf(dist * meia_largura * absf(lateral_camera) * _ombro_s, ombro_mirando * _ombro_s, fator_mira) * frac
+	# 0.89: o lado NÃO depende mais da distância do quadro anterior (um puxava o outro e a câmera tremia na parede)
+	var lado := lerpf(dist * meia_largura * absf(lateral_camera) * _ombro_s, ombro_mirando * _ombro_s, fator_mira)
 	if veiculo != null:
 		lado = 0.0                                # dirigindo: o carro no meio da tela
+	var esp := get_world_3d().direct_space_state
 	var lim := absf(lado)
 	if lim > 0.01:
 		var de := _pivo.global_position
-		var q := PhysicsRayQueryParameters3D.create(de, de + _pivo.global_basis.x * signf(lado) * (lim + FOLGA_CAMERA), _braco.collision_mask, [get_rid()])
-		var rl := get_world_3d().direct_space_state.intersect_ray(q)
+		var q := PhysicsRayQueryParameters3D.create(de, de + _pivo.global_basis.x * signf(lado) * (lim + FOLGA_CAMERA), _mascara_cam, [get_rid()])
+		var rl := esp.intersect_ray(q)
 		if not rl.is_empty():
 			lim = maxf(0.0, de.distance_to(rl["position"]) - FOLGA_CAMERA)
 	var alvo_x := signf(lado) * minf(absf(lado), lim)
-	if lim < absf(lado) or signf(alvo_x) != signf(_lado_cam):
-		_lado_cam = alvo_x if lim < absf(_lado_cam) else move_toward(_lado_cam, alvo_x, delta * 6.0)   # parede: recolhe na hora
+	if absf(alvo_x) < absf(_lado_cam) - 0.005 and lim < absf(lado):
+		_lado_cam = alvo_x                                                   # parede do lado: recolhe na hora
 	else:
-		_lado_cam = move_toward(_lado_cam, alvo_x, delta * 3.0)                                          # sem parede: volta devagar
+		_lado_cam = move_toward(_lado_cam, alvo_x, delta * 3.0)              # sem parede: vai/volta devagar
 	_braco.position.x = _lado_cam
 	camera.position.x = 0.0
+	# 0.89: distância até a parede de trás calculada aqui (esfera do braço), no lugar do SpringArm3D: bate -> encolhe
+	# na hora; a parede sumiu -> estica devagar. Sem isso, girando rente à parede a câmera ia e voltava (tremia).
+	var origem := _pivo.global_position + _pivo.global_basis.x * _lado_cam
+	var seguro := dist
+	if dist > 0.01:
+		_cast_cam.transform = Transform3D(Basis.IDENTITY, origem)
+		_cast_cam.motion = _pivo.global_basis.z * (dist + RAIO_CAM)
+		var fr := esp.cast_motion(_cast_cam)
+		if fr[0] < 1.0:
+			seguro = maxf(0.0, fr[0] * (dist + RAIO_CAM) - RAIO_CAM * 0.4)
+		seguro = minf(seguro, dist)
+	if seguro < _dist_cam - 0.01 or veiculo != null:
+		_dist_cam = seguro
+	else:
+		_dist_cam = move_toward(_dist_cam, seguro, delta * 2.5)
+	_braco.spring_length = _dist_cam
 	_camera_primeira_pessoa(delta, fov_alvo)
 	_tela_submersa()
 	animador.atualizar(delta, self)

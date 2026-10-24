@@ -1,5 +1,6 @@
 extends CanvasLayer
-# TELA DE OPÇÕES (igual à do HTML): abas Controles · Teclado e mouse · Câmera · HUD · Gráficos · Vídeo e som · Ajuda.
+# TELA DE OPÇÕES (igual à do HTML): abas Controles · Teclado e mouse · Câmera · HUD · Gráficos · Vídeo e som ·
+# Infectados (0.89: as regras no estilo Project Zomboid) · Ajuda.
 # 0.62: aba "Teclado e mouse": tipo de controle, mouse (sensibilidade, eixo), jeito de mirar/agachar/correr e a
 # tecla de cada ação (clique e aperte a tecla nova; jogador/teclas.gd).
 # Tudo é salvo na hora em Config (menu/config.gd) e aplicado no jogo por menu/aplicar_opcoes.gd.
@@ -13,7 +14,7 @@ signal editar_hud
 
 const UI := preload("res://menu/ui.gd")
 const Teclas := preload("res://jogador/teclas.gd")
-const ABAS := ["Controles", "Teclado e mouse", "Câmera", "HUD", "Gráficos", "Vídeo e som", "Ajuda"]
+const ABAS := ["Controles", "Teclado e mouse", "Câmera", "HUD", "Gráficos", "Vídeo e som", "Infectados", "Ajuda"]
 const NIVEIS := [[0, "MUITO BAIXO"], [1, "BAIXO"], [2, "MÉDIO"], [3, "ALTO"]]
 
 var aba := 0
@@ -106,6 +107,7 @@ func _montar() -> void:
 			3: p = _pagina_hud(v)
 			4: p = _pagina_graficos(v)
 			5: p = _pagina_video(v)
+			6: p = _pagina_infectados(v)
 			_: p = _pagina_ajuda(v)
 		p.set_anchors_preset(Control.PRESET_FULL_RECT)
 		p.visible = i == aba
@@ -397,6 +399,37 @@ func _pagina_video(v: float) -> Control:
 		var cheia := w == DisplayServer.WINDOW_MODE_FULLSCREEN or w == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if cheia else DisplayServer.WINDOW_MODE_FULLSCREEN))
 	_secao(g, "Tela cheia", tc)
+	return _rolavel(g)
+
+# 0.89 · INFECTADOS no estilo PROJECT ZOMBOID (as "sandbox" de lá; números em inimigos/regras_infectados.gd).
+# Valem para quem cria a partida (no multijogador, os infectados são os do host). Mudanças valem para os novos.
+func _pagina_infectados(v: float) -> Control:
+	var g := _grade(v)
+	_secao(g, "População", _seg("z_pop", [[0, "Pouca"], [1, "Normal"], [2, "Muita"], [3, "Insana"]],
+		{3: "A cidade inteira cheia. Barulho aqui vira horda."}))
+	_secao(g, "Velocidade", _seg("z_vel", [["lentos", "Lentos"], ["rapidos", "Rápidos"], ["corredores", "Corredores"], ["misto", "Misturado"]],
+		{"lentos": "Como na história: lentos, tropeçam, vêm em massa. Andando você escapa.",
+		"rapidos": "Arrastam os pés depressa: andando você não escapa, no trote sim.",
+		"corredores": "Correm quase como você. Só correndo você escapa.",
+		"misto": "A maioria lenta, alguns rápidos e poucos corredores."}))
+	_secao(g, "Força", _seg("z_forca", [[0, "Fraca"], [1, "Normal"], [2, "Sobre-humana"]]))
+	_secao(g, "Resistência", _seg("z_resist", [[0, "Frágil"], [1, "Normal"], [2, "Resistente"]]))
+	_secao(g, "Portas", _seg("z_cog", [[0, "Só batem"], [1, "Abrem"]],
+		{0: "Batem na porta até quebrar (cada pancada chama os outros).", 1: "Abrem portas sem tábuas. Com tábuas, só batendo."}))
+	_secao(g, "Memória", _seg("z_mem", [[0, "Nenhuma"], [1, "Curta"], [2, "Normal"], [3, "Longa"]],
+		{0: "Te perdeu de vista, esquece na hora.", 1: "Procura você uns 20 s.", 2: "Procura você 1 minuto.", 3: "Procura você 2 minutos."}))
+	_secao(g, "Visão", _seg("z_visao", [[0, "Ruim"], [1, "Normal"], [2, "Águia"]]))
+	_secao(g, "Audição", _seg("z_audicao", [[0, "Ruim"], [1, "Normal"], [2, "Exata"]],
+		{2: "Ouvem de mais longe e vão direto no lugar do barulho."}))
+	_secao(g, "O vírus passa por", _seg("z_trans", [[0, "Sangue e saliva"], [1, "Só mordida"], [2, "Ninguém pega"]],
+		{0: "Mordida passa sempre; laceração às vezes; arranhão raramente.", 2: "Ferimentos só machucam: ninguém vira infectado."}))
+	_secao(g, "O vírus mata em", _seg("z_morte", [[0, "Horas"], [1, "1-2 dias"], [2, "2-3 dias"], [3, "1 semana"]]))
+	_secao(g, "Puxar para o chão", _seg("z_derrubar", [[true, "Sim"], [false, "Não"]],
+		{true: "Três infectados te acertando juntos te derrubam (morte)."}))
+	_secao(g, "Reaparecem", _seg("z_reaparecer", [[true, "Sim"], [false, "Não"]],
+		{true: "Lugar que você limpou volta a ter infectados depois de 3 dias sem ninguém por perto."}))
+	_secao(g, "Andam", _seg("z_ativos", [["ambos", "Dia e noite"], ["dia", "Só de dia"], ["noite", "Só de noite"]],
+		{"dia": "De noite ficam parados e quase não sentem nada.", "noite": "De dia ficam parados e quase não sentem nada."}))
 	return _rolavel(g)
 
 func _pagina_ajuda(v: float) -> Control:

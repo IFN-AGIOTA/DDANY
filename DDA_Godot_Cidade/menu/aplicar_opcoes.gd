@@ -37,10 +37,21 @@ func _ready() -> void:
 	filtro = FiltroCls.new()
 	filtro.name = "FiltroTela"
 	add_child(filtro)
-	Config.mudou.connect(func(_k): aplicar())
+	Config.mudou.connect(aplicar)
 	aplicar()
 
-func aplicar() -> void:
+# 0.89: opções que só mexem na câmera/controle do jogador. Trocar uma delas (tecla F = 1ª/3ª pessoa, botão do meio =
+# ombro, sensibilidade...) NÃO reaplica gráficos, texturas, modelos, luzes e chunks: antes cada troca de câmera
+# travava o jogo por ~0,5 s.
+const SO_JOGADOR := ["cam", "pos", "dist", "fov", "sens", "inv", "msens", "msens_mira", "minv", "gsens", "gyro_inv",
+	"gyro_zero", "ctrl", "vib"]
+
+func aplicar(chave := "") -> void:
+	if chave in SO_JOGADOR:
+		_aplicar_jogador()
+		return
+	if chave.begins_with("z_"):
+		return                          # 0.89: regras dos infectados (lidas na hora por inimigos/regras_infectados.gd)
 	var o: Dictionary = Config.o
 	var g: Dictionary = Config.g
 	# som e tela (valem no menu também)
@@ -68,6 +79,19 @@ func aplicar() -> void:
 	filtro.definir(float(g["bri"]) / 100.0, float(g["con"]) / 100.0, float(g["sat"]) / 100.0, bool(g["vig"]))
 	if main == null:
 		return
+	_aplicar_jogador()
+	var j = main.get("jogador")
+	if j != null and is_instance_valid(j):
+		j.camera.far = alcance_visao()
+		var sf = j.find_child("SombraFalsa", true, false)
+		if sf != null:
+			sf.visible = int(g["shad"]) >= 1
+	_aplicar_resto(o, g, j)
+
+func _aplicar_jogador() -> void:
+	if main == null:
+		return
+	var o: Dictionary = Config.o
 	var j = main.get("jogador")
 	if j != null and is_instance_valid(j):
 		j.sensibilidade = float(o["sens"]) / 100.0
@@ -85,10 +109,8 @@ func aplicar() -> void:
 		j.sens_mouse = float(o.get("msens", 100)) / 100.0
 		j.sens_mouse_mira = float(o.get("msens_mira", 70)) / 100.0
 		j.inverter_y_mouse = bool(o.get("minv", false))
-		j.camera.far = alcance_visao()
-		var sf = j.find_child("SombraFalsa", true, false)
-		if sf != null:
-			sf.visible = int(g["shad"]) >= 1
+
+func _aplicar_resto(o: Dictionary, g: Dictionary, j) -> void:
 	# 0.84: detalhes dos efeitos (fumaça no horizonte, poeira e marcas dos tiros)
 	var jg = main.get("jogo")
 	if jg != null and is_instance_valid(jg):

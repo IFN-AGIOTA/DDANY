@@ -50,6 +50,42 @@ func _girar(nome: String) -> Array:
 	j._mirar_ligado = false
 	return [ruins, total]
 
+# 0.89: TREMOR. Com tudo parado (ou girando devagar) a câmera não pode ficar pulando de um quadro para o outro.
+# Mede o maior passo da câmera entre dois quadros: parada (deveria ser ~0) e girando 0.01 rad por quadro.
+func _tremor(nome: String) -> Array:
+	var pior_parado := 0.0
+	var pior_giro := 0.0
+	var vai_volta := 0                      # tremor de verdade: a distância encolhe e estica e encolhe de novo
+	for mira in [false, true]:
+		j._mirar_ligado = mira
+		for k in 8:
+			j.cam_yaw = k * TAU / 8.0
+			j.cam_pit = 0.15
+			await q(25)
+			var antes: Vector3 = j.camera.global_position
+			for f in 30:
+				await q(1)
+				var agora: Vector3 = j.camera.global_position
+				pior_parado = maxf(pior_parado, agora.distance_to(antes))
+				antes = agora
+			# girando devagar: o passo esperado é ~ distância * 0.01; um pulo bem maior que isso é tremor
+			var d_prev: float = (j.camera.global_position - j._pivo.global_position).length()
+			var sinal_ant := 0
+			for f in 40:
+				j.cam_yaw += 0.01
+				await q(1)
+				var d: float = (j.camera.global_position - j._pivo.global_position).length()
+				pior_giro = maxf(pior_giro, absf(d - d_prev))
+				var sn := 0 if absf(d - d_prev) < 0.02 else (1 if d > d_prev else -1)
+				if sn != 0:
+					if sinal_ant != 0 and sn != sinal_ant:
+						vai_volta += 1
+					sinal_ant = sn
+				d_prev = d
+	j._mirar_ligado = false
+	print("    %s: tremor parada %.3f m · maior pulo girando %.3f m · vai-e-volta %d" % [nome, pior_parado, pior_giro, vai_volta])
+	return [pior_parado, pior_giro, vai_volta]
+
 func _r():
 	await q(20)
 	m = current_scene
@@ -87,6 +123,9 @@ func _r():
 		var r1: Array = await _girar("patamar")
 		print("  patamar da escada (prédio %d): %d de %d posições ruins" % [i, r1[0], r1[1]])
 		ok(r1[0] == 0, "patamar da escada: câmera não atravessa parede")
+		var t1: Array = await _tremor("patamar")
+		ok(t1[0] < 0.01, "patamar: câmera parada não treme (%.3f m)" % t1[0])
+		ok(t1[2] <= 2, "patamar: girando, a câmera não fica indo e voltando (%d vezes)" % t1[2])
 		m.interiores.fechar(i)
 		feito += 1
 		if feito >= 1:
@@ -106,5 +145,8 @@ func _r():
 	var r2: Array = await _girar("corredor")
 	print("  corredor da delegacia: %d de %d posições ruins" % [r2[0], r2[1]])
 	ok(r2[0] == 0, "corredor: câmera não atravessa parede")
+	var t2: Array = await _tremor("corredor")
+	ok(t2[0] < 0.01, "corredor: câmera parada não treme (%.3f m)" % t2[0])
+	ok(t2[2] <= 2, "corredor: girando, a câmera não fica indo e voltando (%d vezes)" % t2[2])
 	print("falhas: ", falhas)
 	quit()

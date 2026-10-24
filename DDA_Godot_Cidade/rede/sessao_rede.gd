@@ -11,7 +11,8 @@ extends Node
 #   · INFECTADOS: só o host cria e controla (nascem em volta de TODOS e caçam qualquer um). 10x/s ele manda a cada
 #     amigo os que estão perto dele (Rede.enviar_infectados); o amigo mostra cópias (vago.gd "remoto").
 #     "inf_ani" (ataque, levar golpe, morte) · "inf_dano" (tiro/golpe de um amigo -> host aplica) ·
-#     "mordida" (infectado do host mordeu um amigo -> o aparelho dele leva o dano).
+#     "mordida" (infectado do host mordeu um amigo -> o aparelho dele leva o dano; 0.89: com o tipo do golpe),
+#     "agarrado" (0.89: um infectado do host segurou o amigo: ele anda devagar um instante).
 #   · ITENS NO CHÃO: cada um tem um uid (inventario/item_mundo.gd). "item_solto" = alguém largou (aparece para
 #     todos) · "item_pego" = alguém pegou (some para todos). Os que nascem iguais em todo aparelho (chão dos
 #     prédios, base) já têm uid fixo; os pegos ficam em loot_mundo.pegos e não voltam a aparecer.
@@ -244,9 +245,13 @@ func _evento(id: int, tipo: String, d: Dictionary) -> void:
 			_abate(id, d)
 		"mordida":
 			if id == 1 and not jogador.morto:
-				jogador.receber_ataque(float(d.get("d", 10.0)), float(d.get("c", 0.3)), d.get("o", jogador.global_position))
+				jogador.receber_ataque(float(d.get("d", 10.0)), float(d.get("c", 0.3)), d.get("o", jogador.global_position), str(d.get("t", "")))
 				if main.vagos != null:
 					main.vagos.atacou_jogador.emit(float(d.get("d", 10.0)))
+					main.vagos._contar_golpe(str(d.get("o", "")))       # 0.89: puxar para o chão também no aparelho do amigo
+		"agarrado":
+			if id == 1 and not jogador.morto:
+				jogador.agarrar(float(d.get("t", 0.9)))
 		"item_solto":
 			_item_solto(d)
 		"item_pego":
@@ -281,7 +286,7 @@ func _tiro_remoto(id: int, d: Dictionary) -> void:
 		jogador.armas.efeitos.tracante(de, para, float(W.get("v", 400.0)), float(W.get("tl", 5.0)), 0, Vector3.UP)
 	# os infectados DESTE aparelho também ouvem o tiro do outro
 	if main.vagos != null:
-		main.vagos.barulho(r.global_position, float(W.get("ruido", 30.0)) * (0.22 if d.get("s", false) else 1.0), false)
+		main.vagos.barulho(r.global_position, float(W.get("ruido", 30.0)) * jogador.armas.MULT_RUIDO_TIRO * (0.22 if d.get("s", false) else 1.0), false)
 
 func _aplicar_mundo(d: Dictionary) -> void:
 	if not Rede.eh_cliente() or main.clima == null or not d.has("clima"):

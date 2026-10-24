@@ -203,6 +203,8 @@ func _atropelar(vel: Vector3) -> void:
 		var dano := vel.length() * DANO_ATROPELAR
 		if v.has_method("receber_golpe"):
 			v.receber_golpe(dano, frente, motorista)
+			if v.has_method("derrubar") and int(v.get("estado")) != 4:
+				v.derrubar()                         # 0.89: quem não morre vai para o chão
 		linear_velocity *= 0.93
 		motor = maxf(0.0, motor - 0.01)
 

@@ -91,8 +91,12 @@ func levar_dano(dano: float, cabeca: bool, direcao: Vector3, golpe: bool) -> Dic
 	return {"cabeca": cabeca, "morto": false}
 
 # um infectado do HOST mordeu este amigo: o dano vai para o aparelho dele (rede/sessao_rede.gd "mordida")
-func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3) -> void:
-	Rede.enviar_evento("mordida", {"d": dano, "c": chance_sangrar, "o": origem}, id)
+func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3, tipo := "") -> void:
+	Rede.enviar_evento("mordida", {"d": dano, "c": chance_sangrar, "o": origem, "t": tipo}, id)
+
+# 0.89: um infectado do host agarrou este amigo (ele anda devagar um instante no aparelho dele)
+func agarrar(t: float) -> void:
+	Rede.enviar_evento("agarrado", {"t": t}, id)
 
 # ---------- o que chega pela rede ----------
 # estado (rede/sessao_rede.gd monta): [pos, yaw, vel, bits, arma, aim, since]

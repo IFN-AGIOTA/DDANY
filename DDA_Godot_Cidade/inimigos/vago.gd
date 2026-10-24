@@ -6,16 +6,15 @@ extends CharacterBody3D
 #      se continuar vendo/ouvindo, a suspeita sobe até perseguir; se não, vai ver o que era)
 #   -> INVESTIGANDO "?" (anda até o lugar e olha em volta) -> PERSEGUINDO "!" (corre atrás do jogador)
 #   -> ATACANDO (prepara 0,4 s e golpeia) · MORTO.
-# Reage a SOM (passos conforme a velocidade, tiros, tosse, grito do gritador), LUZ (lanterna à noite) e
+# Reage a SOM (passos conforme a velocidade, tiros, tosse, portas), LUZ (lanterna à noite) e
 # MOVIMENTO (parado você é visto bem mais perto; correndo, de mais longe e até de lado, fora do cone).
 # 0.80 · PERCEPÇÃO: VISÃO só com LINHA DE VISÃO livre (paredes, móveis e carros pela física; prédios e locais
 # fechados de longe pelos dados do mapa: _linha_livre) — atrás da parede ele não vê, nem colado nela. AUDIÇÃO é um
 # CÍRCULO do tamanho do barulho; com parede no meio o som sai abafado (círculo x ABAFADO). Ouvir NUNCA diz onde
 # você está: ele vai até o lugar do barulho (com erro, maior de longe) e só persegue se te VIR. Perdeu de vista:
 # segue a posição exata só por MEMORIA s, depois vai ao último lugar visto/ouvido. Ataca só com a linha livre.
-# Sentidos: AUDIÇÃO (o gerente avisa tiros e passos do jogador) e VISÃO (cone de 110° à frente, 38 m de dia,
-# ~14 m à noite, menos se o jogador estiver agachado; o raio de visão bate nas paredes = camada 1).
-# Fora de vista por ~TEMPO_ESQUECER ele PERDE você: vai até o último lugar onde te viu, olha em volta e volta a vagar.
+# Sentidos: AUDIÇÃO (o gerente avisa tiros e passos do jogador) e VISÃO (o raio de visão bate nas paredes =
+# camada 1); alcances, cone e memória: ver 0.89 abaixo.
 # Movimento (barato para o celular): anda "por conta" na altura do chão (mundo.altura), batendo e deslizando
 # nas plantas dos prédios e nos obstáculos (carros, barreiras) pelos dados do mapa, sem motor de física.
 # Só perto do jogador (~20 m) E perto de um prédio/local com interior aberto usa a física de verdade
@@ -28,13 +27,27 @@ extends CharacterBody3D
 # Colisão: camada 3 (valor 4) · máscara 1. Forma 0 = corpo (cápsula) · forma 1 = cabeça (esfera).
 # Sons sintetizados por código uma vez só (gemidos, rosnado do ataque, baque) e divididos entre todos.
 #
-# TIPOS (sorteados ao nascer, TIPOS abaixo): comum · CORREDOR (rápido e frágil) · PESADO (aguenta muito e bate
-# forte) · GRITADOR (quando vê você, grita e chama os outros num raio grande).
-# À noite, a LANTERNA acesa faz o jogador ser visto de longe (mínimo 30 m).
+# 0.89 · ESTILO PROJECT ZOMBOID (números em inimigos/regras_infectados.gd, opções em Opções › Infectados):
+#   · ANDAR: lento ("shambler", o padrão da lore: lento e tropeça), rápido ("fast shambler"), corredor ("sprinter")
+#     ou RASTEJANTE (perna ruim: de bruços, 1/5 da velocidade, morde o tornozelo). O "lento" tropeça às vezes.
+#   · VISÃO: cone de 120° à frente, ~22 m de dia; no escuro só de pertinho (a lanterna acesa denuncia), chuva e
+#     neblina atrapalham. Agachado, parado ou no capim você aparece menos. CHEIRO (lore): sente quem está a 3,5 m
+#     (9 m se estiver sangrando), até do outro lado da parede (pela metade).
+#   · MEMÓRIA: perdeu você de vista, vai até onde te viu e continua procurando para o lado em que você foi
+#     (nenhuma 3 s · curta 20 s · normal 60 s · longa 120 s); depois desiste.
+#   · MANADA: vê outro infectado caçando perto e vai atrás dele (inimigos/vagos.gd).
+#   · INVESTIDA: caçando, a 1,3-2,4 m dá um bote rápido; o golpe pode te AGARRAR (você fica lento um instante).
+#   · DERRUBADO: golpe forte (ou carro) o derruba; fica no chão uns segundos e LEVANTA (no chão leva mais dano;
+#     com você em cima dele não levanta). Muito ferido, pode virar rastejante.
+#   · FINGINDO DE MORTO: alguns ficam deitados no chão como corpos e levantam quando você chega perto.
+#   · BARREIRA BAIXA (concreto, entulho): tomba por cima e cai do outro lado; carro e caçamba ele contorna.
+#   · PORTAS: bate até quebrar (cada pancada chama os outros); com "Inteligência: abrem portas", abre a porta
+#     que não tem tábuas.
+# (0.89: os tipos antigos "pesado" e "gritador" saíram: não existem no Project Zomboid nem na lore)
 # Golpe corpo a corpo atordoa conforme a força, e depois de atordoado ele fica ~1 s sem poder ser atordoado
 # de novo (não dá para travar um infectado só batendo).
-# Mexa AQUI para: velocidade, vida, dano, alcance da visão/ataque, tempo para desistir, chance de loot,
-# quanto tempo o corpo fica no chão (constantes logo abaixo) e os TIPOS.
+# Mexa AQUI para: dano, alcance do ataque, chance de loot, quanto tempo o corpo fica no chão (constantes logo
+# abaixo). Velocidades, visão, audição, cheiro, memória e ferimentos: inimigos/regras_infectados.gd.
 
 signal morreu(vago: Node, cabeca: bool)
 
@@ -44,41 +57,28 @@ const ItemCls := preload("res://inventario/item.gd")
 const SonsCorpo := preload("res://audio/sons_corpo.gd")
 const SonsBaixados := preload("res://audio/sons_baixados.gd")
 const PortaCls := preload("res://mundo/porta.gd")
+const Regras := preload("res://inimigos/regras_infectados.gd")
 const DANO_PORTA := 2.2                # 0.73: golpe na porta = mordida x isso (porta 100, tábua 140)
 
 # ----- números do Vago -----
 const VIDA := 100.0
 const CABECA_X := 3.0                 # tiro na cabeça = dano x3 (igual ao estande)
-const VEL_VAGAR_MIN := 0.55           # andando à toa (m/s)
-const VEL_VAGAR_MAX := 0.9
-const VEL_INVESTIGAR := 1.2
-const VEL_CORRER := 5.2               # perseguindo (o jogador correndo faz 7,2)
 const DIST_ATAQUE := 1.4
 const PREPARO_ATAQUE := 0.4           # tempo entre começar o golpe e acertar
 const RECARGA_ATAQUE := 1.3
 const DANO_MIN := 8.0
 const DANO_MAX := 14.0
 const CHANCE_SANGRAR := 0.3
-const VISAO_DIA := 38.0
-const VISAO_NOITE := 14.0
-const ANGULO_VISAO := 110.0           # graus (cone à frente)
 const FATOR_AGACHADO := 0.55
-const TEMPO_ESQUECER := 8.0           # segundos sem ver o jogador até desistir
 const DIST_FISICA := 20.0             # física de verdade só a menos disso do jogador e perto de interior aberto
 const DIST_FISICA_CACANDO := 26.0     # 0.79: perseguindo/atacando, física de verdade a menos disso (bate em tudo)
 const CHANCE_LOOT := 0.25
 const LOOT := ["bandagem", "feijao", "agua", "mun_9mm"]
-const VISAO_LANTERNA := 30.0          # de noite, com a lanterna acesa, é visto pelo menos daqui
 const IMUNE_ATORDOAR := 1.0           # depois de atordoado por golpe, fica esse tempo sem atordoar de novo
-const RAIO_GRITO := 55.0
 # tipo: [chance, vida, velocidade (x), dano (x), escala do corpo]
-const TIPOS := {
-	"comum": [0.65, 100.0, 1.0, 1.0, 1.0],
-	"corredor": [0.15, 70.0, 1.22, 0.85, 0.95],
-	"pesado": [0.12, 220.0, 0.72, 1.45, 1.12],
-	"gritador": [0.08, 90.0, 1.0, 1.0, 1.0],
-}
-const TEMPO_CORPO := 90.0             # o corpo fica no chão esse tempo e depois afunda
+# 0.89: o jeito de andar vem da opção Velocidade (Regras.sortear_classe); a vida e a força, das opções Resistência e Força
+const CLASSES := ["lento", "rapido", "corredor", "rastejante"]
+const TEMPO_CORPO := 240.0            # o corpo fica no chão esse tempo e depois afunda (0.89: mais tempo)
 const ALCANCE_SOM := 40.0
 
 const VAGANDO := 0
@@ -87,7 +87,13 @@ const PERSEGUINDO := 2
 const ATACANDO := 3
 const MORTO := 4
 const DESCONFIADO := 5                 # 0.65: parado, olhando para o que ouviu/viu ("hm?")
-const NOMES := ["vagando", "investigando", "perseguindo", "atacando", "morto", "desconfiado"]
+const CAIDO := 6                       # 0.89: derrubado no chão
+const LEVANTANDO := 7                  # 0.89: levantando do chão
+const FINGINDO := 8                    # 0.89: deitado "fingindo de morto"
+const NOMES := ["vagando", "investigando", "perseguindo", "atacando", "morto", "desconfiado", "caído", "levantando", "fingindo"]
+const PERTO_FINGINDO := 2.5            # quem finge de morto levanta quando você chega a isso
+const DIST_INVESTIDA := Vector2(1.3, 2.4)
+const BARREIRA_BAIXA := 1.15           # obstáculo até essa altura: tomba por cima
 const TEMPO_DESCONFIAR := Vector2(1.5, 3.0)
 const VISAO_PARADO := 0.6              # jogador parado: visto só a 60% da distância
 const VISAO_CORRENDO := 1.25           # correndo: de mais longe
@@ -112,9 +118,25 @@ var separacao := Vector3.ZERO         # empurrão para não se amontoar (o geren
 var morto_ha := 0.0
 var dist_jogador := 999.0
 var tipo := "comum"
+var classe := "lento"                  # 0.89: lento · rapido · corredor · rastejante
+var da_horda := false                  # 0.89: veio da população (inimigos/horda.gd): longe, volta a ser grupo
+var _vida_max := VIDA
+var _vel_ir := 0.85                    # 0.89: indo atrás de barulho / seguindo a manada
+var _t_caido := 0.0
+var _t_levantar := 0.0
+var _vai_rastejar := false             # ao "levantar", vira rastejante
+var _depois_levantar := VAGANDO
+var _t_tropeco := 6.0
+var _tropecando := 0.0
+var _investida := 0.0
+var _recarga_investida := 0.0
+var _t_manada := 0.0
+var _penultimo := Vector3.INF          # 0.89: penúltimo lugar onde te viu (para saber para que lado você foi)
+var _pulando := 0.0                    # 0.89: > 0 = tombando por cima de uma barreira baixa
+var _pulo_de := Vector3.ZERO
+var _pulo_para := Vector3.ZERO
 var _mult_dano := 1.0
 var _imune := 0.0
-var _gritou := false
 var som2: AudioStreamPlayer3D          # segundo canal: o baque do tiro não corta o gemido
 var _t_passo := 0.0
 var _dt_longe := 0.0
@@ -127,7 +149,7 @@ var _fisica := false
 var _destino := Vector3.ZERO
 var _vel_alvo := 0.0
 var _vel_vagar := 0.8
-var _vel_correr := VEL_CORRER
+var _vel_correr := 1.0
 var _fator_andar := 1.0                # jeito de andar do modelo (inimigos/modelo_infectado.gd fator_vel)
 var _espera := 0.0
 var _olhando := false
@@ -209,20 +231,17 @@ func _ready() -> void:
 	if semente_modelo < 0:
 		semente_modelo = randi() % 16000000
 	modelo.montar(semente_modelo)
-	# tipo de infectado
-	if tipo_fixo != "" and TIPOS.has(tipo_fixo):
-		tipo = tipo_fixo
-	else:
-		var x := randf()
-		for t in TIPOS:
-			x -= float(TIPOS[t][0])
-			if x <= 0.0:
-				tipo = t
-				break
-	var td: Array = TIPOS[tipo]
-	vida = float(td[1])
-	_mult_dano = float(td[3])
-	modelo.scale *= float(td[4])
+	# 0.89: jeito de andar pela opção Velocidade (Project Zomboid); o host manda o mesmo para a rede (tipo)
+	if tipo_fixo in CLASSES:
+		classe = tipo_fixo
+	elif not remoto:
+		classe = Regras.sortear_classe()
+		if randf() < Regras.CHANCE_RASTEJANTE:
+			classe = "rastejante"
+	tipo = classe
+	vida = VIDA * Regras.mult_vida()
+	_vida_max = vida
+	_mult_dano = Regras.mult_forca()
 	som = AudioStreamPlayer3D.new()
 	som.max_distance = ALCANCE_SOM
 	som.unit_size = 5.0
@@ -238,9 +257,10 @@ func _ready() -> void:
 	_consulta = PhysicsRayQueryParameters3D.new()
 	_consulta.collision_mask = 1
 	_fator_andar = modelo.fator_vel() if modelo.has_method("fator_vel") else 1.0
-	_vel_vagar = randf_range(VEL_VAGAR_MIN, VEL_VAGAR_MAX) * _fator_andar
-	_vel_correr = VEL_CORRER * randf_range(0.88, 1.04) * float(TIPOS[tipo][2])
-	_vel_vagar *= float(TIPOS[tipo][2])
+	_definir_velocidades()
+	_t_tropeco = randf_range(4.0, 10.0)
+	if classe == "rastejante":
+		_virar_rastejante()
 	_t_grunhido = randf_range(1.0, 10.0)
 	_t_sentidos = randf() * 0.25
 	_lado = 1.0 if randf() < 0.5 else -1.0
@@ -249,6 +269,35 @@ func _ready() -> void:
 	_espera = randf_range(0.0, 3.0)
 	_rede_pos = global_position
 	_rede_yaw = rotation.y
+	# 0.89 · FINGINDO DE MORTO: alguns da horda ficam deitados como corpos (levantam quando você chega perto)
+	if da_horda and not remoto and classe != "rastejante" and randf() < Regras.CHANCE_FINGINDO:
+		estado = FINGINDO
+		modelo.deitado()
+		_colisao_deitado(true)
+
+func _definir_velocidades() -> void:
+	_vel_vagar = Regras.vel(classe, "vagar") * (_fator_andar if classe == "lento" else 1.0)
+	_vel_ir = Regras.vel(classe, "ir")
+	_vel_correr = Regras.vel(classe, "cacar")
+
+# 0.89 · RASTEJANTE: de bruços (modelo), devagar, a colisão deitada
+func _virar_rastejante() -> void:
+	classe = "rastejante"
+	tipo = "rastejante"
+	_definir_velocidades()
+	modelo.rastejante = true
+	_colisao_deitado(true)
+
+# deitado (caído, fingindo, rastejante): o corpo vira uma cápsula deitada rente ao chão (os tiros acertam embaixo)
+func _colisao_deitado(sim: bool) -> void:
+	if _forma_corpo == null:
+		return
+	if sim:
+		_forma_corpo.rotation = Vector3(PI / 2.0, 0.0, 0.0)
+		_forma_corpo.position = Vector3(0, 0.3, 0)
+	else:
+		_forma_corpo.rotation = Vector3.ZERO
+		_forma_corpo.position = Vector3(0, 0.88, 0)
 
 # ---------- multijogador: cópia que segue o host ----------
 func receber_rede(pos: Vector3, yaw: float, vel: float, est: int) -> void:
@@ -282,7 +331,22 @@ func _seguir_rede(dt: float) -> void:
 		global_position = p.lerp(_rede_pos, minf(1.0, dt * 10.0))
 	rotation.y = lerp_angle(rotation.y, _rede_yaw, minf(1.0, dt * 10.0))
 	_vel_h = _rede_vel
+	var antes := estado
 	estado = _rede_estado if _rede_estado != MORTO else estado
+	# 0.89: no chão / levantando / fingindo, igual ao host
+	if estado != antes:
+		if estado == CAIDO and antes != FINGINDO:
+			modelo.cair()
+			_colisao_deitado(true)
+		elif estado == FINGINDO:
+			modelo.deitado()
+			_colisao_deitado(true)
+		elif estado == LEVANTANDO:
+			modelo.levantar()
+			_colisao_deitado(classe == "rastejante")
+		elif antes == CAIDO or antes == FINGINDO:
+			modelo.caido = false
+			_colisao_deitado(classe == "rastejante")
 	var j = gerente.jogador if gerente != null else null
 	if j != null and is_instance_valid(j):
 		var pj: Vector3 = j.global_position
@@ -293,25 +357,42 @@ func _seguir_rede(dt: float) -> void:
 		if dist_jogador < ALCANCE_SOM + 5.0:
 			_tocar("gemido%d" % (randi() % 4), randf_range(0.85, 1.15), 0.0)
 
+# cliente: o host avisou que ele virou rastejante
+func rede_tipo(t: String) -> void:
+	if t == "rastejante" and classe != "rastejante":
+		_virar_rastejante()
+
 # ---------- ordens do gerente ----------
 # barulho em "pos" com alcance "raio" (do_jogador = foi o jogador que fez: tiro, passos)
 func ouvir(pos: Vector3, raio: float, do_jogador: bool) -> void:
 	if estado == MORTO or remoto:          # cópia: quem ouve é o Vago do host
 		return
 	var d := global_position.distance_to(pos)
+	if gerente != null and not Regras.ativo_agora(gerente.escuridao()):
+		raio *= 0.4                                  # 0.89: fora do horário em que andam: quase não ouvem
 	if d > raio:
 		return
 	# 0.80 · CÍRCULO DE AUDIÇÃO: com parede/prédio no meio o som chega abafado (círculo menor)
 	if not _linha_livre(global_position + Vector3(0, 1.55, 0), pos + Vector3(0, 1.0, 0)):
 		if d > raio * ABAFADO:
 			return
-	var erro := minf(d * 0.12, 8.0)                  # de longe ele só sabe mais ou menos de onde veio
+	# de longe ele só sabe mais ou menos de onde veio (0.89: a opção Audição muda o erro; "exata" acerta o ponto)
+	var erro := minf(d * 0.12, 8.0) * Regras.erro_audicao()
 	var onde := pos + Vector3(randf_range(-erro, erro), 0.0, randf_range(-erro, erro))
+	if estado == FINGINDO:
+		if d < 4.0:
+			_acordar()                               # barulho bem do lado: levanta
+		return
+	if estado == CAIDO or estado == LEVANTANDO:
+		if _depois_levantar != PERSEGUINDO:
+			_depois_levantar = INVESTIGANDO          # levanta e vai ver
+			_destino = onde
+		return
 	if estado == PERSEGUINDO or estado == ATACANDO:
 		# já está atrás de alguém que sumiu de vista: o barulho mostra para onde ir (não a posição exata agora)
 		if do_jogador and _t_sem_ver >= MEMORIA:
 			_ultimo_visto = onde
-			_t_sem_ver = clampf(_t_sem_ver, MEMORIA + 0.01, TEMPO_ESQUECER * 0.5)
+			_t_sem_ver = clampf(_t_sem_ver, MEMORIA + 0.01, Regras.memoria() * 0.5)
 		return
 	# ouvir não é ver: vai até o lugar do barulho e só persegue se te VIR lá
 	if raio >= RUIDO_INVESTIGAR or estado == INVESTIGANDO or d < 4.0:
@@ -321,7 +402,7 @@ func ouvir(pos: Vector3, raio: float, do_jogador: bool) -> void:
 
 # DESCONFIADO (0.65): para, vira para "pos" e escuta/olha um pouco antes de decidir
 func desconfiar(pos: Vector3) -> void:
-	if estado == MORTO or esta_cacando():
+	if estado == MORTO or esta_cacando() or _no_chao():
 		return
 	_foco = pos
 	if estado != DESCONFIADO:
@@ -335,6 +416,11 @@ func desconfiar(pos: Vector3) -> void:
 func investigar(pos: Vector3) -> void:
 	if estado == MORTO:
 		return
+	if _no_chao():
+		_destino = pos
+		if _depois_levantar != PERSEGUINDO:
+			_depois_levantar = INVESTIGANDO
+		return
 	estado = INVESTIGANDO
 	_destino = pos
 	_espera = 0.0
@@ -343,17 +429,48 @@ func investigar(pos: Vector3) -> void:
 func perseguir() -> void:
 	if estado == MORTO or estado == PERSEGUINDO or estado == ATACANDO:
 		return
+	if estado == FINGINDO:
+		_acordar()
+		return
+	if estado == CAIDO or estado == LEVANTANDO:
+		_depois_levantar = PERSEGUINDO
+		return
 	estado = PERSEGUINDO
 	_suspeita = 1.0
 	_t_alerta = 1.6
-	if tipo == "gritador" and not _gritou:
-		_gritou = true                                  # grita uma vez: os outros num raio grande vêm ver
-		_tocar("rosnado", 1.45, 6.0)
-		if gerente != null:
-			gerente.barulho(global_position, RAIO_GRITO, false)
-	elif randf() < 0.7:
+	if randf() < 0.7:
 		_tocar("rosnado", randf_range(0.85, 1.1), 2.0)
 	_t_grunhido = randf_range(2.0, 4.0)
+
+# 0.89: no chão (caído, levantando ou fingindo de morto): não anda nem ataca
+func _no_chao() -> bool:
+	return estado == CAIDO or estado == LEVANTANDO or estado == FINGINDO
+
+# 0.89 · MANADA (Project Zomboid): outro infectado perto está caçando -> vai atrás dele (para onde ele vai)
+func seguir_manada(lider: Node) -> void:
+	if remoto or _t_manada > 0.0 or estado == MORTO or esta_cacando() or _no_chao():
+		return
+	if not is_instance_valid(lider):
+		return
+	_t_manada = 2.0
+	var alvo: Vector3 = lider._destino if lider._destino != Vector3.ZERO else lider.global_position
+	if lider._alvo != null and is_instance_valid(lider._alvo) and float(lider._t_sem_ver) < 1.0:
+		alvo = lider._alvo.global_position
+	investigar(alvo + Vector3(randf_range(-2.0, 2.0), 0.0, randf_range(-2.0, 2.0)))
+
+# 0.89 · quem fingia de morto levanta (com um rosnado) e vem
+func _acordar() -> void:
+	if estado != FINGINDO:
+		return
+	estado = CAIDO
+	_t_caido = 0.0
+	_depois_levantar = PERSEGUINDO
+	if gerente != null:
+		_alvo = gerente.alvo_para(self)
+		if _alvo != null:
+			_ultimo_visto = _alvo.global_position
+			_t_sem_ver = 0.0
+	_tocar("rosnado", randf_range(0.85, 1.0), 2.0)
 
 func vagar() -> void:
 	if estado == MORTO:
@@ -380,7 +497,8 @@ func receber_tiro(dano: float, _ponto: Vector3, direcao: Vector3, forma: int, at
 		return {"cabeca": cabeca, "morto": false}
 	_quem_bateu = int(atirador.get("id")) if atirador != null and atirador.get("id") != null else 1
 	vida -= dano * (CABECA_X if cabeca else 1.0)
-	modelo.levar_golpe(0.9 if cabeca else 0.6, lado)
+	if not _no_chao():
+		modelo.levar_golpe(0.9 if cabeca else 0.6, lado)
 	_tocar("baque", randf_range(0.9, 1.15), -2.0, true)
 	if gerente != null and vida > 0.0:
 		gerente.rede_ani(self, "golpe", {"f": 0.9 if cabeca else 0.6, "l": lado})
@@ -389,6 +507,8 @@ func receber_tiro(dano: float, _ponto: Vector3, direcao: Vector3, forma: int, at
 		return {"cabeca": cabeca, "morto": true}
 	_atordoado = maxf(_atordoado, 0.22)
 	_cancelar_ataque()
+	if estado == FINGINDO:
+		_acordar()
 	_alertar(atirador)
 	return {"cabeca": cabeca, "morto": false}
 
@@ -402,19 +522,30 @@ func receber_golpe(dano: float, direcao: Vector3, atacante: Node) -> Dictionary:
 			gerente.rede_dano(self, dano, 0, direcao, true)
 		return {"cabeca": false, "morto": false}
 	_quem_bateu = int(atacante.get("id")) if atacante != null and atacante.get("id") != null else 1
-	vida -= dano
-	if gerente != null and vida > 0.0:
+	var no_chao := _no_chao() or classe == "rastejante"
+	vida -= dano * (1.8 if no_chao else 1.0)          # 0.89: no chão leva bem mais (golpe de cima / pisão)
+	if gerente != null and vida > 0.0 and not no_chao:
 		gerente.rede_ani(self, "golpe", {"f": 1.0, "l": signf(global_basis.x.dot(direcao))})
 	var d := Vector3(direcao.x, 0.0, direcao.z)
-	if d.length_squared() > 0.0001:
+	if d.length_squared() > 0.0001 and not no_chao:
 		_empurrao = d.normalized() * 3.2
-	modelo.levar_golpe(1.0, signf(global_basis.x.dot(direcao)))
+	if not no_chao:
+		modelo.levar_golpe(1.0, signf(global_basis.x.dot(direcao)))
 	_tocar("baque", randf_range(0.75, 0.95), 0.0, true)
 	if vida <= 0.0:
 		_morrer(false, direcao)
 		return {"cabeca": false, "morto": true}
+	if estado == FINGINDO:
+		_acordar()
+	elif not no_chao:
+		# 0.89 · DERRUBAR (Project Zomboid): golpe forte derruba; pelas costas, mais fácil
+		var chance := clampf(dano / 140.0, 0.05, 0.45)
+		if d.length_squared() > 0.0001 and (-global_basis.z).dot(d.normalized()) > 0.3:
+			chance += 0.15
+		if randf() < chance:
+			derrubar()
 	if _imune <= 0.0:
-		_atordoado = maxf(_atordoado, (0.2 + dano / 200.0) * (0.6 if tipo == "pesado" else 1.0))
+		_atordoado = maxf(_atordoado, 0.2 + dano / 200.0)
 		_imune = IMUNE_ATORDOAR
 		if not (estado == ATACANDO and _t_ataque > 0.25):  # já no meio da mordida: não para
 			_cancelar_ataque()
@@ -580,6 +711,10 @@ func _physics_process(dt: float) -> void:
 	_atordoado = maxf(0.0, _atordoado - dt)
 	_imune = maxf(0.0, _imune - dt)
 	_recarga = maxf(0.0, _recarga - dt)
+	_t_manada = maxf(0.0, _t_manada - dt)
+	_recarga_investida = maxf(0.0, _recarga_investida - dt)
+	_investida = maxf(0.0, _investida - dt)
+	_tropecando = maxf(0.0, _tropecando - dt)
 	_decidir(dt, j)
 	_mover(dt)
 	# (a animação roda em _process: só nos quadros que vão para a tela)
@@ -592,7 +727,7 @@ func _physics_process(dt: float) -> void:
 				_n_passo += 1
 				var pg := SonsBaixados.sortear("infectados/passo")
 				som2.stream = pg if pg != null else SonsCorpo.passo(_n_passo)
-				som2.pitch_scale = randf_range(0.8, 0.95) * (0.85 if tipo == "pesado" else 1.0)
+				som2.pitch_scale = randf_range(0.8, 0.95)
 				som2.volume_db = -4.0
 				som2.play()
 	# gemidos
@@ -610,16 +745,23 @@ func _trocar_modo(fisica: bool) -> void:
 	_pos_preso = global_position
 
 func _olhar(j: Node3D) -> void:
-	if bool(j.get("morto")):
-		return
+	if bool(j.get("morto")) or estado == FINGINDO:
+		return                                          # fingindo de morto: quem acorda é a distância (_decidir)
 	var cacando := esta_cacando()
-	var alcance := lerpf(VISAO_DIA, VISAO_NOITE, gerente.escuridao())
+	# 0.89 · VISÃO (Project Zomboid): ~22 m de dia; no escuro só de pertinho; chuva e neblina atrapalham
+	var escuro: float = gerente.escuridao()
+	var alcance := lerpf(Regras.VISAO_DIA, Regras.VISAO_ESCURO, escuro) * Regras.mult_visao()
+	var cl = gerente.clima
+	if cl != null:
+		alcance *= (1.0 - 0.35 * clampf(float(cl.chuva), 0.0, 1.0)) * (1.0 - 0.4 * clampf(float(cl.neblina_manha), 0.0, 1.0))
+	if not Regras.ativo_agora(escuro):
+		alcance *= 0.3                                  # fora do horário em que andam (opção "Ativos")
 	if bool(j.get("agachado")):
 		alcance *= FATOR_AGACHADO
 		if j == gerente.jogador and gerente.mato != null and gerente.mato.no_capim:
 			alcance *= 0.5                              # escondido no capim alto dos parques
-	if j == gerente.jogador and gerente.clima != null and gerente.clima.lanterna_acesa and gerente.escuridao() > 0.5:
-		alcance = maxf(alcance, VISAO_LANTERNA)         # a luz da lanterna denuncia de longe
+	if j == gerente.jogador and cl != null and cl.lanterna_acesa and escuro > 0.5:
+		alcance = maxf(alcance, Regras.VISAO_LANTERNA * Regras.mult_visao())   # a luz da lanterna denuncia
 	# 0.65 · MOVIMENTO: parado é difícil de notar; correndo chama atenção de longe
 	var vj := float(j.get("vel_horizontal")) if j.get("vel_horizontal") != null else 0.0
 	if not cacando:
@@ -636,12 +778,14 @@ func _olhar(j: Node3D) -> void:
 		var no_cone := cacando or dist_jogador < PERTO_SENTIR or estado == DESCONFIADO and dist_jogador < alcance * 0.7
 		if not no_cone and dist_jogador > 0.01:
 			var para := Vector3(pj.x - p.x, 0.0, pj.z - p.z) / dist_jogador
-			no_cone = (-global_basis.z).dot(para) >= cos(deg_to_rad(ANGULO_VISAO * 0.5))
+			no_cone = (-global_basis.z).dot(para) >= cos(deg_to_rad(Regras.CONE * 0.5))
 		if not no_cone and vj > 5.0 and dist_jogador < PERIFERIA_CORRENDO:
 			no_cone = true                              # movimento rápido com o canto do olho
 		if no_cone:                                     # 0.80: sempre com a linha de visão livre (nem colado vê através da parede)
 			visto = _linha_livre(p + Vector3(0, 1.55, 0), pj + Vector3(0, 0.8 if bool(j.get("agachado")) else 1.3, 0))
 	if visto:
+		if _penultimo == Vector3.INF or _penultimo.distance_squared_to(j.global_position) > 1.0:
+			_penultimo = _ultimo_visto                  # para saber para que lado você foi quando sumir
 		_ultimo_visto = j.global_position
 		_t_sem_ver = 0.0
 		if not cacando:
@@ -652,6 +796,27 @@ func _olhar(j: Node3D) -> void:
 				desconfiar(_ultimo_visto)               # viu algo de relance: "hm?"
 	else:
 		_suspeita = maxf(0.0, _suspeita - 0.08)
+		_cheirar(j)
+
+# 0.89 · CHEIRO (lore: "atraídos por barulho e cheiro de gente viva"): bem perto ele sente você mesmo sem ver
+# (atrás dele, no escuro, do outro lado da parede pela metade). Sangrando, de bem mais longe. Vai até o lugar exato.
+func _cheirar(j: Node3D) -> void:
+	if esta_cacando() or _no_chao():
+		return
+	var raio := Regras.CHEIRO
+	var sv = j.get("sobrevivencia")
+	if sv != null and int(sv.get("sangramentos")) > 0:
+		raio = Regras.CHEIRO_SANGUE
+	if dist_jogador > raio:
+		return
+	var p := global_position
+	var pj := j.global_position
+	if not _linha_livre(p + Vector3(0, 1.2, 0), pj + Vector3(0, 1.0, 0)):
+		if dist_jogador > raio * 0.5:
+			return
+	if estado == INVESTIGANDO and _destino.distance_squared_to(pj) < 4.0:
+		return
+	investigar(pj)
 
 # 0.80: nada entre "de" e "ate"? Física (paredes, portas, móveis, carros perto) + prédios e cascas dos locais
 # fechados pelos dados do mapa (de longe não há física)
@@ -675,6 +840,30 @@ func _linha_livre(de: Vector3, ate: Vector3) -> bool:
 func _decidir(dt: float, j: Node3D) -> void:
 	var p := global_position
 	match estado:
+		FINGINDO:
+			_vel_alvo = 0.0
+			if dist_jogador < PERTO_FINGINDO and not bool(j.get("morto")):
+				_acordar()                              # você chegou perto do "corpo"
+		CAIDO:
+			_vel_alvo = 0.0
+			# com alguém em pé em cima dele, não levanta (Project Zomboid)
+			if dist_jogador > 0.75:
+				_t_caido -= dt
+			if _t_caido <= 0.0:
+				if _vai_rastejar:
+					_vai_rastejar = false
+					_virar_rastejante()
+					modelo.caido = false
+					_retomar()
+				else:
+					estado = LEVANTANDO
+					_t_levantar = modelo.levantar()
+					_colisao_deitado(false)
+		LEVANTANDO:
+			_vel_alvo = 0.0
+			_t_levantar -= dt
+			if _t_levantar <= 0.0:
+				_retomar()
 		DESCONFIADO:
 			_vel_alvo = 0.0
 			_t_desconfiar -= dt
@@ -702,12 +891,13 @@ func _decidir(dt: float, j: Node3D) -> void:
 				_espera = randf_range(3.0, 6.0)
 				_vel_alvo = 0.0
 			else:
-				_vel_alvo = VEL_INVESTIGAR * _fator_andar
+				_vel_alvo = _vel_ir
 		PERSEGUINDO:
 			if bool(j.get("morto")):
 				vagar()
 				return
-			if _t_sem_ver > TEMPO_ESQUECER:
+			# 0.89 · MEMÓRIA (opção): depois desse tempo sem te ver, desiste (vai ver o último lugar e volta a vagar)
+			if _t_sem_ver > Regras.memoria():
 				investigar(_ultimo_visto)               # perdeu você de vista
 				if dist_jogador < ALCANCE_SOM:
 					_tocar("gemido%d" % (randi() % 4), randf_range(0.7, 0.8), -2.0)
@@ -715,13 +905,23 @@ func _decidir(dt: float, j: Node3D) -> void:
 			# logo depois de perder de vista ainda "sabe" para onde ele foi (só um instante: 0.80)
 			_destino = j.global_position if _t_sem_ver < MEMORIA else _ultimo_visto
 			if _t_sem_ver >= MEMORIA and _dist_xz(p, _destino) < 1.5:
-				investigar(_ultimo_visto)
+				_procurar_adiante(p)                    # 0.89: chegou onde te viu: continua para o lado em que você foi
 				return
-			_vel_alvo = _vel_correr
-			if dist_jogador < 2.5:
+			_vel_alvo = _vel_correr if _t_sem_ver < 4.0 else _vel_ir     # procurando há tempo: anda
+			var reach := 1.1 if classe == "rastejante" else DIST_ATAQUE
+			if dist_jogador < 2.5 and classe != "rastejante":
 				_vel_alvo = clampf((dist_jogador - 0.95) * 3.0, 0.0, _vel_correr)
+			# 0.89 · INVESTIDA: perto e de frente para você, dá um bote rápido (os lentos também pegam)
+			if classe != "rastejante" and _recarga_investida <= 0.0 and _t_sem_ver < 0.3 \
+					and dist_jogador > DIST_INVESTIDA.x and dist_jogador < DIST_INVESTIDA.y and _atordoado <= 0.0:
+				var para_j := Vector3(j.global_position.x - p.x, 0.0, j.global_position.z - p.z).normalized()
+				if (-global_basis.z).dot(para_j) > 0.8 and randf() < 0.5:
+					_investida = 0.35
+				_recarga_investida = 2.5
+			if _investida > 0.0:
+				_vel_alvo = maxf(_vel_correr, 3.4)
 			var dy := absf(j.global_position.y - p.y)
-			if dist_jogador < DIST_ATAQUE and _recarga <= 0.0 and _t_sem_ver < VISTO_ATAQUE and dy < 1.6 and _atordoado <= 0.0:
+			if dist_jogador < reach and _recarga <= 0.0 and _t_sem_ver < VISTO_ATAQUE and dy < (0.9 if classe == "rastejante" else 1.6) and _atordoado <= 0.0:
 				estado = ATACANDO
 				_t_ataque = 0.0
 				_golpeou = false
@@ -735,12 +935,62 @@ func _decidir(dt: float, j: Node3D) -> void:
 			if not _golpeou and _t_ataque >= PREPARO_ATAQUE:
 				_golpeou = true
 				var dy := absf(j.global_position.y - p.y)
-				if not bool(j.get("morto")) and dist_jogador < DIST_ATAQUE + 0.35 and dy < 1.6 \
+				var reach2 := 1.3 if classe == "rastejante" else DIST_ATAQUE + 0.35
+				if not bool(j.get("morto")) and dist_jogador < reach2 and dy < 1.6 \
 						and _linha_livre(p + Vector3(0, 1.3, 0), j.global_position + Vector3(0, 1.1, 0)):
 					_acertar(j)                         # 0.80: nada de morder através da parede
 				_recarga = RECARGA_ATAQUE
 			if _t_ataque >= PREPARO_ATAQUE + 0.45:
 				estado = PERSEGUINDO
+
+# 0.89 · DERRUBADO: cai e fica t s no chão (golpe forte, carro, tombou por cima de uma barreira)
+func derrubar(t := -1.0) -> void:
+	if remoto or estado == MORTO or _no_chao() or classe == "rastejante":
+		return
+	if esta_cacando():
+		_depois_levantar = PERSEGUINDO
+	elif estado == INVESTIGANDO:
+		_depois_levantar = INVESTIGANDO
+	else:
+		_depois_levantar = VAGANDO
+	estado = CAIDO
+	_t_caido = t if t > 0.0 else randf_range(1.6, 3.4)
+	_golpeou = true
+	_investida = 0.0
+	_vel_xz = Vector3.ZERO
+	modelo.cair()
+	_colisao_deitado(true)
+	# muito ferido: às vezes não levanta mais, rasteja (perna quebrada)
+	if vida < _vida_max * 0.45 and randf() < 0.3:
+		_vai_rastejar = true
+
+# 0.89: terminou de levantar (ou virou rastejante): volta ao que estava fazendo
+func _retomar() -> void:
+	var ir := _depois_levantar
+	_depois_levantar = VAGANDO
+	match ir:
+		PERSEGUINDO:
+			estado = PERSEGUINDO
+			_t_alerta = 0.0
+		INVESTIGANDO:
+			estado = INVESTIGANDO
+			_olhando = false
+			_espera = 0.0
+		_:
+			vagar()
+
+# 0.89 · MEMÓRIA: chegou onde te viu pela última vez e ainda lembra de você: segue para o lado em que você foi
+func _procurar_adiante(p: Vector3) -> void:
+	var dir := _ultimo_visto - _penultimo if _penultimo != Vector3.INF else -global_basis.z
+	dir.y = 0.0
+	if dir.length_squared() < 0.01:
+		dir = Vector3(randf_range(-1.0, 1.0), 0.0, randf_range(-1.0, 1.0))
+	dir = dir.normalized().rotated(Vector3.UP, randf_range(-0.6, 0.6))
+	var q := p + dir * randf_range(4.0, 8.0)
+	if gerente != null and gerente.mundo != null and gerente.mundo.dentro_de_predio(q.x, q.z, 0.5, not _fisica):
+		q = p + dir.rotated(Vector3.UP, PI * 0.5 * (1.0 if randf() < 0.5 else -1.0)) * 5.0
+	_penultimo = _ultimo_visto
+	_ultimo_visto = q
 
 # porta fechada perto e para o lado de onde ele quer ir: perto dela, bate; um pouco longe, vai até ela
 func _porta_no_caminho(p: Vector3, quer: Vector3) -> bool:
@@ -755,6 +1005,11 @@ func _porta_no_caminho(p: Vector3, quer: Vector3) -> bool:
 		_dir_desvio = para_porta.normalized()
 		_t_desvio = 0.7
 		return true
+	# 0.89 · INTELIGÊNCIA "abrem portas": porta sem tábuas ele abre (com tábuas, só batendo)
+	if Regras.abrem_portas() and int(pt.tabuas) == 0:
+		pt.definir_aberta(true, true)
+		_t_preso = 1.0
+		return true
 	_t_preso = 1.25                                   # um golpe a cada ~1,2 s
 	modelo.atacar()
 	if gerente != null:
@@ -762,12 +1017,19 @@ func _porta_no_caminho(p: Vector3, quer: Vector3) -> bool:
 	_tocar("rosnado", randf_range(0.9, 1.15), 0.0)
 	rotation.y = atan2(-para_porta.x, -para_porta.z)
 	pt.golpear(randf_range(DANO_MIN, DANO_MAX) * DANO_PORTA * _mult_dano)
+	if gerente != null:
+		gerente.barulho(pt.global_position, Regras.GOLPE_PORTA, false)   # 0.89: as pancadas chamam os outros
 	return true
 
 func _acertar(j: Node3D) -> void:
 	var dano := randf_range(DANO_MIN, DANO_MAX) * _mult_dano * (float(gerente.mult_dano) if gerente != null else 1.0)
+	if classe == "rastejante":
+		dano *= 0.7                                     # mordida no tornozelo
 	if j.has_method("receber_ataque"):
-		j.receber_ataque(dano, CHANCE_SANGRAR, global_position)
+		j.receber_ataque(dano, CHANCE_SANGRAR, global_position, "tornozelo" if classe == "rastejante" else "")
+	# 0.89 · AGARRAR (Project Zomboid): às vezes te segura e você fica lento um instante
+	if classe != "rastejante" and randf() < Regras.CHANCE_AGARRAR and j.has_method("agarrar"):
+		j.agarrar(0.9)
 	_tocar("baque", randf_range(0.7, 0.85), 2.0)
 	if gerente != null and gerente.has_method("_vago_acertou"):
 		gerente._vago_acertou(self, dano)
@@ -830,6 +1092,31 @@ func _direcao_livre(p: Vector3, dir: Vector3, L: float) -> Vector3:
 func _mover(dt: float) -> void:
 	var p := global_position
 	var quer := Vector3.ZERO
+	# 0.89: tombando por cima de uma barreira baixa (meio segundo no ar, cai do outro lado)
+	if _pulando > 0.0:
+		_pulando -= dt
+		var u := clampf(1.0 - _pulando / 0.55, 0.0, 1.0)
+		var q := _pulo_de.lerp(_pulo_para, u)
+		q.y += sin(u * PI) * 0.7
+		global_position = q
+		if _pulando <= 0.0:
+			_y_chao = _pulo_para.y
+			_seco = _pulo_para
+			derrubar(randf_range(0.8, 1.6))
+		return
+	if _no_chao():
+		_vel_xz = Vector3.ZERO
+		_vel_h = 0.0
+		return
+	# 0.89 · TROPEÇO (lore: "lento, tropeça"): o lento às vezes perde o passo
+	if classe == "lento" and _vel_h > 0.4 and estado != ATACANDO:
+		_t_tropeco -= dt
+		if _t_tropeco <= 0.0:
+			_t_tropeco = randf_range(5.0, 11.0)
+			_tropecando = 0.6
+			modelo.levar_golpe(0.4)
+	if _tropecando > 0.0:
+		_vel_alvo *= 0.3
 	if _vel_alvo > 0.01 and _atordoado <= 0.0:
 		var para := Vector3(_destino.x - p.x, 0.0, _destino.z - p.z)
 		var L := para.length()
@@ -842,6 +1129,8 @@ func _mover(dt: float) -> void:
 				_t_predio -= dt
 				if _t_predio <= 0.0:
 					_t_predio = 0.12 if (_contorno or _vel_alvo > 2.0) else 0.25
+					if _tentar_pular(p, dir):
+						return
 					_dir_contorno = _direcao_livre(p, dir, L)
 				if _contorno:
 					dir = _dir_contorno
@@ -941,6 +1230,30 @@ func _mover(dt: float) -> void:
 		var giro := lerpf(4.0, 9.0, clampf(_vel_h / 4.0, 0.0, 1.0))
 		rotation.y = lerp_angle(rotation.y, atan2(-olha.x, -olha.z), minf(1.0, dt * giro))
 
+# 0.89 · BARREIRA BAIXA à frente (concreto, entulho até BARREIRA_BAIXA de altura): tomba por cima e cai do
+# outro lado, como no Project Zomboid. Carros e caçambas (altos) ele contorna.
+func _tentar_pular(p: Vector3, dir: Vector3) -> bool:
+	if classe == "rastejante" or gerente == null or gerente.mundo == null or not gerente.mundo.has_method("topo_obstaculo"):
+		return false
+	var m = gerente.mundo
+	var f := p + dir * 0.75
+	var topo: float = m.topo_obstaculo(f.x, f.z, 0.2)
+	if topo == -INF:
+		return false
+	var alto := topo - p.y
+	if alto < 0.25 or alto > BARREIRA_BAIXA:
+		return false
+	for k in range(4, 12):
+		var q := p + dir * (k * 0.3)
+		if m.topo_obstaculo(q.x, q.z, 0.35) == -INF and not m.dentro_de_predio(q.x, q.z, 0.4, not _fisica):
+			_pulando = 0.55
+			_pulo_de = p
+			_pulo_para = Vector3(q.x, m.altura(q.x, q.z), q.z)
+			rotation.y = atan2(-dir.x, -dir.z)
+			modelo.levar_golpe(0.8)
+			return true
+	return false
+
 # preso numa parede/carro: anda de lado por um tempo (e troca de lado se continuar preso)
 func _checar_preso(dt: float, quer: Vector3) -> void:
 	_t_preso -= dt
@@ -999,7 +1312,7 @@ func _tocar(nome: String, tom: float, vol_db: float, canal2 := false) -> void:
 		return
 	var s3: AudioStreamPlayer3D = som2 if canal2 and som2 != null else som
 	s3.stream = sons[nome]
-	s3.pitch_scale = tom * (0.85 if tipo == "pesado" else 1.0)
+	s3.pitch_scale = tom
 	s3.volume_db = vol_db
 	# vozes GRAVADAS (audio/sons/infectados) no lugar das sintetizadas, quando existem
 	var grav: AudioStream = null
@@ -1009,7 +1322,7 @@ func _tocar(nome: String, tom: float, vol_db: float, canal2 := false) -> void:
 		grav = SonsBaixados.sortear("infectados/grito" if tom > 1.3 else "infectados/ataque")
 	if grav != null:
 		s3.stream = grav
-		s3.pitch_scale = randf_range(0.9, 1.08) * (0.82 if tipo == "pesado" else (1.08 if tipo == "corredor" else 1.0))
+		s3.pitch_scale = randf_range(0.9, 1.08) * (1.08 if tipo == "corredor" else 1.0)
 		s3.volume_db = vol_db - 2.0
 	s3.play()
 

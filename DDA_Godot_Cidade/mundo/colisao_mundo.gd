@@ -681,6 +681,29 @@ func dentro_de_obstaculo(x: float, z: float, margem := 0.0) -> bool:
 					return true
 	return false
 
+# 0.89: Y do TOPO do obstáculo em (x, z) (-INF se não há nenhum): os infectados tombam por cima dos baixos
+# (barreiras de concreto, entulho), como no Project Zomboid, e contornam os altos (carros, caçambas)
+func topo_obstaculo(x: float, z: float, margem := 0.0) -> float:
+	var cx := floori(x / CEL_OBST)
+	var cz := floori(z / CEL_OBST)
+	var topo := -INF
+	for dz in range(-1, 2):
+		for dx in range(-1, 2):
+			var key := Vector2i(cx + dx, cz + dz)
+			if not _obst_hash.has(key):
+				continue
+			for idx in (_obst_hash[key] as PackedInt32Array):
+				var o := idx * 7
+				var ox := x - _obst[o]
+				var oz := z - _obst[o + 1]
+				var co := _obst_cs[idx * 3]
+				var se := _obst_cs[idx * 3 + 1]
+				var lx := ox * co - oz * se
+				var lz := ox * se + oz * co
+				if absf(lx) < _obst[o + 3] * 0.5 + margem and absf(lz) < _obst[o + 5] * 0.5 + margem:
+					topo = maxf(topo, _obst[o + 6] + _obst[o + 4] * 0.5)
+	return topo
+
 # true se o chão de física (mapa de alturas em volta do jogador) cobre (x, z) com folga
 func tem_chao_fisico(x: float, z: float) -> bool:
 	var lim := (MEIO - 3) * ESPACO

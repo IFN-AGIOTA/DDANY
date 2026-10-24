@@ -17,6 +17,13 @@ extends Node
 #   ÁGUA (0.72) ......... entrar na água molha a roupa (até a altura da água); NADAR gasta estamina (peso pesa muito);
 #                         boiando parado ela volta se não estiver pesado. Sem estamina afunda (jogador.gd) e o FÔLEGO
 #                         (0-100) acaba em ~8 s embaixo d'água; depois disso, afoga (morte "afogado").
+#   0.89 · FERIMENTOS (estilo Project Zomboid): o golpe que passa pela roupa vira ARRANHÃO, LACERAÇÃO ou MORDIDA
+#                         (pelas costas a mordida é mais provável; o rastejante só pega o tornozelo: sem mordida).
+#   0.89 · O VÍRUS (lore: fase febril): mordida passa sempre; laceração 25%; arranhão 7% (Opções › Infectados ›
+#                         Transmissão). Ninguém avisa: primeiro nada, depois ENJOO, depois FEBRE ALTA (veias escuras,
+#                         tosse) e no fim a vida vai embora. Antibiótico NÃO cura. Quem morre assim LEVANTA como
+#                         infectado (main.gd). Tempo até morrer: Opções › Infectados (padrão 2-3 dias do jogo).
+#   0.89 · PUXADO PARA O CHÃO: 3 infectados te acertando juntos (inimigos/vagos.gd) = morte.
 # Morte: vida 0 ou sangue < 500 -> sinal "morreu". As roupas protegem (campo "protecao" em itens.gd).
 # Mexa AQUI para: velocidade da fome/sede, dano do sangramento, frio, regeneração.
 
@@ -29,6 +36,11 @@ signal aviso(texto: String)          # mensagens curtas ("VOCÊ VOMITOU", "PERNA
 const FOME_POR_S := 100.0 / 3600.0   # fome zera em ~1 h de jogo andando
 const SEDE_POR_S := 100.0 / 2400.0   # sede zera em ~40 min
 const SANGRA_ML_S := 5.0             # por sangramento
+const Regras := preload("res://inimigos/regras_infectados.gd")
+const FERIDAS := ["arranhao", "laceracao", "mordida"]
+const NOMES_FERIDA := {"arranhao": "ARRANHÃO", "laceracao": "LACERAÇÃO", "mordida": "MORDIDA!"}
+# [dano (x), chance de abrir sangramento, chance de infeccionar (bactéria, antibiótico cura)]
+const EFEITO_FERIDA := {"arranhao": [0.7, 0.15, 0.03], "laceracao": [1.0, 0.75, 0.08], "mordida": [1.3, 1.0, 0.15]}
 const CONFORTO := 36.6
 
 var vida := 100.0
@@ -41,6 +53,10 @@ var sangramentos := 0
 var _t_lento := 0.0
 var _chuva_aqui := 0.0
 var infeccao := 0.0                  # 0 = saudável · >0 = infectado (sobe com o tempo)
+var virus := -1.0                    # 0.89: -1 = não pegou · >= 0 = horas do jogo desde que pegou o vírus
+var virus_fim := 60.0                # 0.89: com quantas horas o vírus mata (sorteado ao pegar)
+var _fase_virus := 0
+var _t_relogio := -1.0
 var tempo_vivo := 0.0
 var causa := ""
 var imortal := false                 # testes / história
@@ -168,6 +184,7 @@ func _process(dt: float) -> void:
 	alvo = clampf(alvo, 33.5, 39.5)
 	temperatura += (alvo - temperatura) * minf(1.0, dt / 120.0)
 	_condicoes(dt, v, p)
+	_virus(dt)
 	# sangue
 	if sangramentos > 0:
 		sangue -= SANGRA_ML_S * sangramentos * dt
@@ -222,21 +239,50 @@ func _morrer(por: String) -> void:
 	morreu.emit(por)
 
 # ---------- ataques (infectados) ----------
-func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3) -> void:
+func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3, tipo := "") -> void:
 	if jogador.morto:
 		return
 	atingido.emit(origem)
 	var prot := protecao()
-	var d := dano * (1.0 - prot * 0.6)
-	_dano(d, "infectados")
-	ferido.emit(d)
-	if randf() < chance_sangrar * (1.0 - prot):
-		sangramentos += 1
-		var inv = inventario()
-		if inv != null:
-			inv.aviso.emit("SANGRANDO")
-	if randf() < 0.04 * (1.0 - prot):
-		infeccao = maxf(infeccao, 0.01)
+	# 0.89 · a roupa segura? (quanto mais proteção, mais golpes só machucam por cima, sem ferida)
+	if randf() < prot * 0.8:
+		var d0 := dano * (1.0 - prot * 0.6) * 0.6
+		_dano(d0, "infectados")
+		ferido.emit(d0)
+	else:
+		# passou: arranhão, laceração ou mordida (Project Zomboid)
+		var chances: Array = Regras.FERIDA
+		var frente := -jogador.global_basis.z
+		var de := origem - jogador.global_position
+		de.y = 0.0
+		if de.length_squared() > 0.0001 and frente.dot(de.normalized()) < -0.2:
+			chances = Regras.FERIDA_POR_TRAS              # pelas costas
+		if tipo == "tornozelo":
+			chances = [0.6, 0.4, 0.0]                     # o rastejante pega o tornozelo
+		var x := randf()
+		var ferida := "arranhao"
+		for i in 3:
+			x -= float(chances[i])
+			if x <= 0.0:
+				ferida = FERIDAS[i]
+				break
+		var ef: Array = EFEITO_FERIDA[ferida]
+		var d := dano * float(ef[0])
+		_dano(d, "infectados")
+		ferido.emit(d)
+		aviso.emit(NOMES_FERIDA[ferida])
+		if randf() < maxf(float(ef[1]), chance_sangrar * 0.5):
+			sangramentos += 1
+			var inv = inventario()
+			if inv != null:
+				inv.aviso.emit("SANGRANDO")
+		if randf() < float(ef[2]):
+			infeccao = maxf(infeccao, 0.01)
+		# o VÍRUS
+		var trans := Regras.transmissao()
+		var pega: float = float(Regras.VIRUS[ferida]) if trans == 0 else (1.0 if trans == 1 and ferida == "mordida" else 0.0)
+		if virus < 0.0 and randf() < pega:
+			pegar_virus()
 	# a roupa leva o golpe
 	var inv = inventario()
 	if inv != null:
@@ -441,6 +487,57 @@ func queda(vel_y: float) -> void:
 		perna_quebrada = true
 		aviso.emit("PERNA QUEBRADA · USE UMA TALA")
 
+# 0.89 · O VÍRUS: começa a contar (as horas do jogo) e sorteia quando ele mata
+func pegar_virus() -> void:
+	if virus >= 0.0:
+		return
+	virus = 0.0
+	_fase_virus = 0
+	var h := Regras.horas_virus()
+	virus_fim = randf_range(h.x, h.y)
+
+# 0.89 · PUXADO PARA O CHÃO pela horda (inimigos/vagos.gd)
+func derrubado() -> void:
+	_morrer("puxado para o chão pelos infectados")
+
+# horas do jogo que passaram (pelo relógio do clima; sem clima: 48 min de verdade = 1 dia)
+func _horas_passadas(dt: float) -> float:
+	if clima == null or clima.get("dia") == null:
+		return dt * 24.0 / 2880.0
+	var agora := (float(clima.dia) - 1.0) * 24.0 + float(clima.hora)
+	if _t_relogio < 0.0 or agora < _t_relogio or agora - _t_relogio > 2.0:
+		_t_relogio = agora
+		return dt * 24.0 / 2880.0
+	var h := agora - _t_relogio
+	_t_relogio = agora
+	return h
+
+# fases: até 15% nada · ENJOO · 50% FEBRE ALTA (veias escuras, tosse) · 85% a vida vai embora · 100% morre
+func _virus(dt: float) -> void:
+	if virus < 0.0:
+		return
+	virus += _horas_passadas(dt)
+	var u := virus / maxf(1.0, virus_fim)
+	var fase := 0 if u < 0.15 else (1 if u < 0.5 else (2 if u < 0.85 else 3))
+	if fase != _fase_virus:
+		_fase_virus = fase
+		match fase:
+			1: aviso.emit("VOCÊ SE SENTE ENJOADO")
+			2: aviso.emit("FEBRE ALTA · VEIAS ESCURAS NA PELE")
+			3: aviso.emit("VOCÊ ESTÁ MORRENDO")
+	if fase >= 2:
+		temperatura = maxf(temperatura, lerpf(37.8, 39.6, clampf((u - 0.5) / 0.35, 0.0, 1.0)))
+		sede = maxf(0.0, sede - SEDE_POR_S * 0.5 * dt)
+		if randf() < dt / 70.0:
+			tossiu.emit(jogador.global_position)          # tosse com sangue (os infectados ouvem)
+			aviso.emit("VOCÊ TOSSIU SANGUE")
+	if fase >= 3:
+		# a vida vai embora até zerar quando o tempo acabar (1 hora do jogo = 120 s de verdade)
+		var resta_s := maxf(5.0, (1.0 - u) * virus_fim * 120.0)
+		_dano(dt * vida / resta_s, "o vírus")
+	if u >= 1.0:
+		_morrer("o vírus")
+
 func pode_correr() -> bool:
 	return estamina > 3.0 and not perna_quebrada and desmaiado <= 0.0
 
@@ -454,6 +551,11 @@ func doencas() -> Array:
 		r.append("INTOXICAÇÃO")
 	if infeccao > 0.0:
 		r.append("INFECÇÃO")
+	# 0.89: o vírus não aparece com nome: só os sintomas (como no Project Zomboid)
+	if _fase_virus == 1:
+		r.append("ENJOO")
+	elif _fase_virus >= 2:
+		r.append("FEBRE")
 	return r
 
 # o frio faz a mira tremer (armas.gd multiplica a dispersão)
@@ -469,6 +571,8 @@ func reiniciar() -> void:
 	molhado = 0.0
 	sangramentos = 0
 	infeccao = 0.0
+	virus = -1.0
+	_fase_virus = 0
 	tempo_vivo = 0.0
 	causa = ""
 	estamina = 100.0
@@ -483,7 +587,7 @@ func reiniciar() -> void:
 func salvar() -> Dictionary:
 	return {"vida": vida, "sangue": sangue, "fome": fome, "sede": sede, "temperatura": temperatura, "molhado": molhado,
 		"sangramentos": sangramentos, "infeccao": infeccao, "tempo_vivo": tempo_vivo, "perna": perna_quebrada,
-		"gripe": gripe, "colera": colera, "intoxicacao": intoxicacao}
+		"gripe": gripe, "colera": colera, "intoxicacao": intoxicacao, "virus": virus, "virus_fim": virus_fim}
 
 func carregar(d: Dictionary) -> void:
 	for k in d:
@@ -491,3 +595,6 @@ func carregar(d: Dictionary) -> void:
 			set(k, float(d[k]))
 	sangramentos = int(d.get("sangramentos", 0))
 	perna_quebrada = bool(d.get("perna", false))
+	virus = float(d.get("virus", -1.0))
+	virus_fim = float(d.get("virus_fim", 60.0))
+	_fase_virus = 0
