@@ -2,8 +2,8 @@
  DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.47 (APK código 43)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
-abandonada. Começou como um jogo em HTML (index-1.html, na pasta principal do repositório, versão 1.1.49)
-e está sendo passado para a Godot 4, um sistema por arquivo.
+abandonada. Começou como um jogo em HTML (versão 1.1.49; os arquivos dele saíram do repositório na 0.89.1 e
+ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arquivo.
 
 ÍNDICE
   1. Como abrir, jogar e gerar o APK
@@ -39,6 +39,14 @@ e está sendo passado para a Godot 4, um sistema por arquivo.
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.89.1 · LIMPEZA: SAEM OS ARQUIVOS DA VERSÃO HTML
+  · Nada muda no jogo (não tem pacote novo). Saíram da pasta principal do repositório os restos da versão em HTML,
+    que a Godot não usa: index-1.html (o jogo HTML), setup.js, package.json e capacitor.config.json (o APK do HTML
+    pelo Capacitor), .github/workflows/build.yml (gerava esse APK no GitHub) e icon.png (cópia do ícone que fica
+    em DDA_Godot_Cidade/icon.png). Continuam no histórico do git, se um dia precisar.
+  · Arquivos (fora da pasta do jogo, todos APAGADOS): ../index-1.html, ../setup.js, ../package.json,
+    ../capacitor.config.json, ../icon.png, ../.github/workflows/build.yml · LEIA-ME.txt: este bloco e o topo.
+
 ATUALIZAÇÃO 0.89 · INFECTADOS NO ESTILO PROJECT ZOMBOID + CÂMERA SEM TRAVAR E SEM TREMER
   · CÂMERA: trocar 1ª/3ª pessoa (F) ou de ombro (botão do meio) travava o jogo ~0,5 s (reaplicava TODAS as opções
     de gráfico, texturas, modelos, luzes e chunks). Agora só mexe na câmera: 524 ms -> 2,5 ms (medido).
