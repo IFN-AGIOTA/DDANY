@@ -115,6 +115,7 @@ ATUALIZAÇÃO 0.89 · INFECTADOS NO ESTILO PROJECT ZOMBOID + CÂMERA SEM TRAVAR 
       ferramentas/testes/teste_infectados_pz.gd .... NOVO
       ferramentas/testes/teste_troca_camera.gd ..... NOVO
       ferramentas/testes/teste_camera_paredes.gd ... mede o tremor
+      ferramentas/testes/teste_infectados_paredes.gd usa o barulho de passos novo (raio_passos)
       ferramentas/testes/rodar.sh .................. roda os dois testes novos
       ferramentas/animacoes_pz_infectados.gd ....... NOVO (acrescenta as animações novas à biblioteca)
 
