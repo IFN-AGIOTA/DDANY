@@ -63,6 +63,8 @@ static func salvar(main, morto := false) -> bool:
 			main.locais.abertos if main.get("locais") != null else {}) if main.loot_mundo != null else {},
 		"clima": main.clima.salvar() if main.clima != null and main.clima.has_method("salvar") else {},
 		"missoes": main.missoes.salvar() if main.get("missoes") != null else {},
+		"vagos": main.vagos.salvar() if main.get("vagos") != null else {},              # 0.90: a horda da cidade
+		"construcao": main.construcao.salvar() if main.get("construcao") != null else {},   # 0.90: a base
 		"chao": _chao(main, p),
 		"mapa_predios": MAPA_PREDIOS,
 	}
@@ -167,6 +169,10 @@ static func carregar(main, d: Dictionary) -> void:
 		j.teleportar(pos + Vector3(0, 0.05, 0), float(jd.get("yaw", 0.0)))
 	if main.get("missoes") != null and d.has("missoes"):
 		main.missoes.carregar(d["missoes"])
+	if main.get("vagos") != null and d.has("vagos"):
+		main.vagos.carregar(d["vagos"])
+	if main.get("construcao") != null and d.has("construcao"):
+		main.construcao.carregar(d["construcao"])
 
 # ================= 0.77: PARTIDA EM REDE =================
 static func ler_rede() -> Dictionary:
@@ -220,7 +226,9 @@ static func salvar_rede(main, morto := false) -> bool:
 			"loot": lm.salvar(main.interiores.abertos if main.interiores != null else {}, main.locais.abertos if main.get("locais") != null else {}),
 			"pegos": lm.pegos.keys(),
 			"mapa_predios": MAPA_PREDIOS,
-			"clima": main.clima.salvar() if main.clima != null and main.clima.has_method("salvar") else {}}
+			"clima": main.clima.salvar() if main.clima != null and main.clima.has_method("salvar") else {},
+			"vagos": main.vagos.salvar() if main.get("vagos") != null else {},
+			"construcao": main.construcao.salvar() if main.get("construcao") != null else {}}
 	return _gravar_rede(d)
 
 # ao começar a partida em rede (main.gd _ligar_rede): o personagem volta; o host continua o mundo salvo
@@ -250,6 +258,10 @@ static func carregar_rede(main) -> String:
 				main.loot_mundo.pegos[id] = true
 		if main.clima != null and m.has("clima"):
 			main.clima.carregar(m["clima"])
+		if main.get("vagos") != null and m.has("vagos"):
+			main.vagos.carregar(m["vagos"])
+		if main.get("construcao") != null and m.has("construcao"):
+			main.construcao.carregar(m["construcao"])
 		if main.get("veiculos") != null:
 			main.veiculos.sincronizar()
 		avisos.append("O MUNDO DA SUA ÚLTIMA SALA CONTINUA")

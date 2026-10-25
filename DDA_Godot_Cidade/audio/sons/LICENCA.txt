@@ -9,6 +9,9 @@ jogador/passo_*.ogg ..... "Footsteps" — GboxMikeFozzy — CC0
                           https://opengameart.org/content/footsteps-0
 infectados/passo_*, impactos/* ... "Impact Sounds" — Kenney (www.kenney.nl) — CC0
                           https://kenney.nl/assets/impact-sounds
+mundo/vidro_*, mundo/martelo_* (0.90) ... do mesmo "Impact Sounds" da Kenney (CC0): vidro_quebrar_0/1 = seis batidas
+                          de vidro (impactGlass) sobrepostas com atraso (ffmpeg) para soar como a janela estourando;
+                          martelo_* = impactWood_heavy; vidro_* = impactGlass light/medium
 ambiente/sirene.ogg ..... "Sirens and Alarm Noise" — aquinn — CC0
                           https://opengameart.org/content/sirens-and-alarm-noise
 

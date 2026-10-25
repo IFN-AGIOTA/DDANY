@@ -383,7 +383,9 @@ func _inf_dano(de: int, d: Dictionary) -> void:
 		return
 	var quem = remotos.get(de)
 	var dir: Vector3 = d.get("d", Vector3.FORWARD)
-	if bool(d.get("g", false)):
+	if int(d.get("f", 0)) == -1:
+		v.empurrado(dir, quem)                        # 0.90: empurrão do amigo
+	elif bool(d.get("g", false)):
 		v.receber_golpe(float(d.get("dn", 0.0)), dir, quem)
 	else:
 		v.receber_tiro(float(d.get("dn", 0.0)), v.global_position, dir, int(d.get("f", 0)), quem)

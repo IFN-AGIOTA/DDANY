@@ -53,6 +53,12 @@ lança             stone-spear                   Lorc
 facão             machete                       Lorc
 pé de cabra       crowbar                       Delapouite
 punhos            fist                          Lorc
+MSG               chat-bubble                   Delapouite
+EMPURRAR (0.90)   push                          Delapouite
+CONSTRUIR (0.90)  hammer-nails                  Lorc
+GIRAR (0.90)      anticlockwise-rotation        Delapouite
+OK (0.90)         check-mark                    Delapouite
+CANCELAR (0.90)   cancel                        Sbed
 
-Lorc: https://lorcblog.blogspot.com · Delapouite: https://delapouite.com · Skoll, John Colburn e Guard13007:
+Lorc: https://lorcblog.blogspot.com · Delapouite: https://delapouite.com · Skoll, John Colburn, Guard13007 e Sbed:
 autores listados em https://game-icons.net/about.html

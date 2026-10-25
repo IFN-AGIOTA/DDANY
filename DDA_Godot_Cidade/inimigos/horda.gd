@@ -586,11 +586,11 @@ func salvar(reais: Array) -> Dictionary:
 func carregar(d: Dictionary) -> void:
 	grupos.clear()
 	quadras.clear()
-	var gs: PackedFloat32Array = d.get("g", PackedFloat32Array())
+	var gs := PackedFloat32Array(d.get("g", []))           # (no arquivo JSON vira lista comum)
 	for i in range(0, gs.size() - 4, 5):
 		var dd := Vector2.INF if gs[i + 3] > 1e8 else Vector2(gs[i + 3], gs[i + 4])
 		grupos.append({"p": Vector2(gs[i], gs[i + 1]), "n": int(gs[i + 2]), "d": dd, "v": VEL_SOM if dd != Vector2.INF else VEL_GRUPO, "t": 0.0})
-	var qs: PackedFloat32Array = d.get("q", PackedFloat32Array())
+	var qs := PackedFloat32Array(d.get("q", []))
 	for i in range(0, qs.size() - 4, 5):
 		quadras[int(qs[i])] = {"base": int(qs[i + 1]), "mortos": int(qs[i + 2]), "visto": qs[i + 3], "resp": qs[i + 4]}
 	_fundir_iguais()

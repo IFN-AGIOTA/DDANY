@@ -20,6 +20,7 @@ const ACOES := [
 	["recarregar", "Recarregar", "k:%d" % KEY_R, "Combate"],
 	["trocar_arma", "Trocar de arma", "k:%d" % KEY_X, "Combate"],
 	["roda", "Roda do inventário rápido", "k:%d" % KEY_Q, "Combate"],
+	["empurrar", "Empurrar / pisar (no caído)", "k:%d" % KEY_G, "Combate"],
 	["atalho_1", "Atalho 1", "k:%d" % KEY_1, "Inventário rápido"],
 	["atalho_2", "Atalho 2", "k:%d" % KEY_2, "Inventário rápido"],
 	["atalho_3", "Atalho 3", "k:%d" % KEY_3, "Inventário rápido"],
@@ -35,13 +36,15 @@ const ACOES := [
 	["camera", "1ª / 3ª pessoa", "k:%d" % KEY_F, "Interação"],
 	["ombro", "Trocar de ombro (câmera)", "m:%d" % MOUSE_BUTTON_MIDDLE, "Combate"],
 	["mensagem", "Mensagens rápidas (multijogador)", "k:%d" % KEY_T, "Interação"],
+	["construir", "Construir (base)", "k:%d" % KEY_B, "Interação"],
+	["girar_peca", "Construir: girar a peça", "k:%d" % KEY_R, "Construir"],
 	["voo", "Câmera livre (voo)", "k:%d" % KEY_V, "Câmera livre"],
 	["voo_sobe", "Câmera livre: subir", "k:%d" % KEY_E, "Câmera livre"],
 	["voo_desce", "Câmera livre: descer", "k:%d" % KEY_Q, "Câmera livre"],
 	["voo_vel", "Câmera livre: velocidade", "k:%d" % KEY_SHIFT, "Câmera livre"],
 ]
 # ações que podem ter a mesma tecla (valem em situações diferentes: andando x câmera livre)
-const SO_NO_VOO := ["voo_sobe", "voo_desce", "voo_vel"]
+const SO_NO_VOO := ["voo_sobe", "voo_desce", "voo_vel", "girar_peca"]     # girar_peca: só construindo (0.90)
 
 static var _mapa := {}                 # ação -> código (padrão + trocadas)
 

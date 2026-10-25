@@ -203,6 +203,83 @@ func ligar_controles(c) -> void:
 	c.trocar_arma_pedido.connect(func(): armas.proxima_arma())
 	c.atalho_pedido.connect(_usar_atalho)
 	c.pegar_pedido.connect(_pegar_do_chao)
+	c.empurrar_pedido.connect(empurrar)
+
+# 0.90 · EMPURRÃO e PISÃO (Project Zomboid): botão EMPURRAR / tecla G, com ou sem arma na mão.
+#   · infectado CAÍDO (ou rastejando) bem na sua frente -> PISÃO: DANO_PISAO (x1,8 por estar no chão);
+#   · senão EMPURRÃO: os que estão na frente (até ~1,3 m) cambaleiam para trás e muitas vezes caem.
+# Gasta estamina (sem fôlego não sai); faz um barulhinho.
+const DANO_PISAO := 40.0
+const ESTAMINA_EMPURRAO := 8.0
+const RECARGA_EMPURRAO := 0.75
+var _t_empurrao := 0.0
+
+func empurrar() -> void:
+	if not ativo or morto or veiculo != null or nadando or _t_empurrao > 0.0 or bool(get("construindo")):
+		return
+	if sobrevivencia != null and sobrevivencia.estamina < ESTAMINA_EMPURRAO:
+		sobrevivencia.aviso.emit("SEM FÔLEGO PARA EMPURRAR")
+		return
+	_t_empurrao = RECARGA_EMPURRAO
+	if sobrevivencia != null:
+		sobrevivencia.estamina = maxf(0.0, sobrevivencia.estamina - ESTAMINA_EMPURRAO)
+	var frente := Vector3(-sin(cam_yaw), 0.0, -cos(cam_yaw))
+	rotation.y = cam_yaw                                  # vira para onde está olhando
+	var espaco := get_world_3d().direct_space_state
+	var esf := SphereShape3D.new()
+	var q := PhysicsShapeQueryParameters3D.new()
+	q.shape = esf
+	q.collision_mask = 4
+	q.exclude = [get_rid()]
+	# 1) alguém no chão bem na frente: pisão
+	esf.radius = 0.55
+	q.transform = Transform3D(Basis.IDENTITY, global_position + frente * 0.85 + Vector3(0, 0.3, 0))
+	for h in espaco.intersect_shape(q, 6):
+		var c = h["collider"]
+		if c != null and c.has_method("receber_golpe") and (bool(c.call("_no_chao")) or str(c.get("classe")) == "rastejante"):
+			animador.acao("pisar", 1.4, true)
+			var res: Dictionary = c.receber_golpe(DANO_PISAO, frente + Vector3(0, -1, 0), self)
+			armas.acertou.emit(false, bool(res.get("morto", false)))
+			armas.sons.tocar("impacto")
+			armas.barulho.emit(global_position, 6.0)
+			return
+	# 2) empurrão em quem está na frente (pode pegar mais de um)
+	animador.acao("soco", 1.6, false)
+	armas.sons.tocar("golpe", -4.0)
+	armas.barulho.emit(global_position, 6.0)
+	esf.radius = 0.75
+	q.transform = Transform3D(Basis.IDENTITY, global_position + frente * 0.9 + Vector3(0, 1.1, 0))
+	var feito := {}
+	for h in espaco.intersect_shape(q, 8):
+		var c = h["collider"]
+		if c == null or feito.has(c) or not c.has_method("empurrado"):
+			continue
+		feito[c] = true
+		var d: Vector3 = (c as Node3D).global_position - global_position
+		d.y = 0.0
+		c.empurrado(d.normalized() if d.length() > 0.1 else frente, self)
+	if not feito.is_empty():
+		armas.sons.tocar("impacto")
+
+# 0.90 · PULAR A JANELA (mundo/janela.gd): passa por cima do peitoril até "destino" (o outro lado), sem andar
+const TEMPO_JANELA := 0.75
+var _passando := 0.0
+var _passa_de := Vector3.ZERO
+var _passa_para := Vector3.ZERO
+
+func passar_janela(destino: Vector3) -> void:
+	if not ativo or morto or veiculo != null or _passando > 0.0:
+		return
+	_passando = TEMPO_JANELA
+	_passa_de = global_position
+	_passa_para = destino
+	velocity = Vector3.ZERO
+	var d := destino - global_position
+	if Vector2(d.x, d.z).length() > 0.1:
+		rotation.y = atan2(-d.x, -d.z)
+	animador.acao("pular", 1.3, true)
+	if armas != null:
+		armas.barulho.emit(global_position, 5.0)
 
 func _usar_atalho(i: int) -> void:
 	if ativo and not morto and not nadando:
@@ -298,6 +375,7 @@ func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3, tipo :=
 
 # 0.89 · AGARRADO (Project Zomboid): um infectado te segurou; por "t" segundos você anda bem devagar
 var agarrado := 0.0
+var construindo := false            # 0.90: com uma peça da base na mão (mundo/construcao.gd): não atira nem empurra
 func agarrar(t: float) -> void:
 	if servidor or morto:
 		return
@@ -558,6 +636,15 @@ func _physics_process(delta: float) -> void:
 	if not ativo:
 		return
 	agarrado = maxf(0.0, agarrado - delta)
+	_t_empurrao = maxf(0.0, _t_empurrao - delta)
+	if _passando > 0.0:
+		_passando -= delta
+		var u := clampf(1.0 - _passando / TEMPO_JANELA, 0.0, 1.0)
+		var q := _passa_de.lerp(_passa_para, u)
+		q.y = lerpf(_passa_de.y, _passa_para.y, u) + sin(u * PI) * 1.15
+		global_position = q
+		velocity = Vector3.ZERO
+		return
 	if veiculo != null:
 		_dirigir(delta)
 		return

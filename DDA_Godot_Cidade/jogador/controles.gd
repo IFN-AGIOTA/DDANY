@@ -36,6 +36,12 @@ signal pegar_pedido
 signal pausa_pedida
 signal selecionou(id: String)      # modo de edição da HUD: botão tocado
 signal mensagem_pedida             # 0.71: mensagens rápidas do multijogador (botão MSG, tecla T)
+signal empurrar_pedido             # 0.90: empurrão / pisão (botão EMPURRAR, tecla G)
+signal construir_pedido            # 0.90: abrir/fechar a construção (botão CONSTRUIR, tecla B)
+signal girar_pedido                # 0.90: construindo: girar a peça (botão GIRAR, tecla R)
+signal confirmar_pedido            # 0.90: construindo: pôr a peça aqui (botão OK, tecla E / clique)
+signal cancelar_pedido             # 0.90: construindo: desistir (botão CANCELAR, botão direito)
+var construindo := false           # 0.90: com a peça na mão, R gira, E/clique põe, botão direito cancela
 
 const UI := preload("res://menu/ui.gd")
 const Teclas := preload("res://jogador/teclas.gd")
@@ -45,7 +51,7 @@ const RAIO_STICK := 90.0
 const FOLHA_ICONES := preload("res://hud/icones/botoes.png")
 const ICONES := ["PAUSA", "INV", "VOO", "CAM", "MIRAR", "ATIRAR", "PULAR", "CORRER", "AGACHAR", "RECARREGAR", "PEGAR",
 	"SOBE", "DESCE", "VEL", "pistola", "m4", "mp5", "ak", "espingarda", "rifle_caca", "faca", "taco", "machado", "cano",
-	"lanca", "facao", "pe_de_cabra", "punhos", "MSG"]
+	"lanca", "facao", "pe_de_cabra", "punhos", "MSG", "EMPURRAR", "CONSTRUIR", "GIRAR", "OK", "CANCELAR"]
 
 # OTIMIZAÇÃO: botões = disco e anel em TEXTURA (menu/ui.gd circulo/aro): todos os discos = 1 chamada de desenho,
 # todos os anéis = 1, textos = 1 (draw_circle/draw_arc eram 2 chamadas por botão).
@@ -134,6 +140,13 @@ func _ready() -> void:
 	_bt("PAUSA", "II", "tr", Vector2(208, 46), 30, Color(1.0, 0.54, 0.21), "tocar", false, false)
 	_bt("CAM", "CAM", "tr", Vector2(284, 46), 30, Color(0.75, 0.85, 1.0), "tocar", false, false)
 	_bt("MSG", "MSG", "tr", Vector2(360, 46), 30, Color(0.45, 1.0, 0.45), "tocar", false, false)
+	_bt("CONSTRUIR", "CONSTRUIR", "tr", Vector2(436, 46), 30, Color(0.85, 0.62, 0.35), "tocar", false, false)
+	_bt("EMPURRAR", "EMPURRAR", "br", Vector2(585, 360), 40, Color(0.92, 0.55, 0.25), "tocar", false, false)
+	_bt("GIRAR", "GIRAR", "br", Vector2(355, 335), 46, Color(0.75, 0.85, 1.0), "tocar", false, false)
+	_bt("OK", "OK", "br", Vector2(215, 250), 70, Color(0.25, 0.8, 0.35), "tocar", false, false)
+	_bt("CANCELAR", "CANCELAR", "br", Vector2(362, 168), 40, Color(0.9, 0.3, 0.25), "tocar", false, false)
+	for b in ["GIRAR", "OK", "CANCELAR"]:
+		ocultos[b] = true                 # só aparecem construindo (mundo/construcao.gd)
 	ocultos["PEGAR"] = true
 	ocultos["MSG"] = true                 # só aparece no multijogador (rede/sessao_rede.gd mostra)
 	_bt("SOBE", "SOBE", "br", Vector2(80, 330), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
@@ -381,6 +394,11 @@ func _ler_botoes_mouse() -> void:
 
 # o que cada ação faz ao apertar (apertou = true) ou soltar
 func _acao(acao: String, apertou: bool) -> void:
+	# 0.90: construindo, o clique põe a peça e o botão direito desiste (não atira nem mira)
+	if construindo and acao in ["atirar", "mirar"]:
+		if apertou:
+			(confirmar_pedido if acao == "atirar" else cancelar_pedido).emit()
+		return
 	match acao:
 		"mirar":
 			if mirar_modo == "alternar":
@@ -399,7 +417,9 @@ func _acao(acao: String, apertou: bool) -> void:
 		"agachar":
 			if agachar_modo == "alternar":
 				agachar_pedido.emit()
-		"recarregar": recarregar_pedido.emit()
+		"recarregar":
+			if not construindo:
+				recarregar_pedido.emit()
 		"trocar_arma":
 			if not modo_voo:
 				trocar_arma_pedido.emit()
@@ -407,8 +427,19 @@ func _acao(acao: String, apertou: bool) -> void:
 			if not modo_voo:
 				inventario_pedido.emit()
 		"pegar":
-			if not modo_voo:
+			if construindo:
+				confirmar_pedido.emit()
+			elif not modo_voo:
 				pegar_pedido.emit()
+		"empurrar":
+			if not modo_voo and not construindo:
+				empurrar_pedido.emit()
+		"construir":
+			if not modo_voo:
+				construir_pedido.emit()
+		"girar_peca":
+			if construindo:
+				girar_pedido.emit()
 		"roda":
 			if not modo_voo:
 				roda_tecla.emit()
@@ -516,6 +547,11 @@ func _tocou(id: String) -> void:
 		"CAM": camera_pedida.emit()
 		"OMBRO": ombro_pedido.emit()
 		"MSG": mensagem_pedida.emit()
+		"EMPURRAR": empurrar_pedido.emit()
+		"CONSTRUIR": construir_pedido.emit()
+		"GIRAR": girar_pedido.emit()
+		"OK": confirmar_pedido.emit()
+		"CANCELAR": cancelar_pedido.emit()
 
 # OTIMIZAÇÃO: redesenha só quando algo que aparece mudou (botão aceso, texto, botão escondido, bloqueio).
 # Os toques já pedem redesenho na hora (_input). Antes redesenhava todos os botões em todo quadro.

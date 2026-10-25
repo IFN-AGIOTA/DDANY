@@ -514,11 +514,11 @@ func usar(it) -> void:
 func _barricar(it) -> void:
 	var pt = PortaCls.perto(jogador.global_position, 2.3)
 	if pt == null:
-		aviso.emit("CHEGUE PERTO DE UMA PORTA PARA BARRICAR")
+		aviso.emit("CHEGUE PERTO DE UMA PORTA OU JANELA PARA BARRICAR")
 		return
 	var msg: String = pt.barricar(jogador.global_position)
 	aviso.emit(msg)
-	if msg.begins_with("PORTA BARRICADA"):
+	if msg.contains(" BARRICADA ("):                    # "PORTA BARRICADA (1/3...)" ou "JANELA BARRICADA (...)"
 		animar.emit("arrombar")
 		it.qtd -= 1
 		if it.qtd <= 0:

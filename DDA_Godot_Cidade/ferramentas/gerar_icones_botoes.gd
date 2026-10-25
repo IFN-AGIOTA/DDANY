@@ -40,6 +40,11 @@ const LISTA := [
 	["pe_de_cabra", "delapouite/crowbar", false],
 	["punhos", "lorc/fist", false],
 	["MSG", "delapouite/chat-bubble", false],      # 0.71: mensagens rápidas (multijogador)
+	["EMPURRAR", "delapouite/push", false],        # 0.90: empurrão / pisão
+	["CONSTRUIR", "lorc/hammer-nails", false],     # 0.90: construir base
+	["GIRAR", "delapouite/anticlockwise-rotation", false],
+	["OK", "delapouite/check-mark", false],
+	["CANCELAR", "sbed/cancel", false],
 ]
 const CEL := 128
 const ICONE := 112                     # sobra uma borda vazia: as mipmaps não "vazam" para o vizinho

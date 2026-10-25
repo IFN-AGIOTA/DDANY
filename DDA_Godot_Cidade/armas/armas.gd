@@ -231,7 +231,7 @@ func cano() -> Node3D:
 	return n.get_node_or_null("Cano")
 
 func pode_usar() -> bool:
-	return jogador != null and jogador.ativo and not jogador.morto
+	return jogador != null and jogador.ativo and not jogador.morto and not bool(jogador.get("construindo"))
 
 func recarregar() -> void:
 	if not pode_usar():

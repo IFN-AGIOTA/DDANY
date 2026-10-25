@@ -135,6 +135,8 @@ var _penultimo := Vector3.INF          # 0.89: penúltimo lugar onde te viu (par
 var _pulando := 0.0                    # 0.89: > 0 = tombando por cima de uma barreira baixa
 var _pulo_de := Vector3.ZERO
 var _pulo_para := Vector3.ZERO
+var _pulo_dur := 0.55
+var _pulo_alto := 0.7
 var _mult_dano := 1.0
 var _imune := 0.0
 var som2: AudioStreamPlayer3D          # segundo canal: o baque do tiro não corta o gemido
@@ -551,6 +553,36 @@ func receber_golpe(dano: float, direcao: Vector3, atacante: Node) -> Dictionary:
 			_cancelar_ataque()
 	_alertar(atacante)
 	return {"cabeca": false, "morto": false}
+
+# 0.90 · EMPURRÃO (Project Zomboid): quase sem dano; ele cambaleia para trás e muitas vezes CAI (pelas costas, quase
+# sempre). Rastejante e quem já está no chão não são empurrados (neles o certo é o pisão).
+const CHANCE_DERRUBAR_EMPURRAO := 0.55
+func empurrado(direcao: Vector3, quem: Node) -> Dictionary:
+	if estado == MORTO or _no_chao() or classe == "rastejante":
+		return {"cabeca": false, "morto": false, "caiu": false}
+	var d := Vector3(direcao.x, 0.0, direcao.z)
+	if d.length_squared() < 0.0001:
+		d = -global_basis.z
+	d = d.normalized()
+	if remoto:                                          # cópia: o host decide; aqui só a reação
+		modelo.levar_golpe(0.8, signf(global_basis.x.dot(d)))
+		if gerente != null:
+			gerente.rede_dano(self, 0.0, -1, d, true)
+		return {"cabeca": false, "morto": false, "caiu": false}
+	_empurrao = d * 4.0
+	_cancelar_ataque()
+	_atordoado = maxf(_atordoado, 0.7)
+	_investida = 0.0
+	var chance := CHANCE_DERRUBAR_EMPURRAO + (0.35 if (-global_basis.z).dot(d) > 0.3 else 0.0)
+	var caiu := randf() < chance
+	if caiu:
+		derrubar()
+	else:
+		modelo.levar_golpe(0.8, signf(global_basis.x.dot(d)))
+		if gerente != null:
+			gerente.rede_ani(self, "golpe", {"f": 0.8, "l": signf(global_basis.x.dot(d))})
+	_alertar(quem)
+	return {"cabeca": false, "morto": false, "caiu": caiu}
 
 func _alertar(quem: Node) -> void:
 	if quem == null or not is_instance_valid(quem) or not (quem is Node3D):
@@ -995,18 +1027,31 @@ func _procurar_adiante(p: Vector3) -> void:
 # porta fechada perto e para o lado de onde ele quer ir: perto dela, bate; um pouco longe, vai até ela
 func _porta_no_caminho(p: Vector3, quer: Vector3) -> bool:
 	var pt = PortaCls.perto(p, 4.5)
-	if pt == null or not pt.fechada():
+	if pt == null:
+		return false
+	var e_janela: bool = pt.get("janela") == true
+	if not pt.fechada() and not e_janela:
 		return false
 	var para_porta: Vector3 = pt.global_position - p
 	para_porta.y = 0.0
 	if para_porta.normalized().dot(quer.normalized()) < -0.3:
 		return false                                  # a porta fica para trás: não é o caminho
-	if para_porta.length() > 1.5:
+	if para_porta.length() > (1.3 if e_janela else 1.5):
 		_dir_desvio = para_porta.normalized()
 		_t_desvio = 0.7
 		return true
-	# 0.89 · INTELIGÊNCIA "abrem portas": porta sem tábuas ele abre (com tábuas, só batendo)
-	if Regras.abrem_portas() and int(pt.tabuas) == 0:
+	# 0.90 · JANELA QUEBRADA (sem tábuas): pula para o outro lado e cai no chão (levanta depois)
+	if e_janela and not pt.fechada():
+		_pulando = 0.75
+		_pulo_dur = 0.75
+		_pulo_alto = 1.2
+		_pulo_de = p
+		_pulo_para = pt.ponto_do_outro_lado(p)
+		rotation.y = atan2(-para_porta.x, -para_porta.z)
+		modelo.levar_golpe(0.8)
+		return true
+	# 0.89 · INTELIGÊNCIA "abrem portas": porta sem tábuas ele abre (com tábuas, só batendo; janela ele quebra)
+	if Regras.abrem_portas() and int(pt.tabuas) == 0 and not e_janela:
 		pt.definir_aberta(true, true)
 		_t_preso = 1.0
 		return true
@@ -1095,9 +1140,9 @@ func _mover(dt: float) -> void:
 	# 0.89: tombando por cima de uma barreira baixa (meio segundo no ar, cai do outro lado)
 	if _pulando > 0.0:
 		_pulando -= dt
-		var u := clampf(1.0 - _pulando / 0.55, 0.0, 1.0)
+		var u := clampf(1.0 - _pulando / _pulo_dur, 0.0, 1.0)
 		var q := _pulo_de.lerp(_pulo_para, u)
-		q.y += sin(u * PI) * 0.7
+		q.y += sin(u * PI) * _pulo_alto
 		global_position = q
 		if _pulando <= 0.0:
 			_y_chao = _pulo_para.y
@@ -1247,6 +1292,8 @@ func _tentar_pular(p: Vector3, dir: Vector3) -> bool:
 		var q := p + dir * (k * 0.3)
 		if m.topo_obstaculo(q.x, q.z, 0.35) == -INF and not m.dentro_de_predio(q.x, q.z, 0.4, not _fisica):
 			_pulando = 0.55
+			_pulo_dur = 0.55
+			_pulo_alto = 0.7
 			_pulo_de = p
 			_pulo_para = Vector3(q.x, m.altura(q.x, q.z), q.z)
 			rotation.y = atan2(-dir.x, -dir.z)

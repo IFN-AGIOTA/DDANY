@@ -31,6 +31,7 @@ const Mat := preload("res://mundo/materiais_cidade.gd")
 const ItemMundo := preload("res://inventario/item_mundo.gd")
 const CaixaMundo := preload("res://inventario/caixa_mundo.gd")
 const PortaCls := preload("res://mundo/porta.gd")
+const JanelaCls := preload("res://mundo/janela.gd")
 
 const PE_DIREITO := 4.0
 const LAJE := 0.6
@@ -84,6 +85,7 @@ var r := RandomNumberGenerator.new()
 var paredes := Malhas.Construtor.new()
 var piso := Malhas.Construtor.new()
 var resto := Malhas.Construtor.new()
+var _descarte := Malhas.Construtor.new()   # 0.90: o que não é desenhado (as janelas do térreo se desenham sozinhas)
 var teto := Malhas.Construtor.new()
 var col: Array = []                    # [centro local, tamanho, giro]
 var cont: Array = []                   # lugares com loot
@@ -97,6 +99,7 @@ var cor_dentro := Color.GRAY
 var comodos: Array = []                # [Rect2, tipo]
 var _pontos: Array = []                # pontos livres no chão (loot solto)
 var portas: Array = []                 # 0.73: {pos (meio do vão, no chão), giro, larg, alt, parede, dupla, estado, abertura}
+var janelas: Array = []                # 0.90: janelas do térreo {pos, giro, larg, y0, y1, parede, vidro, tabuas}
 var _rp := RandomNumberGenerator.new() # 0.73: sorteio das portas de dentro (separado: não muda o resto do prédio)
 var _pad_piso := 1.0
 # 0.82: o piso (o desenho) fica 1,5 cm acima do chão do lote: na mesma altura os dois "brigavam" e piscavam
@@ -221,23 +224,38 @@ func _enfeite_abertura(f: int, s0: float, s1: float, ab: Array) -> void:
 			"parede": ESP, "dupla": true, "estado": estado, "abertura": abre})
 	else:
 		var fora: Vector2 = n * (o + 0.03) + t * meio
+		# 0.90 · no TÉRREO a janela é de verdade (mundo/janela.gd: vidro, quebrar, pular, tábuas): as tábuas e o caixilho
+		# daqui vão para um construtor descartado (os sorteios continuam os mesmos: os móveis não mudam de lugar)
+		var real := nivel == 0
+		var pb = _descarte if real else paredes
+		var rj := RandomNumberGenerator.new()
+		rj.seed = hash([idx, f, int(s0 * 10.0)])
+		var tem_vidro := false
+		var tab := 0
 		if r.randf() < 0.35:
 			# janela tapada com tábuas (por fora)
+			tab = rj.randi_range(1, 3)
 			var y0: float = ab[2]
 			var y1: float = ab[3]
 			for k in 3:
 				var y := lerpf(y0 + 0.2, y1 - 0.2, k / 2.0)
 				var tam := Vector3(0.04, 0.22, s1 - s0 + 0.3) if f < 2 else Vector3(s1 - s0 + 0.3, 0.22, 0.04)
-				paredes.caixa(Vector3(fora.x, y, fora.y), tam, Moveis.MADEIRA * r.randf_range(0.7, 1.0), Basis(Vector3.FORWARD if f >= 2 else Vector3.RIGHT, r.randf_range(-0.15, 0.15)))
+				pb.caixa(Vector3(fora.x, y, fora.y), tam, Moveis.MADEIRA * r.randf_range(0.7, 1.0), Basis(Vector3.FORWARD if f >= 2 else Vector3.RIGHT, r.randf_range(-0.15, 0.15)))
 		else:
-			# caixilho escuro + cacos de vidro no chão de dentro
+			# caixilho escuro + cacos de vidro no chão de dentro (térreo: 55% ainda com o vidro inteiro, sem cacos)
+			tem_vidro = real and rj.randf() < 0.55
+			var rb = _descarte if tem_vidro else resto
 			var y1: float = ab[3]
 			var tam2 := Vector3(0.08, 0.08, s1 - s0) if f < 2 else Vector3(s1 - s0, 0.08, 0.08)
-			paredes.caixa(Vector3(fora.x, ab[2], fora.y), tam2, Color(0.15, 0.15, 0.16))
-			paredes.caixa(Vector3(fora.x, y1, fora.y), tam2, Color(0.15, 0.15, 0.16))
+			pb.caixa(Vector3(fora.x, ab[2], fora.y), tam2, Color(0.15, 0.15, 0.16))
+			pb.caixa(Vector3(fora.x, y1, fora.y), tam2, Color(0.15, 0.15, 0.16))
 			for k in r.randi_range(1, 4):
 				var q: Vector2 = n * (o - ESP - r.randf_range(0.2, 1.2)) + t * r.randf_range(s0, s1)
-				resto.caixa(Vector3(q.x, PISO_Y + 0.01, q.y), Vector3(r.randf_range(0.05, 0.2), 0.01, r.randf_range(0.05, 0.15)), Color(0.55, 0.65, 0.68), Basis(Vector3.UP, r.randf() * 3.0))
+				rb.caixa(Vector3(q.x, PISO_Y + 0.01, q.y), Vector3(r.randf_range(0.05, 0.2), 0.01, r.randf_range(0.05, 0.15)), Color(0.55, 0.65, 0.68), Basis(Vector3.UP, r.randf() * 3.0))
+		if real:
+			var pc: Vector2 = n * (o - ESP * 0.5) + t * meio
+			janelas.append({"pos": Vector3(pc.x, 0.0, pc.y), "giro": atan2(n.x, n.y), "larg": s1 - s0, "y0": float(ab[2]),
+				"y1": float(ab[3]), "parede": ESP, "vidro": tem_vidro, "tabuas": tab})
 
 # ---------- paredes internas ----------
 # parede reta de a até b (alinhada a X ou Z) com vãos de porta nas posições "vaos" (distância a partir de a)
@@ -766,6 +784,22 @@ func criar(lm) -> Node3D:
 		pt.position = e["pos"]
 		pt.rotation.y = e["giro"]
 		raiz.add_child(pt)
+	# 0.90: janelas do térreo (mesmo esquema das portas: id "j<prédio>:<n>", estado no loot)
+	for k in janelas.size():
+		var e: Dictionary = janelas[k]
+		var jn = JanelaCls.new()
+		jn.id = "j%d:%d" % [idx, k]
+		jn.largura = e["larg"]
+		jn.y0 = e["y0"]
+		jn.y1 = e["y1"]
+		jn.parede = e["parede"]
+		jn.vidro = e["vidro"]
+		jn.tabuas = e["tabuas"]
+		if loot != null and loot.get("portas") != null and loot.portas.has(jn.id):
+			jn.aplicar(loot.portas[jn.id])
+		jn.position = e["pos"]
+		jn.rotation.y = e["giro"]
+		raiz.add_child(jn)
 	return raiz
 
 # lugares livres no chão para itens soltos (entre os móveis)
