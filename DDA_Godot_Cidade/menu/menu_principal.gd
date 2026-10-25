@@ -1,6 +1,7 @@
 extends CanvasLayer
 # MENU PRINCIPAL (igual ao do HTML): "DIAS DE UM / APOCALIPSE / NOVA YORK", versão, botões
 # Jogar (mundo livre) · História (em breve) · Multijogador (menu/tela_multijogador.gd) · Opções · Créditos (menu/creditos.gd), e o ícone do PERFIL no canto. Fica por cima da cena_menu.gd.
+# 0.96: botão NOVIDADES no canto de baixo à direita (a versão e o título da última atualização) -> menu/tela_novidades.gd.
 # Mexa AQUI para: textos e botões do menu principal. (A cena 3D de fundo é menu/cena_menu.gd.)
 
 signal jogar
@@ -12,6 +13,8 @@ signal perfil                            # ícone de perfil no canto (menu/tela_
 const UI := preload("res://menu/ui.gd")
 const Salvamento := preload("res://menu/salvamento.gd")
 const CreditosCls := preload("res://menu/creditos.gd")
+const NovidadesCls := preload("res://menu/tela_novidades.gd")
+const ListaNovidades := preload("res://menu/novidades_lista.gd")
 const AvatarCls := preload("res://menu/avatar.gd")
 
 var _raiz: Control
@@ -144,6 +147,21 @@ func _montar() -> void:
 		bp.offset_bottom = 8.5 * v
 		bp.apertado.connect(func(): perfil.emit())
 		_raiz.add_child(bp)
+	# NOVIDADES: canto de baixo à direita (a última atualização; abre a lista de todas)
+	var ult: Array = ListaNovidades.LISTA[0] if not ListaNovidades.LISTA.is_empty() else ["", "", []]
+	var tit_ult: String = str(ult[1])
+	if tit_ult.length() > 46:
+		tit_ult = tit_ult.substr(0, 44).strip_edges() + "…"
+	var bn := UI.BotaoMenu.new("Novidades", "Versão %s · %s" % [ult[0], tit_ult], false, 3.0, 26.0)
+	bn.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	bn.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	bn.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	bn.offset_right = -3.0 * v
+	bn.offset_bottom = -3.0 * v
+	bn.offset_left = -3.0 * v
+	bn.offset_top = -3.0 * v
+	bn.apertado.connect(_abrir_novidades)
+	_raiz.add_child(bn)
 	_aviso = UI.rotulo("", 3.0 * v, UI.AMBAR, 700, 0.0, true)
 	_aviso.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	_aviso.offset_top = -9.0 * v
@@ -164,6 +182,13 @@ func _abrir_creditos() -> void:
 	var c := CreditosCls.new()
 	c.name = "Creditos"
 	add_child(c)
+
+func _abrir_novidades() -> void:
+	if get_node_or_null("Novidades") != null:
+		return
+	var n := NovidadesCls.new()
+	n.name = "Novidades"
+	add_child(n)
 
 # APOCALIPSE: degradê + sombra (a sombra é um filho desenhado atrás, sem o degradê)
 func _titulo_grande(txt: String, tam: float, v: float) -> Control:

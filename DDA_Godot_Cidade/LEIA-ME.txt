@@ -39,6 +39,22 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.96 · TELA DE NOVIDADES NO MENU
+  · No MENU PRINCIPAL, no CANTO DE BAIXO À DIREITA, um botão NOVIDADES mostra a versão e o título da última
+    atualização. Tocando nele abre a tela NOVIDADES com TODAS as atualizações do jogo, de CIMA PARA BAIXO, da MAIS NOVA
+    para a MAIS ANTIGA: cada uma num cartão com a versão, o título e o que mudou (a versão instalada vem marcada
+    ATUAL). Abre com as 12 mais novas; "Mostrar mais antigas" vai acrescentando o resto (leve no celular).
+  ARQUIVOS MEXIDOS (os textos da tela vêm deste LEIA-ME, os blocos "ATUALIZAÇÃO", só a parte do jogador, sem as
+  listas de arquivos e de testes: a cada atualização é só rodar ferramentas/gerar_novidades.gd, ver seção 9):
+    menu/tela_novidades.gd ......... NOVO · a tela das novidades (cartões, "Mostrar mais antigas", Voltar/Esc)
+    menu/novidades_lista.gd ........ NOVO · a lista (GERADA do LEIA-ME; não editar à mão)
+    ferramentas/gerar_novidades.gd . NOVO · gera a lista a partir dos blocos ATUALIZAÇÃO do LEIA-ME
+    ferramentas/testes/teste_novidades.gd NOVO · teste (lista em ordem, sem arquivos; abre, mostra mais, fecha)
+    ferramentas/testes/rodar.sh .... teste_novidades na bateria
+    menu/menu_principal.gd ......... botão NOVIDADES no canto de baixo à direita
+    menu/config.gd ................. VERSAO "0.96"
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..." + seção 9
+
 ATUALIZAÇÃO 0.95 · SENTIDOS DO MUTADO (FAREJAR, ESTALO DE DENTES) E O "MODO DE ESCUTA" DO CONTROLADO
   · BOTÃO NOVO "SENTIDO" (tecla H no PC), só aparece para quem não é humano. Liga por 10 s e depois espera 20 s
     (o botão mostra a contagem):
@@ -2469,6 +2485,9 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - garras / arma de fogo travada ....... armas/armas.gd (def_corpo, _sincronizar)
 - FAREJAR / ESCUTAR / estalo de dentes
   (tempos, alcances, cores) ........... jogador/sentidos.gd · botão SENTIDO: jogador/controles.gd · tecla: teclas.gd
+- tela NOVIDADES do menu (aparência) .. menu/tela_novidades.gd · botão: menu/menu_principal.gd
+- textos das NOVIDADES ................ vêm dos blocos ATUALIZAÇÃO deste LEIA-ME: rodar ferramentas/gerar_novidades.gd
+                                        (gera menu/novidades_lista.gd)
 - salvar no multijogador .............. menu/salvamento.gd (salvar_rede/carregar_rede; arquivo user://save_rede.json)
 - de quanto em quanto tempo os infectados
   dos prédios/locais voltam ............ mundo/interiores.gd e mundo/locais.gd (CICLO_INFECTADOS)
@@ -2756,6 +2775,9 @@ MÚSICA (pasta audio/)
   "ATUALIZAÇÃO X.YY" novo no topo da seção 2 com tudo o que mudou e os arquivos mexidos, e as seções de
   controles, números, itens, história e o MAPA de arquivos atualizadas quando for o caso. Este arquivo vai
   sempre junto no .zip da atualização.
+- 0.96: depois de escrever o bloco, rodar ferramentas/gerar_novidades.gd (godot --headless -s
+  res://ferramentas/gerar_novidades.gd): ele refaz menu/novidades_lista.gd, a lista da tela NOVIDADES do menu
+  (só a parte do jogador de cada bloco; ARQUIVOS e testes ficam de fora). O novidades_lista.gd vai no .zip também.
 - PELO JOGO (celular): pacote com os arquivos mudados desde o APK atual (0.75), feito por ferramentas/gerar_pacote.gd
   (MODO=pacote) e publicado em atualizacoes/; APK novo com MODO=apk (ver seção 1 e o topo do gerar_pacote.gd).
   Antes de publicar, rode os testes: ferramentas/testes/rodar.sh.
