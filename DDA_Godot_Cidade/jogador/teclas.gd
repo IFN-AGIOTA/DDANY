@@ -21,6 +21,7 @@ const ACOES := [
 	["trocar_arma", "Trocar de arma", "k:%d" % KEY_X, "Combate"],
 	["roda", "Roda do inventário rápido", "k:%d" % KEY_Q, "Combate"],
 	["empurrar", "Empurrar / pisar (no caído)", "k:%d" % KEY_G, "Combate"],
+	["sentido", "Sentido do mutado (farejar / escutar)", "k:%d" % KEY_H, "Combate"],
 	["atalho_1", "Atalho 1", "k:%d" % KEY_1, "Inventário rápido"],
 	["atalho_2", "Atalho 2", "k:%d" % KEY_2, "Inventário rápido"],
 	["atalho_3", "Atalho 3", "k:%d" % KEY_3, "Inventário rápido"],

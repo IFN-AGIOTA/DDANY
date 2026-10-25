@@ -39,6 +39,33 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.95 · SENTIDOS DO MUTADO (FAREJAR, ESTALO DE DENTES) E O "MODO DE ESCUTA" DO CONTROLADO
+  · BOTÃO NOVO "SENTIDO" (tecla H no PC), só aparece para quem não é humano. Liga por 10 s e depois espera 20 s
+    (o botão mostra a contagem):
+      - MUTADO · FAREJAR: ele sente o CHEIRO das pessoas até 250 m (outros jogadores e os sobreviventes do
+        hospital): cada uma aparece com uma AURA VERMELHA que pulsa, vista ATRAVÉS DAS PAREDES, e a borda da tela fica
+        vermelha. Mutados não têm cheiro de gente (não aparecem).
+      - CONTROLADO (quem tomar o SORO da 2ª parte) · ESCUTAR, como o "modo de escuta" de The Last of Us: o mundo fica
+        CINZA e quem está até 40 m (jogadores, infectados e sobreviventes) aparece como um VULTO BRANCO DESFOCADO
+        através das paredes. (Pronto e testado, mas o soro ainda não existe no jogo.)
+  · ESTALO DE DENTES do mutado (lore: o aviso sonoro dos mutados): a cada 30 s os dentes dele batem sozinhos (som
+    feito por código, ouvido até ~45 m). No MULTIJOGADOR o mutado agora NÃO aparece no mapa dos outros, a não ser
+    quando estala: aí aparece uma marca VERMELHA piscando "MUTADO · nome" no mapa e no minimapa por 10 s (e ele
+    recebe o aviso "OS OUTROS TE VEEM NO MAPA"). Os outros também ouvem o estalo no lugar.
+  · Testado: teste_mutado.gd (agora 35 conferências: + botão, farejar, 10 s / espera 20 s, estalo a cada 30 s, some e
+    aparece no mapa, escutar do controlado e os vultos saindo no fim) + fotos dos dois efeitos.
+  ARQUIVOS MEXIDOS:
+    jogador/sentidos.gd ............ NOVO · farejar, escutar, estalo de dentes (tempos, alcances, cores, os efeitos
+                                     através das paredes, a tela vermelha/cinza e o som do estalo)
+    jogador/controles.gd ........... botão SENTIDO (sinal sentido_pedido; escondido para humano)
+    jogador/teclas.gd .............. tecla H "Sentido do mutado"
+    main.gd ........................ cria jogador/sentidos.gd
+    rede/sessao_rede.gd ............ evento "estalo"
+    hud/mapa.gd .................... mutado some do mapa dos outros; marca vermelha "MUTADO" quando estala
+    ferramentas/testes/teste_mutado.gd  conferências dos sentidos; conta o tempo do jogo (não o do relógio)
+    menu/config.gd ................. VERSAO "0.95"
+    LEIA-ME.txt .................... este bloco + seções 3, 4, 7 (mapa) e 10
+
 ATUALIZAÇÃO 0.94 · O JOGADOR MUTADO (1% DE CHANCE AO MORRER PELOS INFECTADOS)
   · Lore (Bíblia 2.7): o mutado é o vírus "aprendendo" num corpo que MORREU. Agora, quando você MORRE PELOS
     INFECTADOS (golpe/mordida, puxado para o chão ou o vírus), tem 1% DE CHANCE de não morrer: o corpo fica no chão,
@@ -2172,6 +2199,7 @@ TOQUE (vários dedos ao mesmo tempo)
   na frente vira PISÃO) · CONSTRUIR (0.90: menu da base; com a peça na mão: GIRAR, OK, CANCELAR) · INV · II (pausa) · CAM (1ª/3ª pessoa) · VOO (câmera livre: SOBE / DESCE / VEL)
   · OMBRO (0.79): troca a câmera de ombro (direito <-> esquerdo).
   · BALÃO (só no multijogador): mensagens rápidas.
+  · SENTIDO (0.95, só para o mutado/controlado): FAREJAR (mutado) ou ESCUTAR (controlado) por 10 s, espera 20 s.
 - CARRO (0.76): PEGAR perto de um carro que funciona = ENTRAR; joystick frente/trás = acelerar/freio e ré, lados =
   virar; PULAR = freio de mão; PEGAR = SAIR. PC: W/S/A/D (setas), Espaço freio de mão, E sair.
 - Desde a 0.67 os botões mostram ÍCONES (balas = atirar, mira = mirar, mochila = INV, drone = VOO...); o botão
@@ -2182,7 +2210,7 @@ PC (todas as teclas trocáveis em Opções › Teclado e mouse)
   E pegar / abrir e fechar porta / falar com o NPC do hospital · Tab inventário · M mapa · Esc/P pausa · F 1ª/3ª pessoa · botão do meio do mouse
   trocar de ombro · V câmera livre (E sobe, Q desce) ·
   T mensagens rápidas (multijogador; 1..8 escolhe) · F11 tela cheia · G empurrar/pisar · B construir (com a
-  peça na mão: R gira, E ou clique constrói, botão direito cancela).
+  peça na mão: R gira, E ou clique constrói, botão direito cancela) · H sentido do mutado (farejar / escutar).
 
 -----------------------------------------------------------------------------------------------------
 4. NÚMEROS DO JOGO
@@ -2234,6 +2262,8 @@ PORTAS (0.73): porta 100 de vida, cada tábua mais 140 (até 3) · golpe de infe
 MUTADO (0.94, jogador/mutacao.gd): 1% ao morrer pelos infectados · levanta em 6 s · dano recebido x0,45 · sangramento
   x0,4 · trote/corrida x1,22 · pulo x1,4 · estamina correndo x0,5 · queda x1,35 · garras 30 de dano (1,65 m, 0,55 s) ·
   armas brancas x1,3 · sem arma de fogo · infectados ignoram · (controlado, 2ª parte: x1,1 · x1,2 · dano x0,7 · garras 20)
+SENTIDOS (0.95, jogador/sentidos.gd): ligado 10 s, espera 20 s · farejar até 250 m (até 24 pessoas) · escutar até 40 m ·
+  estalo de dentes a cada 30 s (ouvido a ~45 m; no mapa dos outros por 10 s)
 HOSPITAIS (0.91): zona neutra = terreno + 8 m · trégua ao sair 120 s · guardas a cada 0,5 s · NPCs: falar até 2,4 m
 LOJA DA MÔNICA (0.91): 18 itens por dia (1 de cada categoria + 7 da especialidade) · especialidade -20%, o resto +15% ·
   preço = preço cheio x estado (35%-100%) · ela paga 40% · renova a cada dia do jogo (48 min) · preços em npc/precos.gd
@@ -2437,6 +2467,8 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - corpo curvado do mutado ............. jogador/camada_mutado.gd (CURVA)
 - infectados ignorando o mutado ....... inimigos/vagos.gd (ignorado) + inimigos/vago.gd
 - garras / arma de fogo travada ....... armas/armas.gd (def_corpo, _sincronizar)
+- FAREJAR / ESCUTAR / estalo de dentes
+  (tempos, alcances, cores) ........... jogador/sentidos.gd · botão SENTIDO: jogador/controles.gd · tecla: teclas.gd
 - salvar no multijogador .............. menu/salvamento.gd (salvar_rede/carregar_rede; arquivo user://save_rede.json)
 - de quanto em quanto tempo os infectados
   dos prédios/locais voltam ............ mundo/interiores.gd e mundo/locais.gd (CICLO_INFECTADOS)
@@ -2777,6 +2809,8 @@ MÚSICA (pasta audio/)
 - Mutado (0.94): o corpo usa as mesmas animações do humano (só curvado por cima; sem animação própria de bicho, não
   escala paredes nem pula entre telhados como os mutados do livro); a arma de fogo na mão dele fica invisível (está no
   inventário); o soro da 2ª parte ainda não existe. No multijogador o sorteio é feito no aparelho de quem morreu.
+  Sentidos (0.95): o farejar mostra uma aura (não o corpo) e sozinho só acha os sobreviventes do hospital; o ESCUTAR
+  do controlado está pronto, mas só vale quando o soro existir.
 - Ideias para depois: loot por região, lugares
   especiais (quarentena), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, veículos consertáveis,
   outros sobreviventes (NPCs), o modo história novo, base com andares e telhado.

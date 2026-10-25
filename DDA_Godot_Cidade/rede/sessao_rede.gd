@@ -29,6 +29,7 @@ extends Node
 #     o bit 256 do estado diz que o jogador está protegido (não fere e não é ferido).
 #     0.94: o bit 512 diz que o jogador está MUTADO (jogador/mutacao.gd: os infectados do host o ignoram e a cópia
 #     dele fica com o corpo do mutado).
+#     0.95: evento "estalo" = o mutado estalou os dentes (som no lugar e ele aparece no mapa por 10 s).
 # AINDA NÃO: dano entre jogadores, salvar a partida em rede, missões do rádio (cada um tem as suas), infectados
 # não entram em prédio atrás de um amigo (o host não tem as paredes do interior onde o amigo está).
 # Mexa AQUI para: o que vai em cada mensagem e de quanto em quanto tempo.
@@ -262,6 +263,9 @@ func _evento(id: int, tipo: String, d: Dictionary) -> void:
 				if main.vagos != null:
 					main.vagos.atacou_jogador.emit(float(d.get("d", 10.0)))
 					main.vagos._contar_golpe(str(d.get("o", "")))       # 0.89: puxar para o chão também no aparelho do amigo
+		"estalo":                              # 0.95: um mutado estalou os dentes (jogador/sentidos.gd)
+			if main.get("sentidos") != null:
+				main.sentidos.estalo_remoto(id, d)
 		"agarrado":
 			if id == 1 and not jogador.morto:
 				jogador.agarrar(float(d.get("t", 0.9)))

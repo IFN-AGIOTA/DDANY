@@ -15,10 +15,11 @@ func q(n):
 	for i in n:
 		await physics_frame
 		await process_frame
-func seg(s: float):
-	var t0 := Time.get_ticks_msec()
-	while Time.get_ticks_msec() - t0 < s * 1000.0:
+func seg(s: float):                                  # tempo do JOGO (com a máquina lenta, o relógio corre mais)
+	var t := 0.0
+	while t < s:
 		await process_frame
+		t += root.get_process_delta_time()
 
 func _r():
 	var Mut = load("res://jogador/mutacao.gd")
@@ -48,6 +49,7 @@ func _r():
 	m.clima.hora = 13.0
 	ok(j.armas.atual == "pistola" and not j.mutado, "começa humano, com a pistola")
 	var peso_antes: float = j.inventario.peso_total()
+	var inicio: Vector3 = j.global_position
 	# infectado na frente: caça o humano
 	var frente: Vector3 = -j.global_basis.z
 	var v = m.vagos._criar(j.global_position + frente * 6.0 + Vector3(0, 0.05, 0), Vector3.INF)
@@ -114,6 +116,60 @@ func _r():
 		H.falar_com(mon)
 		await q(3)
 		ok(H.tela == null, "a Mônica não negocia com o mutado")
+	# 0.95 · SENTIDOS: farejar (mutado) no hospital: os sobreviventes aparecem com a aura
+	var sen = m.sentidos
+	await q(3)
+	ok(sen != null and not bool(m.controles.ocultos.get("SENTIDO", true)), "botão SENTIDO aparece para o mutado")
+	sen.usar()
+	await seg(0.8)
+	var auras := 0
+	for a0 in sen._alvos:
+		if sen._alvos[a0][0] != null:
+			auras += 1
+	ok(sen.ativo > 8.0 and auras >= 4, "FAREJAR: os sobreviventes do hospital aparecem pelo cheiro (%d auras)" % auras)
+	await seg(9.6)
+	ok(sen.ativo <= 0.0 and sen.espera > 18.0, "dura 10 s e depois espera 20 s (espera %.1f)" % sen.espera)
+	sen.usar()
+	await q(3)
+	ok(sen.ativo <= 0.0, "na espera não liga")
+	await seg(0.8)
+	ok(sen._alvos.is_empty(), "as auras somem no fim")
+	# estalo de dentes (a cada 30 s) e o mapa dos outros
+	sen._t_estalo = 0.01
+	await q(3)
+	ok(sen._t_estalo > 29.0 and sen._som_estalo != null, "estalo de dentes a cada 30 s")
+	var rm = load("res://rede/jogador_remoto.gd").new()
+	rm.mutado = true
+	ok(sen.escondido(7, rm), "o amigo mutado some do mapa")
+	sen.estalo_remoto(7, {"p": j.global_position + Vector3(20, 0, 0)})
+	ok(not sen.escondido(7, rm) and sen.estalos.has(7), "estalou: aparece no mapa")
+	sen.estalos[7][1] = 0.05
+	await seg(0.3)
+	ok(sen.escondido(7, rm), "10 s depois some de novo")
+	rm.free()
+	# controlado (soro, 2ª parte): ESCUTAR mostra o vulto do infectado através da parede
+	s.mutacao = 2
+	sen.espera = 0.0
+	m.mundo.forcar(Vector2(inicio.x, inicio.z))
+	j.teleportar(inicio, 0.0)                         # longe do hospital (os guardas derrubam infectado lá)
+	await q(30)
+	var v3 = m.vagos._criar(j.global_position + Vector3(6, 0.05, 6), Vector3.INF)
+	await q(5)
+	sen.usar()
+	await seg(0.8)
+	var vultos := 0
+	for a1 in sen._alvos:
+		vultos += sen._alvos[a1][1].size()
+	ok(sen.ativo > 8.0 and v3 != null and sen._alvos.has(v3) and vultos > 0, "ESCUTAR (controlado): vultos através das paredes (%d malhas)" % vultos)
+	ok(m.vagos.alvo_para(v3) == j and not m.vagos.ignorado(j), "controlado: os infectados voltam a ver você")
+	sen.ativo = 0.01
+	await seg(0.9)
+	var sobrou := 0
+	for mi in v3.find_children("*", "MeshInstance3D", true, false):
+		if mi.material_overlay != null:
+			sobrou += 1
+	ok(sobrou == 0, "o vulto sai do infectado no fim")
+	s.mutacao = 1
 	# morrer de novo = volta humano
 	s.imortal = false
 	Mut.forcar = true                                   # mesmo forçado: quem já é mutado morre de verdade

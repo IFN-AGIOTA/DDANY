@@ -48,6 +48,7 @@ const EditorHudCls := preload("res://menu/editor_hud.gd")
 const AplicarOpcoesCls := preload("res://menu/aplicar_opcoes.gd")
 const LogoProdutoraCls := preload("res://menu/logo_produtora.gd")
 const Mutacao := preload("res://jogador/mutacao.gd")
+const SentidosCls := preload("res://jogador/sentidos.gd")
 const JOGADOR_CENA := preload("res://jogador/jogador.tscn")
 const SessaoRedeCls := preload("res://rede/sessao_rede.gd")
 const TelaMultiCls := preload("res://menu/tela_multijogador.gd")
@@ -78,6 +79,7 @@ var _t_info := 0.0
 var missoes: Node = null                    # mundo/missoes.gd (suprimentos militares avisados pelo rádio)
 var construcao: Node = null                 # 0.90: mundo/construcao.gd (a base que você constrói)
 var hospitais: Node = null                  # 0.91: npc/hospitais.gd (zona neutra, Mônica, Lucas, Carlos, dinheiro)
+var sentidos: Node = null                   # 0.95: jogador/sentidos.gd (farejar/escutar e o estalo do mutado)
 var eventos: Node = null                    # mundo/eventos.gd (0.65: helicóptero caído, comboio, zona contaminada)
 var hud_status: CanvasLayer                 # hud/hud_status.gd (vida, sangue, fome, sede, temperatura)
 var tela_morte: CanvasLayer
@@ -558,6 +560,10 @@ func _criar_jogo() -> void:
 	jogo.add_child(hospitais)
 	hospitais.ligar(self)
 	jogador.hospitais = hospitais
+	sentidos = SentidosCls.new()
+	sentidos.name = "Sentidos"
+	jogo.add_child(sentidos)
+	sentidos.ligar(self)
 	eventos = EventosCls.new()
 	eventos.name = "Eventos"
 	jogo.add_child(eventos)

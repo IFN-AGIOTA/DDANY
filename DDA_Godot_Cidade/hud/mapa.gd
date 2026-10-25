@@ -8,6 +8,8 @@ extends CanvasLayer
 #  - BÚSSOLA (faixa no alto, no meio): N, NE, L, SE, S, SO, O, NO, marcas a cada 15° (0.65: sem o número dos graus).
 #  - OBJETIVO: definir_objetivo(Vector2(x, z), "nome") / limpar_objetivo(). Aparece no minimapa (seta na borda
 #    quando está fora do alcance), no mapa e na bússola, com a distância em metros.
+#  - 0.95 MUTADO (jogador/sentidos.gd): o amigo MUTADO não aparece no mapa, só quando estala os dentes (marca
+#    vermelha "MUTADO" por 10 s no lugar do estalo).
 #  - 0.91 TROCAS DO LUCAS (npc/hospitais.gd notas_mapa): nos hospitais aparece um "$" com o que está te esperando
 #    (oferta para você, venda para buscar o dinheiro, itens recusados para pegar de volta).
 # A IMAGEM DO MAPA é desenhada UMA vez ao começar (SubViewport: água, terra, parques, calçadas, ruas e prédios
@@ -43,6 +45,7 @@ const COR_PREDIO := Color(0.125, 0.125, 0.135)
 const COR_RUINA := Color(0.26, 0.15, 0.11)
 const COR_JOGADOR := Color(0.40, 0.88, 1.0)
 const COR_AMIGO := Color(0.45, 1.0, 0.45)       # 0.71: outros jogadores da partida
+const COR_ESTALO := Color(1.0, 0.18, 0.12)       # 0.95: mutado que estalou os dentes
 const COR_OBJETIVO := Color(1.0, 0.706, 0.0)
 const COR_FUNDO := Color(0.03, 0.05, 0.08, 0.6)
 const RUMOS := ["N", "NE", "L", "SE", "S", "SO", "O", "NO"]
@@ -644,11 +647,35 @@ func _amigos() -> Array:
 	var s = cena.get("sessao_rede") if cena != null else null
 	if s == null or not is_instance_valid(s):
 		return l
+	var sen = cena.get("sentidos")
 	for id in s.remotos:
 		var r = s.remotos[id]
 		if is_instance_valid(r) and r.visible and not r.morto:
+			if sen != null and is_instance_valid(sen) and sen.escondido(id, r):
+				continue                                    # 0.95: mutado sem estalar: some do mapa
 			l.append([Vector2(r.global_position.x, r.global_position.z), str(r.nome)])
 	return l
+
+# 0.95: mutados que estalaram os dentes: [[posição, nome], ...] (marca vermelha por 10 s)
+func _estalos() -> Array:
+	var l := []
+	var cena := get_tree().current_scene if is_inside_tree() else null
+	var sen = cena.get("sentidos") if cena != null else null
+	var s = cena.get("sessao_rede") if cena != null else null
+	if sen == null or not is_instance_valid(sen):
+		return l
+	for id in sen.estalos:
+		var nome := "MUTADO"
+		if s != null and is_instance_valid(s) and s.remotos.has(id) and is_instance_valid(s.remotos[id]):
+			nome = "MUTADO · " + str(s.remotos[id].nome)
+		l.append([sen.estalos[id][0], nome])
+	return l
+
+func _marca_estalo(ci: CanvasItem, c: Vector2, r: float) -> void:
+	var piscar := 0.6 + 0.4 * sin(Time.get_ticks_msec() / 160.0)
+	UI.circulo(ci, c, r * 1.3, Color(0.08, 0.0, 0.0, 0.95))
+	UI.aro(ci, c, r * 1.3, maxf(2.0, r * 0.3), Color(COR_ESTALO.r, COR_ESTALO.g, COR_ESTALO.b, piscar))
+	UI.circulo(ci, c, r * 0.55, COR_ESTALO)
 
 # 0.91: [[posição, texto, cor], ...] do que te espera nas trocas do Lucas (npc/hospitais.gd)
 func _notas() -> Array:
@@ -730,6 +757,13 @@ func _desenhar_minimapa(vh: float) -> void:
 		if pn2.length() > r - 1.4 * vh:
 			pn2 = pn2.normalized() * (r - 1.4 * vh)
 		_marca_nota(ci, c + pn2 + Vector2(1.2 * vh, -1.2 * vh), 0.9 * vh, nt[2])
+	# 0.95: mutado que estalou os dentes (vermelho; fora do alcance, na borda)
+	for e2 in _estalos():
+		var de: Vector2 = e2[0] - _pos
+		var pe := Vector2(de.dot(direita), -de.dot(frente)) * esc
+		if pe.length() > r - 1.2 * vh:
+			pe = pe.normalized() * (r - 1.2 * vh)
+		_marca_estalo(ci, c + pe, 0.8 * vh)
 	# amigos (multijogador): bolinha verde; fora do alcance, na borda
 	for a in _amigos():
 		var d2: Vector2 = a[0] - _pos
@@ -921,6 +955,11 @@ func _desenhar_mapa() -> void:
 		if nlin == 0:
 			_marca_nota(ci, pnt + Vector2(2.0 * vh, -2.0 * vh), 1.4 * vh, nt[2])
 		_texto(ci, nt[1], pnt + Vector2(0, -4.4 * vh - nlin * 2.4 * vh), int(1.9 * vh), nt[2])
+	# 0.95: mutados que estalaram os dentes
+	for e2 in _estalos():
+		var pe2 := _mundo_para_tela(e2[0])
+		_marca_estalo(ci, pe2, 1.2 * vh)
+		_texto(ci, e2[1], pe2 + Vector2(0, -2.6 * vh), int(1.9 * vh), COR_ESTALO)
 	# amigos (multijogador)
 	for a in _amigos():
 		var pa := _mundo_para_tela(a[0])
