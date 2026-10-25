@@ -42,9 +42,54 @@ func _r():
 	await q(10)
 	var t = m.menu.get_node_or_null("Novidades")
 	ok(t != null and t._mostradas == t.POR_VEZ, "o botão abre a tela com as %d mais novas" % (t._mostradas if t != null else 0))
-	t._acrescentar(t.POR_VEZ)
+	# arrastar com o DEDO em cima dos cartões rola a lista (0.96.1)
+	var rolar: ScrollContainer = null
+	for c in t._raiz.get_children():
+		if c is ScrollContainer:
+			rolar = c
+	var vs := root.get_visible_rect().size
+	var p0 := Vector2(vs.x * 0.5, vs.y * 0.8)
+	var ev := InputEventScreenTouch.new()
+	ev.index = 0
+	ev.position = p0
+	ev.pressed = true
+	Input.parse_input_event(ev)
+	await q(2)
+	for k in 12:
+		var dr := InputEventScreenDrag.new()
+		dr.index = 0
+		dr.position = p0 - Vector2(0, 25.0 * (k + 1))
+		dr.relative = Vector2(0, -25.0)
+		dr.velocity = Vector2(0, -600.0)
+		Input.parse_input_event(dr)
+		await q(1)
+	var solta := InputEventScreenTouch.new()
+	solta.index = 0
+	solta.position = p0 - Vector2(0, 300.0)
+	solta.pressed = false
+	Input.parse_input_event(solta)
+	await q(10)
+	ok(rolar != null and rolar.scroll_vertical > 100, "arrastar o dedo rola a lista (desceu %d px)" % (rolar.scroll_vertical if rolar != null else 0))
+	var antes: int = t._mostradas
+	ok(antes == t.POR_VEZ, "arrastar não apertou nenhum botão (%d cartões)" % antes)
+	# um TOQUE rápido no botão "Mostrar mais antigas" (lá embaixo) ainda funciona
+	rolar.scroll_vertical = 9999999
 	await q(5)
-	ok(t._mostradas == 2 * t.POR_VEZ, "mostrar mais antigas acrescenta")
+	var bm: Control = t._mais
+	var c := bm.get_global_rect().get_center()
+	var tp := InputEventScreenTouch.new()
+	tp.index = 0
+	tp.position = c
+	tp.pressed = true
+	Input.parse_input_event(tp)
+	await q(2)
+	var tr := InputEventScreenTouch.new()
+	tr.index = 0
+	tr.position = c
+	tr.pressed = false
+	Input.parse_input_event(tr)
+	await q(5)
+	ok(t._mostradas == 2 * t.POR_VEZ, "um toque em \"Mostrar mais antigas\" acrescenta (%d cartões)" % t._mostradas)
 	t._sair()
 	await q(5)
 	ok(m.menu.get_node_or_null("Novidades") == null, "Voltar fecha")

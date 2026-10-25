@@ -39,6 +39,19 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.96.1 · DÁ PARA ARRASTAR A LISTA DE NOVIDADES COM O DEDO
+  · CONSERTO: na tela NOVIDADES não dava para ARRASTAR com o dedo para ver as atualizações mais antigas (os cartões
+    seguravam o toque). Agora arrastar em qualquer lugar da lista rola, e ela continua deslizando um pouco ao soltar
+    (no PC também dá para arrastar segurando o botão do mouse; a rodinha continua valendo). Soltar o dedo depois de
+    arrastar não aperta o botão que estiver embaixo; um toque rápido em "Mostrar mais antigas" continua funcionando.
+  ARQUIVOS MEXIDOS (teste_novidades.gd agora com 9 conferências: + arrastar o dedo rola, arrastar não aperta botão e
+  o toque rápido aperta, com os toques passando pelo mesmo caminho do celular):
+    menu/tela_novidades.gd ......... arrastar para rolar (dedo e mouse) com deslize; cartões deixam o toque passar
+    ferramentas/testes/teste_novidades.gd  as conferências novas
+    menu/novidades_lista.gd ........ refeita (com este bloco)
+    menu/config.gd ................. VERSAO "0.96.1"
+    LEIA-ME.txt .................... este bloco
+
 ATUALIZAÇÃO 0.96 · TELA DE NOVIDADES NO MENU
   · No MENU PRINCIPAL, no CANTO DE BAIXO À DIREITA, um botão NOVIDADES mostra a versão e o título da última
     atualização. Tocando nele abre a tela NOVIDADES com TODAS as atualizações do jogo, de CIMA PARA BAIXO, da MAIS NOVA
