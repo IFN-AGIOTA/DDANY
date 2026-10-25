@@ -219,7 +219,8 @@ static func salvar_rede(main, morto := false) -> bool:
 	var d := ler_rede()
 	if not bool(j.get("servidor")):          # o "jogador" do servidor do PC não é gente
 		d["personagem"] = {"sobrevivencia": j.sobrevivencia.salvar(), "inventario": j.inventario.salvar(),
-			"abates": main.abates, "tempo_jogo": main._tempo_jogo, "morto": morto}
+			"abates": main.abates, "tempo_jogo": main._tempo_jogo, "morto": morto,
+			"cama": main.construcao.minha_cama if main.get("construcao") != null and not morto else ""}   # 0.90: a sua cama na base
 	if rede != null and rede.eh_host() and main.loot_mundo != null:
 		var lm = main.loot_mundo
 		d["mundo"] = {"semente": lm.semente,
@@ -265,4 +266,6 @@ static func carregar_rede(main) -> String:
 		if main.get("veiculos") != null:
 			main.veiculos.sincronizar()
 		avisos.append("O MUNDO DA SUA ÚLTIMA SALA CONTINUA")
+	if main.get("construcao") != null and not pj.is_empty() and not bool(pj.get("morto", false)):
+		main.construcao.minha_cama = str(pj.get("cama", ""))   # a cama vem do personagem (a peça chega do host)
 	return " · ".join(avisos)

@@ -47,7 +47,7 @@ static var _cenas := {}
 static var _mats := {}
 
 static func tem(id: String) -> bool:
-	return ITENS.has(id) or id in ["refrigerante", "analgesico", "vitaminas", "antibiotico", "carvao", "pastilha", "tabuas", "galao"]
+	return ITENS.has(id) or id in ["refrigerante", "analgesico", "vitaminas", "antibiotico", "carvao", "pastilha", "tabuas", "galao", "martelo"]
 
 static func cena(nome: String) -> PackedScene:
 	if not _cenas.has(nome):
@@ -138,6 +138,20 @@ static func _por_codigo(id: String) -> Node3D:
 			var preto := _mat(Color(0.08, 0.08, 0.08), 0.0, 0.6)
 			for peca in [[Vector3(0, 0.17, 0), Vector3(0.17, 0.34, 0.26), plast], [Vector3(0, 0.37, -0.03), Vector3(0.05, 0.05, 0.17), plast],
 					[Vector3(0, 0.36, 0.1), Vector3(0.035, 0.08, 0.035), preto]]:
+				var mi := MeshInstance3D.new()
+				var bm := BoxMesh.new()
+				bm.size = peca[1]
+				mi.mesh = bm
+				mi.material_override = peca[2]
+				mi.position = peca[0]
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				n.add_child(mi)
+		"martelo":
+			# 0.90: cabo de madeira com cabeça de aço (orelha para arrancar prego)
+			var cabo := _mat(Color(0.55, 0.38, 0.2), 0.0, 0.7)
+			var aco := _mat(Color(0.42, 0.43, 0.46), 0.85, 0.35)
+			for peca in [[Vector3(0, 0.15, 0), Vector3(0.035, 0.3, 0.025), cabo], [Vector3(0, 0.31, 0.015), Vector3(0.035, 0.035, 0.12), aco],
+					[Vector3(0, 0.31, -0.065), Vector3(0.042, 0.042, 0.04), aco]]:
 				var mi := MeshInstance3D.new()
 				var bm := BoxMesh.new()
 				bm.size = peca[1]

@@ -1,7 +1,7 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.47 (APK código 43)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.90 (APK código 45)
 =====================================================================================================
-Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York ("Liberty City")
+Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York
 abandonada. Começou como um jogo em HTML (versão 1.1.49; os arquivos dele saíram do repositório na 0.89.1 e
 ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arquivo.
 
@@ -39,6 +39,67 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.90 · EMPURRÃO, JANELAS DE VERDADE E CONSTRUIR A BASE
+  · EMPURRÃO E PISÃO (como no Project Zomboid): botão EMPURRAR (tecla G). Empurra o infectado da frente: ele
+    cambaleia e 55% das vezes CAI (90% se for pelas costas). Com um infectado CAÍDO ou rastejando na sua frente, o
+    mesmo botão vira PISÃO (40 de dano, na cabeça). Gasta 8 de fôlego (sem fôlego não sai) e tem 0,75 s de espera.
+    Funciona no multijogador (o empurrão do amigo derruba no host).
+  · JANELAS DE VERDADE no térreo dos prédios que abrem (antes eram só desenho):
+    - com VIDRO (55% das que não têm tábua): PEGAR = QUEBRAR (barulho alto, 22 m; sem arma na mão, 50% de cortar a
+      mão e sangrar);
+    - quebrada: PEGAR = PULAR A JANELA (você passa por cima do peitoril para o outro lado);
+    - TÁBUAS (USAR perto) barricam a janela como a porta (até 3); pé de cabra ou machado tiram uma tábua;
+    - os INFECTADOS batem nas tábuas, depois no vidro, e PULAM para dentro (caem no chão e levantam).
+    - O estado de cada janela vai no jogo salvo e para os amigos (como as portas).
+  · CONSTRUIR A BASE (botão CONSTRUIR / tecla B). Precisa de um MARTELO (item novo, nos depósitos, lojas,
+    oficinas, carros e no chão de postos/armazéns/metrô) e de TÁBUAS (agora juntam até 10 por pilha e aparecem
+    em mais quantidade):
+      PAREDE DE TÁBUAS (3 tábuas) · PAREDE COM PORTA (4: porta de verdade, abre, fecha e barrica) · BARRICADA
+      BAIXA (2: os infectados tombam por cima) · CAIXOTE (2: guarda itens, 8 x 6) · CAMA IMPROVISADA (3 tábuas +
+      2 trapos: PEGAR nela = você passa a renascer ali) · COLETOR DE CHUVA (2: junta água LIMPA na chuva; PEGAR
+      enche uma garrafa vazia ou troca a água suja).
+    Escolhida a peça, ela aparece na sua frente (verde = cabe, vermelha = não cabe), encaixando de meio em meio
+    metro: GIRAR (R) gira 90°, OK (E ou clique) constrói, CANCELAR (botão direito) desiste. A obra leva 2,5 s
+    martelando (os infectados ouvem a 18 m) e você não pode se mexer. Com material sobrando, já fica com outra
+    peça igual na mão. DESMONTAR (no menu) tira a peça mais perto e devolve metade das tábuas (caixote só vazio).
+    Os infectados batem nas peças até quebrar (parede 350 de vida) e não nascem a menos de 3 m da base. Tudo vai
+    no jogo salvo e, no multijogador, aparece para todos (quem entra depois recebe a base do host; a sua cama vai
+    no seu personagem).
+  · CONSERTO: a HORDA da cidade (0.89) não ia de fato no jogo salvo; agora vai (no jogo sozinho e no mundo do host).
+  · Testado: teste_janelas_empurrao.gd e teste_construcao.gd (novos), mais a bateria inteira e os testes de rede.
+  · Arquivos:
+      mundo/construcao.gd .......................... NOVO (menu, peças, custo, obra, desmontar, cama, chuva, salvar, rede)
+      mundo/peca_base.gd ........................... NOVO (desenho e colisão de cada peça; cama e coletor no PEGAR)
+      mundo/janela.gd .............................. NOVO (vidro, quebrar, pular, tábuas, infectados)
+      mundo/interior.gd ............................ janelas do térreo viram mundo/janela.gd (os móveis não mudam)
+      mundo/loot_mundo.gd .......................... martelo nas tabelas; mais tábuas (1-3)
+      inventario/itens.gd .......................... MARTELO (novo); tábuas até 10 por pilha
+      inventario/modelos_itens.gd .................. desenho do martelo
+      inventario/icones/martelo.png ................ NOVO
+      inventario/inventario.gd ..................... barricar janela com tábuas
+      inventario/tela_inventario.gd ................ PEGAR mostra cama/coletor
+      jogador/jogador.gd ........................... empurrar/pisar, pular janela, PEGAR na janela e nas peças
+      jogador/sobrevivente/animacoes.res ........... + pisar (Quaternius, CC0)
+      jogador/controles.gd ......................... botões EMPURRAR, CONSTRUIR, GIRAR, OK, CANCELAR
+      jogador/teclas.gd ............................ G empurrar · B construir · R girar
+      hud/icones/botoes.png, hud/icones/LICENCA.txt  5 ícones novos (game-icons.net, CC BY 3.0)
+      ferramentas/gerar_icones_botoes.gd ........... os ícones novos
+      ferramentas/gerar_icones.gd .................. ícone do martelo
+      armas/armas.gd ............................... não atira com a peça na mão
+      inimigos/vago.gd ............................. levar empurrão, pular janela, bater nas peças, pular a barricada
+      inimigos/vagos.gd ............................ não nasce perto da base
+      inimigos/horda.gd ............................ carregar a horda do jogo salvo
+      main.gd ...................................... cria a construção; renascer na cama
+      menu/salvamento.gd ........................... salva horda e base; cama no personagem da rede
+      menu/creditos.gd ............................. créditos dos ícones e sons novos
+      menu/config.gd ............................... versão 0.90
+      rede/sessao_rede.gd .......................... empurrão do amigo; base_nova/tira/vida/agua/tudo
+      audio/sons/mundo/vidro_*.ogg, vidro_quebrar_*.ogg, martelo_*.ogg  NOVOS (Kenney, CC0) · audio/sons/LICENCA.txt
+      ferramentas/testes/teste_janelas_empurrao.gd . NOVO
+      ferramentas/testes/teste_construcao.gd ....... NOVO
+      ferramentas/testes/rodar.sh .................. roda os dois testes novos
+      ferramentas/animacao_pisar_jogador.gd ........ NOVO (acrescenta a animação "pisar")
+
 ATUALIZAÇÃO 0.89.2 · LIMPEZA: SAEM OS RESTOS DO MODO HISTÓRIA ANTIGO
   · Nada muda para quem joga: o botão "História · Em breve" do menu continua. Não tem pacote novo (vai junto no
     próximo). O que sobrava do modo história apagado na 0.63 saiu:
@@ -1906,7 +1967,9 @@ TOQUE (vários dedos ao mesmo tempo)
 - Metade DIREITA: arrastar = olhar. Minimapa: toque = mapa grande.
 - ATIRAR / GOLPEAR (segurar; dá para arrastar o dedo em cima dele para mirar enquanto atira) · CORRER (segurar)
 - PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga) · RECARREGAR · ARMA (troca coldre/ombro) · PEGAR
-  (aparece perto de um item; perto de uma PORTA: abrir / fechar / tirar tábua) · INV · II (pausa) · CAM (1ª/3ª pessoa) · VOO (câmera livre: SOBE / DESCE / VEL)
+  (aparece perto de um item; perto de uma PORTA: abrir / fechar / tirar tábua; 0.90: JANELA: quebrar / pular /
+  tirar tábua; CAMA da base: renascer aqui; COLETOR: encher garrafa) · EMPURRAR (0.90; com um infectado caído
+  na frente vira PISÃO) · CONSTRUIR (0.90: menu da base; com a peça na mão: GIRAR, OK, CANCELAR) · INV · II (pausa) · CAM (1ª/3ª pessoa) · VOO (câmera livre: SOBE / DESCE / VEL)
   · OMBRO (0.79): troca a câmera de ombro (direito <-> esquerdo).
   · BALÃO (só no multijogador): mensagens rápidas.
 - CARRO (0.76): PEGAR perto de um carro que funciona = ENTRAR; joystick frente/trás = acelerar/freio e ré, lados =
@@ -1918,7 +1981,8 @@ PC (todas as teclas trocáveis em Opções › Teclado e mouse)
   mouse direito mirar · R recarregar · X ou rodinha trocar arma · Q roda do inventário rápido · 1..8 atalhos ·
   E pegar / abrir e fechar porta · Tab inventário · M mapa · Esc/P pausa · F 1ª/3ª pessoa · botão do meio do mouse
   trocar de ombro · V câmera livre (E sobe, Q desce) ·
-  T mensagens rápidas (multijogador; 1..8 escolhe) · F11 tela cheia.
+  T mensagens rápidas (multijogador; 1..8 escolhe) · F11 tela cheia · G empurrar/pisar · B construir (com a
+  peça na mão: R gira, E ou clique constrói, botão direito cancela).
 
 -----------------------------------------------------------------------------------------------------
 4. NÚMEROS DO JOGO
@@ -1967,6 +2031,12 @@ VEÍCULOS (0.76): tanque 30 L · ~1,6 L/km + 0,03 L/min ligado · até ~86 km/h 
   m/s · motor ouvido a ~38 m · ~4% dos sedãs/táxis/vans inteiros funcionam
 PORTAS (0.73): porta 100 de vida, cada tábua mais 140 (até 3) · golpe de infectado na porta = mordida x2,2
   (8–14 x 2,2) · abrir/fechar: barulho de 7 m · martelar tábua 10,5 m · porta quebrando 14 m · usar até 1,9 m
+EMPURRÃO (0.90): derruba 55% (pelas costas 90%) · pisão 40 de dano · 8 de fôlego · 0,75 s de espera
+JANELAS (0.90): vidro 22 de vida · tábua 140 (até 3) · quebrar = barulho de 22 m · 50% de cortar a mão sem arma ·
+  55% das janelas sem tábua têm vidro · pular leva 0,75 s
+BASE (0.90): parede 3 tábuas / 350 de vida · parede com porta 4 / 350 · barricada baixa 2 / 150 (1 m) · caixote 2 /
+  120 (8 x 6) · cama 3 + 2 trapos / 100 · coletor 2 / 100 (até 20 goles, 1 a cada 12 s de chuva) · obra 2,5 s ·
+  martelo ouvido a 18 m · desmontar devolve metade · grade de 0,5 m · infectados não nascem a menos de 3 m
 LOCAIS ESPECIAIS (0.78): 42 = 12 postos, 4 hospitais, 6 supermercados, 6 armazéns, 4 delegacias, 4 escolas,
   4 estações do metrô (plataformas a 7,1 m; trilhos a 6 m) e 2 quartéis (torres de vigia a 6 m) · 6 em cada 10
   com gerador · só 15% dos móveis vazios
@@ -1992,7 +2062,8 @@ ITENS (inventario/itens.gd; item novo = 1 linha na tabela DB)
 - Comida: feijão, atum, sardinha, pêssegos em calda, biscoitos, barra de cereal, salgadinho (dá sede), maçã.
 - Bebida: água, refrigerante, suco.
 - Ferramentas: fita adesiva e kit de costura (consertam roupas), kit de limpeza de armas, lanterna, corda,
-  rádio, isqueiro, TÁBUAS COM PREGOS (0.73: USAR perto de uma porta fechada = barricar; até 3 por porta),
+  rádio, isqueiro, TÁBUAS COM PREGOS (0.73: USAR perto de uma porta fechada = barricar; até 3 por porta; 0.90:
+  também nas janelas, até 10 por pilha e material da base), MARTELO (0.90: para CONSTRUIR a base e desmontar),
   GALÃO DE GASOLINA (0.76: 10 L; USAR perto do carro = abastecer; encher na bomba do posto).
 - Roupas (calor / chuva / proteção): capacete tático, gorro, boné, lanterna de cabeça, camiseta, moletom,
   jaqueta acolchoada, capa de chuva, colete tático, colete à prova de balas, calça cargo, jeans.
@@ -2027,6 +2098,8 @@ LOOT (mundo/loot_mundo.gd; tabelas no topo, com raridade e quantidades)
   silenciador, kit de armas), "bunker_militar" (colete, capacete, mochila de combate, máscara, kit médico,
   munição, rádio, pilhas, lanternas, comida), "bunker_med", "bunker_comida", "bunker_deposito", "bunker_alojamento",
   "bunker_controle" e o chão "chao_bunker". Só 3% dos móveis vazios.
+- MARTELO (0.90): "loja", "deposito", "carro", "posto_oficina", "super_estoque", "armazem_carga", "chao_posto",
+  "chao_armazem", "chao_metro". Tábuas vêm de 1 a 3.
 - ITENS SOLTOS no chão dos prédios (até 4 por prédio, conforme o uso).
 - 35% dos móveis já foram saqueados. Armas vêm com pente pela metade (ou sem pente). Itens vêm gastos.
 - O conteúdo é sorteado na 1ª visita e fica guardado (e salvo). 0.72: depois de um tempo (16 h de jogo nos
@@ -2177,6 +2250,15 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - PORTA (abrir/fechar, tábuas, vida,
   quebrar, estado guardado) ........... mundo/porta.gd (onde ficam: mundo/interior.gd · infectados batendo:
                                         inimigos/vago.gd _porta_no_caminho · BARRICAR: inventario/inventario.gd)
+- JANELA do térreo (vidro, quebrar,
+  pular, tábuas) ...................... mundo/janela.gd (0.90; onde ficam: mundo/interior.gd · pular: jogador/
+                                        jogador.gd passar_janela · infectados: inimigos/vago.gd _porta_no_caminho)
+- CONSTRUIR A BASE (menu, peças, custo,
+  obra, desmontar, cama, coletor, rede) mundo/construcao.gd (0.90; PECAS no topo) · desenho/colisão de cada
+                                        peça: mundo/peca_base.gd · infectados batendo: inimigos/vago.gd
+                                        _base_no_caminho
+- EMPURRÃO / PISÃO .................... jogador/jogador.gd (empurrar, DANO_PISAO) · o infectado: inimigos/vago.gd
+                                        (empurrado)
 - móveis .............................. mundo/moveis.gd (tamanhos em TAM)
 - quais prédios abrem perto do jogador, porta-malas mundo/interiores.gd
 - loot de cada móvel/carro/chão ....... mundo/loot_mundo.gd (tabelas no topo)
@@ -2422,9 +2504,11 @@ MÚSICA (pasta audio/)
   a aparecer.
 - Sobrevivente: rosto liso de manequim.
 - Infectados: os rostos são simples (manequim, olhos pintados).
-- Infectados no estilo Project Zomboid (0.89), o que ainda falta de lá: não há JANELAS que quebram (os prédios
-  não têm janelas abertas) nem cercas altas que caem com o peso; você ainda não tem o EMPURRÃO (shove) nem o
-  pisão (bater num caído já tira 1,8x); o helicóptero é só som (como lá); os infectados não batem nos carros.
+- Infectados no estilo Project Zomboid (0.89), o que ainda falta de lá: cercas altas que caem com o peso; o
+  helicóptero é só som (como lá); os infectados não batem nos carros. Janelas (0.90): só as do térreo dos
+  prédios que abrem (as dos andares de cima e dos locais especiais continuam desenho).
+- Base (0.90): as peças ficam só no chão (sem andar de cima, telhado ou escada); não dá para consertar uma peça
+  batida (desmonte e construa de novo); só quem manda no mundo (sozinho ou o host) vê os infectados quebrando.
   No celular cabem 22 de verdade ao mesmo tempo (o resto da horda espera longe e vem quando morrem). No
   multijogador, o "puxar para o chão" de um amigo é contado no aparelho dele pelas mordidas que chegam.
 - MULTIJOGADOR: infectados, itens e caixas iguais para todos (0.44); PvP, amigos no mapa, colisão entre
@@ -2436,8 +2520,8 @@ MÚSICA (pasta audio/)
   24 h: uma partida aberta por mais de 24 h seguidas perde o retransmissor e precisa ser reaberta); o amigo com internet só IPv6 ainda não entra
   pela internet.
 - Ideias para depois: loot por região, lugares
-  especiais (quarentena), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, construir base, veículos consertáveis,
-  outros sobreviventes (NPCs), o modo história novo.
+  especiais (quarentena), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, veículos consertáveis,
+  outros sobreviventes (NPCs), o modo história novo, base com andares e telhado.
 
 -----------------------------------------------------------------------------------------------------
 11. CONTA (FIREBASE): COMO LIGAR O LOGIN COM GOOGLE E OS AMIGOS (uma vez só, grátis, ~10 min)

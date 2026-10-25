@@ -52,6 +52,7 @@ var ativo := true:
 var clima = null
 var mato = null                        # mundo/mato.gd (agachado no capim alto = quase invisível)
 var veiculos = null                    # 0.79: mundo/veiculos.gd (carros que funcionam: obstáculo para quem anda sem física)
+var construcao = null                  # 0.90: mundo/construcao.gd (a base: obstáculo e alvo das pancadas)
 var abates := 0
 var cidade = null
 var mundo = null
@@ -329,6 +330,8 @@ func _livre(x: float, z: float) -> bool:
 		return false
 	if mundo.dentro_de_predio(x, z, 1.5) or mundo.dentro_de_obstaculo(x, z, 0.6) or Locais.em_construcao(Vector2(x, z), 1.5):
 		return false
+	if construcao != null and construcao.dentro(x, z, 3.0):
+		return false                           # 0.90: ninguém nasce dentro da sua base
 	return true
 
 func _visivel(p: Vector3) -> bool:

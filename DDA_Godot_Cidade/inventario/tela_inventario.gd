@@ -173,6 +173,10 @@ func _process(dt: float) -> void:
 				var pt = PortaCls.perto(inv.jogador.global_position)
 				if pt != null:
 					acao_porta = pt.acao(inv)
+			if perto == null and acao_porta == "" and inv.jogador != null and inv.jogador.get("construcao") != null:
+				var pc = inv.jogador.construcao.usavel_perto(inv.jogador.global_position)     # 0.90: cama, coletor
+				if pc != null:
+					acao_porta = pc.acao(inv)
 			controles.ocultos["PEGAR"] = aberto or (perto == null and acao_porta == "")
 			# o botão diz O QUE vai pegar (nome curto do item)
 			if acao_porta != "":

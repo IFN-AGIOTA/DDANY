@@ -315,12 +315,19 @@ func _pegar_do_chao() -> void:
 		if mb != "":
 			inventario.aviso.emit(mb)
 		return
-	# 0.73: sem item perto: a porta (abrir, fechar, tirar tábua)
+	# 0.73: sem item perto: a porta (abrir, fechar, tirar tábua) · 0.90: e a janela
 	var pt = PortaCls.perto(global_position)
 	if pt != null:
 		var msg: String = pt.usar(inventario)
 		if msg != "":
 			inventario.aviso.emit(msg)
+		return
+	# 0.90: peça da base com uso (cama: renascer aqui · coletor: encher garrafa)
+	var pc = construcao.usavel_perto(global_position) if construcao != null else null
+	if pc != null:
+		var m3: String = pc.usar(inventario)
+		if m3 != "":
+			inventario.aviso.emit(m3)
 
 # usa res://modelos/personagem.(tscn|scn|glb|gltf|fbx) se existir; senão fica o soldado original
 func _carregar_modelo_do_projeto() -> void:
@@ -376,6 +383,7 @@ func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3, tipo :=
 # 0.89 · AGARRADO (Project Zomboid): um infectado te segurou; por "t" segundos você anda bem devagar
 var agarrado := 0.0
 var construindo := false            # 0.90: com uma peça da base na mão (mundo/construcao.gd): não atira nem empurra
+var construcao = null               # 0.90: mundo/construcao.gd (cama e coletor no botão PEGAR)
 func agarrar(t: float) -> void:
 	if servidor or morto:
 		return

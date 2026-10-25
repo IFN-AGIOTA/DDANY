@@ -1024,6 +1024,26 @@ func _procurar_adiante(p: Vector3) -> void:
 	_penultimo = _ultimo_visto
 	_ultimo_visto = q
 
+# 0.90 · PEÇA DA BASE no caminho (parede, caixote alto...): bate até quebrar (cada pancada chama os outros)
+func _base_no_caminho(p: Vector3, quer: Vector3) -> bool:
+	var base = gerente.construcao if gerente != null else null
+	if base == null or estado == VAGANDO:
+		return false
+	var pc = base.no_caminho(p, quer, 1.4)
+	if pc == null:
+		return false
+	_t_preso = 1.25
+	modelo.atacar()
+	gerente.rede_ani(self, "atacar", {})
+	_tocar("rosnado", randf_range(0.9, 1.15), 0.0)
+	var para: Vector3 = pc.global_position - p
+	para.y = 0.0
+	if para.length_squared() > 0.01:
+		rotation.y = atan2(-para.x, -para.z)
+	pc.golpear(randf_range(DANO_MIN, DANO_MAX) * DANO_PORTA * _mult_dano)
+	gerente.barulho(pc.global_position, Regras.GOLPE_PORTA, false)
+	return true
+
 # porta fechada perto e para o lado de onde ele quer ir: perto dela, bate; um pouco longe, vai até ela
 func _porta_no_caminho(p: Vector3, quer: Vector3) -> bool:
 	var pt = PortaCls.perto(p, 4.5)
@@ -1105,7 +1125,8 @@ func _bate(q: Vector3, m_predio: float, m_obst: float) -> bool:
 	if _fisica:
 		return false
 	return m.dentro_de_obstaculo(q.x, q.z, m_obst) or gerente.dentro_de_veiculo(q.x, q.z, m_obst) \
-		or gerente.Locais.em_construcao(Vector2(q.x, q.z), m_predio)
+		or gerente.Locais.em_construcao(Vector2(q.x, q.z), m_predio) \
+		or (gerente.construcao != null and gerente.construcao.dentro(q.x, q.z, m_obst))     # 0.90: a base
 
 # CONTORNAR: se o caminho direto está livre, vai direto. Se não, segue a parede sempre pelo mesmo lado
 # (escolhido pelo lado que abre primeiro), pegando a direção livre mais próxima do destino (de 30 em 30°).
@@ -1281,8 +1302,11 @@ func _tentar_pular(p: Vector3, dir: Vector3) -> bool:
 	if classe == "rastejante" or gerente == null or gerente.mundo == null or not gerente.mundo.has_method("topo_obstaculo"):
 		return false
 	var m = gerente.mundo
+	var base = gerente.construcao
 	var f := p + dir * 0.75
 	var topo: float = m.topo_obstaculo(f.x, f.z, 0.2)
+	if base != null:
+		topo = maxf(topo, base.topo(f.x, f.z, 0.2))       # 0.90: barricada baixa, caixote e cama da base
 	if topo == -INF:
 		return false
 	var alto := topo - p.y
@@ -1290,7 +1314,8 @@ func _tentar_pular(p: Vector3, dir: Vector3) -> bool:
 		return false
 	for k in range(4, 12):
 		var q := p + dir * (k * 0.3)
-		if m.topo_obstaculo(q.x, q.z, 0.35) == -INF and not m.dentro_de_predio(q.x, q.z, 0.4, not _fisica):
+		if m.topo_obstaculo(q.x, q.z, 0.35) == -INF and not m.dentro_de_predio(q.x, q.z, 0.4, not _fisica) \
+				and (base == null or base.topo(q.x, q.z, 0.35) == -INF):
 			_pulando = 0.55
 			_pulo_dur = 0.55
 			_pulo_alto = 0.7
@@ -1320,6 +1345,8 @@ func _checar_preso(dt: float, quer: Vector3) -> void:
 			return
 		# 0.73: preso atrás de uma PORTA FECHADA (mundo/porta.gd) indo atrás de alguém: vai até ela e bate até quebrar
 		if _fisica and _porta_no_caminho(p, quer):
+			return
+		if _base_no_caminho(p, quer):
 			return
 		var dir := quer.normalized()
 		var nova := dir.cross(Vector3.UP) * _lado

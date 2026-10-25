@@ -53,7 +53,7 @@ func _rodar() -> void:
 	for id in ["faca", "facao", "taco", "machado", "cano", "lanca", "pe_de_cabra"]:
 		await _foto(id, Itens.def(id), _arma(id, []), "lado_em_pe")
 	# comida, remédios, ferramentas (modelos realistas de inventario/modelos_itens.gd)
-	var com_modelo: Array = ModelosItens.ITENS.keys() + ["refrigerante", "analgesico", "vitaminas", "antibiotico", "carvao", "pastilha", "tabuas", "galao"]
+	var com_modelo: Array = ModelosItens.ITENS.keys() + ["refrigerante", "analgesico", "vitaminas", "antibiotico", "carvao", "pastilha", "tabuas", "galao", "martelo"]
 	for id in com_modelo:
 		if id in SEM_FOTO:
 			continue

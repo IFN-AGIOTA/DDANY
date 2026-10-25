@@ -28,6 +28,7 @@ const MapaCls := preload("res://hud/mapa.gd")
 const ClimaCls := preload("res://mundo/clima.gd")
 const Salvamento := preload("res://menu/salvamento.gd")
 const MissoesCls := preload("res://mundo/missoes.gd")
+const ConstrucaoCls := preload("res://mundo/construcao.gd")
 const EventosCls := preload("res://mundo/eventos.gd")
 const AmbienteCls := preload("res://audio/ambiente.gd")
 const VagosCls := preload("res://inimigos/vagos.gd")
@@ -72,6 +73,7 @@ var locais: Node                            # mundo/locais.gd (postos, hospitais
 var veiculos: Node                          # 0.76: mundo/veiculos.gd (carros que funcionam: dirigir, gasolina)
 var _t_info := 0.0
 var missoes: Node = null                    # mundo/missoes.gd (suprimentos militares avisados pelo rádio)
+var construcao: Node = null                 # 0.90: mundo/construcao.gd (a base que você constrói)
 var eventos: Node = null                    # mundo/eventos.gd (0.65: helicóptero caído, comboio, zona contaminada)
 var hud_status: CanvasLayer                 # hud/hud_status.gd (vida, sangue, fome, sede, temperatura)
 var tela_morte: CanvasLayer
@@ -534,6 +536,12 @@ func _criar_jogo() -> void:
 	missoes.name = "Missoes"
 	jogo.add_child(missoes)
 	missoes.ligar(self)
+	construcao = ConstrucaoCls.new()
+	construcao.name = "Construcao"
+	jogo.add_child(construcao)
+	construcao.ligar(self)
+	jogador.construcao = construcao
+	vagos.construcao = construcao
 	eventos = EventosCls.new()
 	eventos.name = "Eventos"
 	jogo.add_child(eventos)
@@ -621,6 +629,10 @@ func _renascer() -> void:
 	_fechar_morte()
 	var morte := Vector2(jogador.global_position.x, jogador.global_position.z)
 	var p := _ponto_renascer(morte)
+	# 0.90: tem uma CAMA na base: renasce nela
+	var pc = construcao.ponto_cama() if construcao != null else null
+	if pc != null:
+		p = Vector2(pc.x, pc.z)
 	jogador.morto = false
 	Sons.tocar("partida/entrada", -8.0)
 	jogador.sobrevivencia.reiniciar()
@@ -648,6 +660,9 @@ func _ponto_renascer(longe_de: Vector2) -> Vector2:
 
 func _fechar_jogo() -> void:
 	_fechar_morte()
+	if construcao != null and is_instance_valid(construcao):
+		construcao.fechar_menu()
+	construcao = null
 	if interiores != null and is_instance_valid(interiores):
 		interiores.fechar_todos()           # devolve os blocos dos prédios para a cidade
 	interiores = null

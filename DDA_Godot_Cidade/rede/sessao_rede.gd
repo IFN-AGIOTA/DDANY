@@ -22,6 +22,8 @@ extends Node
 #     conteúdo novo vai para todos ("grade") e eles não reabastecem de novo. O chão novo tem uid próprio por ciclo.
 #   · 0.73: PORTAS (mundo/porta.gd): abrir, fechar, barricar, tirar tábua e quebrar vão para todos ("porta"); quem
 #     chega recebe as portas mexidas junto com "mundo_itens".
+#   · 0.90 BASE: "base_nova" (peças prontas), "base_tira" (desmontou/quebrou), "base_vida", "base_agua" (coletor);
+#     quem chega recebe "base_tudo" do host. As peças vão no jogo salvo do host (mundo/construcao.gd).
 # AINDA NÃO: dano entre jogadores, salvar a partida em rede, missões do rádio (cada um tem as suas), infectados
 # não entram em prédio atrás de um amigo (o host não tem as paredes do interior onde o amigo está).
 # Mexa AQUI para: o que vai em cada mensagem e de quanto em quanto tempo.
@@ -222,6 +224,8 @@ func _evento(id: int, tipo: String, d: Dictionary) -> void:
 			if Rede.eh_host():
 				_mandar_mundo(id)
 				_mandar_mundo_itens(id)
+				if main.get("construcao") != null:
+					Rede.enviar_evento("base_tudo", {"l": main.construcao.estado()}, id)
 		"roupa":
 			if Rede.jogadores.has(id):
 				_criar(id).vestir(d)
@@ -269,6 +273,9 @@ func _evento(id: int, tipo: String, d: Dictionary) -> void:
 		"mundo_itens":
 			if id == 1:
 				_aplicar_mundo_itens(d)
+		"base_nova", "base_tira", "base_vida", "base_agua", "base_tudo":    # 0.90: construir base (mundo/construcao.gd)
+			if main.get("construcao") != null and (tipo != "base_tudo" or id == 1):
+				main.construcao.receber(tipo, d)
 
 func _tiro_remoto(id: int, d: Dictionary) -> void:
 	var r = remotos.get(id)
