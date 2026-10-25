@@ -226,6 +226,22 @@ func _fogo(pai: Node3D, pos: Vector3, grande: bool) -> void:
 		Vector2(2.5, 7.0) if grande else Vector2(1.5, 4.0), 4.0 if grande else 2.5, 0.6, false)
 	fum.emission_sphere_radius = 1.0
 
+static var _disco: GradientTexture2D = null
+static func _disco_suave() -> GradientTexture2D:
+	if _disco == null:
+		var g := Gradient.new()
+		g.set_color(0, Color(1, 1, 1, 1))
+		g.set_color(1, Color(1, 1, 1, 0))
+		g.add_point(0.45, Color(1, 1, 1, 0.55))
+		_disco = GradientTexture2D.new()
+		_disco.gradient = g
+		_disco.fill = GradientTexture2D.FILL_RADIAL
+		_disco.fill_from = Vector2(0.5, 0.5)
+		_disco.fill_to = Vector2(1.0, 0.5)
+		_disco.width = 64
+		_disco.height = 64
+	return _disco
+
 func _particulas(pai: Node3D, pos: Vector3, n: int, vida: float, cor: Color, tam: Vector2, vel: float, espalhar: float, brilha: bool) -> CPUParticles3D:
 	var p := CPUParticles3D.new()
 	p.amount = n
@@ -239,6 +255,7 @@ func _particulas(pai: Node3D, pos: Vector3, n: int, vida: float, cor: Color, tam
 	m.billboard_mode = BaseMaterial3D.BILLBOARD_PARTICLES
 	m.vertex_color_use_as_albedo = true
 	m.albedo_color = Color.WHITE
+	m.albedo_texture = _disco_suave()                 # 0.92: bolinha macia (sem ela a fumaça eram quadradinhos)
 	if brilha:
 		m.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	q.material = m

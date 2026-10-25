@@ -58,6 +58,10 @@ const MODELOS := {
 	"pedra_3": ["natureza/Rock_Medium_3.gltf", 1.3, 0.0, false],
 }
 
+# 0.92: tom por cima da cor do pacote (os arbustos do Quaternius são verde-limão: de longe pareciam bolas de tinta)
+const TOM := {"arbusto": Color(0.6, 0.66, 0.48), "arbusto_leve": Color(0.6, 0.66, 0.48), "arbusto_flores": Color(0.62, 0.68, 0.5),
+	"samambaia": Color(0.7, 0.74, 0.58), "planta": Color(0.7, 0.74, 0.58)}
+
 static var _cache := {}
 static var _existe := {}
 
@@ -138,7 +142,11 @@ static func _montar(nome: String) -> ArrayMesh:
 				nn[i] = (Basis(Vector3.UP, giro) * nn[i]).normalized()
 			a[Mesh.ARRAY_NORMAL] = nn
 		am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a)
-		am.surface_set_material(am.get_surface_count() - 1, _material(par[1]))
+		var mt = _material(par[1])
+		if TOM.has(nome) and mt is BaseMaterial3D:
+			mt = (mt as BaseMaterial3D).duplicate()
+			mt.albedo_color = (mt as BaseMaterial3D).albedo_color * TOM[nome]
+		am.surface_set_material(am.get_surface_count() - 1, mt)
 	return am
 
 # média dos vértices acima (acima = true) ou abaixo de uma altura

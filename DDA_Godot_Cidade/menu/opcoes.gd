@@ -538,6 +538,10 @@ func _pagina_graficos(v: float) -> Control:
 		_atualizar_gfx())
 	_gfx_widgets["q"] = q
 	_rotulo_preset = _linha_gfx(lista, "Predefinição", "", q, v)
+	if OS.has_feature("pc"):
+		# 0.92: modo de desenho (só no PC): vale ao abrir o jogo de novo (menu/aplicar_opcoes.gd escreve o override.cfg)
+		_gfx_seg(lista, "rend", "Modo de desenho", "ULTRA: sombras nos cantos, luz rebatendo nas paredes, reflexos no chão molhado, brilho e neblina de verdade (precisa de placa de vídeo · vale ao abrir o jogo de novo)",
+			[[0, "LEVE"], [1, "ULTRA"]], v)
 	_gfx_seg(lista, "shd", "Detalhes dos shaders", "fachadas: janelas, andares e lojas", NIVEIS, v)
 	_gfx_seg(lista, "tex", "Detalhes das texturas", "nitidez das texturas do chão (menos = mais leve)", NIVEIS, v)
 	_gfx_seg(lista, "models", "Detalhes dos modelos", "até onde carros, postes, árvores e objetos da rua aparecem completos", NIVEIS, v)
@@ -595,7 +599,11 @@ func _pagina_graficos(v: float) -> Control:
 	_bt_aplicar.pressed.connect(func():
 		Config.aplicar_graficos(_pend)
 		_atualizar_gfx()
-		mensagem("Gráficos aplicados."))
+		var quer_ultra := int(_pend.get("rend", 0)) == 1
+		if OS.has_feature("pc") and quer_ultra != (RenderingServer.get_rendering_device() != null):
+			mensagem("Gráficos aplicados. Feche e abra o jogo de novo para trocar o modo de desenho.")
+		else:
+			mensagem("Gráficos aplicados."))
 	hp.add_child(_bt_aplicar)
 	pe.add_child(hp)
 	caixa.add_child(pe)

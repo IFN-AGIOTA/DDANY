@@ -46,6 +46,7 @@ uniform float alcance = 72.0;
 uniform float rigidez = 1.0;
 uniform sampler2D textura : source_color, filter_linear_mipmap;   // 0.69: arbusto baixado (folhas recortadas)
 uniform float com_textura = 0.0;
+uniform vec3 tom = vec3(1.0);           // 0.92: tom do arbusto baixado (a textura dele é verde-limão)
 void vertex() {
 	vec3 origem = MODEL_MATRIX[3].xyz;
 	vec3 w = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
@@ -74,7 +75,7 @@ void fragment() {
 	if (tx.a < 0.5) {
 		discard;
 	}
-	ALBEDO = COLOR.rgb * tx.rgb * mix(1.0, 0.72, molhado);
+	ALBEDO = COLOR.rgb * tx.rgb * tom * mix(1.0, 0.72, molhado);
 	ROUGHNESS = mix(0.85, 0.45, molhado);
 	SPECULAR = 0.25;
 }
@@ -102,6 +103,7 @@ func ligar(c: Node3D, m: Node3D, j: Node3D) -> void:
 		if i == 2 and tex_arbusto != null:
 			mt.set_shader_parameter("textura", tex_arbusto)
 			mt.set_shader_parameter("com_textura", 1.0)
+			mt.set_shader_parameter("tom", Vector3(0.62, 0.68, 0.5))
 		_mats.append(mt)
 
 # ---------- malhas (feitas uma vez) ----------

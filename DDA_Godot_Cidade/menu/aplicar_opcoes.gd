@@ -76,6 +76,7 @@ func aplicar(chave := "") -> void:
 	vp.mesh_lod_threshold = [6.0, 3.0, 1.5, 1.0][clampi(int(g.get("models", 2)), 0, 3)]   # 0.84: modelos com LOD simplificam antes
 	vp.texture_mipmap_bias = [1.0, 0.5, 0.0, 0.0][clampi(int(g.get("tex", 3)), 0, 3)]     # 0.84: detalhe das texturas
 	_aplicar_resolucao()
+	_modo_desenho(g)
 	filtro.definir(float(g["bri"]) / 100.0, float(g["con"]) / 100.0, float(g["sat"]) / 100.0, bool(g["vig"]))
 	if main == null:
 		return
@@ -87,6 +88,58 @@ func aplicar(chave := "") -> void:
 		if sf != null:
 			sf.visible = int(g["shad"]) >= 1
 	_aplicar_resto(o, g, j)
+
+# 0.92 · MODO DE DESENHO (só no PC exportado): ULTRA = o renderizador completo da Godot (Forward+, Vulkan), escrito
+# no override.cfg ao lado do .exe (a Godot lê ao abrir; se a placa não tiver Vulkan ela volta sozinha para o leve).
+# LEVE = apaga o arquivo. No celular e no editor/testes nunca mexe.
+const ARQ_OVERRIDE := "override.cfg"
+static func ultra() -> bool:
+	return RenderingServer.get_rendering_device() != null     # só os renderizadores de Vulkan têm "rendering device"
+
+func _modo_desenho(g: Dictionary) -> void:
+	if not OS.has_feature("pc") or not OS.has_feature("template"):
+		return
+	var arq := OS.get_executable_path().get_base_dir().path_join(ARQ_OVERRIDE)
+	if int(g.get("rend", 0)) == 1:
+		if not FileAccess.file_exists(arq):
+			var f := FileAccess.open(arq, FileAccess.WRITE)
+			if f != null:
+				f.store_string("[rendering]\n\nrenderer/rendering_method=\"forward_plus\"\nrendering_device/fallback_to_opengl3=true\n")
+	elif FileAccess.file_exists(arq):
+		DirAccess.remove_absolute(arq)
+
+# efeitos que só o modo ULTRA tem (no leve o renderizador não faz)
+func _efeitos_ultra(cid) -> void:
+	if not ultra() or cid.ambiente == null:
+		return
+	var env: Environment = cid.ambiente
+	env.ssao_enabled = true                       # sombra nos cantos e onde as coisas se encostam
+	env.ssao_radius = 1.4
+	env.ssao_intensity = 2.2
+	env.ssao_light_affect = 0.15
+	env.ssil_enabled = true                       # luz que rebate nas paredes (cor do chão/prédio no vizinho)
+	env.ssil_radius = 4.0
+	env.ssil_intensity = 0.7
+	env.ssr_enabled = true                        # reflexos de verdade no chão molhado, poças e vidros
+	env.ssr_max_steps = 48
+	env.ssr_fade_in = 0.2
+	env.ssr_fade_out = 2.0
+	env.glow_enabled = true                       # brilho em volta das luzes (janelas acesas, postes, lanterna, sol)
+	env.glow_intensity = 0.55
+	env.glow_bloom = 0.04
+	env.glow_hdr_threshold = 1.05
+	env.glow_blend_mode = Environment.GLOW_BLEND_MODE_SOFTLIGHT
+	env.fog_sky_affect = 0.25                     # (no Forward+ a neblina embranquecia o céu inteiro)
+	env.volumetric_fog_enabled = true             # neblina de verdade: dá para ver o facho da lanterna e dos postes
+	env.volumetric_fog_density = 0.006
+	env.volumetric_fog_length = 70.0
+	env.volumetric_fog_albedo = Color(0.85, 0.85, 0.88)
+	env.volumetric_fog_anisotropy = 0.45
+	env.volumetric_fog_ambient_inject = 0.2
+	env.volumetric_fog_gi_inject = 0.0
+	if cid.sol != null:
+		cid.sol.shadow_blur = 1.5
+		cid.sol.light_volumetric_fog_energy = 0.6
 
 func _aplicar_jogador() -> void:
 	if main == null:
@@ -144,6 +197,7 @@ func _aplicar_resto(o: Dictionary, g: Dictionary, j) -> void:
 		if ab != null:
 			ab.aplicar_modelos(int(g.get("models", 2)))                       # até onde os objetos da rua aparecem
 			ab.aplicar_luzes(bool(g.get("wire", true)), bool(g.get("halo", true)))   # fios de poste · halos de luz
+		_efeitos_ultra(cid)
 		if cid.ambiente != null:
 			# raio de chunks menor que a distância de visão: mais neblina, para a borda do mundo carregado não aparecer
 			var corte: float = ALCANCE[clampi(int(g["dist"]), 0, 3)] / alcance_visao()

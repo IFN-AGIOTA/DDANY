@@ -57,7 +57,7 @@ const GFX_PRESETS := {
 	"ultra": {"shd": 3, "res": 3, "dyn": false, "dist": 3, "fx": 3, "models": 3, "tex": 3, "aniso": 16, "aa": 3, "cap": 0,
 		"shad": 2, "den": 2, "detd": 3, "wtr": true, "wire": true, "halo": true, "fog": 2, "rp": 35, "chk": 0, "ocl": true},
 }
-const GFX_COR := {"bri": 100, "con": 100, "sat": 100, "vig": false}
+const GFX_COR := {"bri": 100, "con": 100, "sat": 100, "vig": false, "rend": 0}   # 0.92: rend = modo de desenho (0 leve · 1 ultra, só PC)
 
 var o := {}                           # opções (controles, câmera, HUD, vídeo e som)
 var g := {}                           # gráficos (aplicados pelo botão APLICAR)

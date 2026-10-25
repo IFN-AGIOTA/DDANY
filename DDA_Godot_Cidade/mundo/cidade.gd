@@ -727,6 +727,7 @@ func _buildings() -> void:
 					n_entra += 1
 				predio_info.append(info)
 	_locais()
+	Mat.aquecer_texturas()                       # 0.92: texturas dos prédios/interiores (antes das threads)
 	mat_predio = Mat.material(Mat.PREDIO, {"detalhe": 1.0})
 	var caixa := BoxMesh.new()
 	caixa.material = mat_predio

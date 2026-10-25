@@ -699,7 +699,8 @@ func _gerar(inf: Dictionary, i: int, cidade) -> void:
 func _criar_malha() -> void:
 	var caixa := Vector4(info["x"], info["z"], hx - ESP, hz - ESP)
 	var am := ArrayMesh.new()
-	paredes.malha(Mat.material(Mat.INTERIOR, {"caixa": caixa, "padrao": 3.0, "semente": float(info["sem"])}), am)
+	paredes.malha(Mat.material(Mat.INTERIOR, {"caixa": caixa, "padrao": 3.0, "semente": float(info["sem"]), "papel": 1.0,
+		"tipo_predio": float(info.get("tipo", 0))}), am)   # 0.92: papel de parede velho por dentro, o material do prédio por fora
 	piso.malha(Mat.material(Mat.INTERIOR, {"caixa": caixa, "padrao": _pad_piso}), am)
 	resto.malha(Mat.material(Mat.INTERIOR, {"caixa": caixa, "padrao": 0.0}), am)
 	teto.malha(Mat.material(Mat.INTERIOR, {"caixa": caixa, "padrao": 0.0}), am)

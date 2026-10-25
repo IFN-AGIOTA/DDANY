@@ -132,9 +132,10 @@ void molhar(inout vec3 c, inout float rough, inout float spec, float poca) {
 	c *= mix(1.0, 0.62, molhado);                                 // chão molhado escurece
 	rough = mix(rough, 0.38, molhado);
 	float agua = poca * smoothstep(0.15, 0.6, molhado);
-	c = mix(c, c * 0.35, agua);
-	rough = mix(rough, 0.12, agua);
-	spec = mix(spec, 0.5, agua);
+	// 0.92: poça ESCURA e lisa (antes refletia o céu cinza tão forte que parecia gelo/neve)
+	c = mix(c, c * 0.18, agua);
+	rough = mix(rough, 0.24, agua);
+	spec = mix(spec, 0.28, agua);
 }
 """
 
@@ -432,6 +433,18 @@ shader_type spatial;
 uniform float detalhe = 1.0;               // 0 = sem janelas (leve) · 1 = completo
 global uniform float molhado;              // chuva (mundo/clima.gd): paredes escurecem
 global uniform float noite;                // 0 dia · 1 noite (mundo/clima.gd): luzes de sobreviventes nas janelas
+// 0.92: TEXTURAS das paredes e do telhado (Poly Haven, CC0), postas por material(): tijolo (tipo 1), concreto
+// (0, 3, 4), pedra (2). De perto têm detalhe; de longe (TEX_LONGE) viram a cor lisa de antes (sem chiado e mais leve)
+uniform float com_textura = 1.0;
+uniform sampler2D tex_tijolo : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_concreto : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_pedra : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_telhado : source_color, filter_linear_mipmap, repeat_enable;
+const float TEX_LONGE = 320.0;
+vec3 det(sampler2D t, vec2 p, vec2 dx, vec2 dy, float forca) {
+	vec3 m = max(textureLod(t, vec2(0.5), 10.0).rgb, vec3(0.04));
+	return mix(vec3(1.0), textureGrad(t, p, dx, dy).rgb / m, forca);
+}
 varying vec3 lp;
 varying flat vec3 tam;                     // flat = igual no prédio todo (interpolado, o sorteio por janela "chiava")
 varying flat float tipo;
@@ -468,11 +481,19 @@ void fragment() {
 	vec3 base = COLOR.rgb;
 	float dist = length(VERTEX);
 	vec3 px = fwidth(lp);                      // quantos metros cabem em 1 pixel (fora do "if": derivada segura)
+	vec2 uvp = abs(nl.x) > 0.5 ? lp.zy : lp.xy;       // 0.92: parede (u, v) e telhado (x, z) para as texturas
+	vec2 dpx = dFdx(uvp);
+	vec2 dpy = dFdy(uvp);
+	vec2 dtx = dFdx(lp.xz);
+	vec2 dty = dFdy(lp.xz);
+	float com_tex = com_textura * (1.0 - smoothstep(TEX_LONGE * 0.5, TEX_LONGE, dist));
 	if (nl.y > 0.5) {
 		// telhado: laje escura com manchas + borda (platibanda)
 		vec2 b = 0.5 * tam.xz - abs(lp.xz);
 		float borda = 1.0 - smoothstep(0.4, 0.9, min(b.x, b.y));
-		ALBEDO = mix(vec3(0.24, 0.23, 0.22) * (0.85 + 0.3 * hash(floor(lp.xz * 0.5) + sem)), base * 0.8, borda);
+		vec3 dtel = vec3(1.0);
+		if (com_tex > 0.0) dtel = mix(vec3(1.0), det(tex_telhado, lp.xz / 5.0, dtx / 5.0, dty / 5.0, 0.9), com_tex);
+		ALBEDO = mix(vec3(0.24, 0.23, 0.22) * (0.85 + 0.3 * hash(floor(lp.xz * 0.5) + sem)), base * 0.8, borda) * dtel;
 		ROUGHNESS = 0.95;
 	} else {
 		float u = abs(nl.x) > 0.5 ? lp.z : lp.x;
@@ -509,9 +530,17 @@ void fragment() {
 			else if (tc < 0.5) vidro = vec3(0.6, 0.58, 0.5) * (0.8 + 0.2 * ruido(vec2(wu, wv) * 3.0 + sem) * nitido);
 		}
 		// luz de sobrevivente (vela/lampião) em pouquíssimas janelas, à noite, em alguns prédios
-		float habitado = step(hash(vec2(sem * 71.0, 2.0)), 0.2);
-		float luz = habitado * step(tipo > 2.5 ? 0.997 : 0.97, hash(cel + sem * 29.0 + 3.0)) * step(0.22, h) * step(tipo, 3.5);
+		// 0.92: mais prédios habitados (35%) e mais janelas acesas neles (a cidade à noite não ficava quase toda preta)
+		float habitado = step(hash(vec2(sem * 71.0, 2.0)), 0.35);
+		float luz = habitado * step(tipo > 2.5 ? 0.993 : 0.94, hash(cel + sem * 29.0 + 3.0)) * step(0.22, h) * step(tipo, 3.5);
 		vec3 parede = base * (0.9 + 0.12 * hash(vec2(cel.y, sem)));
+		if (com_tex > 0.0) {
+			vec3 dpar;
+			if (tipo > 0.5 && tipo < 1.5) dpar = det(tex_tijolo, uvp / 1.4, dpx / 1.4, dpy / 1.4, 0.95);
+			else if (tipo > 1.5 && tipo < 2.5) dpar = det(tex_pedra, uvp / 2.6, dpx / 2.6, dpy / 2.6, 0.8);
+			else dpar = det(tex_concreto, uvp / 3.0, dpx / 3.0, dpy / 3.0, 0.85);
+			parede *= mix(vec3(1.0), dpar, com_tex);
+		}
 		// sujeira escorrendo das janelas e manchas de umidade (cidade abandonada)
 		parede *= 0.8 + 0.2 * ruido(vec2(u * 0.55 + sem * 40.0, v * 0.035));
 		parede *= 1.0 - 0.18 * smoothstep(0.55, 0.85, ruido(vec2(u * 0.12, v * 0.09) + sem * 7.0));
@@ -578,7 +607,7 @@ void fragment() {
 		ROUGHNESS = mix(0.9, 0.25, janela);
 		SPECULAR = mix(0.3, 0.7, janela);
 		float tremula = 0.75 + 0.25 * sin(TIME * (5.0 + 6.0 * h) + h * 40.0) * sin(TIME * 2.3 + sem * 9.0);
-		EMISSION = vec3(1.0, 0.55, 0.2) * 1.8 * tremula * luz * janela * noite;
+		EMISSION = vec3(1.0, 0.55, 0.2) * 2.6 * tremula * luz * janela * noite;
 	}
 }
 """
@@ -595,9 +624,28 @@ uniform float semente = 0.0;                  // a mesma do prédio (hera do lad
 uniform float sujeira = 1.0;                  // 0.68: força das manchas/sujeira (locais especiais usam menos)
 uniform float forca_hera = 1.0;               // 0.68: quanto de hera pode subir pelas paredes de fora
 uniform float camada = 0.0;                   // 0.78: chão pintado dos locais especiais (por cima do lote ao longe)
+// 0.92: TEXTURAS de verdade (Poly Haven, CC0: mundo/texturas/LICENCA.txt), postas por material() · papel = 1: papel de
+// parede velho por dentro (casas e apartamentos) · 0: reboco gasto (locais especiais) · com_textura = 0: o desenho antigo
+uniform float papel = 0.0;
+uniform float com_textura = 1.0;
+uniform sampler2D tex_papel : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_reboco : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_ceramica : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_madeira : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_concreto : source_color, filter_linear_mipmap, repeat_enable;
+// lado de FORA das paredes do prédio com interior: a mesma textura do prédio visto de longe (tipo, como em PREDIO)
+uniform float tipo_predio = -1.0;
+uniform sampler2D tex_tijolo : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_pedra : source_color, filter_linear_mipmap, repeat_enable;
+uniform sampler2D tex_predio : source_color, filter_linear_mipmap, repeat_enable;
 global uniform float molhado;
 varying vec3 wp;
 varying float dentro;
+// detalhe da textura em volta de 1 (a cor média dela vira 1): a cor de cada parede/piso continua a do desenho
+vec3 det(sampler2D t, vec2 p, vec2 dx, vec2 dy, float forca) {
+	vec3 m = max(textureLod(t, vec2(0.5), 10.0).rgb, vec3(0.04));
+	return mix(vec3(1.0), textureGrad(t, p, dx, dy).rgb / m, forca);
+}
 // "aleatório" sem sin(): sin() de número grande (coordenadas de milhares de metros) perde a precisão na placa do
 // celular (Mali) e o resultado vira quase constante -> bolinhas iguais em grade e listras. Números pequenos (mod) e
 // só multiplicações = igual no celular e no PC.
@@ -626,7 +674,22 @@ void fragment() {
 	dentro = 1.0 - smoothstep(-0.02, 0.06, max(d.x, d.y));
 	vec3 c = COLOR.rgb;
 	vec2 u = UV;
-	if (padrao > 0.5 && padrao < 1.5) {
+	vec2 dux = dFdx(u);                        // derivadas fora dos "if" (dentro deles a placa não garante)
+	vec2 duy = dFdy(u);
+	if (com_textura > 0.5 && padrao > 0.5) {
+		// 0.92: texturas: 1 cerâmica (ladrilhos de 0,5 m) · 2 tábuas · 3 papel de parede ou reboco · 4 concreto
+		if (padrao < 1.5) c *= det(tex_ceramica, u / 2.0, dux / 2.0, duy / 2.0, 0.9);
+		else if (padrao < 2.5) c *= det(tex_madeira, u / 2.4, dux / 2.4, duy / 2.4, 0.9);
+		else if (padrao < 3.5) {
+			vec3 dpa = papel > 0.5 ? det(tex_papel, u / 2.2, dux / 2.2, duy / 2.2, 0.75) : det(tex_reboco, u / 4.5, dux / 4.5, duy / 4.5, 0.22);
+			vec3 dfo;
+			if (tipo_predio > 0.5 && tipo_predio < 1.5) dfo = det(tex_tijolo, u / 1.4, dux / 1.4, duy / 1.4, 0.95);
+			else if (tipo_predio > 1.5 && tipo_predio < 2.5) dfo = det(tex_pedra, u / 2.6, dux / 2.6, duy / 2.6, 0.8);
+			else if (tipo_predio > -0.5) dfo = det(tex_predio, u / 3.0, dux / 3.0, duy / 3.0, 0.85);
+			else dfo = det(tex_reboco, u / 4.5, dux / 4.5, duy / 4.5, 0.22);
+			c *= mix(dfo, dpa, dentro);
+		} else c *= det(tex_concreto, u / 4.0, dux / 4.0, duy / 4.0, 0.8);
+	} else if (padrao > 0.5 && padrao < 1.5) {
 		vec2 g = fract(u / 0.5);
 		float junta = step(0.94, max(g.x, g.y));
 		float xadrez = mod(floor(u.x / 0.5) + floor(u.y / 0.5), 2.0);
@@ -660,6 +723,11 @@ void fragment() {
 	float va = mod(wp.y - 0.6, 4.6);
 	float canto = (0.62 + 0.38 * smoothstep(0.0, 0.9, va)) * (0.8 + 0.2 * (1.0 - smoothstep(3.3, 3.98, va)));
 	c *= mix(1.0, canto, dentro * vertical);
+	// 0.92: sombra onde o piso encontra as paredes de fora e nos cantos das paredes (a luz de dentro não chega lá)
+	vec2 ate_parede = caixa.zw - abs(wp.xz - caixa.xy);
+	float no_piso = (1.0 - vertical) * step(0.5, padrao) * step(padrao, 2.5);
+	c *= mix(1.0, 0.55 + 0.45 * smoothstep(0.0, 0.9, min(ate_parede.x, ate_parede.y)), dentro * no_piso);
+	c *= mix(1.0, 0.62 + 0.38 * smoothstep(0.0, 0.7, max(ate_parede.x, ate_parede.y)), dentro * vertical * step(min(ate_parede.x, ate_parede.y), 0.12));
 	ALBEDO = c;
 	ROUGHNESS = 0.9;
 	SPECULAR = 0.2;
@@ -688,9 +756,30 @@ static func texturas_chao() -> Dictionary:
 		d["tex_" + k] = load("res://mundo/texturas/chao_%s.jpg" % k)
 	return d
 
+# 0.92: texturas dos prédios e dos interiores (mundo/texturas/, Poly Haven, CC0), postas em todo material desses shaders
+const TEX_PREDIO := {"tex_tijolo": "predio_tijolo", "tex_concreto": "predio_concreto", "tex_pedra": "predio_pedra", "tex_telhado": "predio_telhado"}
+const TEX_INTERIOR := {"tex_papel": "interior_papel", "tex_reboco": "interior_reboco", "tex_ceramica": "interior_ceramica",
+	"tex_madeira": "interior_madeira", "tex_concreto": "interior_concreto", "tex_tijolo": "predio_tijolo", "tex_pedra": "predio_pedra",
+	"tex_predio": "predio_concreto"}
+static var _tex := {}
+
+static func _textura(nome: String) -> Texture2D:
+	if not _tex.has(nome):
+		_tex[nome] = load("res://mundo/texturas/%s.jpg" % nome)
+	return _tex[nome]
+
+# carrega todas de uma vez na thread principal (os interiores são montados numa thread: lá só pegam do cache)
+static func aquecer_texturas() -> void:
+	for lista in [TEX_PREDIO, TEX_INTERIOR]:
+		for k in lista:
+			_textura(lista[k])
+
 static func material(codigo: String, params := {}) -> ShaderMaterial:
 	var m := ShaderMaterial.new()
 	m.shader = shader(codigo)
+	var lista: Dictionary = TEX_PREDIO if codigo == PREDIO else (TEX_INTERIOR if codigo == INTERIOR else {})
+	for k in lista:
+		m.set_shader_parameter(k, _textura(lista[k]))
 	for k in params:
 		m.set_shader_parameter(k, params[k])
 	return m

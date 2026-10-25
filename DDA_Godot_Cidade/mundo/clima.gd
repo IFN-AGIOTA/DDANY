@@ -47,10 +47,11 @@ const HORAS := [
 		"nev": Color(0.86, 0.60, 0.46), "amb": 0.9, "amb_cor": Color(0.20, 0.17, 0.16), "amb_ceu": 0.9, "exp": 1.1, "nd": 1.7, "esc": 0.15},
 	{"h": 8.0, "sol": Color(1.0, 0.86, 0.70), "e": 1.05, "topo": Color(0.22, 0.38, 0.66), "hor": Color(0.86, 0.80, 0.72),
 		"nev": Color(0.80, 0.76, 0.70), "amb": 0.9, "amb_cor": Color(0.0, 0.0, 0.0), "amb_ceu": 1.0, "exp": 1.05, "nd": 1.15, "esc": 0.0},
-	{"h": 12.0, "sol": Color(1.0, 0.96, 0.88), "e": 1.25, "topo": Color(0.20, 0.40, 0.76), "hor": Color(0.74, 0.81, 0.88),
-		"nev": Color(0.74, 0.79, 0.84), "amb": 0.9, "amb_cor": Color(0.0, 0.0, 0.0), "amb_ceu": 1.0, "exp": 1.0, "nd": 1.0, "esc": 0.0},
-	{"h": 16.0, "sol": Color(1.0, 0.89, 0.74), "e": 1.2, "topo": Color(0.21, 0.37, 0.68), "hor": Color(0.86, 0.78, 0.66),
-		"nev": Color(0.84, 0.75, 0.63), "amb": 0.9, "amb_cor": Color(0.0, 0.0, 0.0), "amb_ceu": 1.0, "exp": 1.03, "nd": 1.0, "esc": 0.0},
+	# 0.92: meio-dia e tarde com mais contraste (menos luz ambiente, horizonte e neblina menos brancos)
+	{"h": 12.0, "sol": Color(1.0, 0.96, 0.88), "e": 1.35, "topo": Color(0.17, 0.37, 0.76), "hor": Color(0.60, 0.72, 0.86),
+		"nev": Color(0.60, 0.68, 0.79), "amb": 0.72, "amb_cor": Color(0.0, 0.0, 0.0), "amb_ceu": 1.0, "exp": 0.97, "nd": 0.8, "esc": 0.0},
+	{"h": 16.0, "sol": Color(1.0, 0.89, 0.74), "e": 1.28, "topo": Color(0.19, 0.35, 0.68), "hor": Color(0.80, 0.72, 0.62),
+		"nev": Color(0.76, 0.69, 0.60), "amb": 0.76, "amb_cor": Color(0.0, 0.0, 0.0), "amb_ceu": 1.0, "exp": 1.0, "nd": 0.9, "esc": 0.0},
 	{"h": 18.0, "sol": Color(1.0, 0.78, 0.56), "e": 1.15, "topo": Color(0.20, 0.33, 0.60), "hor": Color(0.98, 0.66, 0.42),
 		"nev": Color(0.92, 0.64, 0.45), "amb": 0.9, "amb_cor": Color(0.0, 0.0, 0.0), "amb_ceu": 1.0, "exp": 1.05, "nd": 1.0, "esc": 0.0},
 	{"h": 19.1, "sol": Color(1.0, 0.42, 0.22), "e": 0.75, "topo": Color(0.13, 0.17, 0.36), "hor": Color(0.92, 0.40, 0.26),
@@ -182,6 +183,7 @@ var refletiu := 0                    # quantas vezes o reflexo do céu foi refei
 var _ult_reflexo := -100000          # quando foi a última vez (ms)
 
 var _ceu: ProceduralSkyMaterial
+var _ceu_noite = null                # 0.92: mundo/ceu_noite.gd
 var _malha_chuva: MeshInstance3D
 var _mat_chuva: ShaderMaterial
 var _som_chuva: AudioStreamPlayer
@@ -210,6 +212,10 @@ func ligar(c: Node3D, j: Node3D) -> void:
 	cidade = c
 	jogador = j
 	_rng.randomize()
+	if _ceu_noite == null:
+		_ceu_noite = CeuNoiteCls.new()                  # 0.92: estrelas e lua (mundo/ceu_noite.gd)
+		_ceu_noite.name = "CeuNoite"
+		add_child(_ceu_noite)
 	if cidade.ambiente != null and cidade.ambiente.sky != null:
 		_ceu = cidade.ambiente.sky.sky_material as ProceduralSkyMaterial
 	_guardar_original()
@@ -301,6 +307,7 @@ func carregar(d: Dictionary) -> void:
 
 const CidadeCls := preload("res://mundo/cidade.gd")
 const LuzesRua := preload("res://mundo/luzes_rua.gd")
+const CeuNoiteCls := preload("res://mundo/ceu_noite.gd")
 
 # quanto de água (mar, rio, lago) existe num raio de ~350 m do jogador (0..1)
 func _medir_agua() -> float:
@@ -454,7 +461,9 @@ func _nova_lanterna(nome: String, energia: float, alcance: float, angulo: float)
 	l.spot_angle = angulo
 	l.spot_angle_attenuation = 0.6
 	l.spot_attenuation = 0.7
-	l.shadow_enabled = false
+	l.shadow_enabled = nome == "LanternaMao"           # 0.92: a lanterna da mão faz sombra (a da cabeça, não: ficaria tremendo)
+	l.shadow_bias = 0.06
+	l.shadow_normal_bias = 1.5
 	l.visible = false
 	add_child(l)
 	return l
@@ -658,6 +667,9 @@ func _atualizar_ceu() -> void:
 		_refletir_ceu([topo.r, topo.g, topo.b, hor.r, hor.g, hor.b, nev.r, nev.g, nev.b,
 			cor_luz.r * energia, cor_luz.g * energia, cor_luz.b * energia, dir.x, dir.y, dir.z])
 	_escuridao = clampf(float(k["esc"]) + (1.0 - float(k["esc"])) * (0.12 * n + 0.1 * c), 0.0, 1.0)
+	if _ceu_noite != null and sol != null:
+		var no_ceu := sol.global_transform.basis.z           # a lua fica do lado oposto para onde a luz dela aponta
+		_ceu_noite.definir(0.0 if subsolo else smoothstep(0.35, 0.95, float(k["esc"])), maxf(n, c), no_ceu, parte_lua)
 	LuzesRua.noite(_escuridao)                 # 0.84: halos dos postes e semáforos (mundo/luzes_rua.gd)
 	if _mat_chuva != null:
 		var b := lerpf(0.22, 0.78, luz_dia) * (1.0 - 0.25 * n)
