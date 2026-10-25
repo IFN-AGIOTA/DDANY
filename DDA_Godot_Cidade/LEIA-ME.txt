@@ -39,6 +39,19 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.92.1 · LÂMPADAS DE VERDADE NOS LOCAIS COM GERADOR
+  · Nos locais com gerador ligado (hospital, posto, supermercado, armazém, delegacia, escola, quartel) a luz saía do
+    nada, sem lâmpada nenhuma. Agora cada luz tem a LÂMPADA desenhada (modelo simples feito por código):
+      - hospital, supermercado, delegacia, escola e quartel: CALHA com TUBO FLUORESCENTE presa no teto por dois arames;
+      - posto (inclusive embaixo da cobertura das bombas) e armazém: LÂMPADA PENDURADA no fio, com bocal.
+  · O tubo/bulbo BRILHA junto com a sua luz: apagado de dia, aceso à noite e piscando junto na lâmpada velha que falha.
+  · Leve: poucas peças por lâmpada, sem sombra, somem de longe junto com a luz.
+  ARQUIVOS MEXIDOS:
+    mundo/ambiente_local.gd ... _lampada() monta a calha+tubo ou o fio+bocal+bulbo em cada luz; lista _brilhos com o
+                                material de cada uma, que acende/apaga/pisca junto com a luz
+    menu/config.gd ............ VERSAO "0.92.1"
+    LEIA-ME.txt ............... este bloco + mapa "QUERO MEXER EM..." (modelo das lâmpadas)
+
 ATUALIZAÇÃO 0.92 · VISUAL: TEXTURAS DE VERDADE, LUA E ESTRELAS, LUZ MELHOR E MODO ULTRA NO PC
   · TEXTURAS NOVAS (Poly Haven, CC0, baixadas e creditadas): os PRÉDIOS agora têm TIJOLO, CONCRETO e PEDRA de
     verdade nas paredes (conforme o tipo do prédio) e textura no TELHADO; de longe (a partir de ~160 m) a textura
@@ -2346,6 +2359,8 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - de quanto em quanto tempo o loot volta mundo/loot_mundo.gd (CICLO, CICLO_LOCAL)
 - luz e som dos locais (gerador, lâmpadas,
   zumbido, bipe do hospital) .......... mundo/ambiente_local.gd (CHANCE_GERADOR, LUZES_MAX, ALCANCE)
+- modelo das lâmpadas dos locais (calha
+  com tubo / bulbo pendurado) ......... mundo/ambiente_local.gd (_lampada)
 - salvar no multijogador .............. menu/salvamento.gd (salvar_rede/carregar_rede; arquivo user://save_rede.json)
 - de quanto em quanto tempo os infectados
   dos prédios/locais voltam ............ mundo/interiores.gd e mundo/locais.gd (CICLO_INFECTADOS)
