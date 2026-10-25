@@ -46,6 +46,7 @@ const OpcoesCls := preload("res://menu/opcoes.gd")
 const PausaCls := preload("res://menu/pausa.gd")
 const EditorHudCls := preload("res://menu/editor_hud.gd")
 const AplicarOpcoesCls := preload("res://menu/aplicar_opcoes.gd")
+const LogoProdutoraCls := preload("res://menu/logo_produtora.gd")
 const JOGADOR_CENA := preload("res://jogador/jogador.tscn")
 const SessaoRedeCls := preload("res://rede/sessao_rede.gd")
 const TelaMultiCls := preload("res://menu/tela_multijogador.gd")
@@ -127,7 +128,14 @@ func _ready() -> void:
 		return
 	Rede.caiu.connect(_rede_caiu)
 	Conta.chamado.connect(_chamado)
-	_abrir_menu()
+	# 0.93: logo da produtora (Infinity Studio) antes de tudo; os testes (rodando um script com -s) pulam
+	if "-s" in OS.get_cmdline_args() or "--script" in OS.get_cmdline_args():
+		_abrir_menu()
+		return
+	var logo := LogoProdutoraCls.new()
+	logo.name = "LogoProdutora"
+	add_child(logo)
+	logo.acabou.connect(_abrir_menu, CONNECT_ONE_SHOT)
 
 # nó "Cidade" (construções). No editor é criado sem dono, então não é salvo na cena.
 func _cidade() -> Node3D:

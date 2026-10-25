@@ -39,6 +39,20 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.93 · LOGO DA INFINITY STUDIO NA ABERTURA
+  · Ao abrir o jogo, antes do menu, aparece a LOGO DA PRODUTORA (Infinity Studio): tela preta, a logo surge devagar
+    (fade in), fica uns 2 segundos e some (fade out); depois o preto se desfaz em cima do menu. Uns 5 segundos ao todo.
+  · Um toque na tela, clique ou qualquer tecla PULA a logo.
+  · Créditos: nova seção "PRODUÇÃO · Infinity Studio".
+  ARQUIVOS MEXIDOS:
+    menu/logo_produtora.gd ..... NOVO · a tela da logo (tempos ENTRAR, FICAR, SAIR, REVELAR; pular com toque/tecla)
+    menu/logo_produtora.png .... NOVO · a imagem da logo (a que o usuário mandou)
+    menu/logo_produtora.png.import NOVO · importação da imagem
+    main.gd .................... _ready: mostra a logo e só abre o menu quando ela acaba (os testes pulam a logo)
+    menu/creditos.gd ........... seção PRODUÇÃO (Infinity Studio)
+    menu/config.gd ............. VERSAO "0.93"
+    LEIA-ME.txt ................ este bloco + mapa "QUERO MEXER EM..." (logo da abertura)
+
 ATUALIZAÇÃO 0.92.1 · LÂMPADAS DE VERDADE NOS LOCAIS COM GERADOR
   · Nos locais com gerador ligado (hospital, posto, supermercado, armazém, delegacia, escola, quartel) a luz saía do
     nada, sem lâmpada nenhuma. Agora cada luz tem a LÂMPADA desenhada (modelo simples feito por código):
@@ -2361,6 +2375,8 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   zumbido, bipe do hospital) .......... mundo/ambiente_local.gd (CHANCE_GERADOR, LUZES_MAX, ALCANCE)
 - modelo das lâmpadas dos locais (calha
   com tubo / bulbo pendurado) ......... mundo/ambiente_local.gd (_lampada)
+- logo da produtora ao abrir o jogo
+  (imagem, tempo do fade) ............. menu/logo_produtora.gd + menu/logo_produtora.png
 - salvar no multijogador .............. menu/salvamento.gd (salvar_rede/carregar_rede; arquivo user://save_rede.json)
 - de quanto em quanto tempo os infectados
   dos prédios/locais voltam ............ mundo/interiores.gd e mundo/locais.gd (CICLO_INFECTADOS)

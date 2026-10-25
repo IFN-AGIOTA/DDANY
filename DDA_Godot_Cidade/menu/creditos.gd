@@ -11,6 +11,8 @@ const UI := preload("res://menu/ui.gd")
 
 # [título da seção, [[linha principal, detalhe], ...]]
 const EQUIPE := [
+	["PRODUÇÃO", [
+		["Infinity Studio", "Produtora do jogo (a logo que abre o jogo)"]]],
 	["HISTÓRIA E UNIVERSO", [
 		["Willian Ulguim e Gabriel Solla", "Dias de um Apocalipse · Livro 1 e Bíblia da Lore"]]],
 	["JOGO", [
