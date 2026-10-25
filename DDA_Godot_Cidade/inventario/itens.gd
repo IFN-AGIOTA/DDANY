@@ -182,8 +182,8 @@ const DB := {
 		"desc": "Não serve para nada. Mas é fofo."},
 	"revista": {"nome": "REVISTA VELHA", "sigla": "REVISTA", "w": 2, "h": 2, "peso": 0.2, "max": 1, "cat": "diverso", "slot": "",
 		"desc": "\"O FIM ESTÁ PRÓXIMO?\" diz a capa."},
-	"dinheiro": {"nome": "MAÇO DE DÓLARES", "sigla": "US$", "w": 1, "h": 1, "peso": 0.05, "max": 20, "cat": "diverso", "slot": "",
-		"desc": "Não compra mais nada."},
+	"dinheiro": {"nome": "DÓLARES", "sigla": "US$", "w": 1, "h": 1, "peso": 0.001, "max": 1000, "cat": "diverso", "slot": "",
+		"desc": "0.91: o DINHEIRO do jogo (cada um = US$ 1). Compra e vende com a MÔNICA nos HOSPITAIS e paga as trocas com outros jogadores (LUCAS)."},
 	"celular": {"nome": "CELULAR QUEBRADO", "sigla": "CEL.", "w": 1, "h": 1, "peso": 0.15, "max": 1, "cat": "diverso", "slot": "",
 		"desc": "Tela trincada. Sem sinal."},
 	# 0.83: CARTÕES DE ACESSO DOS BUNKERS (só existe um de cada; aparecem nas áreas militares) · mundo/porta_bunker.gd

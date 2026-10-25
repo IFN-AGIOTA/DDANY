@@ -28,6 +28,7 @@ var agachado := false
 var mancando := false
 var nadando := false                           # 0.72
 var afundando := false
+var protegido := false                         # 0.91: na zona neutra do hospital ou na trégua (não fere nem é ferido)
 var mira_pitch := 0.0
 var morto := false
 var armas := _Armas.new()
@@ -121,6 +122,7 @@ func receber_estado(d: Array) -> void:
 	mancando = b & 16 != 0
 	nadando = b & 32 != 0
 	afundando = b & 64 != 0
+	protegido = b & 256 != 0
 	armas.aim = float(d[5])
 	armas.since = float(d[6])
 	mira_pitch = float(d[7]) if d.size() > 7 else 0.0

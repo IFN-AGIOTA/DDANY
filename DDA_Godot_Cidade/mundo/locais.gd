@@ -16,6 +16,8 @@ extends Node
 #   - 0.83: BUNKERS (tipo "bunker", mundo/local_bunker.gd): um por ilha, 5 andares no subsolo, escuro, muito loot,
 #     sem infectados. A porta só abre com o cartão do mesmo número (mundo/porta_bunker.gd). O cartão aparece nas
 #     ÁREAS MILITARES (quartéis e postos militares dos hospitais: CHANCE em mundo/loot_mundo.gd tentar_cartao).
+#   - 0.91: os HOSPITAIS são ZONAS NEUTRAS (npc/hospitais.gd): sem PvP, sem infectados (não enchem de novo e os
+#     guardas derrubam quem entra) e com os sobreviventes do livro (montados pelo ao_abrir).
 # Mexa AQUI para: quantos/onde (LOCAIS), nomes, cores no mapa, distâncias e quantos infectados.
 
 const LocalCls := preload("res://mundo/local.gd")
@@ -276,6 +278,7 @@ var hud = null                         # armas/hud_combate.gd (aviso ao entrar)
 var abertos := {}                      # índice -> Node3D
 var ativo := true
 var centros_extra := Callable()        # 0.74: host: posições dos amigos (abre também os locais perto deles)
+var ao_abrir := Callable()             # 0.91: (índice, nó) depois de montar um local (npc/hospitais.gd põe os NPCs)
 var usar_thread := true
 var _infestados := {}                  # local -> ciclo em que foi enchido (nesta partida)
 var _dentro := -1
@@ -346,6 +349,8 @@ func _process(dt: float) -> void:
 		_dentro = agora
 		if agora >= 0 and LOCAIS[agora][0] == "bunker" and hud != null and hud.has_method("mostrar_aviso"):
 			hud.mostrar_aviso("%s · ÁREA RESTRITA · a porta só abre com o CARTÃO DE ACESSO %d" % [nome(agora), numero_bunker(agora)], 5.0)
+		elif agora >= 0 and LOCAIS[agora][0] == "hospital":
+			pass                                       # 0.91: zona neutra (o aviso é do npc/hospitais.gd)
 		elif agora >= 0 and hud != null and hud.has_method("mostrar_aviso"):
 			hud.mostrar_aviso("%s · ZONA DE PvP · loot raro, cuidado com outros sobreviventes" % NOMES[LOCAIS[agora][0]], 5.0)
 			var mus := get_node_or_null("/root/Musica")
@@ -358,9 +363,14 @@ func abrir(i: int, ja := false) -> void:
 	var e: Array = LOCAIS[i]
 	if usar_thread and not ja:
 		_tarefa_i = i
-		_tarefa = WorkerThreadPool.add_task(func(): _tarefa_res = LocalCls.preparar(e[0], i, int(e[3]), Vector2(e[1], e[2])), false, "local")
+		# 0.91: os valores vão prontos no bind (a função anônima que lia "e" na thread recebeu, uma vez, um número
+		# no lugar do tipo do local)
+		_tarefa = WorkerThreadPool.add_task(_preparar_na_thread.bind(String(e[0]), i, int(e[3]), Vector2(e[1], e[2])), false, "local")
 		return
-	_terminar(i, LocalCls.preparar(e[0], i, int(e[3]), Vector2(e[1], e[2])))
+	_terminar(i, LocalCls.preparar(String(e[0]), i, int(e[3]), Vector2(e[1], e[2])))
+
+func _preparar_na_thread(t: String, i: int, gi: int, c: Vector2) -> void:
+	_tarefa_res = LocalCls.preparar(t, i, gi, c)
 
 # abre já, sem thread (nascer/carregar o jogo dentro de um local)
 func abrir_agora(p: Vector2) -> void:
@@ -401,9 +411,11 @@ func _terminar(i: int, prep) -> void:
 					grades.append("L%d_%d" % [i, k])
 			loot.tentar_cartao("L%d" % i, grades, quantos_bunkers())
 	_infestar(i, no, prep.infectados)
+	if ao_abrir.is_valid():
+		ao_abrir.call(i, no)
 
 func _infestar(i: int, no: Node3D, pontos: Array) -> void:
-	if vagos == null or not bool(vagos.get("ativo")):
+	if vagos == null or not bool(vagos.get("ativo")) or LOCAIS[i][0] == "hospital":   # 0.91: hospital = zona neutra
 		return
 	var c := ciclo_infectados(i)
 	if int(_infestados.get(i, -1)) >= c:

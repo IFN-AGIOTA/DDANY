@@ -30,6 +30,7 @@ const Locais := preload("res://mundo/locais.gd")
 const VagoCls := preload("res://inimigos/vago.gd")
 const HordaCls := preload("res://inimigos/horda.gd")
 const Regras := preload("res://inimigos/regras_infectados.gd")
+const Hospitais := preload("res://npc/hospitais.gd")
 
 const MAX_ATIVOS_PADRAO := 22               # 0.89: infectados DE VERDADE ao mesmo tempo (o resto fica virtual na horda)
 const FATOR_PC := 1.4                       # no PC cabem mais
@@ -332,6 +333,8 @@ func _livre(x: float, z: float) -> bool:
 		return false
 	if construcao != null and construcao.dentro(x, z, 3.0):
 		return false                           # 0.90: ninguém nasce dentro da sua base
+	if Hospitais.zona(Vector2(x, z), Hospitais.MARGEM + 6.0) >= 0:
+		return false                           # 0.91: nem na zona neutra dos hospitais
 	return true
 
 func _visivel(p: Vector3) -> bool:

@@ -29,6 +29,7 @@ const ClimaCls := preload("res://mundo/clima.gd")
 const Salvamento := preload("res://menu/salvamento.gd")
 const MissoesCls := preload("res://mundo/missoes.gd")
 const ConstrucaoCls := preload("res://mundo/construcao.gd")
+const HospitaisCls := preload("res://npc/hospitais.gd")
 const EventosCls := preload("res://mundo/eventos.gd")
 const AmbienteCls := preload("res://audio/ambiente.gd")
 const VagosCls := preload("res://inimigos/vagos.gd")
@@ -74,6 +75,7 @@ var veiculos: Node                          # 0.76: mundo/veiculos.gd (carros qu
 var _t_info := 0.0
 var missoes: Node = null                    # mundo/missoes.gd (suprimentos militares avisados pelo rádio)
 var construcao: Node = null                 # 0.90: mundo/construcao.gd (a base que você constrói)
+var hospitais: Node = null                  # 0.91: npc/hospitais.gd (zona neutra, Mônica, Lucas, Carlos, dinheiro)
 var eventos: Node = null                    # mundo/eventos.gd (0.65: helicóptero caído, comboio, zona contaminada)
 var hud_status: CanvasLayer                 # hud/hud_status.gd (vida, sangue, fome, sede, temperatura)
 var tela_morte: CanvasLayer
@@ -542,6 +544,11 @@ func _criar_jogo() -> void:
 	construcao.ligar(self)
 	jogador.construcao = construcao
 	vagos.construcao = construcao
+	hospitais = HospitaisCls.new()
+	hospitais.name = "Hospitais"
+	jogo.add_child(hospitais)
+	hospitais.ligar(self)
+	jogador.hospitais = hospitais
 	eventos = EventosCls.new()
 	eventos.name = "Eventos"
 	jogo.add_child(eventos)

@@ -8,6 +8,8 @@ extends CanvasLayer
 #  - BÚSSOLA (faixa no alto, no meio): N, NE, L, SE, S, SO, O, NO, marcas a cada 15° (0.65: sem o número dos graus).
 #  - OBJETIVO: definir_objetivo(Vector2(x, z), "nome") / limpar_objetivo(). Aparece no minimapa (seta na borda
 #    quando está fora do alcance), no mapa e na bússola, com a distância em metros.
+#  - 0.91 TROCAS DO LUCAS (npc/hospitais.gd notas_mapa): nos hospitais aparece um "$" com o que está te esperando
+#    (oferta para você, venda para buscar o dinheiro, itens recusados para pegar de volta).
 # A IMAGEM DO MAPA é desenhada UMA vez ao começar (SubViewport: água, terra, parques, calçadas, ruas e prédios
 # de mundo/cidade.gd, ~4,4 m por pixel no PC e ~5,9 no celular, com mipmaps) e fica guardada; o minimapa só gira/recorta essa imagem num
 # shader (nada de imagem refeita por quadro). No mapa com muito zoom, ruas e prédios perto são redesenhados em
@@ -648,6 +650,19 @@ func _amigos() -> Array:
 			l.append([Vector2(r.global_position.x, r.global_position.z), str(r.nome)])
 	return l
 
+# 0.91: [[posição, texto, cor], ...] do que te espera nas trocas do Lucas (npc/hospitais.gd)
+func _notas() -> Array:
+	var cena := get_tree().current_scene if is_inside_tree() else null
+	var h = cena.get("hospitais") if cena != null else null
+	if h == null or not is_instance_valid(h):
+		return []
+	return h.notas_mapa()
+
+func _marca_nota(ci: CanvasItem, c: Vector2, r: float, cor: Color) -> void:
+	UI.circulo(ci, c, r * 1.25, Color(0.03, 0.05, 0.08, 0.95))
+	UI.aro(ci, c, r * 1.25, maxf(2.0, r * 0.3), cor)
+	_texto(ci, "$", c, int(r * 1.5), cor)
+
 # local especial: círculo escuro, aro na cor do tipo e a letra (P, H, S, A)
 func _icone_local(ci: CanvasItem, c: Vector2, r: float, tipo: String, i := -1) -> void:
 	var cor: Color = Locais.CORES_MAPA[tipo]
@@ -708,6 +723,13 @@ func _desenhar_minimapa(vh: float) -> void:
 		var p := Vector2(d.dot(direita), -d.dot(frente)) * esc
 		if p.length() <= r - 1.2 * vh:
 			_icone_local(ci, c + p, 1.1 * vh, e[0], i)
+	# 0.91: trocas te esperando num hospital ("$"; fora do alcance, na borda)
+	for nt in _notas():
+		var dn: Vector2 = nt[0] - _pos
+		var pn2 := Vector2(dn.dot(direita), -dn.dot(frente)) * esc
+		if pn2.length() > r - 1.4 * vh:
+			pn2 = pn2.normalized() * (r - 1.4 * vh)
+		_marca_nota(ci, c + pn2 + Vector2(1.2 * vh, -1.2 * vh), 0.9 * vh, nt[2])
 	# amigos (multijogador): bolinha verde; fora do alcance, na borda
 	for a in _amigos():
 		var d2: Vector2 = a[0] - _pos
@@ -887,6 +909,18 @@ func _desenhar_mapa() -> void:
 		_icone_local(ci, pl, 1.5 * vh, e[0], i)
 		if _mpp < 9.0:
 			_texto(ci, Locais.nome(i), pl + Vector2(0, 2.8 * vh), tl, Locais.CORES_MAPA[e[0]])
+	# 0.91: trocas te esperando nos hospitais (o "$" e o que é)
+	var por_lugar := {}
+	for nt in _notas():
+		var k := str(nt[0])
+		var nlin: int = por_lugar.get(k, 0)
+		por_lugar[k] = nlin + 1
+		var pnt := _mundo_para_tela(nt[0])
+		if not Rect2(Vector2.ZERO, vs).grow(3.0 * vh).has_point(pnt):
+			continue
+		if nlin == 0:
+			_marca_nota(ci, pnt + Vector2(2.0 * vh, -2.0 * vh), 1.4 * vh, nt[2])
+		_texto(ci, nt[1], pnt + Vector2(0, -4.4 * vh - nlin * 2.4 * vh), int(1.9 * vh), nt[2])
 	# amigos (multijogador)
 	for a in _amigos():
 		var pa := _mundo_para_tela(a[0])

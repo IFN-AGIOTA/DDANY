@@ -23,7 +23,7 @@ const RECURSOS := [
 		"CC0 1.0 (domínio público)", "opengameart.org/content/3d-keycard"],
 	["Personagem do jogador (corpo, pele, olhos, sobrancelhas, cabelos e barba)", "Quaternius · \"Universal Base Characters\"",
 		"CC0 1.0 (domínio público)", "quaternius.itch.io/universal-base-characters"],
-	["Modelos 3D (manequins) dos infectados e animações", "Quaternius · \"Universal Animation Library\" 1 e 2",
+	["Modelos 3D (manequins) dos infectados e dos sobreviventes do hospital (0.91) e animações", "Quaternius · \"Universal Animation Library\" 1 e 2",
 		"CC0 1.0 (domínio público)", "quaternius.com · opengameart.org/content/universal-animation-library-2"],
 	["Animações de andar de lado e de costas, fuzil (mirar, atirar, recarregar), golpes com arma, pegar do chão, levar golpe, mortes e sentar",
 		"Kay Lousberg · \"KayKit Character Animations\" (convertidas para o esqueleto do jogo)",

@@ -293,9 +293,15 @@ func _pegar_do_chao() -> void:
 		if veiculos_mgr != null:
 			veiculos_mgr.sair()
 		return
-	var it = inventario.item_mais_proximo()
+	# 0.91: sobrevivente do hospital (Mônica: loja · Lucas: trocas · os outros falam): vale o que estiver mais perto,
+	# ele ou um item no chão
+	var npc = hospitais.npc_perto(global_position) if hospitais != null else null
+	var it = inventario.item_mais_proximo(hospitais.dist_npc(npc, global_position) if npc != null else 1.6)
 	if it != null:
 		inventario.pegar(it)
+		return
+	if npc != null:
+		hospitais.falar_com(npc)
 		return
 	if veiculos_mgr != null:
 		if veiculos_mgr.perto != "" and not nadando:
@@ -384,6 +390,7 @@ func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3, tipo :=
 var agarrado := 0.0
 var construindo := false            # 0.90: com uma peça da base na mão (mundo/construcao.gd): não atira nem empurra
 var construcao = null               # 0.90: mundo/construcao.gd (cama e coletor no botão PEGAR)
+var hospitais = null                # 0.91: npc/hospitais.gd (falar com os sobreviventes do hospital no botão PEGAR)
 func agarrar(t: float) -> void:
 	if servidor or morto:
 		return

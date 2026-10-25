@@ -65,6 +65,7 @@ static func salvar(main, morto := false) -> bool:
 		"missoes": main.missoes.salvar() if main.get("missoes") != null else {},
 		"vagos": main.vagos.salvar() if main.get("vagos") != null else {},              # 0.90: a horda da cidade
 		"construcao": main.construcao.salvar() if main.get("construcao") != null else {},   # 0.90: a base
+		"hospitais": main.hospitais.salvar_personagem() if main.get("hospitais") != null else {},   # 0.91: loja e trégua
 		"chao": _chao(main, p),
 		"mapa_predios": MAPA_PREDIOS,
 	}
@@ -173,6 +174,8 @@ static func carregar(main, d: Dictionary) -> void:
 		main.vagos.carregar(d["vagos"])
 	if main.get("construcao") != null and d.has("construcao"):
 		main.construcao.carregar(d["construcao"])
+	if main.get("hospitais") != null and d.has("hospitais"):
+		main.hospitais.carregar_personagem(d["hospitais"])
 
 # ================= 0.77: PARTIDA EM REDE =================
 static func ler_rede() -> Dictionary:
@@ -220,7 +223,8 @@ static func salvar_rede(main, morto := false) -> bool:
 	if not bool(j.get("servidor")):          # o "jogador" do servidor do PC não é gente
 		d["personagem"] = {"sobrevivencia": j.sobrevivencia.salvar(), "inventario": j.inventario.salvar(),
 			"abates": main.abates, "tempo_jogo": main._tempo_jogo, "morto": morto,
-			"cama": main.construcao.minha_cama if main.get("construcao") != null and not morto else ""}   # 0.90: a sua cama na base
+			"cama": main.construcao.minha_cama if main.get("construcao") != null and not morto else "",   # 0.90: a sua cama na base
+			"hospitais": main.hospitais.salvar_personagem() if main.get("hospitais") != null else {}}     # 0.91: loja e trégua
 	if rede != null and rede.eh_host() and main.loot_mundo != null:
 		var lm = main.loot_mundo
 		d["mundo"] = {"semente": lm.semente,
@@ -229,7 +233,8 @@ static func salvar_rede(main, morto := false) -> bool:
 			"mapa_predios": MAPA_PREDIOS,
 			"clima": main.clima.salvar() if main.clima != null and main.clima.has_method("salvar") else {},
 			"vagos": main.vagos.salvar() if main.get("vagos") != null else {},
-			"construcao": main.construcao.salvar() if main.get("construcao") != null else {}}
+			"construcao": main.construcao.salvar() if main.get("construcao") != null else {},
+			"trocas": main.hospitais.trocas.salvar() if main.get("hospitais") != null else {}}   # 0.91: o que está com o Lucas
 	return _gravar_rede(d)
 
 # ao começar a partida em rede (main.gd _ligar_rede): o personagem volta; o host continua o mundo salvo
@@ -263,9 +268,13 @@ static func carregar_rede(main) -> String:
 			main.vagos.carregar(m["vagos"])
 		if main.get("construcao") != null and m.has("construcao"):
 			main.construcao.carregar(m["construcao"])
+		if main.get("hospitais") != null and m.has("trocas"):
+			main.hospitais.trocas.carregar(m["trocas"])
 		if main.get("veiculos") != null:
 			main.veiculos.sincronizar()
 		avisos.append("O MUNDO DA SUA ÚLTIMA SALA CONTINUA")
 	if main.get("construcao") != null and not pj.is_empty() and not bool(pj.get("morto", false)):
 		main.construcao.minha_cama = str(pj.get("cama", ""))   # a cama vem do personagem (a peça chega do host)
+	if main.get("hospitais") != null and not pj.is_empty() and not bool(pj.get("morto", false)):
+		main.hospitais.carregar_personagem(pj.get("hospitais", {}))
 	return " · ".join(avisos)

@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.90 (APK código 45)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.91 (APK código 45)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York
 abandonada. Começou como um jogo em HTML (versão 1.1.49; os arquivos dele saíram do repositório na 0.89.1 e
@@ -39,6 +39,71 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.91 · DINHEIRO, HOSPITAIS NEUTROS, LOJA DA MÔNICA E TROCAS PELO LUCAS
+  · DINHEIRO: o "maço de dólares" virou DÓLARES, a moeda do jogo (cada um = US$ 1, até 1000 por pilha, quase não
+    pesa). Aparece no loot como antes, agora em quantias de US$ 5 a US$ 300 (balcões, cofres, carteiras...).
+  · OS 4 HOSPITAIS VIRARAM ZONAS NEUTRAS (com os sobreviventes do hospital do Livro 1, conforme a Bíblia da Lore):
+    - lá dentro (terreno + 8 m) o PvP NUNCA vale (em nenhum modo), infectados não nascem nem enchem o hospital, e os
+      que entram são derrubados pelos guardas do Carlos (tiro abafado, não chama a horda). Aviso "ZONA NEUTRA" no alto;
+    - ao SAIR: TRÉGUA DE 2 MINUTOS (contador no alto): ninguém te fere e você não fere ninguém (vale para os dois lados,
+      os outros jogadores sabem pela rede);
+    - MÔNICA (ex-enfermeira, líder · LOJA), LUCAS (17 anos, o rádio · TROCAS), CARLOS (ex-militar, sem o braço
+      esquerdo · GUARDA, na porta), JOSÉ, A SENHORA (cabelo branco) e JHON (boné preto, perto do rádio) estão em
+      TODOS os hospitais, parados (olham para você), com nome em cima. PEGAR (E) perto = falar / abrir a tela.
+  · LOJA DA MÔNICA (abas COMPRAR e VENDER):
+    - vende TODOS OS TIPOS de item (armas, munição, pentes, acessórios, armas brancas, remédios, comida, bebida,
+      ferramentas, roupas e mochilas) e cada hospital tem uma ESPECIALIDADE (mais itens dela e 20% mais barato):
+      1 REMÉDIOS E COMIDA · 2 ARMAS E MUNIÇÃO · 3 ROUPAS E MOCHILAS · 4 FERRAMENTAS E CONSTRUÇÃO;
+    - o estoque é DIFERENTE PARA CADA JOGADOR e em cada hospital, e se renova a cada DIA do jogo (48 min); o que você
+      comprou some do seu estoque até o dia seguinte (vai no jogo salvo);
+    - ela COMPRA os seus itens por 40% do valor (menos se estiver gasto); dinheiro e cartões dos bunkers não;
+    - confere tudo: sem dinheiro suficiente ("Isso custa US$ X e você só tem US$ Y"), item que não cabe na mochila.
+  · TROCAS ENTRE JOGADORES PELO LUCAS (multijogador; abas PARA VOCÊ, VENDER e SUAS OFERTAS):
+    - VENDER: escolha PARA QUEM (lista de nomes: quem está na partida e quem já passou por ela), marque os ITENS
+      (até 12, com o valor de loja ao lado), ajuste o PREÇO (-100 -10 +10 +100 +1000) e ENTREGUE AO LUCAS: os itens
+      saem do seu inventário e ficam com ele, NAQUELE hospital (até 6 ofertas abertas por jogador);
+    - quem recebe vê em PARA VOCÊ (em qualquer hospital) a lista de cada jogador que quer vender para ele, com os
+      itens e o preço, e um aviso pelo rádio + "$" no mapa. ACEITAR: só no hospital da oferta e com o dinheiro (o
+      Lucas confere: "Custa US$ X e você só tem US$ Y. Faltam US$ Z."); o dinheiro sai e os itens entram. RECUSAR:
+      de qualquer hospital. E vice-versa (os dois podem vender um para o outro);
+    - quem vendeu recebe o aviso pelo rádio e o "$" no MAPA (VENDIDO · BUSCAR US$ X, ou RECUSARAM · BUSCAR ITENS) e
+      vai até aquele hospital buscar com o Lucas (SUAS OFERTAS: RECEBER / PEGAR OS ITENS DE VOLTA / CANCELAR);
+    - quem confere tudo é o HOST (a oferta ainda está aberta? é para você? você é o dono? o dinheiro bate?): ninguém
+      aceita duas vezes, pega o dinheiro do outro ou paga a menos. As ofertas vão no jogo salvo do mundo do host.
+  · PEGAR perto de um NPC e de um item no chão: vale o que estiver mais perto.
+  · Testado: teste_hospital.gd (46 conferências: zona, guardas, trégua, loja, regras das trocas, jogo salvo) e
+    rede_trocas (DOIS JOGOS conectados: oferta, aviso no mapa, compra, buscar o dinheiro, recusa e devolução, e o
+    tiro bloqueado no hospital), mais a bateria inteira e os testes de rede.
+  · Arquivos:
+      npc/hospitais.gd ............................. NOVO (zona neutra, trégua, guardas, NPCs, dinheiro, estoque, mapa)
+      npc/npc_hospital.gd .......................... NOVO (um sobrevivente: modelo, nome, falas, olhar para você)
+      npc/modelo_npc.gd ............................ NOVO (manequim repintado como gente viva: roupa e cara de cada um)
+      npc/loja.gd .................................. NOVO (estoque da Mônica por jogador/hospital/dia, especialidades)
+      npc/precos.gd ................................ NOVO (preço de cada item em dólares, quanto a Mônica paga)
+      npc/trocas.gd ................................ NOVO (o registro das trocas no host, as regras e a rede)
+      npc/tela_npc.gd .............................. NOVO (base das telas dos NPCs: lista que rola, ícones, botões)
+      npc/tela_loja.gd ............................. NOVO (tela da Mônica)
+      npc/tela_trocas.gd ........................... NOVO (tela do Lucas)
+      inimigos/infectados/animacoes.res ............ + 7 animações dos NPCs (Quaternius, CC0)
+      ferramentas/animacoes_npcs.gd ................ NOVO (acrescenta essas animações)
+      inventario/itens.gd .......................... DÓLARES (moeda, até 1000 por pilha)
+      mundo/loot_mundo.gd .......................... dinheiro em quantias maiores (x5)
+      mundo/locais.gd .............................. hospital sem infectados; ao_abrir (monta os NPCs)
+      inimigos/vagos.gd ............................ não nasce infectado na zona neutra
+      jogador/jogador.gd ........................... PEGAR fala com o NPC (o mais perto entre NPC e item)
+      inventario/tela_inventario.gd ................ texto do botão PEGAR perto de um NPC
+      rede/sessao_rede.gd .......................... PvP nunca no hospital; trégua (bit 256); eventos das trocas
+      rede/jogador_remoto.gd ....................... protegido (trégua do amigo)
+      hud/mapa.gd .................................. "$" das trocas nos hospitais (mapa e minimapa)
+      main.gd ...................................... cria npc/hospitais.gd
+      menu/salvamento.gd ........................... loja e trégua no personagem; trocas no mundo do host
+      menu/creditos.gd ............................. manequins e animações também dos NPCs
+      menu/config.gd ............................... versão 0.91
+      ferramentas/testes/teste_hospital.gd ......... NOVO
+      ferramentas/testes/rede_trocas_host.gd ....... NOVO
+      ferramentas/testes/rede_trocas_cliente.gd .... NOVO
+      ferramentas/testes/rodar.sh .................. teste_hospital na bateria; alvo rede_trocas
+
 ATUALIZAÇÃO 0.90 · EMPURRÃO, JANELAS DE VERDADE E CONSTRUIR A BASE
   · EMPURRÃO E PISÃO (como no Project Zomboid): botão EMPURRAR (tecla G). Empurra o infectado da frente: ele
     cambaleia e 55% das vezes CAI (90% se for pelas costas). Com um infectado CAÍDO ou rastejando na sua frente, o
@@ -1968,7 +2033,8 @@ TOQUE (vários dedos ao mesmo tempo)
 - ATIRAR / GOLPEAR (segurar; dá para arrastar o dedo em cima dele para mirar enquanto atira) · CORRER (segurar)
 - PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga) · RECARREGAR · ARMA (troca coldre/ombro) · PEGAR
   (aparece perto de um item; perto de uma PORTA: abrir / fechar / tirar tábua; 0.90: JANELA: quebrar / pular /
-  tirar tábua; CAMA da base: renascer aqui; COLETOR: encher garrafa) · EMPURRAR (0.90; com um infectado caído
+  tirar tábua; CAMA da base: renascer aqui; COLETOR: encher garrafa; 0.91: NPC do hospital: LOJA da Mônica,
+  TROCAS do Lucas, falar com os outros) · EMPURRAR (0.90; com um infectado caído
   na frente vira PISÃO) · CONSTRUIR (0.90: menu da base; com a peça na mão: GIRAR, OK, CANCELAR) · INV · II (pausa) · CAM (1ª/3ª pessoa) · VOO (câmera livre: SOBE / DESCE / VEL)
   · OMBRO (0.79): troca a câmera de ombro (direito <-> esquerdo).
   · BALÃO (só no multijogador): mensagens rápidas.
@@ -1979,7 +2045,7 @@ TOQUE (vários dedos ao mesmo tempo)
 PC (todas as teclas trocáveis em Opções › Teclado e mouse)
 - WASD/setas andar · Shift correr · Alt andar devagar · Espaço pular · C agachar · mouse esquerdo atirar/golpear ·
   mouse direito mirar · R recarregar · X ou rodinha trocar arma · Q roda do inventário rápido · 1..8 atalhos ·
-  E pegar / abrir e fechar porta · Tab inventário · M mapa · Esc/P pausa · F 1ª/3ª pessoa · botão do meio do mouse
+  E pegar / abrir e fechar porta / falar com o NPC do hospital · Tab inventário · M mapa · Esc/P pausa · F 1ª/3ª pessoa · botão do meio do mouse
   trocar de ombro · V câmera livre (E sobe, Q desce) ·
   T mensagens rápidas (multijogador; 1..8 escolhe) · F11 tela cheia · G empurrar/pisar · B construir (com a
   peça na mão: R gira, E ou clique constrói, botão direito cancela).
@@ -2031,6 +2097,11 @@ VEÍCULOS (0.76): tanque 30 L · ~1,6 L/km + 0,03 L/min ligado · até ~86 km/h 
   m/s · motor ouvido a ~38 m · ~4% dos sedãs/táxis/vans inteiros funcionam
 PORTAS (0.73): porta 100 de vida, cada tábua mais 140 (até 3) · golpe de infectado na porta = mordida x2,2
   (8–14 x 2,2) · abrir/fechar: barulho de 7 m · martelar tábua 10,5 m · porta quebrando 14 m · usar até 1,9 m
+HOSPITAIS (0.91): zona neutra = terreno + 8 m · trégua ao sair 120 s · guardas a cada 0,5 s · NPCs: falar até 2,4 m
+LOJA DA MÔNICA (0.91): 18 itens por dia (1 de cada categoria + 7 da especialidade) · especialidade -20%, o resto +15% ·
+  preço = preço cheio x estado (35%-100%) · ela paga 40% · renova a cada dia do jogo (48 min) · preços em npc/precos.gd
+  (ex.: pistola 260, M4 950, AKM 880, munição 2-6 cada, kit médico 130, antibiótico 160, água 20, mochila de combate 320)
+TROCAS DO LUCAS (0.91): até 12 itens por oferta · até 6 ofertas abertas por jogador · preço até US$ 100.000
 EMPURRÃO (0.90): derruba 55% (pelas costas 90%) · pisão 40 de dano · 8 de fôlego · 0,75 s de espera
 JANELAS (0.90): vidro 22 de vida · tábua 140 (até 3) · quebrar = barulho de 22 m · 50% de cortar a mão sem arma ·
   55% das janelas sem tábua têm vidro · pular leva 0,75 s
@@ -2068,7 +2139,8 @@ ITENS (inventario/itens.gd; item novo = 1 linha na tabela DB)
 - Roupas (calor / chuva / proteção): capacete tático, gorro, boné, lanterna de cabeça, camiseta, moletom,
   jaqueta acolchoada, capa de chuva, colete tático, colete à prova de balas, calça cargo, jeans.
 - Mochilas: pochete, mochila escolar, de trilha, de combate.
-- Diversos: ursinho, revista velha, maço de dólares, celular quebrado, CARTÃO DE ACESSO · BUNKER 1..4 (0.83: abre
+- DINHEIRO (0.91): DÓLARES (cada um = US$ 1, até 1000 por pilha): compra e vende com a Mônica e paga as trocas.
+- Diversos: ursinho, revista velha, celular quebrado, CARTÃO DE ACESSO · BUNKER 1..4 (0.83: abre
   a porta do bunker do mesmo número; só existe um de cada; aparece nas caixas militares dos quartéis e dos postos
   militares dos hospitais).
 - ESTADO de todo item: PERFEITO > GASTO > DANIFICADO > MUITO DANIFICADO > ARRUINADO. Roupas gastam com mordidas.
@@ -2098,6 +2170,8 @@ LOOT (mundo/loot_mundo.gd; tabelas no topo, com raridade e quantidades)
   silenciador, kit de armas), "bunker_militar" (colete, capacete, mochila de combate, máscara, kit médico,
   munição, rádio, pilhas, lanternas, comida), "bunker_med", "bunker_comida", "bunker_deposito", "bunker_alojamento",
   "bunker_controle" e o chão "chao_bunker". Só 3% dos móveis vazios.
+- DINHEIRO (0.91): as quantias do loot foram multiplicadas por 5 (ex.: balcão US$ 5-30, cofre até US$ 300).
+- LOJA DA MÔNICA (0.91, npc/loja.gd): não é loot do chão; o estoque é sorteado por jogador, hospital e dia.
 - MARTELO (0.90): "loja", "deposito", "carro", "posto_oficina", "super_estoque", "armazem_carga", "chao_posto",
   "chao_armazem", "chao_metro". Tábuas vêm de 1 a 3.
 - ITENS SOLTOS no chão dos prédios (até 4 por prédio, conforme o uso).
@@ -2122,7 +2196,10 @@ O VÍRUS: Projeto Harbinger (EUA + laboratórios internacionais), mutação do v
 (variante aérea); todos carregam o vírus adormecido; ~1% é imune; forma comum (morre e reanima) e forma
 adaptativa (Mavie).
 
-NO JOGO: o modo história foi APAGADO na 0.63 para ser refeito do zero. No menu, o botão "História" mostra
+NO JOGO (0.91): os SOBREVIVENTES DO HOSPITAL estão nos 4 hospitais (zonas neutras): MÔNICA (loja), CARLOS (guarda,
+sem o braço esquerdo), LUCAS (trocas pelo rádio), JOSÉ, A SENHORA e JHON (npc/hospitais.gd, aparência em
+npc/modelo_npc.gd VISUAIS).
+O modo história foi APAGADO na 0.63 para ser refeito do zero. No menu, o botão "História" mostra
 "Em breve". (O Ato 1 antigo, com abertura, cutscenes e os companheiros Greg e Mavie, ficou no histórico do git.)
 
 -----------------------------------------------------------------------------------------------------
@@ -2209,7 +2286,17 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - cidade abandonada (carros, entulho) . mundo/abandono.gd
 - modelos baixados do cenário (postes,
   placas, semáforo, lixo, vegetação) .. mundo/cenario.gd (arquivos em mundo/cenario/, licenças no LICENCA.txt)
-- LOCAIS ESPECIAIS (zonas de PvP): onde ficam, casca de longe,
+- HOSPITAIS (0.91): zona neutra, trégua
+  de 2 min, guardas, onde fica cada NPC,
+  dinheiro ............................ npc/hospitais.gd (MARGEM, IMUNIDADE, NPCS)
+- os sobreviventes do hospital (nome,
+  falas, PEGAR) ....................... npc/npc_hospital.gd · cara e roupa: npc/modelo_npc.gd (VISUAIS) · animações:
+                                        ferramentas/animacoes_npcs.gd
+- LOJA DA MÔNICA: estoque, especialidades npc/loja.gd · tela: npc/tela_loja.gd
+- PREÇOS de cada item em dólares ...... npc/precos.gd (PRECO, VENDA)
+- TROCAS DO LUCAS (regras, limites, rede,
+  avisos, marcas do mapa) ............. npc/trocas.gd · tela: npc/tela_trocas.gd · base das telas: npc/tela_npc.gd
+- LOCAIS ESPECIAIS (zonas de PvP; hospitais: zona neutra): onde ficam, casca de longe,
   monta/desmonta, infectados, aviso ...... mundo/locais.gd (lista LOCAIS: ferramentas/escolher_locais.gd)
 - posto, hospital, supermercado e armazém
   por dentro e por fora (planta, móveis) . mundo/local.gd (loot: tabelas em mundo/loot_mundo.gd)
@@ -2357,6 +2444,7 @@ MULTIJOGADOR (pasta rede/ · modo livre)
 - o boneco do outro jogador (suavizado,
   nome em cima, roupa, arma) .......... rede/jogador_remoto.gd
 - PvP: onde o tiro acerta o amigo ..... rede/alvo_jogador.gd (corpo/cabeça) · regra e eventos: rede/sessao_rede.gd
+                                        (0.91: nunca no hospital, trégua: pvp_vale_em, _protegido)
   (mandar_pvp, pvp_vale_em) · dano: jogador/sobrevivencia.gd (levar_tiro_pvp) · opção: menu/opcoes.gd
 - mensagens rápidas (frases) .......... hud/mensagens.gd
 - conta (Google/convidado), amigos e
@@ -2507,6 +2595,10 @@ MÚSICA (pasta audio/)
 - Infectados no estilo Project Zomboid (0.89), o que ainda falta de lá: cercas altas que caem com o peso; o
   helicóptero é só som (como lá); os infectados não batem nos carros. Janelas (0.90): só as do térreo dos
   prédios que abrem (as dos andares de cima e dos locais especiais continuam desenho).
+- Hospitais (0.91): os NPCs ficam parados (não andam, não lutam; os guardas são invisíveis: o tiro "vem do Carlos");
+  os rostos são simples (olhos e boca em peças, manequim). Trocas só no multijogador. O dinheiro de uma troca que
+  ficou esperando resposta do host some se o host cair bem nessa hora. A loja não tem estoque compartilhado (cada um
+  vê o seu). Mônica, Lucas e os outros são os mesmos nos 4 hospitais (o livro tem um hospital só).
 - Base (0.90): as peças ficam só no chão (sem andar de cima, telhado ou escada); não dá para consertar uma peça
   batida (desmonte e construa de novo); só quem manda no mundo (sozinho ou o host) vê os infectados quebrando.
   No celular cabem 22 de verdade ao mesmo tempo (o resto da horda espera longe e vem quando morrem). No

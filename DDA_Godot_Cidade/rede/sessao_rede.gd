@@ -24,6 +24,9 @@ extends Node
 #     chega recebe as portas mexidas junto com "mundo_itens".
 #   · 0.90 BASE: "base_nova" (peças prontas), "base_tira" (desmontou/quebrou), "base_vida", "base_agua" (coletor);
 #     quem chega recebe "base_tudo" do host. As peças vão no jogo salvo do host (mundo/construcao.gd).
+#   · 0.91 TROCAS do Lucas (npc/trocas.gd): "troca_pedido" (amigo -> host), "troca_resp" (host -> quem pediu),
+#     "trocas_lista" (host -> todos; quem chega recebe). HOSPITAL = zona neutra e TRÉGUA ao sair (npc/hospitais.gd):
+#     o bit 256 do estado diz que o jogador está protegido (não fere e não é ferido).
 # AINDA NÃO: dano entre jogadores, salvar a partida em rede, missões do rádio (cada um tem as suas), infectados
 # não entram em prédio atrás de um amigo (o host não tem as paredes do interior onde o amigo está).
 # Mexa AQUI para: o que vai em cada mensagem e de quanto em quanto tempo.
@@ -35,6 +38,7 @@ const LootMundo := preload("res://mundo/loot_mundo.gd")
 const Locais := preload("res://mundo/locais.gd")
 const MensagensCls := preload("res://hud/mensagens.gd")
 const PortaCls := preload("res://mundo/porta.gd")
+const Hospitais := preload("res://npc/hospitais.gd")
 const INFECTADOS_POR_SEG := 10.0
 const RAIO_INFECTADOS := 170.0                # host manda a cada amigo os infectados até essa distância dele
 const ENVIOS_POR_SEG := 15.0
@@ -171,7 +175,8 @@ func _physics_process(dt: float) -> void:
 func estado_local() -> Array:
 	var j = jogador
 	var bits := (1 if j.agachado else 0) | (2 if j.mirando else 0) | (4 if j.morto else 0) | (0 if j.is_on_floor() else 8) \
-		| (16 if j.mancando else 0) | (32 if j.nadando else 0) | (64 if j.afundando else 0) | (128 if j.veiculo != null else 0)
+		| (16 if j.mancando else 0) | (32 if j.nadando else 0) | (64 if j.afundando else 0) | (128 if j.veiculo != null else 0) \
+		| (256 if _protegido() else 0)
 	var carro: Array = ["", Vector3.ZERO]
 	if j.veiculo != null and is_instance_valid(j.veiculo):
 		carro = [str(j.veiculo.id), j.veiculo.rotation]     # 0.76: dirigindo: qual carro e como ele está virado
@@ -226,6 +231,8 @@ func _evento(id: int, tipo: String, d: Dictionary) -> void:
 				_mandar_mundo_itens(id)
 				if main.get("construcao") != null:
 					Rede.enviar_evento("base_tudo", {"l": main.construcao.estado()}, id)
+				if main.get("hospitais") != null:
+					main.hospitais.trocas.mandar_para(id)
 		"roupa":
 			if Rede.jogadores.has(id):
 				_criar(id).vestir(d)
@@ -273,6 +280,9 @@ func _evento(id: int, tipo: String, d: Dictionary) -> void:
 		"mundo_itens":
 			if id == 1:
 				_aplicar_mundo_itens(d)
+		"troca_pedido", "troca_resp", "trocas_lista":    # 0.91: trocas do Lucas (npc/trocas.gd)
+			if main.get("hospitais") != null:
+				main.hospitais.trocas.receber(id, tipo, d)
 		"base_nova", "base_tira", "base_vida", "base_agua", "base_tudo":    # 0.90: construir base (mundo/construcao.gd)
 			if main.get("construcao") != null and (tipo != "base_tudo" or id == 1):
 				main.construcao.receber(tipo, d)
@@ -515,8 +525,9 @@ func _porta_recebida(pid: String, e: Array) -> void:
 
 # ---------- PvP (0.71) ----------
 # Regra (escolha do HOST em Opções › Vídeo e som › "PvP no multijogador", vai em Rede.mundo["pvp"]):
-#   "zonas" (padrão) = só vale dentro das ZONAS DE PvP (postos, hospitais, supermercados, armazéns: mundo/locais.gd)
+#   "zonas" (padrão) = só vale dentro das ZONAS DE PvP (postos, supermercados, armazéns...: mundo/locais.gd)
 #   "tudo" = na cidade inteira · "desligado" = ninguém fere ninguém
+# 0.91: nos HOSPITAIS (zona neutra) nunca vale, e quem saiu de lá está na TRÉGUA (não fere nem é ferido) por 2 min.
 # Quem decide é o aparelho de quem LEVA o tiro (pela posição dele): sem trapaça de quem atira.
 const PVP_ZONA_MARGEM := 4.0
 const ABATE_JANELA := 12.0                    # morreu até 12 s depois de levar tiro de alguém = abate dele
@@ -530,16 +541,29 @@ static func modo_pvp() -> String:
 	return str(Rede.mundo.get("pvp", "zonas"))
 
 static func pvp_vale_em(p: Vector3) -> bool:
+	if Hospitais.zona(Vector2(p.x, p.z)) >= 0:
+		return false                                  # 0.91: zona neutra
 	match modo_pvp():
 		"tudo":
 			return true
 		"desligado":
 			return false
-	return Locais.em(Vector2(p.x, p.z), PVP_ZONA_MARGEM) >= 0
+	var i := Locais.em(Vector2(p.x, p.z), PVP_ZONA_MARGEM)
+	return i >= 0 and Locais.LOCAIS[i][0] != "hospital"
+
+# 0.91: eu estou na zona neutra ou na trégua
+func _protegido() -> bool:
+	return main.get("hospitais") != null and main.hospitais.protegido()
 
 # eu acertei o jogador "alvo_id": manda o dano para o aparelho dele (falso = o PvP não vale onde ele está)
 func mandar_pvp(alvo_id: int, dano: float, cabeca: bool, direcao: Vector3, golpe: bool) -> bool:
 	var r = remotos.get(alvo_id)
+	if r != null and (_protegido() or r.protegido):          # 0.91: trégua do hospital
+		var agora0 := Time.get_ticks_msec() / 1000.0
+		if agora0 - _t_aviso_pvp > 4.0 and main.hud != null:
+			_t_aviso_pvp = agora0
+			main.hud.mostrar_aviso("TRÉGUA DO HOSPITAL: VOCÊ NÃO PODE FERIR NINGUÉM AINDA" if _protegido() else "%s ESTÁ NA TRÉGUA DO HOSPITAL: NÃO FERE" % r.nome.to_upper())
+		return false
 	if r == null or not pvp_vale_em(r.global_position):
 		var agora := Time.get_ticks_msec() / 1000.0
 		if agora - _t_aviso_pvp > 4.0 and main.hud != null:
@@ -553,6 +577,8 @@ func mandar_pvp(alvo_id: int, dano: float, cabeca: bool, direcao: Vector3, golpe
 func _pvp_recebido(de: int, d: Dictionary) -> void:
 	if jogador == null or jogador.morto or not pvp_vale_em(jogador.global_position):
 		return
+	if _protegido() or (remotos.has(de) and remotos[de].protegido):
+		return                                        # 0.91: trégua (vale para os dois lados)
 	_ultimo_atirador = de
 	_t_ultimo_tiro = Time.get_ticks_msec() / 1000.0
 	_ultima_arma = str(d.get("a", ""))

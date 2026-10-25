@@ -153,7 +153,9 @@ func _process(dt: float) -> void:
 	if _t_scan <= 0.0:
 		_t_scan = 0.25
 		if controles != null:
-			var perto = inv.item_mais_proximo()
+			var hosp = inv.jogador.get("hospitais") if inv.jogador != null else null
+			var npc = hosp.npc_perto(inv.jogador.global_position) if hosp != null else null     # 0.91: Mônica, Lucas...
+			var perto = inv.item_mais_proximo(hosp.dist_npc(npc, inv.jogador.global_position) if npc != null else 1.6)
 			# 0.73: sem item perto, o mesmo botão serve para a PORTA (abrir, fechar, tirar tábua)
 			# 0.76: e para o CARRO (entrar/sair) e a BOMBA do posto (encher o galão)
 			var acao_porta := ""
@@ -165,6 +167,8 @@ func _process(dt: float) -> void:
 				acao_porta = "ENTRAR\nCARRO"
 			elif perto == null and vm != null and vm.bomba_perto() != null:
 				acao_porta = "ENCHER\nGALÃO" if vm.tem_galao_para_encher(inv) else "BOMBA DE\nGASOLINA"
+			if perto == null and acao_porta == "" and npc != null:
+				acao_porta = npc.acao()
 			if perto == null and acao_porta == "" and inv.jogador != null:
 				var pb = PortaBunkerCls.perto(inv.jogador.global_position)        # 0.83: bunker
 				if pb != null:

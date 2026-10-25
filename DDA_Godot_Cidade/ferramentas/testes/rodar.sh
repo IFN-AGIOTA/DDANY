@@ -4,6 +4,7 @@
 #   GODOT=... ferramentas/testes/rodar.sh rede                     (dois jogos conectados: infectados perto do amigo)
 #   GODOT=... ferramentas/testes/rodar.sh rede_carro               (dois jogos conectados: amigo dirigindo)
 #   GODOT=... ferramentas/testes/rodar.sh rede_save                (salvar em rede: duas sessões seguidas)
+#   GODOT=... ferramentas/testes/rodar.sh rede_trocas              (0.91: trocas do Lucas entre dois jogos, PvP no hospital)
 #   GODOT=... ferramentas/testes/rodar.sh rede_turn                (0.85: amigo entra pelo retransmissor TURN)
 #   TURN_CF=1 (ou cai) GODOT=... rodar.sh rede_turn                 (0.88: senha pedida à "Cloudflare"; cai = vai para a reserva)
 #   GODOT=... sudo ferramentas/testes/rodar.sh rede_nat            (0.86: ligação direta atrás de NAT de mentira)
@@ -49,6 +50,15 @@ if [ "$alvo" = rede_save ]; then
 		grep -hE "CLI[12]:|SCRIPT ERROR" "$DADOS/cli$fase.txt"
 	done
 	grep -q "fome 3[23].*tábuas 2 · porta true · pego true" "$DADOS/host2.txt" && grep -q "fome 4[34].*galão 1 · porta do host true · pego do host true" "$DADOS/cli2.txt" || falhou=1
+elif [ "$alvo" = rede_trocas ]; then
+	XDG_DATA_HOME="$DADOS/h" timeout 300 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_trocas_host.gd > "$DADOS/host.txt" 2>&1 &
+	sleep 2
+	XDG_DATA_HOME="$DADOS/c" timeout 300 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_trocas_cliente.gd > "$DADOS/cli.txt" 2>&1
+	wait
+	grep -E "HOST:|SCRIPT ERROR" "$DADOS/host.txt"
+	grep -E "CLI:|SCRIPT ERROR" "$DADOS/cli.txt"
+	grep -q "comprou true · faca true · tábuas [3-9]" "$DADOS/host.txt" && grep -q "tiro nele vale false" "$DADOS/host.txt" \
+		&& grep -q "buscou com o Lucas US\$ 120" "$DADOS/cli.txt" && grep -q "atum voltou true" "$DADOS/cli.txt" || falhou=1
 elif [ "$alvo" = rede_carro ]; then
 	XDG_DATA_HOME="$DADOS/h" timeout 300 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_carro_host.gd > "$DADOS/host.txt" 2>&1 &
 	sleep 2
@@ -116,6 +126,7 @@ elif [ "$alvo" = todos ]; then
 	rodar teste_infectados_pz 1
 	rodar teste_janelas_empurrao 1
 	rodar teste_construcao 1
+	rodar teste_hospital 1
 	rodar_turn
 else
 	rodar "$alvo" 1
