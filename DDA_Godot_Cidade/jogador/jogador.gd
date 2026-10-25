@@ -18,6 +18,9 @@ extends CharacterBody3D
 # joystick vira acelerador/ré (frente/trás) e direção (lados), PULAR = freio de mão, PEGAR = sair. A câmera vai mais
 # para trás e para cima e se vira sozinha para a frente do carro (dá para olhar em volta arrastando).
 #
+# MUTADO (0.94, jogador/mutacao.gd): corre e trota mais rápido e pula mais alto; o corpo fica escuro, com veios e
+# curvado (modelo_sobrevivente.definir_mutacao, aplicado aqui quando sobrevivencia.mutacao muda).
+#
 # MODELO 3D: o nó "Modelo" é o encaixe. Se existir res://modelos/personagem.glb (ou .tscn/.fbx) ele substitui o
 # soldado original, com as animações (ver modelos/LEIA-ME.txt). Por código: jogador.trocar_modelo(no).
 
@@ -52,6 +55,7 @@ const InventarioCls := preload("res://inventario/inventario.gd")
 const SobrevivenciaCls := preload("res://jogador/sobrevivencia.gd")
 const PortaCls := preload("res://mundo/porta.gd")
 const PortaBunkerCls := preload("res://mundo/porta_bunker.gd")
+const Mutacao := preload("res://jogador/mutacao.gd")
 
 @export_group("Câmera")
 @export var distancia_camera := 2.35
@@ -92,6 +96,10 @@ var _dist_passo := 0.0
 var _n_passo := 0
 var _t_dor := 0.0
 var morto := false
+# 0.94: mutado completo (os infectados ignoram; quem lê: inimigos/vagos.gd, vago.gd, armas.gd, rede)
+var mutado: bool:
+	get: return sobrevivencia != null and sobrevivencia.mutacao == 1
+var _mutacao_visual := 0
 var agachado := false
 var mancando := false                # perna quebrada (o animador troca a caminhada por "mancar")
 var mirando := false                # mira (aproxima a câmera); ligada pelo botão MIRAR ou botão direito do mouse
@@ -371,6 +379,17 @@ func usar_sobrevivente() -> void:
 	m.vestir(inventario)
 	if not inventario.mudou.is_connected(_vestir):
 		inventario.mudou.connect(_vestir)
+
+# 0.94: o corpo mudou (mutou, morreu e voltou humano, carregou o jogo salvo)
+func _aplicar_mutacao(nivel: int) -> void:
+	_mutacao_visual = nivel
+	var m = _slot.get_node_or_null("Sobrevivente")
+	if m != null and m.has_method("definir_mutacao"):
+		m.definir_mutacao(nivel)
+	armas._sincronizar()                     # garras / arma de fogo travada
+
+func _mult_mut(chave: String) -> float:
+	return float(Mutacao.valor(sobrevivencia.mutacao, chave)) if sobrevivencia != null else 1.0
 
 func _vestir() -> void:
 	var m = _slot.get_node_or_null("Sobrevivente")
@@ -719,9 +738,9 @@ func _physics_process(delta: float) -> void:
 		if agachado:
 			vmax = VEL_AGACHADO_RAPIDO if mag > 0.55 else VEL_AGACHADO
 		elif sprint:
-			vmax = VEL_CORRIDA
+			vmax = VEL_CORRIDA * _mult_mut("vel")
 		else:
-			vmax = VEL_TROTE if mag > 0.72 else (VEL_ANDAR if mag > 0.35 else VEL_DEVAGAR)
+			vmax = VEL_TROTE * _mult_mut("vel") if mag > 0.72 else (VEL_ANDAR if mag > 0.35 else VEL_DEVAGAR)
 			if controles != null and controles.andando_pc() and mag > 0.35:
 				vmax = VEL_ANDAR
 		if mirando:
@@ -751,7 +770,7 @@ func _physics_process(delta: float) -> void:
 				_levantar()             # pular agachado = levantar
 				velocity.y = 0.0
 			else:
-				velocity.y = FORCA_PULO
+				velocity.y = FORCA_PULO * _mult_mut("pulo")
 				pulou.emit()
 		else:
 			velocity.y = 0.0
@@ -820,6 +839,9 @@ func _camera_primeira_pessoa(delta: float, fov_alvo: float) -> void:
 func _process(delta: float) -> void:
 	if not ativo:
 		return
+	var nivel_mut: int = sobrevivencia.mutacao if sobrevivencia != null else 0
+	if nivel_mut != _mutacao_visual:
+		_aplicar_mutacao(nivel_mut)
 	if controles != null:
 		var r: Vector2 = controles.consumir_olhar()
 		var s := sensibilidade * (0.6 if mirando else 1.0)     # mirando: olhar mais preciso
@@ -844,7 +866,7 @@ func _process(delta: float) -> void:
 			cam_pit = clampf(cam_pit - gv.y * delta * gs * (-1.0 if inverter_y else 1.0), _pit_min(), _pit_max())
 		controles.indicadores["AGACHAR"] = agachado
 		controles.indicadores["MIRAR"] = mirando
-		controles.textos["ARMA"] = armas.WDEF[armas.atual]["nome"] if armas.atual != "" else "ARMA"
+		controles.textos["ARMA"] = armas.nome_atual()
 		controles.icones["ARMA"] = armas.atual                    # 0.67: ícone da arma no botão (faca, pistola...)
 	fator_agachado = lerpf(fator_agachado, 1.0 if agachado else 0.0, minf(1.0, delta * 10.0))
 	fator_mira = lerpf(fator_mira, 1.0 if mirando else 0.0, minf(1.0, delta * 12.0))

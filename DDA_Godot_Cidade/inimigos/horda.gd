@@ -485,9 +485,7 @@ func evento_ao_longe(c: Vector3) -> Vector3:
 		# rajada: mais 1 a 4 tiros
 		for i in _rng.randi_range(1, 4):
 			var t := get_tree().create_timer(_rng.randf_range(0.4, 2.5) * (i + 1))
-			t.timeout.connect(func():
-				if is_instance_valid(som):
-					som.play())
+			t.timeout.connect(som.play)        # 0.94: ligado ao próprio som (se ele já sumiu, a ligação some junto)
 	return p
 
 func comecar_helicoptero() -> void:

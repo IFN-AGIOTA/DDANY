@@ -21,6 +21,8 @@ extends Node3D
 # Sem nada: regata clara, short escuro e botas. Para um item novo aparecer, coloque a cor dele nas tabelas.
 # Chapéu/capacete/gorro escondem o cabelo. CABELOS = penteado e barba que o personagem usa.
 # A arma da mão fica presa ao osso da MÃO DIREITA (acompanha as animações).
+# MUTADO (0.94, definir_mutacao): pele escura e acinzentada com VEIOS VERMELHOS que pulsam, olhos amarelados e o
+# corpo CURVADO (jogador/camada_mutado.gd). Vale para o jogador e para a cópia dos amigos (rede/jogador_remoto.gd).
 # Mexa AQUI para: cores da pele/cabelo/roupas, tabelas de roupas e onde a arma fica.
 
 const Malhas := preload("res://mundo/malhas.gd")
@@ -30,6 +32,7 @@ const IkFuzil := preload("res://jogador/ik_fuzil.gd")
 const CamadaAcao := preload("res://jogador/camada_acao.gd")
 const CamadaPostura := preload("res://jogador/camada_postura.gd")
 const CamadaMira := preload("res://jogador/camada_mira.gd")
+const CamadaMutado := preload("res://jogador/camada_mutado.gd")
 const CabecaOculta := preload("res://jogador/cabeca_oculta.gd")
 const ModelosItens := preload("res://inventario/modelos_itens.gd")
 const PASTA := "res://jogador/sobrevivente/"
@@ -64,14 +67,35 @@ uniform sampler2D pele : source_color, filter_linear_mipmap;
 uniform sampler2D normal_pele : hint_normal, filter_linear_mipmap;
 uniform sampler2D rugosidade : hint_default_white, filter_linear_mipmap;
 uniform float esconde[12];
+uniform float mutado = 0.0;         // 0.94: 0 = humano · 1 = mutado completo
+uniform vec3 cor_veio : source_color = vec3(0.55, 0.03, 0.03);
 varying flat float regiao;          // flat: cada triângulo pega UMA parte (sem faixas misturadas na divisa)
 void vertex() { regiao = COLOR.r; }
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float ruido(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
 void fragment() {
 	int r = clamp(int(regiao * 15.0 + 0.5), 0, 11);
 	if (esconde[r] > 0.5) { discard; }
-	ALBEDO = texture(pele, UV).rgb;
-	NORMAL_MAP = texture(normal_pele, UV).rgb;
+	vec3 c = texture(pele, UV).rgb;
 	ROUGHNESS = texture(rugosidade, UV).r;
+	if (mutado > 0.001) {
+		// pele escura e sem vida + VEIOS (linhas finas onde o ruído passa pelo meio) que pulsam devagar
+		vec3 escura = c * vec3(0.36, 0.33, 0.34) + vec3(0.025, 0.02, 0.022);
+		float n = ruido(UV * 34.0) * 0.65 + ruido(UV * 90.0) * 0.35;
+		float veio = 1.0 - smoothstep(0.0, 0.035, abs(n - 0.5));
+		float pulso = 0.55 + 0.45 * sin(TIME * 2.2 + n * 9.0);
+		c = mix(c, escura, mutado);
+		c = mix(c, cor_veio * 0.6, veio * mutado * 0.9);
+		EMISSION = cor_veio * veio * mutado * pulso * 0.45;
+		ROUGHNESS = mix(ROUGHNESS, 0.55, mutado);
+	}
+	ALBEDO = c;
+	NORMAL_MAP = texture(normal_pele, UV).rgb;
 }
 """
 
@@ -92,6 +116,7 @@ var _ponto_fuzil: Node3D
 var camada                             # jogador/camada_acao.gd: ações só na parte de cima (recarregar andando...)
 var postura                            # jogador/camada_postura.gd: como segura a arma (pistola, faca, taco...)
 var mira_camada                        # jogador/camada_mira.gd: tronco inclina com a câmera ao mirar
+var mutado_camada                      # 0.94: jogador/camada_mutado.gd (corpo curvado do mutado)
 var cabeca_oculta                      # 0.65: jogador/cabeca_oculta.gd (1ª pessoa: esconde a cabeça)
 var _osso_cabeca := -1
 var _ik: IkFuzil
@@ -455,6 +480,10 @@ func _criar_ponto_fuzil() -> void:
 	mira_camada.name = "CamadaMira"
 	esqueleto.add_child(mira_camada)
 	mira_camada.preparar(esqueleto)
+	mutado_camada = CamadaMutado.new()
+	mutado_camada.name = "CamadaMutado"
+	esqueleto.add_child(mutado_camada)
+	mutado_camada.preparar(esqueleto)
 	# preso ao ESQUELETO (sempre de frente), não ao peito: a animação de mirar (de pistola) gira o tronco para o
 	# lado e o fuzil ficaria atravessado. jogador/ik_fuzil.gd põe o fuzil no lugar e leva as mãos até ele.
 	_ponto_fuzil = Node3D.new()
@@ -506,6 +535,31 @@ func _process(dt: float) -> void:
 	_mira = move_toward(_mira, alvo, dt * 5.0)
 	_ik.mira = _mira
 	_ik.pitch = mira_camada.aplicado
+
+# ---------- MUTADO (0.94) ----------
+# nível 0 = humano · 1 = mutado (pele escura, veios, olhos, curvado) · 2 = controlado (só os veios, mais fracos)
+func definir_mutacao(nivel: int) -> void:
+	var f := 1.0 if nivel == 1 else (0.45 if nivel == 2 else 0.0)
+	_mat.set_shader_parameter("mutado", f)
+	if mutado_camada != null:
+		mutado_camada.ligado = nivel == 1
+	# olhos (malha separada "Eyes"): amarelados e brilhando de leve
+	var olhos := esqueleto.get_node_or_null("Eyes") as MeshInstance3D
+	if olhos != null:
+		if f <= 0.0:
+			olhos.material_override = null
+		else:
+			var mo := (olhos.mesh.surface_get_material(0) as StandardMaterial3D).duplicate() as StandardMaterial3D
+			mo.albedo_color = Color(1.0, 1.0, 1.0).lerp(Color(1.0, 0.78, 0.25), f)
+			mo.emission_enabled = true
+			mo.emission = Color(0.55, 0.36, 0.04)
+			mo.emission_energy_multiplier = 0.5 * f
+			olhos.material_override = mo
+	# cabelo e sobrancelhas mais escuros e sem cor
+	for c in PENTEADOS + ["Eyebrows"]:
+		var h := esqueleto.get_node_or_null(c) as MeshInstance3D
+		if h != null and h.material_override is StandardMaterial3D:
+			(h.material_override as StandardMaterial3D).albedo_color = CABELO_COR.lerp(Color(0.08, 0.075, 0.07), f)
 
 # ---------- 1ª PESSOA (0.65) ----------
 # esconde a cabeça (jogador/cabeca_oculta.gd); o resto do corpo continua visível

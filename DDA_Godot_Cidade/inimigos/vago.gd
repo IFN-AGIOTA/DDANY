@@ -588,6 +588,8 @@ func _alertar(quem: Node) -> void:
 	if quem == null or not is_instance_valid(quem) or not (quem is Node3D):
 		return
 	var p: Vector3 = (quem as Node3D).global_position
+	if gerente != null and gerente.ignorado(quem):
+		return                                          # 0.94: o mutado bateu: não liga para ele
 	if gerente != null and (quem == gerente.jogador or quem.is_in_group("jogadores_remotos")):
 		_alvo = quem as Node3D
 		_ultimo_visto = p
@@ -734,11 +736,13 @@ func _physics_process(dt: float) -> void:
 	_t_sentidos -= dt
 	if _t_sentidos <= 0.0:
 		_t_sentidos = randf_range(0.2, 0.26)
-		if not esta_cacando() or randf() < 0.15:          # caçando, só às vezes troca de alvo
+		if not esta_cacando() or randf() < 0.15 or gerente.ignorado(j):   # caçando, só às vezes troca de alvo
 			var novo: Node3D = gerente.alvo_para(self)
 			if novo != _alvo:
 				_alvo = novo
 				j = novo
+		if esta_cacando() and gerente.ignorado(j):
+			vagar()                                     # 0.94: só sobrou o mutado: perde o interesse
 		_olhar(j)
 	_atordoado = maxf(0.0, _atordoado - dt)
 	_imune = maxf(0.0, _imune - dt)
@@ -777,7 +781,7 @@ func _trocar_modo(fisica: bool) -> void:
 	_pos_preso = global_position
 
 func _olhar(j: Node3D) -> void:
-	if bool(j.get("morto")) or estado == FINGINDO:
+	if bool(j.get("morto")) or estado == FINGINDO or gerente.ignorado(j):
 		return                                          # fingindo de morto: quem acorda é a distância (_decidir)
 	var cacando := esta_cacando()
 	# 0.89 · VISÃO (Project Zomboid): ~22 m de dia; no escuro só de pertinho; chuva e neblina atrapalham
@@ -874,7 +878,7 @@ func _decidir(dt: float, j: Node3D) -> void:
 	match estado:
 		FINGINDO:
 			_vel_alvo = 0.0
-			if dist_jogador < PERTO_FINGINDO and not bool(j.get("morto")):
+			if dist_jogador < PERTO_FINGINDO and not bool(j.get("morto")) and not gerente.ignorado(j):
 				_acordar()                              # você chegou perto do "corpo"
 		CAIDO:
 			_vel_alvo = 0.0
@@ -1087,6 +1091,8 @@ func _porta_no_caminho(p: Vector3, quer: Vector3) -> bool:
 	return true
 
 func _acertar(j: Node3D) -> void:
+	if gerente != null and gerente.ignorado(j):
+		return                                          # 0.94: mutado (o golpe já tinha começado antes de mutar)
 	var dano := randf_range(DANO_MIN, DANO_MAX) * _mult_dano * (float(gerente.mult_dano) if gerente != null else 1.0)
 	if classe == "rastejante":
 		dano *= 0.7                                     # mordida no tornozelo

@@ -163,13 +163,19 @@ func escuridao() -> float:
 		return clampf(float(clima.escuridao()), 0.0, 1.0)
 	return 0.0
 
+# 0.94: jogador MUTADO (jogador/mutacao.gd): os infectados não veem, não ouvem e não atacam
+static func ignorado(n) -> bool:
+	return n != null and is_instance_valid(n) and bool(n.get("mutado"))
+
 # quem este infectado vai caçar: o jogador ou outro jogador da partida (o mais perto, de pé)
+# (o mutado só fica de "alvo" quando não tem mais ninguém: aí o infectado não o vê nem ataca, vago.gd)
 func alvo_para(v: Node3D) -> Node3D:
 	var p := v.global_position
-	var melhor: Node3D = null if sem_jogador else jogador
-	var md := INF if sem_jogador else p.distance_squared_to(jogador.global_position)
+	var sem_local := sem_jogador or ignorado(jogador)
+	var melhor: Node3D = null if sem_local else jogador
+	var md := INF if sem_local else p.distance_squared_to(jogador.global_position)
 	for c in remotos():
-		if not is_instance_valid(c) or c.morto or not c.visible:
+		if not is_instance_valid(c) or c.morto or not c.visible or ignorado(c):
 			continue
 		var d := p.distance_squared_to(c.global_position)
 		if d < md * 0.7:                        # prefere o jogador se estiverem parecidos
@@ -264,7 +270,7 @@ func _process(dt: float) -> void:
 				break
 
 func _ruido_jogador() -> void:
-	if sem_jogador or bool(jogador.get("morto")):
+	if sem_jogador or bool(jogador.get("morto")) or ignorado(jogador):
 		return
 	var vel: float = jogador.get("vel_horizontal")
 	if vel < 0.3:
@@ -370,7 +376,7 @@ func _longe_de_todos(p: Vector3, lim2: float) -> bool:
 # passos dos amigos (o host não tem o "jogador" deles: usa a velocidade que chega pela rede)
 func _ruido_remotos() -> void:
 	for r in remotos():
-		if not is_instance_valid(r) or not r.visible or r.morto:
+		if not is_instance_valid(r) or not r.visible or r.morto or ignorado(r):
 			continue
 		var vel: float = r.vel_horizontal
 		if vel < 0.3:

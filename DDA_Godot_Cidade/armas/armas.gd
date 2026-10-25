@@ -13,6 +13,9 @@ extends Node
 # INVENTÁRIO: a arma usada é a que está nas MÃOS (inventario/inventario.gd). As balas do pente ficam no próprio
 # item da arma e a recarga puxa munição (mun_9mm / mun_556) dos bolsos e da mochila. Mãos vazias = sem arma.
 # (veja mundo/estande_tiro.gd). Use a camada de física 3 ("inimigos") para alvos/inimigos.
+# 0.94 · MUTADO (jogador/mutacao.gd): os PUNHOS viram GARRAS (mais dano e alcance, golpes de rasgar) e as armas
+# brancas batem mais forte. ARMA DE FOGO ele carrega, mas não usa: na mão ela fica parada (não aparece) e o golpe
+# continua sendo o das garras.
 
 signal mudou                          # munição / arma / recarga mudaram (HUD)
 signal acertou(cabeca: bool, matou: bool)
@@ -29,6 +32,7 @@ const EfeitosCls := preload("res://armas/efeitos_tiro.gd")
 const SonsCls := preload("res://armas/sons_armas.gd")
 const Sons := preload("res://audio/sons.gd")
 const Itens := preload("res://inventario/itens.gd")
+const Mutacao := preload("res://jogador/mutacao.gd")
 
 const WDEF := {
 	"pistola": {"nome": "PISTOLA", "mag": 12, "rate": 0.17, "auto": false, "range": 150.0, "spread": 0.004,
@@ -134,12 +138,22 @@ func ligar_inventario(inv) -> void:
 		mudou.connect(_invalidar_estado)     # tiro, recarga, troca de pente
 	_sincronizar()
 
+var _fogo_travada = null               # 0.94: arma de fogo na mão do mutado (para avisar uma vez só)
+
 # a arma das mãos mudou? (trocou no inventário, atalho 1..8, botão ARMA, largou no chão...)
 func _sincronizar() -> void:
 	var it = inventario.arma_na_mao() if inventario != null else null
 	if it != null and not WDEF.has(it.def()["arma"]):
 		it = null
 	var maos_vazias: bool = inventario != null and inventario.slots.get("maos") == null
+	if it != null and not WDEF[it.def()["arma"]].get("corpo", false) and not bool(Mutacao.valor(_nivel_mut(), "arma_fogo", true)):
+		if it != _fogo_travada:
+			aviso.emit("MUTADO: NÃO CONSEGUE USAR ARMA DE FOGO")
+		_fogo_travada = it
+		it = null                              # 0.94: mutado não usa arma de fogo (fica com as garras)
+		maos_vazias = true
+	else:
+		_fogo_travada = null
 	var k: String = it.def()["arma"] if it != null else ("punhos" if maos_vazias else "")
 	if it == item_arma and k == atual:
 		_mostrar_acessorios()
@@ -537,8 +551,34 @@ func _animar(nome: String, duracao: float, corpo_todo: bool) -> void:
 	var a: Animation = an._ap.get_animation(nome)
 	an.acao(nome, clampf(a.length / maxf(duracao, 0.1), 0.5, 3.0), corpo_todo)
 
-func _corpo_a_corpo(dt: float) -> void:
+# 0.94: nível da mutação de quem segura (0 = humano)
+func _nivel_mut() -> int:
+	var s = jogador.get("sobrevivencia") if jogador != null else null
+	return int(s.mutacao) if s != null else 0
+
+# números do golpe agora (mutado: punhos = GARRAS e armas brancas mais fortes)
+func def_corpo() -> Dictionary:
 	var W: Dictionary = WDEF[atual]
+	var n := _nivel_mut()
+	if n == 0:
+		return W
+	W = W.duplicate()
+	if atual == "punhos":
+		W["nome"] = "GARRAS"
+		W["dano"] = float(Mutacao.valor(n, "garras", 13.0))
+		W["alcance"] = 1.65
+		W["rate"] = 0.55
+	else:
+		W["dano"] = float(W["dano"]) * float(Mutacao.valor(n, "branca"))
+	return W
+
+func nome_atual() -> String:
+	if atual == "":
+		return "ARMA"
+	return "GARRAS" if atual == "punhos" and _nivel_mut() != 0 else str(WDEF[atual]["nome"])
+
+func _corpo_a_corpo(dt: float) -> void:
+	var W: Dictionary = def_corpo()
 	var held := gatilho and pode_usar()
 	if held and not _prev:
 		_pend = true
@@ -569,6 +609,8 @@ func _corpo_a_corpo(dt: float) -> void:
 		sons.tocar("golpe", -4.0)
 		_n_golpe += 1
 		var anims: Array = GOLPES.get(atual, ["golpe_1m_a", "golpe_1m_b"])
+		if atual == "punhos" and _nivel_mut() != 0:
+			anims = ["golpe_1m_a", "golpe_1m_b", "golpe_1m_diag"]     # garras: rasga de lado e na diagonal
 		_animar(anims[_n_golpe % anims.size()], maxf(float(W["rate"]) * 0.9, 0.5), true)
 	if _golpe_pend and golpe < 0.62:      # o golpe acerta no meio do movimento
 		_golpe_pend = false

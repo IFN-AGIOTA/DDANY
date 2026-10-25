@@ -127,6 +127,7 @@ elif [ "$alvo" = todos ]; then
 	rodar teste_janelas_empurrao 1
 	rodar teste_construcao 1
 	rodar teste_hospital 1
+	rodar teste_mutado 1
 	rodar_turn
 else
 	rodar "$alvo" 1

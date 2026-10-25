@@ -24,6 +24,8 @@ extends Node
 #                         tosse) e no fim a vida vai embora. Antibiótico NÃO cura. Quem morre assim LEVANTA como
 #                         infectado (main.gd). Tempo até morrer: Opções › Infectados (padrão 2-3 dias do jogo).
 #   0.89 · PUXADO PARA O CHÃO: 3 infectados te acertando juntos (inimigos/vagos.gd) = morte.
+#   0.94 · MUTAÇÃO (jogador/mutacao.gd): "mutacao" 0 = humano · 1 = mutado · 2 = controlado (soro, 2ª parte). Mutado
+#                         leva menos dano, sangra menos, não pega vírus nem infecção, cansa menos e aguenta queda maior.
 # Morte: vida 0 ou sangue < 500 -> sinal "morreu". As roupas protegem (campo "protecao" em itens.gd).
 # Mexa AQUI para: velocidade da fome/sede, dano do sangramento, frio, regeneração.
 
@@ -37,6 +39,7 @@ const FOME_POR_S := 100.0 / 3600.0   # fome zera em ~1 h de jogo andando
 const SEDE_POR_S := 100.0 / 2400.0   # sede zera em ~40 min
 const SANGRA_ML_S := 5.0             # por sangramento
 const Regras := preload("res://inimigos/regras_infectados.gd")
+const Mutacao := preload("res://jogador/mutacao.gd")
 const FERIDAS := ["arranhao", "laceracao", "mordida"]
 const NOMES_FERIDA := {"arranhao": "ARRANHÃO", "laceracao": "LACERAÇÃO", "mordida": "MORDIDA!"}
 # [dano (x), chance de abrir sangramento, chance de infeccionar (bactéria, antibiótico cura)]
@@ -59,6 +62,7 @@ var _fase_virus := 0
 var _t_relogio := -1.0
 var tempo_vivo := 0.0
 var causa := ""
+var mutacao := 0                     # 0.94: 0 = humano · 1 = mutado · 2 = controlado (jogador/mutacao.gd)
 var imortal := false                 # testes
 var estamina := 100.0
 var estamina_max := 100.0
@@ -187,7 +191,7 @@ func _process(dt: float) -> void:
 	_virus(dt)
 	# sangue
 	if sangramentos > 0:
-		sangue -= SANGRA_ML_S * sangramentos * dt
+		sangue -= SANGRA_ML_S * sangramentos * dt * float(Mutacao.valor(mutacao, "sangra"))
 	elif fome > 40.0 and sede > 40.0 and sangue < 5000.0:
 		sangue = minf(5000.0, sangue + 1.2 * dt)
 	# vida
@@ -226,7 +230,7 @@ func _process(dt: float) -> void:
 func _dano(d: float, por: String) -> void:
 	if imortal or jogador.morto:
 		return
-	vida -= d
+	vida -= d * float(Mutacao.valor(mutacao, "dano"))
 	if vida <= 0.0:
 		vida = 0.0
 		_morrer(por)
@@ -276,12 +280,12 @@ func receber_ataque(dano: float, chance_sangrar: float, origem: Vector3, tipo :=
 			var inv = inventario()
 			if inv != null:
 				inv.aviso.emit("SANGRANDO")
-		if randf() < float(ef[2]):
+		if randf() < float(ef[2]) and mutacao == 0:
 			infeccao = maxf(infeccao, 0.01)
 		# o VÍRUS
 		var trans := Regras.transmissao()
 		var pega: float = float(Regras.VIRUS[ferida]) if trans == 0 else (1.0 if trans == 1 and ferida == "mordida" else 0.0)
-		if virus < 0.0 and randf() < pega:
+		if virus < 0.0 and randf() < pega and mutacao == 0:
 			pegar_virus()
 	# a roupa leva o golpe
 	var inv = inventario()
@@ -415,7 +419,7 @@ func _condicoes(dt: float, v: float, p: Vector3) -> void:
 			estamina += dt * (2.0 - pesado * 0.2)
 		_afogar(dt)
 	elif v > 5.0:
-		estamina -= dt * (13.0 + peso * 0.15)
+		estamina -= dt * (13.0 + peso * 0.15) * float(Mutacao.valor(mutacao, "estamina"))
 	elif v > 2.5:
 		estamina += dt * 4.0
 	else:
@@ -477,7 +481,7 @@ func _afogar(dt: float) -> void:
 
 # queda: jogador.gd chama ao pousar com a velocidade vertical (negativa)
 func queda(vel_y: float) -> void:
-	var v := -vel_y
+	var v := -vel_y / float(Mutacao.valor(mutacao, "queda"))   # 0.94: mutado aguenta mais
 	if v < 9.5:
 		return
 	var d := (v - 9.5) * 9.0
@@ -515,6 +519,9 @@ func _horas_passadas(dt: float) -> float:
 # fases: até 15% nada · ENJOO · 50% FEBRE ALTA (veias escuras, tosse) · 85% a vida vai embora · 100% morre
 func _virus(dt: float) -> void:
 	if virus < 0.0:
+		return
+	if mutacao != 0:
+		virus = -1.0                                    # 0.94: o vírus já mudou o corpo (mutado não morre dele)
 		return
 	virus += _horas_passadas(dt)
 	var u := virus / maxf(1.0, virus_fim)
@@ -575,6 +582,7 @@ func reiniciar() -> void:
 	_fase_virus = 0
 	tempo_vivo = 0.0
 	causa = ""
+	mutacao = 0                                         # 0.94: morreu mutado = volta humano
 	estamina = 100.0
 	folego = 100.0
 	perna_quebrada = false
@@ -587,7 +595,7 @@ func reiniciar() -> void:
 func salvar() -> Dictionary:
 	return {"vida": vida, "sangue": sangue, "fome": fome, "sede": sede, "temperatura": temperatura, "molhado": molhado,
 		"sangramentos": sangramentos, "infeccao": infeccao, "tempo_vivo": tempo_vivo, "perna": perna_quebrada,
-		"gripe": gripe, "colera": colera, "intoxicacao": intoxicacao, "virus": virus, "virus_fim": virus_fim}
+		"gripe": gripe, "colera": colera, "intoxicacao": intoxicacao, "virus": virus, "virus_fim": virus_fim, "mutacao": mutacao}
 
 func carregar(d: Dictionary) -> void:
 	for k in d:
@@ -597,4 +605,5 @@ func carregar(d: Dictionary) -> void:
 	perna_quebrada = bool(d.get("perna", false))
 	virus = float(d.get("virus", -1.0))
 	virus_fim = float(d.get("virus_fim", 60.0))
+	mutacao = int(d.get("mutacao", 0))
 	_fase_virus = 0

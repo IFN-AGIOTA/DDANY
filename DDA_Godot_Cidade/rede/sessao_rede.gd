@@ -27,6 +27,8 @@ extends Node
 #   · 0.91 TROCAS do Lucas (npc/trocas.gd): "troca_pedido" (amigo -> host), "troca_resp" (host -> quem pediu),
 #     "trocas_lista" (host -> todos; quem chega recebe). HOSPITAL = zona neutra e TRÉGUA ao sair (npc/hospitais.gd):
 #     o bit 256 do estado diz que o jogador está protegido (não fere e não é ferido).
+#     0.94: o bit 512 diz que o jogador está MUTADO (jogador/mutacao.gd: os infectados do host o ignoram e a cópia
+#     dele fica com o corpo do mutado).
 # AINDA NÃO: dano entre jogadores, salvar a partida em rede, missões do rádio (cada um tem as suas), infectados
 # não entram em prédio atrás de um amigo (o host não tem as paredes do interior onde o amigo está).
 # Mexa AQUI para: o que vai em cada mensagem e de quanto em quanto tempo.
@@ -176,7 +178,7 @@ func estado_local() -> Array:
 	var j = jogador
 	var bits := (1 if j.agachado else 0) | (2 if j.mirando else 0) | (4 if j.morto else 0) | (0 if j.is_on_floor() else 8) \
 		| (16 if j.mancando else 0) | (32 if j.nadando else 0) | (64 if j.afundando else 0) | (128 if j.veiculo != null else 0) \
-		| (256 if _protegido() else 0)
+		| (256 if _protegido() else 0) | (512 if j.mutado else 0)
 	var carro: Array = ["", Vector3.ZERO]
 	if j.veiculo != null and is_instance_valid(j.veiculo):
 		carro = [str(j.veiculo.id), j.veiculo.rotation]     # 0.76: dirigindo: qual carro e como ele está virado

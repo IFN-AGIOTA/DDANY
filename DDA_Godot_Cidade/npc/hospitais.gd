@@ -115,9 +115,17 @@ func npc_perto(pos: Vector3):
 func dist_npc(n, pos: Vector3) -> float:
 	return minf(1.6, Vector2(n.global_position.x - pos.x, n.global_position.z - pos.z).length())
 
+# 0.94: o que dizem para um jogador MUTADO (não negociam com ele)
+const FALAS_MUTADO := {"monica": "MÔNICA: \"Para aí! O que aconteceu com você?... Aqui você não compra nada. Sai devagar.\"",
+	"lucas": "LUCAS: \"Cara... teus olhos. Não, não, não. Sem troca. Vai embora, por favor.\"",
+	"carlos": "CARLOS: \"Mais um passo e eu atiro. Fora do meu hospital.\""}
+
 # PEGAR perto de um NPC (jogador/jogador.gd)
 func falar_com(n) -> void:
 	if tela != null and is_instance_valid(tela):
+		return
+	if jogador != null and bool(jogador.get("mutado")):
+		avisar(FALAS_MUTADO.get(str(n.quem), "%s SE AFASTA DE VOCÊ, COM MEDO." % str(n.NOMES.get(n.quem, "O SOBREVIVENTE")).to_upper()))
 		return
 	match str(n.quem):
 		"monica":

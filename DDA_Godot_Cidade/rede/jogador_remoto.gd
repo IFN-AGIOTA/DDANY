@@ -29,6 +29,7 @@ var mancando := false
 var nadando := false                           # 0.72
 var afundando := false
 var protegido := false                         # 0.91: na zona neutra do hospital ou na trégua (não fere nem é ferido)
+var mutado := false                            # 0.94: mutado (bit 512): os infectados ignoram, corpo do mutado
 var mira_pitch := 0.0
 var morto := false
 var armas := _Armas.new()
@@ -123,6 +124,10 @@ func receber_estado(d: Array) -> void:
 	nadando = b & 32 != 0
 	afundando = b & 64 != 0
 	protegido = b & 256 != 0
+	if (b & 512 != 0) != mutado:
+		mutado = b & 512 != 0
+		if modelo != null and modelo.has_method("definir_mutacao"):
+			modelo.definir_mutacao(1 if mutado else 0)
 	armas.aim = float(d[5])
 	armas.since = float(d[6])
 	mira_pitch = float(d[7]) if d.size() > 7 else 0.0

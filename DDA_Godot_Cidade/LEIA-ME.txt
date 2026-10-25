@@ -39,6 +39,54 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.94 · O JOGADOR MUTADO (1% DE CHANCE AO MORRER PELOS INFECTADOS)
+  · Lore (Bíblia 2.7): o mutado é o vírus "aprendendo" num corpo que MORREU. Agora, quando você MORRE PELOS
+    INFECTADOS (golpe/mordida, puxado para o chão ou o vírus), tem 1% DE CHANCE de não morrer: o corpo fica no chão,
+    a tela escurece, um grito... e você LEVANTA MUTADO no mesmo lugar, COM TUDO O QUE CARREGAVA (sem tela de morte).
+    Queda, fome, frio, tiro de outro jogador etc. nunca mutam.
+  · O MUTADO:
+      - os INFECTADOS IGNORAM você: não te veem, não ouvem os seus passos, não atacam (quem estava te caçando perde o
+        interesse; o que finge de morto não levanta). No multijogador vale para os infectados do host também;
+      - mais RESISTENTE: leva menos da metade do dano (x0,45), sangra bem menos, não pega o vírus nem infecção e aguenta
+        quedas maiores; vida e sangue cheios ao levantar;
+      - mais RÁPIDO (trote e corrida +22%), PULA bem mais alto (+40%) e cansa a metade correndo;
+      - GARRAS no lugar dos punhos (dano 30, golpes de rasgar) e as ARMAS BRANCAS batem 30% mais forte;
+      - COLETA arma de fogo e qualquer item (vão para o inventário normalmente), mas NÃO USA arma de fogo: na mão ela
+        fica parada (aviso "MUTADO: NÃO CONSEGUE USAR ARMA DE FOGO") e o golpe continua sendo o das garras;
+      - o corpo muda: PELE ESCURA e sem vida, VEIOS VERMELHOS que pulsam, OLHOS AMARELADOS e o corpo CURVADO (coluna
+        dobrada, ombros e braços para a frente). Os amigos veem você assim;
+      - os sobreviventes do HOSPITAL não negociam com você (a Mônica e o Lucas mandam você embora);
+      - MORREU DE NOVO: morte de verdade (tela de morte) e você renasce HUMANO normal.
+  · Vai no jogo salvo (sozinho e no multijogador).
+  · Preparado para a 2ª PARTE: o SORO que devolve o controle (nível "CONTROLADO": um pouco mais rápido, resistente e
+    com pulo maior que um humano, com as garras, mas mais fraco que o mutado). Os números já estão em
+    jogador/mutacao.gd; o soro ainda não existe no jogo.
+  · CONSERTO pequeno: os tiros distantes da horda (rajadas) davam um erro no log quando o som já tinha acabado.
+  · Testado: teste_mutado.gd (23 conferências: chance de 1%, só morte por infectado, levanta com tudo, garras, arma
+    de fogo travada, infectados não caçam nem atacam, números, visual, rede, jogo salvo, hospital, morrer de novo =
+    humano) + fotos (frente, lado e rosto) + a bateria inteira.
+  ARQUIVOS MEXIDOS:
+    jogador/mutacao.gd ............. NOVO · chance (1%), causas, tempo caído e os números de cada nível (mutado e
+                                     controlado)
+    jogador/camada_mutado.gd ....... NOVO · o corpo curvado do mutado (quanto cada osso dobra)
+    ferramentas/testes/teste_mutado.gd NOVO · o teste
+    main.gd ........................ _morreu sorteia a mutação; _mutar (tela escura, grito, levanta mutado, salva)
+    jogador/sobrevivencia.gd ....... "mutacao" (0/1/2): menos dano, sangra menos, sem vírus/infecção, queda, estamina;
+                                     zera ao renascer; vai no jogo salvo
+    jogador/jogador.gd ............. "mutado"; corre/trota/pula mais; aplica o visual quando muda
+    jogador/modelo_sobrevivente.gd . pele escura + veios vermelhos (shader), olhos amarelados, cabelo escuro, liga a
+                                     camada do corpo curvado (definir_mutacao)
+    armas/armas.gd ................. GARRAS (def_corpo, nome_atual), armas brancas mais fortes, arma de fogo travada
+    inimigos/vagos.gd .............. ignorado(): o mutado não vira alvo, os passos dele não fazem barulho
+    inimigos/vago.gd ............... não vê, não ataca, larga a caçada e não acorda pelo mutado
+    inimigos/horda.gd .............. conserto do erro das rajadas distantes
+    npc/hospitais.gd ............... os sobreviventes não negociam com o mutado (falas)
+    rede/sessao_rede.gd ............ bit 512 do estado = mutado
+    rede/jogador_remoto.gd ......... lê o bit 512 e mostra o amigo mutado
+    ferramentas/testes/rodar.sh .... teste_mutado na bateria
+    menu/config.gd ................. VERSAO "0.94"
+    LEIA-ME.txt .................... este bloco + seções 4, 6, 7 (mapa) e 10
+
 ATUALIZAÇÃO 0.93 · LOGO DA INFINITY STUDIO NA ABERTURA
   · Ao abrir o jogo, antes do menu, aparece a LOGO DA PRODUTORA (Infinity Studio): tela preta, a logo surge devagar
     (fade in), fica uns 2 segundos e some (fade out); depois o preto se desfaz em cima do menu. Uns 5 segundos ao todo.
@@ -2183,6 +2231,9 @@ VEÍCULOS (0.76): tanque 30 L · ~1,6 L/km + 0,03 L/min ligado · até ~86 km/h 
   m/s · motor ouvido a ~38 m · ~4% dos sedãs/táxis/vans inteiros funcionam
 PORTAS (0.73): porta 100 de vida, cada tábua mais 140 (até 3) · golpe de infectado na porta = mordida x2,2
   (8–14 x 2,2) · abrir/fechar: barulho de 7 m · martelar tábua 10,5 m · porta quebrando 14 m · usar até 1,9 m
+MUTADO (0.94, jogador/mutacao.gd): 1% ao morrer pelos infectados · levanta em 6 s · dano recebido x0,45 · sangramento
+  x0,4 · trote/corrida x1,22 · pulo x1,4 · estamina correndo x0,5 · queda x1,35 · garras 30 de dano (1,65 m, 0,55 s) ·
+  armas brancas x1,3 · sem arma de fogo · infectados ignoram · (controlado, 2ª parte: x1,1 · x1,2 · dano x0,7 · garras 20)
 HOSPITAIS (0.91): zona neutra = terreno + 8 m · trégua ao sair 120 s · guardas a cada 0,5 s · NPCs: falar até 2,4 m
 LOJA DA MÔNICA (0.91): 18 itens por dia (1 de cada categoria + 7 da especialidade) · especialidade -20%, o resto +15% ·
   preço = preço cheio x estado (35%-100%) · ela paga 40% · renova a cada dia do jogo (48 min) · preços em npc/precos.gd
@@ -2287,6 +2338,9 @@ adaptativa (Mavie).
 NO JOGO (0.91): os SOBREVIVENTES DO HOSPITAL estão nos 4 hospitais (zonas neutras): MÔNICA (loja), CARLOS (guarda,
 sem o braço esquerdo), LUCAS (trocas pelo rádio), JOSÉ, A SENHORA e JHON (npc/hospitais.gd, aparência em
 npc/modelo_npc.gd VISUAIS).
+NO JOGO (0.94): os MUTADOS da Bíblia (2.7) entram como uma chance do JOGADOR: morto pelos infectados, 1% levanta
+mutado (pele escura, veios, olhos amarelados, corpo curvado; os infectados o ignoram). O soro que devolve o controle
+fica para a 2ª parte.
 O modo história foi APAGADO na 0.63 para ser refeito do zero. No menu, o botão "História" mostra
 "Em breve". (O Ato 1 antigo, com abertura, cutscenes e os companheiros Greg e Mavie, ficou no histórico do git.)
 
@@ -2377,6 +2431,12 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   com tubo / bulbo pendurado) ......... mundo/ambiente_local.gd (_lampada)
 - logo da produtora ao abrir o jogo
   (imagem, tempo do fade) ............. menu/logo_produtora.gd + menu/logo_produtora.png
+- jogador MUTADO (chance, causas,
+  números de cada nível) .............. jogador/mutacao.gd · sorteio e levantar: main.gd (_morreu, _mutar)
+- visual do mutado (pele, veios, olhos)  jogador/modelo_sobrevivente.gd (SHADER, definir_mutacao)
+- corpo curvado do mutado ............. jogador/camada_mutado.gd (CURVA)
+- infectados ignorando o mutado ....... inimigos/vagos.gd (ignorado) + inimigos/vago.gd
+- garras / arma de fogo travada ....... armas/armas.gd (def_corpo, _sincronizar)
 - salvar no multijogador .............. menu/salvamento.gd (salvar_rede/carregar_rede; arquivo user://save_rede.json)
 - de quanto em quanto tempo os infectados
   dos prédios/locais voltam ............ mundo/interiores.gd e mundo/locais.gd (CICLO_INFECTADOS)
@@ -2714,6 +2774,9 @@ MÚSICA (pasta audio/)
   (0.88: o da Cloudflare, 1000 GB grátis; a Metered, 500 MB/mês, fica de reserva; a senha da Cloudflare vale
   24 h: uma partida aberta por mais de 24 h seguidas perde o retransmissor e precisa ser reaberta); o amigo com internet só IPv6 ainda não entra
   pela internet.
+- Mutado (0.94): o corpo usa as mesmas animações do humano (só curvado por cima; sem animação própria de bicho, não
+  escala paredes nem pula entre telhados como os mutados do livro); a arma de fogo na mão dele fica invisível (está no
+  inventário); o soro da 2ª parte ainda não existe. No multijogador o sorteio é feito no aparelho de quem morreu.
 - Ideias para depois: loot por região, lugares
   especiais (quarentena), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, veículos consertáveis,
   outros sobreviventes (NPCs), o modo história novo, base com andares e telhado.

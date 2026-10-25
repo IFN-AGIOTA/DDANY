@@ -47,6 +47,7 @@ const PausaCls := preload("res://menu/pausa.gd")
 const EditorHudCls := preload("res://menu/editor_hud.gd")
 const AplicarOpcoesCls := preload("res://menu/aplicar_opcoes.gd")
 const LogoProdutoraCls := preload("res://menu/logo_produtora.gd")
+const Mutacao := preload("res://jogador/mutacao.gd")
 const JOGADOR_CENA := preload("res://jogador/jogador.tscn")
 const SessaoRedeCls := preload("res://rede/sessao_rede.gd")
 const TelaMultiCls := preload("res://menu/tela_multijogador.gd")
@@ -601,6 +602,10 @@ func _tem_dentro(it, id: String) -> bool:
 func _morreu(causa: String) -> void:
 	if jogador == null:
 		return
+	# 0.94 · MUTAÇÃO: morto pelos infectados, 1% de chance de levantar MUTADO (jogador/mutacao.gd)
+	if Mutacao.sorteia(causa, jogador.sobrevivencia.mutacao):
+		_mutar()
+		return
 	Sons.tocar("partida/morte", -2.0)
 	# tudo o que ele carregava cai no chão, junto do corpo
 	var p := jogador.global_position
@@ -634,6 +639,47 @@ func _morreu(causa: String) -> void:
 	tela_morte.menu_principal.connect(func():
 		_fechar_morte()
 		_abrir_menu())
+
+# 0.94: o corpo fica no chão, a tela escurece em vermelho e ele LEVANTA MUTADO no mesmo lugar, com tudo o que tinha
+func _mutar() -> void:
+	Sons.tocar("partida/morte", -2.0)
+	Musica.adicionar_tensao(1.0)
+	var j = jogador
+	var veu := CanvasLayer.new()
+	veu.layer = 60
+	var cor := ColorRect.new()
+	cor.set_anchors_preset(Control.PRESET_FULL_RECT)
+	cor.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cor.color = Color(0.0, 0.0, 0.0, 0.0)
+	veu.add_child(cor)
+	add_child(veu)
+	var tw := veu.create_tween()
+	tw.tween_property(cor, "color", Color(0.02, 0.0, 0.0, 0.94), 1.6)
+	tw.tween_interval(Mutacao.TEMPO_LEVANTAR - 2.6)
+	tw.tween_callback(_grito_mutado)
+	tw.tween_property(cor, "color", Color(0.35, 0.0, 0.0, 0.6), 0.5)
+	tw.tween_property(cor, "color", Color(0.25, 0.0, 0.0, 0.0), 1.8)
+	tw.tween_callback(veu.queue_free)
+	await get_tree().create_timer(Mutacao.TEMPO_LEVANTAR).timeout
+	if jogador == null or jogador != j or not jogador.morto:
+		return
+	var s = jogador.sobrevivencia
+	s.mutacao = 1
+	s.vida = 100.0
+	s.sangue = 5000.0
+	s.sangramentos = 0
+	s.infeccao = 0.0
+	s.virus = -1.0
+	s.perna_quebrada = false
+	s.desmaiado = 0.0
+	s.causa = ""
+	jogador.morto = false
+	if hud != null:
+		hud.mostrar_aviso("VOCÊ NÃO MORREU... O VÍRUS MUDOU O SEU CORPO · VOCÊ É UM MUTADO\nOS INFECTADOS NÃO TE ATACAM · ARMA DE FOGO VOCÊ NÃO CONSEGUE USAR", 9.0)
+	salvar_jogo()
+
+func _grito_mutado() -> void:
+	Sons.tocar("infectados/grito", -4.0, 0.8)
 
 func _fechar_morte() -> void:
 	if tela_morte != null:
