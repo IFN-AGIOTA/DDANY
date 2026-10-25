@@ -66,6 +66,7 @@ static func salvar(main, morto := false) -> bool:
 		"vagos": main.vagos.salvar() if main.get("vagos") != null else {},              # 0.90: a horda da cidade
 		"construcao": main.construcao.salvar() if main.get("construcao") != null else {},   # 0.90: a base
 		"hospitais": main.hospitais.salvar_personagem() if main.get("hospitais") != null else {},   # 0.91: loja e trégua
+		"trocas": main.hospitais.trocas.salvar() if main.get("hospitais") != null else {},   # 0.91: trocas com o rádio
 		"chao": _chao(main, p),
 		"mapa_predios": MAPA_PREDIOS,
 	}
@@ -176,6 +177,8 @@ static func carregar(main, d: Dictionary) -> void:
 		main.construcao.carregar(d["construcao"])
 	if main.get("hospitais") != null and d.has("hospitais"):
 		main.hospitais.carregar_personagem(d["hospitais"])
+	if main.get("hospitais") != null and d.has("trocas"):
+		main.hospitais.trocas.carregar(d["trocas"])
 
 # ================= 0.77: PARTIDA EM REDE =================
 static func ler_rede() -> Dictionary:

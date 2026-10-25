@@ -70,6 +70,15 @@ ATUALIZAÇÃO 0.91 · DINHEIRO, HOSPITAIS NEUTROS, LOJA DA MÔNICA E TROCAS PELO
       vai até aquele hospital buscar com o Lucas (SUAS OFERTAS: RECEBER / PEGAR OS ITENS DE VOLTA / CANCELAR);
     - quem confere tudo é o HOST (a oferta ainda está aberta? é para você? você é o dono? o dinheiro bate?): ninguém
       aceita duas vezes, pega o dinheiro do outro ou paga a menos. As ofertas vão no jogo salvo do mundo do host.
+  · TROCAS OFFLINE (jogando sozinho): o Lucas troca com os SOBREVIVENTES DO RÁDIO (PETE, ROSA, MARCUS, JENNY e
+    TOMMY), NPCs no lugar dos outros jogadores, com a mesma tela e o mesmo caminho:
+    - você VENDE para um deles (escolhe, marca os itens, põe o preço e entrega ao Lucas); em 1 a 4 minutos ele
+      responde: COMPRA se o preço for justo para ele (cada um paga de 80% a 125% do valor de loja) ou RECUSA. Aviso
+      pelo rádio + "$" no mapa, e você busca o dinheiro (ou os itens) com o Lucas daquele hospital;
+    - eles também te OFERECEM itens (cada um do seu tipo: munição, comida, ferramentas, roupas...) de vez em quando
+      (a cada 8 a 20 minutos, até 2 abertas), num dos hospitais: ACEITAR lá, com o dinheiro, ou RECUSAR. A oferta
+      vence em 1 dia do jogo (48 min). Tudo vai no jogo salvo.
+    - A loja da MÔNICA (comprar e vender direto com ela) funciona igual sozinho e no multijogador.
   · PEGAR perto de um NPC e de um item no chão: vale o que estiver mais perto.
   · Testado: teste_hospital.gd (46 conferências: zona, guardas, trégua, loja, regras das trocas, jogo salvo) e
     rede_trocas (DOIS JOGOS conectados: oferta, aviso no mapa, compra, buscar o dinheiro, recusa e devolução, e o
@@ -80,7 +89,8 @@ ATUALIZAÇÃO 0.91 · DINHEIRO, HOSPITAIS NEUTROS, LOJA DA MÔNICA E TROCAS PELO
       npc/modelo_npc.gd ............................ NOVO (manequim repintado como gente viva: roupa e cara de cada um)
       npc/loja.gd .................................. NOVO (estoque da Mônica por jogador/hospital/dia, especialidades)
       npc/precos.gd ................................ NOVO (preço de cada item em dólares, quanto a Mônica paga)
-      npc/trocas.gd ................................ NOVO (o registro das trocas no host, as regras e a rede)
+      npc/trocas.gd ................................ NOVO (o registro das trocas no host, as regras e a rede;
+                                                     offline: os sobreviventes do rádio)
       npc/tela_npc.gd .............................. NOVO (base das telas dos NPCs: lista que rola, ícones, botões)
       npc/tela_loja.gd ............................. NOVO (tela da Mônica)
       npc/tela_trocas.gd ........................... NOVO (tela do Lucas)
@@ -98,7 +108,8 @@ ATUALIZAÇÃO 0.91 · DINHEIRO, HOSPITAIS NEUTROS, LOJA DA MÔNICA E TROCAS PELO
       rede/jogador_remoto.gd ....................... protegido (trégua do amigo)
       hud/mapa.gd .................................. "$" das trocas nos hospitais (mapa e minimapa)
       main.gd ...................................... cria npc/hospitais.gd
-      menu/salvamento.gd ........................... loja e trégua no personagem; trocas no mundo do host
+      menu/salvamento.gd ........................... loja e trégua no personagem; trocas no mundo do host (e no
+                                                     jogo salvo de quem joga sozinho)
       menu/creditos.gd ............................. manequins e animações também dos NPCs
       menu/config.gd ............................... versão 0.91
       ferramentas/testes/teste_hospital.gd ......... NOVO
@@ -2103,7 +2114,9 @@ HOSPITAIS (0.91): zona neutra = terreno + 8 m · trégua ao sair 120 s · guarda
 LOJA DA MÔNICA (0.91): 18 itens por dia (1 de cada categoria + 7 da especialidade) · especialidade -20%, o resto +15% ·
   preço = preço cheio x estado (35%-100%) · ela paga 40% · renova a cada dia do jogo (48 min) · preços em npc/precos.gd
   (ex.: pistola 260, M4 950, AKM 880, munição 2-6 cada, kit médico 130, antibiótico 160, água 20, mochila de combate 320)
-TROCAS DO LUCAS (0.91): até 12 itens por oferta · até 6 ofertas abertas por jogador · preço até US$ 100.000
+TROCAS DO LUCAS (0.91): até 12 itens por oferta · até 6 ofertas abertas por jogador · preço até US$ 100.000 ·
+  offline: o sobrevivente do rádio responde em 0,5-2 h de jogo (1-4 min) e paga até valor de loja x 0,8-1,25 (x0,85-1,15
+  de sorte) · ofertas deles a cada 4-10 h de jogo, até 2 abertas, vencem em 24 h
 EMPURRÃO (0.90): derruba 55% (pelas costas 90%) · pisão 40 de dano · 8 de fôlego · 0,75 s de espera
 JANELAS (0.90): vidro 22 de vida · tábua 140 (até 3) · quebrar = barulho de 22 m · 50% de cortar a mão sem arma ·
   55% das janelas sem tábua têm vidro · pular leva 0,75 s
@@ -2297,7 +2310,9 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - LOJA DA MÔNICA: estoque, especialidades npc/loja.gd · tela: npc/tela_loja.gd
 - PREÇOS de cada item em dólares ...... npc/precos.gd (PRECO, VENDA)
 - TROCAS DO LUCAS (regras, limites, rede,
-  avisos, marcas do mapa) ............. npc/trocas.gd · tela: npc/tela_trocas.gd · base das telas: npc/tela_npc.gd
+  avisos, marcas do mapa; offline: os
+  sobreviventes do rádio) ............. npc/trocas.gd (RADIO, DECIDE_HORAS, OFERTA_A_CADA) · tela: npc/tela_trocas.gd ·
+                                        base das telas: npc/tela_npc.gd
 - LOCAIS ESPECIAIS (zonas de PvP; hospitais: zona neutra): onde ficam, casca de longe,
   monta/desmonta, infectados, aviso ...... mundo/locais.gd (lista LOCAIS: ferramentas/escolher_locais.gd)
 - posto, hospital, supermercado e armazém
@@ -2598,7 +2613,8 @@ MÚSICA (pasta audio/)
   helicóptero é só som (como lá); os infectados não batem nos carros. Janelas (0.90): só as do térreo dos
   prédios que abrem (as dos andares de cima e dos locais especiais continuam desenho).
 - Hospitais (0.91): os NPCs ficam parados (não andam, não lutam; os guardas são invisíveis: o tiro "vem do Carlos");
-  os rostos são simples (olhos e boca em peças, manequim). Trocas só no multijogador. O dinheiro de uma troca que
+  os rostos são simples (olhos e boca em peças, manequim). Offline, os sobreviventes do rádio só existem pelo rádio
+  (não aparecem no mapa nem no mundo). O dinheiro de uma troca que
   ficou esperando resposta do host some se o host cair bem nessa hora. A loja não tem estoque compartilhado (cada um
   vê o seu). Mônica, Lucas e os outros são os mesmos nos 4 hospitais (o livro tem um hospital só).
 - Base (0.90): as peças ficam só no chão (sem andar de cima, telhado ou escada); não dá para consertar uma peça

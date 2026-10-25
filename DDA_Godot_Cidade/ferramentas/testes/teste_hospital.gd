@@ -81,6 +81,15 @@ func _r():
 	ok(str(outro) != str(est) and str(outro_h) != str(est), "estoque diferente para outro jogador e em outro hospital")
 	ok(Loja.especialidade(hi)[0] != Loja.especialidade(H.hospitais()[1])[0], "cada hospital tem uma especialidade")
 	var k := 0
+	for kk in est.size():                                # um item que caiba na mochila do teste
+		var ti = Item.novo(str(est[kk]["id"]), int(est[kk]["q"]))
+		if H.cabe(ti):
+			k = kk
+			break
+	var grande := -1
+	for kk in est.size():
+		if not H.cabe(Item.novo(str(est[kk]["id"]), int(est[kk]["q"]))):
+			grande = kk
 	var preco := int(est[k]["preco"])
 	t._compra(k)
 	await q(2)
@@ -94,6 +103,10 @@ func _r():
 		"comprou %s por US$ %d (sobrou %d)" % [est[k]["id"], preco, H.dinheiro()])
 	t._compra(k)
 	ok(H.dinheiro() == 5000 - preco, "não compra o mesmo item duas vezes no mesmo dia")
+	if grande >= 0:
+		t._compra(grande)
+		ok(not H.comprado(hi, grande) and H.dinheiro() == 5000 - preco and t._aviso.text.contains("Não cabe"),
+			"item que não cabe na mochila: ela não vende (%s)" % est[grande]["id"])
 	# vender
 	var it = Item.novo("faca", 1)
 	j.inventario._guardar_auto(it)
@@ -131,6 +144,7 @@ func _r():
 	var jog0: Dictionary = Rede.jogadores
 	Rede.jogadores = {1: {"nome": "Ana", "uid": "a"}, 2: {"nome": "Bia", "uid": "b"}}
 	var T = H.trocas
+	T._prox_oferta = 1e9                                 # (os sobreviventes do rádio ficam quietos nesta parte)
 	T._atender(2, "recusar", {})                         # a Bia fica conhecida
 	var faca = Item.novo("faca", 1).para_dict()
 	var r1: Dictionary = T._atender(1, "nova", {"para": "b", "p": 150, "h": hi, "itens": [faca, Item.novo("tabuas", 3).para_dict()]})
@@ -174,6 +188,52 @@ func _r():
 	T._responder(0, {"ok": true, "dinheiro": 70, "itens": [Item.novo("atum", 1).para_dict()]})
 	ok(H.dinheiro() == din0 + 70 and j.inventario.contar("atum") >= 1, "resposta do host entrega dinheiro e itens")
 	Rede.jogadores = jog0
+	T.ofertas.clear()
+	# ---------- offline: os sobreviventes do rádio ----------
+	var resp = []
+	T.resposta.connect(func(x): resp.append(x))
+	ok(T.nomes().size() == T.RADIO.size() and T.minha_chave() == "eu", "offline: a lista do Lucas são os sobreviventes do rádio (%s)" % str(T.nomes().map(func(n): return n[1])))
+	var f1 = Item.novo("faca", 1)
+	T.pedir("nova", {"para": "npc:tommy", "p": 5, "h": hi, "itens": [f1.para_dict()]})
+	ok(resp.size() == 1 and resp[0]["ok"] and T.ofertas.size() == 1 and T.ofertas[0].has("decide"), "vendeu para o TOMMY pelo rádio (%s)" % (resp[0].get("msg", "") if resp.size() > 0 else ""))
+	T.ofertas[0]["decide"] = 0.0
+	T._simular()
+	ok(T.ofertas[0]["e"] == "vendida" and not T.notas().is_empty(), "preço justo: ele compra e aparece no mapa (%s)" % (T.notas()[0][1] if not T.notas().is_empty() else ""))
+	var dd0: int = H.dinheiro()
+	T.pedir("receber", {"i": T.ofertas[0]["i"]})
+	ok(H.dinheiro() == dd0 + 5 and T.ofertas.is_empty(), "buscou os US$ 5 com o Lucas")
+	T.pedir("nova", {"para": "npc:jenny", "p": 99999, "h": hi, "itens": [f1.para_dict()]})
+	T.ofertas[0]["decide"] = 0.0
+	T._simular()
+	ok(T.ofertas[0]["e"] == "recusada", "preço absurdo: ela recusa")
+	var facas: int = j.inventario.contar("faca")
+	T.pedir("receber", {"i": T.ofertas[0]["i"]})
+	ok(j.inventario.contar("faca") == facas + 1 and T.ofertas.is_empty(), "a faca volta")
+	T._prox_oferta = 0.0
+	T._simular()
+	var pm: Array = T.para_mim()
+	ok(pm.size() == 1 and str(pm[0]["de"]).begins_with("npc:") and int(pm[0]["p"]) > 0, "um sobrevivente do rádio te oferece itens (%s por US$ %s)" % [pm[0]["dn"] if pm.size() > 0 else "-", pm[0]["p"] if pm.size() > 0 else "-"])
+	if pm.size() == 1:
+		var pr := int(pm[0]["p"])
+		H.dar_dinheiro(pr)
+		var d1: int = H.dinheiro()
+		var n_it: int = (pm[0]["itens"] as Array).size()
+		H.tirar_dinheiro(pr)
+		T.pedir("aceitar", {"i": pm[0]["i"], "pago": pr}, pr)
+		ok(resp[-1]["ok"] and H.dinheiro() == d1 - pr and T.ofertas.is_empty(), "aceitou: pagou US$ %d e recebeu %d itens" % [pr, n_it])
+	T._prox_oferta = 0.0
+	T._simular()
+	if not T.ofertas.is_empty():
+		T.ofertas[0]["exp"] = 0.0
+		T._prox_oferta = 1e9
+		T._simular()
+	ok(T.ofertas.is_empty(), "a oferta deles vence se você não responder")
+	T._prox_oferta = 0.0
+	T._simular()
+	var Salv0 = load("res://menu/salvamento.gd")
+	Salv0.salvar(m)
+	var d0s = JSON.parse_string(FileAccess.get_file_as_string(Salv0.ARQUIVO))
+	ok(d0s is Dictionary and d0s.has("trocas") and (d0s["trocas"]["l"] as Array).size() == T.ofertas.size(), "as trocas do rádio vão no jogo salvo")
 	T.ofertas.clear()
 	# ---------- trégua ----------
 	var fora: Vector2 = Locais.local_para_mundo(hi, Vector2(0, 60.0))

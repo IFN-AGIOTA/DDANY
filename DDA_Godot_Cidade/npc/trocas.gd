@@ -10,7 +10,13 @@ extends Node
 # (a oferta ainda está aberta? é para você? você é o dono? o dinheiro veio certo?) antes de mexer. Os pedidos vão por
 # "troca_pedido" (amigo -> host), a resposta por "troca_resp" (host -> quem pediu) e o registro inteiro por
 # "trocas_lista" (host -> todos), que é de onde cada aparelho tira os avisos e as marcas do mapa.
-# Sozinho (sem rede) não tem com quem trocar. Mexa AQUI para: limites (MAX_*) e as regras de cada pedido.
+# SOZINHO (OFFLINE): o Lucas troca com os SOBREVIVENTES DO RÁDIO (RADIO), NPCs que fazem o papel dos outros jogadores:
+#   - você VENDE para um deles igual ao multijogador; depois de DECIDE_HORAS de jogo ele ACEITA (se o preço não passa
+#     de quanto ele paga: valor de loja x "paga" de cada um, com um pouco de sorte) ou RECUSA; aviso + "$" no mapa e
+#     você busca o dinheiro (ou os itens) no hospital;
+#   - eles também te OFERECEM itens de vez em quando (OFERTA_A_CADA horas, até 2 abertas, num hospital qualquer);
+#     a oferta some se você não responder em VENCE_HORAS. O registro vai no jogo salvo (menu/salvamento.gd).
+# Mexa AQUI para: limites (MAX_*), as regras de cada pedido e os sobreviventes do rádio.
 
 const ItemCls := preload("res://inventario/item.gd")
 const Precos := preload("res://npc/precos.gd")
@@ -19,6 +25,13 @@ const Locais := preload("res://mundo/locais.gd")
 const MAX_ABERTAS := 6                  # ofertas abertas por vendedor
 const MAX_ITENS := 12                   # itens por oferta
 const MAX_PRECO := 100000
+# offline: [chave, nome, quanto paga (x valor de loja), o que costuma vender (categorias)]
+const RADIO := [["npc:pete", "PETE (RÁDIO)", 1.1, ["municao", "arma", "pente"]], ["npc:rosa", "ROSA (RÁDIO)", 0.9, ["comida", "bebida", "medico"]],
+	["npc:marcus", "MARCUS (RÁDIO)", 1.0, ["ferramenta", "branca", "acessorio"]], ["npc:jenny", "JENNY (RÁDIO)", 0.8, ["roupa", "mochila", "medico"]],
+	["npc:tommy", "TOMMY (RÁDIO)", 1.25, ["municao", "comida", "ferramenta"]]]
+const DECIDE_HORAS := [0.5, 2.0]        # horas de jogo até o sobrevivente responder (1 h = 2 min)
+const OFERTA_A_CADA := [4.0, 10.0]      # horas de jogo entre as ofertas deles
+const VENCE_HORAS := 24.0
 
 signal mudou                            # o registro mudou (a tela do Lucas refaz)
 signal resposta(r: Dictionary)          # resposta de um pedido meu
@@ -30,6 +43,7 @@ var _n := 0
 var _pedidos := {}                      # número do pedido -> {"dinheiro": pago} (para devolver se der errado)
 var _vistos := {}                       # avisos já mostrados ("id:estado")
 var _t := 0.0
+var _prox_oferta := -1.0                # offline: hora do jogo da próxima oferta de um sobrevivente do rádio
 
 func _rede():
 	return get_node_or_null("/root/Rede")
@@ -46,7 +60,7 @@ func eh_host() -> bool:
 func minha_chave() -> String:
 	var r = _rede()
 	if r == null or not bool(r.ligado):
-		return ""
+		return "eu"                                  # offline
 	return chave_de(r.meu_id())
 
 func chave_de(peer: int) -> String:
@@ -78,9 +92,13 @@ func nomes() -> Array:
 			if id != r.meu_id():
 				on[chave_de(id)] = true
 	var l: Array = []
+	if not em_rede():
+		for s in RADIO:
+			l.append([s[0], s[1], false, true])       # [chave, nome, na partida, do rádio]
+		return l
 	for k in conhecidos:
-		if k != eu:
-			l.append([k, str(conhecidos[k]), on.has(k)])
+		if k != eu and not str(k).begins_with("npc:"):
+			l.append([k, str(conhecidos[k]), on.has(k), false])
 	l.sort_custom(func(a, b): return (a[2] and not b[2]) or (a[2] == b[2] and str(a[1]) < str(b[1])))
 	return l
 
@@ -90,7 +108,9 @@ func pedir(tipo: String, d: Dictionary, pago := 0) -> void:
 	_n += 1
 	var n := _n
 	_pedidos[n] = {"dinheiro": pago, "itens": d.get("itens", []) if tipo == "nova" else []}
-	if eh_host():
+	if not em_rede():
+		_responder(n, _atender(0, tipo, d))          # offline: o Lucas resolve aqui mesmo
+	elif eh_host():
 		_responder(n, _atender(_rede().meu_id(), tipo, d))
 	else:
 		_rede().enviar_evento("troca_pedido", {"t": tipo, "d": d, "n": n}, 1)
@@ -98,8 +118,14 @@ func pedir(tipo: String, d: Dictionary, pago := 0) -> void:
 # ---------- host: confere e faz ----------
 func _atender(peer: int, tipo: String, d: Dictionary) -> Dictionary:
 	var r = _rede()
-	var eu := chave_de(peer)
-	conhecidos[eu] = r.nome_de(peer)
+	var off := not em_rede() and peer == 0
+	var eu := "eu" if off else chave_de(peer)
+	var nome_eu: String = "VOCÊ" if off else r.nome_de(peer)
+	if off:
+		for s in RADIO:
+			conhecidos[s[0]] = s[1]
+	else:
+		conhecidos[eu] = nome_eu
 	var res := {"ok": false, "t": tipo}
 	match tipo:
 		"nova":
@@ -119,8 +145,10 @@ func _atender(peer: int, tipo: String, d: Dictionary) -> Dictionary:
 			elif abertas >= MAX_ABERTAS:
 				res["msg"] = "VOCÊ JÁ TEM %d OFERTAS ABERTAS" % MAX_ABERTAS
 			else:
-				var o := {"i": "%d_%d" % [Time.get_ticks_msec() % 100000000, randi() % 100000], "de": eu, "dn": r.nome_de(peer),
+				var o := {"i": "%d_%d" % [Time.get_ticks_msec() % 100000000, randi() % 100000], "de": eu, "dn": nome_eu,
 					"para": para, "pn": str(conhecidos[para]), "h": h, "itens": itens, "p": preco, "e": "aberta", "c": ""}
+				if para.begins_with("npc:"):                 # offline: o sobrevivente do rádio responde daqui a pouco
+					o["decide"] = _horas() + randf_range(DECIDE_HORAS[0], DECIDE_HORAS[1])
 				ofertas.append(o)
 				res["ok"] = true
 				res["msg"] = "O LUCAS GUARDOU OS ITENS · OFERTA PARA %s POR %s" % [str(o["pn"]).to_upper(), Precos.texto(preco)]
@@ -137,11 +165,13 @@ func _atender(peer: int, tipo: String, d: Dictionary) -> Dictionary:
 				res["msg"] = "O DINHEIRO NÃO BATE COM O PREÇO"
 			else:
 				o["e"] = "vendida"
-				o["c"] = r.nome_de(peer)
+				o["c"] = nome_eu
 				res["ok"] = true
 				res["itens"] = o["itens"]
 				res["msg"] = "COMPROU DE %s POR %s" % [str(o["dn"]).to_upper(), Precos.texto(int(o["p"]))]
 				o["itens"] = []
+				if str(o["de"]).begins_with("npc:"):
+					ofertas.erase(o)                         # o sobrevivente do rádio não precisa buscar o dinheiro
 			if not res["ok"]:
 				res["dinheiro"] = pago                      # devolve o dinheiro
 		"recusar":
@@ -152,6 +182,8 @@ func _atender(peer: int, tipo: String, d: Dictionary) -> Dictionary:
 				o["e"] = "recusada"
 				res["ok"] = true
 				res["msg"] = "VOCÊ RECUSOU A OFERTA DE %s" % str(o["dn"]).to_upper()
+				if str(o["de"]).begins_with("npc:"):
+					ofertas.erase(o)
 		"cancelar", "receber":
 			var o = _achar(str(d.get("i", "")))
 			if o == null or o["de"] != eu:
@@ -181,8 +213,80 @@ func _achar(id: String):
 func _espalhar() -> void:
 	if eh_host():
 		_rede().enviar_evento("trocas_lista", {"l": ofertas, "c": conhecidos})
+	if eh_host() or not em_rede():
 		_ver_avisos()
 		mudou.emit()
+
+func _horas() -> float:
+	return gerente.main.loot_mundo.horas() if gerente != null and gerente.main != null and gerente.main.loot_mundo != null else 0.0
+
+# ---------- offline: os sobreviventes do rádio ----------
+func _simular() -> void:
+	var h := _horas()
+	var mudou_algo := false
+	for o in ofertas.duplicate():
+		var de := str(o["de"])
+		var para := str(o["para"])
+		# eles respondem às suas ofertas
+		if para.begins_with("npc:") and o["e"] == "aberta" and h >= float(o.get("decide", 0.0)):
+			var paga := 1.0
+			for s in RADIO:
+				if s[0] == para:
+					paga = float(s[2])
+			var valor := 0
+			for di in o["itens"]:
+				var it = ItemCls.de_dict(di)
+				if it != null:
+					valor += Precos.valor(it)
+			if int(o["p"]) <= int(valor * paga * randf_range(0.85, 1.15)):
+				o["e"] = "vendida"
+				o["c"] = o["pn"]
+			else:
+				o["e"] = "recusada"
+			mudou_algo = true
+		# as ofertas deles vencem
+		elif de.begins_with("npc:") and o["e"] == "aberta" and h >= float(o.get("exp", INF)):
+			ofertas.erase(o)
+			mudou_algo = true
+	# de vez em quando, um deles oferece algo
+	if _prox_oferta < 0.0:
+		_prox_oferta = h + randf_range(1.0, 3.0)
+	var deles := ofertas.filter(func(o): return str(o["de"]).begins_with("npc:")).size()
+	if h >= _prox_oferta:
+		_prox_oferta = h + randf_range(OFERTA_A_CADA[0], OFERTA_A_CADA[1])
+		if deles < 2:
+			_oferta_do_radio(h)
+			mudou_algo = true
+	if mudou_algo:
+		_espalhar()
+
+func _oferta_do_radio(h: float) -> void:
+	var Loja = load("res://npc/loja.gd")
+	var s: Array = RADIO[randi() % RADIO.size()]
+	var hs: Array = gerente.hospitais()
+	var itens: Array = []
+	var valor := 0
+	for k in randi_range(1, 3):
+		var cat: String = s[3][randi() % (s[3] as Array).size()]
+		var ids: Array = Loja._ids_da(cat)
+		if ids.is_empty():
+			continue
+		var id: String = ids[randi() % ids.size()]
+		var pac: Array = Loja.PACOTE.get(id, Loja.PACOTE.get(cat, [1, 1]))
+		var it = ItemCls.novo(id, mini(randi_range(int(pac[0]), int(pac[1])), maxi(1, it_max(id))))
+		if it == null:
+			continue
+		it.estado = snappedf(randf_range(0.55, 1.0), 0.01)
+		valor += Precos.valor(it)
+		itens.append(it.para_dict())
+	if itens.is_empty():
+		return
+	ofertas.append({"i": "r%d_%d" % [Time.get_ticks_msec() % 100000000, randi() % 100000], "de": s[0], "dn": s[1], "para": "eu",
+		"pn": "VOCÊ", "h": hs[randi() % hs.size()], "itens": itens, "p": maxi(1, int(valor * randf_range(0.8, 1.3))), "e": "aberta",
+		"c": "", "exp": h + VENCE_HORAS})
+
+static func it_max(id: String) -> int:
+	return int(load("res://inventario/itens.gd").def(id).get("max", 1))
 
 # ---------- rede (rede/sessao_rede.gd chama) ----------
 func receber(de: int, tipo: String, d: Dictionary) -> void:
@@ -272,6 +376,10 @@ func _process(dt: float) -> void:
 	if _t > 0.0:
 		return
 	_t = 2.0
+	if not em_rede():
+		if gerente != null:
+			_simular()
+		return
 	if not eh_host():
 		return
 	var r = _rede()
@@ -286,10 +394,11 @@ func _process(dt: float) -> void:
 
 # ---------- jogo salvo (só o host guarda: o registro é do mundo dele) ----------
 func salvar() -> Dictionary:
-	return {"l": ofertas, "c": conhecidos}
+	return {"l": ofertas, "c": conhecidos, "prox": _prox_oferta}
 
 func carregar(d: Dictionary) -> void:
 	ofertas = d.get("l", [])
 	conhecidos = d.get("c", {})
+	_prox_oferta = float(d.get("prox", -1.0))
 	for o in ofertas:                                   # já vistos: não avisa de novo ao carregar
 		_vistos["%s:%s" % [o["i"], o["e"]]] = true

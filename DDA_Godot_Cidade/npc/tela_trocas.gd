@@ -5,6 +5,7 @@ extends "res://npc/tela_npc.gd"
 #   VENDER ......... escolha PARA QUEM, marque os ITENS, ajuste o PREÇO e ENTREGUE AO LUCAS (os itens ficam com ele).
 #   SUAS OFERTAS ... o que você ofereceu: esperando (CANCELAR), VENDIDO (RECEBER o dinheiro) ou RECUSADO (PEGAR os
 #                    itens de volta) · sempre no hospital onde você deixou.
+# Offline os "outros" são os SOBREVIVENTES DO RÁDIO (npc/trocas.gd RADIO): mesma tela, eles respondem sozinhos.
 
 const Itens := preload("res://inventario/itens.gd")
 
@@ -20,9 +21,6 @@ func _ready() -> void:
 	trocas.resposta.connect(_resp)
 
 func _montar(aba: int) -> void:
-	if not trocas.em_rede():
-		texto("LUCAS: \"Eu passo as ofertas pelo rádio para os outros sobreviventes. Sozinho aqui não tem com quem trocar: jogue no MULTIJOGADOR.\"")
-		return
 	match aba:
 		0: _para_voce()
 		1: _vender()
@@ -44,10 +42,14 @@ func _itens_de(o: Dictionary) -> void:
 func _para_voce() -> void:
 	var l: Array = trocas.para_mim()
 	if l.is_empty():
-		texto("Ninguém te ofereceu nada ainda. Quando alguém oferecer, o Lucas avisa pelo rádio e aparece no seu mapa.")
+		texto("Ninguém te ofereceu nada ainda. Quando alguém oferecer, o Lucas avisa pelo rádio e aparece no seu mapa." +
+			("" if trocas.em_rede() else " (Sozinho, quem oferece são os sobreviventes do rádio, de vez em quando.)"))
 		return
 	for o in l:
-		titulo_secao("%s VENDE POR %s · %s" % [str(o["dn"]).to_upper(), Precos.texto(int(o["p"])), _onde(o)])
+		var vence := ""
+		if o.has("exp"):
+			vence = " · VENCE EM ~%d MIN" % maxi(1, int(ceil((float(o["exp"]) - trocas._horas()) * 2.0)))
+		titulo_secao("%s VENDE POR %s · %s%s" % [str(o["dn"]).to_upper(), Precos.texto(int(o["p"])), _onde(o), vence])
 		_itens_de(o)
 		botoes([["ACEITAR (%s)" % Precos.texto(int(o["p"])), _aceitar.bind(o), true], ["RECUSAR", _recusar.bind(o)]])
 
@@ -81,9 +83,12 @@ func _vender() -> void:
 	var nomes: Array = trocas.nomes()
 	if nomes.is_empty():
 		texto("Ainda não passou mais ninguém por esta partida. Quem entrar aparece aqui (e continua na lista depois que sair).")
+	if not trocas.em_rede():
+		texto("Sozinho, o Lucas passa a sua oferta pelo rádio para estes sobreviventes. Eles respondem em alguns minutos: se o preço for justo para eles, compram; se não, recusam.")
 	for n in nomes:
 		var esc: bool = n[0] == _para
-		linha(null, str(n[1]).to_upper(), "está na partida" if n[2] else "fora da partida (vê a oferta quando voltar)",
+		var det := "sobrevivente do rádio (responde em alguns minutos)" if n.size() > 3 and n[3] else ("está na partida" if n[2] else "fora da partida (vê a oferta quando voltar)")
+		linha(null, str(n[1]).to_upper(), det,
 			"ESCOLHIDO" if esc else "ESCOLHER", _escolher.bind(str(n[0])), esc)
 	titulo_secao("2. ITENS QUE VOCÊ QUER VENDER (marque)")
 	var tem := false
