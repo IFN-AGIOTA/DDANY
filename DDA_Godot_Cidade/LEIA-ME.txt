@@ -88,7 +88,9 @@ ATUALIZAÇÃO 0.91 · DINHEIRO, HOSPITAIS NEUTROS, LOJA DA MÔNICA E TROCAS PELO
       ferramentas/animacoes_npcs.gd ................ NOVO (acrescenta essas animações)
       inventario/itens.gd .......................... DÓLARES (moeda, até 1000 por pilha)
       mundo/loot_mundo.gd .......................... dinheiro em quantias maiores (x5)
-      mundo/locais.gd .............................. hospital sem infectados; ao_abrir (monta os NPCs)
+      mundo/locais.gd .............................. hospital sem infectados; ao_abrir (monta os NPCs); CONSERTO:
+                                                     a montagem do local na thread recebia, raramente, o tipo errado
+                                                     (função anônima) e agora recebe os valores prontos
       inimigos/vagos.gd ............................ não nasce infectado na zona neutra
       jogador/jogador.gd ........................... PEGAR fala com o NPC (o mais perto entre NPC e item)
       inventario/tela_inventario.gd ................ texto do botão PEGAR perto de um NPC
