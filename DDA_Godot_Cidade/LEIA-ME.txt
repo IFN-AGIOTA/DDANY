@@ -1,5 +1,5 @@
 =====================================================================================================
- DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.91 (APK código 45)
+ DIAS DE UM APOCALIPSE · NOVA YORK · PORTE PARA A GODOT 4                         versão 0.92 (APK código 45)
 =====================================================================================================
 Jogo de sobrevivência em 3ª pessoa no estilo DayZ, com história própria, numa Nova York
 abandonada. Começou como um jogo em HTML (versão 1.1.49; os arquivos dele saíram do repositório na 0.89.1 e
@@ -39,6 +39,52 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.92 · VISUAL: TEXTURAS DE VERDADE, LUA E ESTRELAS, LUZ MELHOR E MODO ULTRA NO PC
+  · TEXTURAS NOVAS (Poly Haven, CC0, baixadas e creditadas): os PRÉDIOS agora têm TIJOLO, CONCRETO e PEDRA de
+    verdade nas paredes (conforme o tipo do prédio) e textura no TELHADO; de longe (a partir de ~160 m) a textura
+    some aos poucos e fica a cor lisa de antes (sem chiado e leve). Os prédios que você entra usam a mesma textura por
+    fora. Por dentro: PAPEL DE PAREDE VELHO nas casas e apartamentos, REBOCO gasto nos locais especiais, piso de
+    CERÂMICA gasta, de MADEIRA velha e de CONCRETO. A cor de cada parede/piso continua a sorteada (a textura dá o
+    detalhe por cima).
+  · INTERIORES: sombra onde o piso encontra as paredes e nos cantos (a luz de dentro não chega lá).
+  · NOITE: ESTRELAS (piscando de leve) e a LUA no céu (somem com nuvens e de dia); mais prédios com gente (35%) e
+    mais janelas acesas, mais fortes.
+  · MEIO-DIA E TARDE: mais contraste (menos luz "chapada", céu mais azul, horizonte e neblina menos brancos).
+  · CHUVA: as POÇAS ficam escuras e lisas (antes refletiam o céu tão forte que pareciam gelo).
+  · ARBUSTOS com verde natural (eram verde-limão, viravam bolas de tinta de longe).
+  · FUMAÇA dos destroços (helicóptero, comboio) com bolinhas macias (antes eram quadradinhos).
+  · LANTERNA DA MÃO faz sombra.
+  · MODO ULTRA (só no PC): Opções › Gráficos › "Modo de desenho": LEVE (o de sempre) ou ULTRA. O ULTRA usa o
+    renderizador completo da Godot (Vulkan): sombra nos cantos e onde as coisas se encostam, luz rebatendo nas
+    paredes, REFLEXOS de verdade no chão molhado e nos vidros, BRILHO em volta das luzes e NEBLINA de verdade (dá para
+    ver o facho da lanterna). Vale ao fechar e abrir o jogo de novo (fica no arquivo override.cfg ao lado do .exe;
+    LEVE apaga o arquivo). Precisa de placa de vídeo com Vulkan; se não tiver, a Godot volta sozinha para o leve.
+    O celular continua no leve.
+  · CONSERTO: o COLETE do personagem ficava cinza no modo ULTRA (a cor ia só nos vértices); agora vai no material.
+  · Testado: fotos do jogo nos dois modos (meio-dia, tarde, noite, lanterna, chuva, interior, prédios de tijolo,
+    concreto e pedra) e a bateria inteira + testes de rede.
+  · Arquivos:
+      mundo/materiais_cidade.gd .................... texturas nos prédios (PREDIO) e interiores (INTERIOR), sombra nos
+                                                     cantos, poças escuras, mais janelas acesas · material() põe as
+                                                     texturas (TEX_PREDIO, TEX_INTERIOR) · aquecer_texturas()
+      mundo/texturas/predio_tijolo.jpg, predio_concreto.jpg, predio_pedra.jpg, predio_telhado.jpg,
+        interior_papel.jpg, interior_reboco.jpg, interior_ceramica.jpg, interior_madeira.jpg,
+        interior_concreto.jpg (+ .import) ........ NOVOS (Poly Haven, CC0) · mundo/texturas/LICENCA.txt
+      mundo/ceu_noite.gd ........................... NOVO (estrelas e lua)
+      mundo/clima.gd ............................... cria o céu da noite; meio-dia/tarde com mais contraste; sombra
+                                                     da lanterna da mão
+      mundo/cidade.gd .............................. carrega as texturas antes das threads
+      mundo/interior.gd ............................ papel de parede por dentro e o material do prédio por fora
+      mundo/cenario.gd ............................. tom dos arbustos/plantas (TOM)
+      mundo/mato.gd ................................ tom do arbusto do mato
+      mundo/eventos.gd ............................. fumaça dos destroços com bolinha macia
+      jogador/modelo_sobrevivente.gd ............... cor do colete no material
+      menu/aplicar_opcoes.gd ....................... modo de desenho (override.cfg) e os efeitos do ULTRA
+      menu/opcoes.gd ............................... opção "Modo de desenho" (só PC)
+      menu/config.gd ............................... "rend" nos gráficos; versão 0.92
+      menu/creditos.gd ............................. créditos das texturas novas
+      ferramentas/testes/_fotos_luz.gd ............. APAGADO (tinha entrado no git sem querer)
+
 ATUALIZAÇÃO 0.91 · DINHEIRO, HOSPITAIS NEUTROS, LOJA DA MÔNICA E TROCAS PELO LUCAS
   · DINHEIRO: o "maço de dólares" virou DÓLARES, a moeda do jogo (cada um = US$ 1, até 1000 por pilha, quase não
     pesa). Aparece no loot como antes, agora em quantias de US$ 5 a US$ 300 (balcões, cofres, carteiras...).
@@ -2286,6 +2332,11 @@ HUD (pasta hud/)
 MUNDO / CONSTRUÇÕES (pasta mundo/)
 - prédios, ruas, calçadas, faixas,
   parques/árvores, céu, sol, ruínas ... mundo/cidade.gd
+- TEXTURAS dos prédios e dos interiores
+  (quais, tamanho, força, até onde) ... mundo/materiais_cidade.gd (TEX_PREDIO, TEX_INTERIOR, det(), TEX_LONGE) ·
+                                        arquivos em mundo/texturas/ (LICENCA.txt)
+- ESTRELAS e LUA ...................... mundo/ceu_noite.gd (força: mundo/clima.gd _atualizar_ceu)
+- MODO ULTRA do PC (efeitos e arquivo) menu/aplicar_opcoes.gd (_efeitos_ultra, _modo_desenho) · opção: menu/opcoes.gd
 - aparência do mar, chão, asfalto,
   janelas, interiores (shaders) ....... mundo/materiais_cidade.gd
 - colisão com chão/prédios/carros e tiros mundo/colisao_mundo.gd
@@ -2612,6 +2663,9 @@ MÚSICA (pasta audio/)
 - Infectados no estilo Project Zomboid (0.89), o que ainda falta de lá: cercas altas que caem com o peso; o
   helicóptero é só som (como lá); os infectados não batem nos carros. Janelas (0.90): só as do térreo dos
   prédios que abrem (as dos andares de cima e dos locais especiais continuam desenho).
+- Visual (0.92): o modo ULTRA só existe no PC (no celular o renderizador é sempre o leve) e só vale ao reabrir o jogo;
+  foi testado num Vulkan por software (sem placa de verdade): numa placa de verdade pode precisar de ajuste fino de
+  cor. As texturas dos prédios somem de longe (~160-320 m) para não chiar; os móveis continuam sem textura.
 - Hospitais (0.91): os NPCs ficam parados (não andam, não lutam; os guardas são invisíveis: o tiro "vem do Carlos");
   os rostos são simples (olhos e boca em peças, manequim). Offline, os sobreviventes do rádio só existem pelo rádio
   (não aparecem no mapa nem no mundo). O dinheiro de uma troca que

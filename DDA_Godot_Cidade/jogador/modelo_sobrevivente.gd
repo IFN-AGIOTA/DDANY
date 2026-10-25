@@ -395,10 +395,11 @@ func _fazer_casca(id: String) -> ArrayMesh:
 				V2.append(p)
 				N2.append(N[vi])
 				var f := (p.y - y_min) / maxf(y_max - y_min, 0.001)
-				var c := base * (0.9 + 0.2 * C[vi].g)
+				# 0.92: o vértice leva só o claro/escuro e a COR vai no material (no modo ULTRA a cor do vértice saía cinza)
+				var sombra := 0.9 + 0.2 * C[vi].g
 				if id == "colete" and p.z > 0.05 and f > 0.25 and f < 0.55 and absf(p.x) < 0.14:
-					c = base * 0.75                                    # fileira de bolsos na frente
-				C2.append(c)
+					sombra = 0.75                                      # fileira de bolsos na frente
+				C2.append(Color(sombra, sombra, sombra))
 				for k in nb:
 					B2.append(B[vi * nb + k])
 					W2.append(W[vi * nb + k])
@@ -413,7 +414,9 @@ func _fazer_casca(id: String) -> ArrayMesh:
 	arr[Mesh.ARRAY_INDEX] = I2
 	var m := ArrayMesh.new()
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS if nb == 8 else 0)
-	m.surface_set_material(0, Malhas.mat_cores(0.8))
+	var mat := Malhas.mat_cores(0.8)
+	mat.albedo_color = base
+	m.surface_set_material(0, mat)
 	return m
 
 # ---------- armas (jogador/armas: armas.anexar chama segurar_arma) ----------
