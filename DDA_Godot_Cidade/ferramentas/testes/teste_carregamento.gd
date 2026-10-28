@@ -2,7 +2,8 @@ extends SceneTree
 # TESTE: TELA DE CARREGAMENTO (0.99). Jogar com a montagem em etapas (como no jogo de verdade): a tela cobre tudo
 # antes de o menu sumir, mostra as etapas na ordem com a barra só andando para a frente, as dicas trocam, nada do jogo
 # anda enquanto monta, e no fim ela some sozinha com o jogador já no chão e o jogo andando. Depois, "Voltar ao início"
-# pela pausa usa a mesma tela. Com FOTOS=<pasta> salva fotos da tela (para conferir a aparência).
+# pela pausa usa a mesma tela. 0.99.1: nenhuma parada (quadro sem desenhar a tela) passa de 1,5 s.
+# Com FOTOS=<pasta> salva fotos da tela (para conferir a aparência).
 var falhas := 0
 func ok(c: bool, msg: String) -> void:
 	if c: print("  ok   ", msg)
@@ -40,6 +41,7 @@ func _r():
 	var jogo_andou_montando := false
 	var fotos_tiradas := {}
 	var apareceu := false
+	var maior_parada := 0.0
 	var t0 := Time.get_ticks_msec()
 	var c = null
 	while Time.get_ticks_msec() - t0 < 400000:
@@ -58,6 +60,7 @@ func _r():
 		if etapas.is_empty() or etapas[-1] != c.texto_etapa:
 			etapas.append(c.texto_etapa)
 		fracoes.append(c.fracao())
+		maior_parada = maxf(maior_parada, c.maior_quadro)
 		for marca in [["inicio", 0.02], ["meio", 0.45], ["fim", 0.9]]:
 			if c.fracao() >= marca[1] and not fotos_tiradas.has(marca[0]) and c._alfa >= 1.0:
 				fotos_tiradas[marca[0]] = true
@@ -73,6 +76,7 @@ func _r():
 			anda = false
 	ok(anda and fracoes.size() > 0 and fracoes[-1] > 0.99, "a barra só anda para a frente e chega a 100%% (%.2f)" % (fracoes[-1] if fracoes.size() > 0 else 0.0))
 	ok(not jogo_andou_montando, "nada do jogo anda enquanto monta")
+	ok(maior_parada < 1.5, "a tela nunca fica parada muito tempo (maior parada %.2f s)" % maior_parada)
 	ok(m.carregamento == null and not is_instance_valid(c), "a tela some sozinha no fim")
 	ok(m.jogo != null and m.jogo.process_mode == Node.PROCESS_MODE_PAUSABLE and m.jogador != null, "o jogo está montado e andando")
 	var p0: Vector3 = m.jogador.global_position

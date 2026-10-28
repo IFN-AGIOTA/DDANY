@@ -76,7 +76,11 @@ var fatiar := false
 var progresso := -1.0
 var t_fatia := 0
 func respirar(feito: int, total: int) -> void:
-	progresso = clampf(float(feito) / float(maxi(total, 1)), 0.0, 1.0)
+	progresso = maxf(progresso, clampf(float(feito) / float(maxi(total, 1)), 0.0, 1.0))
+	await pausa()
+
+# só a parada (sem mexer no progresso)
+func pausa() -> void:
 	if fatiar and Time.get_ticks_msec() - t_fatia > FATIA_MS and is_inside_tree():
 		await get_tree().process_frame
 		t_fatia = Time.get_ticks_msec()
@@ -92,7 +96,7 @@ func construir() -> void:
 func etapas() -> Array:
 	var r: Array = [
 		["Lendo o mapa de Nova York", 1.5, _comecar],
-		["Chão, praias e o mar", 1.2, func(): _ground(dados_cidade)],
+		["Chão, praias e o mar", 1.2, func(): await _ground(dados_cidade)],
 		["Ruas e avenidas", 16.0, func(): await _roads(dados_cidade)],
 		["Levantando os prédios", 11.0, _buildings],
 		["Quarteirões e calçadas", 5.0, _lotes],
@@ -248,6 +252,8 @@ func _malha(verts: PackedVector3Array, mat: Material, cores := PackedColorArray(
 	var pv := {}                               # Vector2i -> PackedVector3Array
 	var pc := {}                               # Vector2i -> PackedColorArray
 	for t in range(0, verts.size() - 2, 3):
+		if t % 12288 == 0:
+			await pausa()
 		var a := verts[t]
 		var b := verts[t + 1]
 		var c := verts[t + 2]
@@ -268,6 +274,7 @@ func _malha(verts: PackedVector3Array, mat: Material, cores := PackedColorArray(
 			cc.append(cores[t + 2])
 			pc[k] = cc
 	for k in pv:
+		await pausa()
 		var vv: PackedVector3Array = pv[k]
 		var normals := PackedVector3Array()
 		normals.resize(vv.size())
@@ -404,17 +411,17 @@ func _ground(data) -> void:
 	var p_terra := {"mascara": _mascara, "mundo": WORLD, "camada": CAMADA["terra"]}
 	p_terra.merge(Mat.texturas_chao())
 	var mt := Mat.material(Mat.TERRA, p_terra)
-	_malha(v, mt, PackedColorArray(), "Terra")
+	await _malha(v, mt, PackedColorArray(), "Terra")
 	v = PackedVector3Array()
 	_poly(v, lakes, Y_LAGO)
 	var agua_lago: ShaderMaterial = agua.duplicate()
 	agua_lago.set_shader_parameter("camada", CAMADA["lago"])
-	_malha(v, agua_lago, PackedColorArray(), "Lagos")
+	await _malha(v, agua_lago, PackedColorArray(), "Lagos")
 	mats_agua = [agua, agua_lago]
 	v = PackedVector3Array()
 	_poly(v, parks, Y_PARQUE)
 	var mp := Mat.material(Mat.PARQUE, {"camada": CAMADA["parque"]})
-	_malha(v, mp, PackedColorArray(), "Parques")
+	await _malha(v, mp, PackedColorArray(), "Parques")
 	mats_chao = [mt, mp]
 
 # ---------- ruas: ligar pontas soltas e marcar cruzamentos ----------
@@ -524,10 +531,10 @@ func _roads(data) -> void:
 			_mascara_rua(a, b, hw)
 	var m_calc := Mat.material(Mat.CALCADA, {"camada": CAMADA["calcada"]})
 	var m_asf := Mat.material(Mat.ASFALTO, {"camada": CAMADA["rua"]})
-	_malha(calc, m_calc, PackedColorArray(), "Calcadas")
-	_malha(asf, m_asf, PackedColorArray(), "Asfalto")
+	await _malha(calc, m_calc, PackedColorArray(), "Calcadas")
+	await _malha(asf, m_asf, PackedColorArray(), "Asfalto")
 	mats_chao.append_array([m_calc, m_asf])
-	_malha(mv, Mat.material(Mat.FAIXA, {"camada": CAMADA["faixa"]}), mc, "Faixas", PEDACO_FAIXAS)
+	await _malha(mv, Mat.material(Mat.FAIXA, {"camada": CAMADA["faixa"]}), mc, "Faixas", PEDACO_FAIXAS)
 
 # faixas de um trecho: linha central (amarela dupla nas avenidas, tracejada branca nas ruas), divisórias de
 # pista tracejadas, bordas, e faixa de pedestre + linha de parada perto dos cruzamentos
@@ -1052,7 +1059,7 @@ func _lotes() -> void:
 	mat_lote = Mat.material(Mat.TERRA, p_lote)
 	mats_chao.append(mat_lote)
 	(mats_chao[0] as ShaderMaterial).set_shader_parameter("splat", splat)
-	_malha(v, mat_lote, cs, "Lotes")
+	await _malha(v, mat_lote, cs, "Lotes")
 
 # índices ORDENADOS -> pares (primeiro, último) de cada trecho de células seguidas na mesma linha
 func _trechos(idx: PackedInt32Array) -> PackedInt32Array:
@@ -1110,7 +1117,7 @@ func _splatmap() -> void:
 # caixas oclusoras: o que fica todo atrás dos prédios não é desenhado (mundo/oclusao.gd)
 func _oclusao() -> void:
 	oclusao = OclusaoCls.new()
-	oclusao.montar(self)
+	await oclusao.montar(self)
 	for oi in oclusao.nos:
 		_adopt(oi)
 
@@ -1291,8 +1298,8 @@ func _arvores() -> void:
 		_adopt(ml)
 		detalhes.append(ml)
 	print("Árvores: ", total)
-	_plantas(celulas, rv, veg)
-	_montar_veg(veg)
+	await _plantas(celulas, rv, veg)
+	await _montar_veg(veg)
 
 # ---------- 0.69: VEGETAÇÃO BAIXADA (mundo/cenario.gd: Quaternius "Stylized Nature MegaKit") ----------
 const PERTO_MODELO_ARVORE := 110.0          # árvore baixada até aqui; depois, a árvore simples de código
@@ -1342,11 +1349,15 @@ static func _sortear_planta(r: RandomNumberGenerator, tabela: Array) -> Array:
 func _plantas(celulas_parque: PackedInt32Array, r: RandomNumberGenerator, veg: Dictionary) -> void:
 	var n := 0
 	for i in celulas_parque:
+		if n % 512 == 0:
+			await pausa()
 		for k in r.randi_range(0, 3):
 			var e := _sortear_planta(r, PLANTAS_PARQUE)
 			_planta(veg, e, i, r, Y_PARQUE)
 			n += 1
 	for i in range(0, W * H, 3):                       # 1 célula em 3 (mais rápido; a chance compensa)
+		if i % 24576 == 0:
+			await pausa()
 		if land[i] == 1 and park[i] == 0 and road[i] == 0 and lote[i] == 0 and r.randf() < 0.5:
 			var x := (i % W + 0.5) * CELL - WORLD.x
 			var z := (i / W + 0.5) * CELL - WORLD.y
@@ -1375,6 +1386,7 @@ func _planta(veg: Dictionary, e: Array, celula: int, r: RandomNumberGenerator, y
 func _montar_veg(veg: Dictionary) -> void:
 	var total := 0
 	for nome in veg:
+		await pausa()
 		var malha: ArrayMesh = Cenario.malha(nome)
 		var grupo: String = nome.rstrip("0123456789").trim_suffix("_")
 		if grupo.begins_with("arvore_seca"):

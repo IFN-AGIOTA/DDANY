@@ -14,7 +14,7 @@ const UI := preload("res://menu/ui.gd")
 const TEMPO_DICA := 7.0                 # s em cada dica
 const ENTRAR := 0.35                    # s do fade de entrada
 const SAIR := 0.7                       # s do fade de saída
-const QUADROS_VISTA := 6                # quadros desenhando o jogo por baixo antes de sumir (shaders, prédios perto)
+const QUADROS_VISTA := 4                # quadros desenhando o jogo por baixo antes de sumir (shaders, prédios perto)
 const MAX_VISTA := 6.0                  # s no máximo esperando a vista
 
 const DICAS := [
@@ -258,7 +258,8 @@ func _fechar_etapa() -> void:
 
 # tudo montado: deixa o jogo desenhar alguns quadros por baixo (shaders, prédios e chão perto), enche a barra e some
 func terminar() -> void:
-	await etapa("Preparando a vista", peso_vista)
+	if texto_etapa != "Preparando a vista":   # main.gd já começou a vista (mostrando a cidade aos poucos)
+		await etapa("Preparando a vista", peso_vista)
 	var t0 := Time.get_ticks_msec()
 	var qd := PackedStringArray()
 	for i in QUADROS_VISTA:
@@ -346,9 +347,10 @@ class _Desenho extends Control:
 		# barra
 		var x0 := 6.0 * v
 		var x1 := tam.x - 6.0 * v
-		var y := tam.y - 7.0 * v
-		var h := 0.8 * v
-		draw_rect(Rect2(x0, y, x1 - x0, h), Color(1, 1, 1, 0.12))
+		var y := tam.y - 7.6 * v
+		var h := 1.4 * v                # 0.99.1: barra mais grossa, com trilho e contorno (bem visível)
+		draw_rect(Rect2(x0, y, x1 - x0, h), Color(0, 0, 0, 0.45))
+		draw_rect(Rect2(x0, y, x1 - x0, h), Color(1, 0.72, 0.35, 0.35), false, maxf(1.0, 0.15 * v))
 		var f: float = tela.fracao()
 		var xf := lerpf(x0, x1, f)
 		UId.degrade_h(self, PackedVector2Array([Vector2(x0, y), Vector2(xf, y), Vector2(xf, y + h), Vector2(x0, y + h)]),

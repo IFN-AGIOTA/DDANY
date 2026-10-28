@@ -299,6 +299,26 @@ func _jogar(carregar_salvo := false) -> void:
 	Sons.tocar("partida/entrada", -3.0)        # 0.49: entrada da partida (pancada grave + eco + coração)
 
 # ---------- 0.99: tela de carregamento (menu/tela_carregamento.gd) ----------
+# 0.99.1: arquivos grandes lidos do disco EM SEGUNDO PLANO (outra thread) assim que a tela aparece, na ordem em que o
+# jogo vai precisar: quando a montagem chega neles, já estão na memória (na 1ª vez que o jogo abre, ler o boneco do
+# disco travava a tela por segundos)
+const PRE_CARREGAR := ["res://mundo/cenario/", "res://jogador/sobrevivente/", "res://inimigos/infectados/",
+	"res://armas/modelos/", "res://equipamentos/modelos/", "res://inventario/modelos/"]
+static func _pre_carregar() -> void:
+	for pasta in PRE_CARREGAR:
+		for f in DirAccess.get_files_at(pasta):           # no jogo exportado vêm como "x.glb.import"/"x.scn.remap"
+			var nome := str(f).trim_suffix(".remap").trim_suffix(".import")
+			if not (nome.get_extension() in ["glb", "scn", "res", "tscn"]):
+				continue
+			var p: String = pasta + nome
+			if ResourceLoader.exists(p) and not ResourceLoader.has_cached(p):
+				ResourceLoader.load_threaded_request(p)
+
+# entre partes pesadas do _criar_jogo: deixa a tela de carregamento desenhar um quadro (sem a tela: nada)
+func _respiro() -> void:
+	if carregamento != null:
+		await get_tree().process_frame
+
 # esconde o menu, tira a "foto" da tela para o fundo e espera a tela de carregamento aparecer por inteiro
 func _abrir_carregamento(modo: String) -> void:
 	var escondidas: Array = []              # menu, pausa, HUD...: um quadro sem eles, para a foto do fundo
@@ -314,6 +334,7 @@ func _abrir_carregamento(modo: String) -> void:
 		carregamento.total += float(ETAPAS_JOGO[k][1])
 	carregamento.fonte_progresso = func() -> float: return float(cidade.progresso) if cidade != null else -1.0
 	add_child(carregamento)                 # a foto é tirada aqui
+	_pre_carregar()
 	for n in escondidas:                    # o que continua (um aviso de convite, por exemplo) volta, por baixo da tela
 		if is_instance_valid(n):
 			n.visible = true
@@ -336,12 +357,30 @@ func _etapa_texto(texto: String, peso: float) -> void:
 
 # tudo montado: o jogo volta a andar, desenha alguns quadros por baixo e a tela some devagar
 func _fim_carregamento() -> void:
-	if jogo != null:
-		jogo.process_mode = Node.PROCESS_MODE_PAUSABLE
 	if carregamento == null:
+		if jogo != null:
+			jogo.process_mode = Node.PROCESS_MODE_PAUSABLE
 		return
 	carregamento.peso_vista = ETAPAS_JOGO["vista"][1]
+	await carregamento.etapa(ETAPAS_JOGO["vista"][0], ETAPAS_JOGO["vista"][1])
+	# 0.99.1: a VISTA APARECE AOS POUCOS (ainda debaixo da tela): o 3D volta com tudo escondido e cada quadro mostra
+	# mais um lote; assim os shaders e as texturas vão para a placa de vídeo em vários quadros curtos, não num só
+	# (na 1ª vez que o jogo abre, esse quadro único travava a tela por quase 2 s)
+	var lotes: Array = []
+	for no in (cidade.get_children() if cidade != null else []) + jogo.get_children():
+		if no is Node3D and no.visible:
+			no.visible = false
+			lotes.append(no)
 	get_viewport().disable_3d = false
+	const N_LOTES := 12
+	for i in N_LOTES:
+		for k in range(lotes.size() * i / N_LOTES, lotes.size() * (i + 1) / N_LOTES):
+			if is_instance_valid(lotes[k]):
+				lotes[k].visible = true
+		if cidade != null:
+			cidade.progresso = float(i + 1) / N_LOTES * 0.8
+		await get_tree().process_frame
+	jogo.process_mode = Node.PROCESS_MODE_PAUSABLE   # o jogo volta a andar (os quadros finais trazem os prédios perto)
 	var c = carregamento
 	carregamento = null                     # o jogo já pode ser pausado/salvo enquanto a tela some
 	await c.terminar()
@@ -552,12 +591,14 @@ func _criar_jogo() -> void:
 	controles.name = "Controles"
 	jogo.add_child(controles)
 	controles.pausa_pedida.connect(_pausar)
+	await _respiro()
 	mundo = ColisaoMundoCls.new()
 	mundo.name = "ColisaoMundo"
 	jogo.add_child(mundo)
 	mundo.configurar(cidade.dados_cidade, cidade.predios)
 	mundo.configurar_lotes(cidade.lote, cidade.W, cidade.H, cidade.CELL, cidade.WORLD, cidade.RAMPA_LOTE)   # chão dos quarteirões
 	mundo.configurar_locais(LocaisCls.volumes_mundo(cidade.Y_CALCADA))   # 0.74: tiro de longe para nos locais especiais
+	await _respiro()
 	chunks = ChunksCls.new()
 	chunks.name = "Chunks"
 	jogo.add_child(chunks)
@@ -632,6 +673,7 @@ func _criar_jogo() -> void:
 	roda_armas.aviso.connect(func(t): hud.mostrar_aviso(t))
 	await _etapa("loot")
 	LootCls.espalhar(jogo, mundo, SPAWN)
+	await _respiro()
 	loot_mundo = LootMundoCls.new()
 	loot_mundo.semente = randi()                      # cada jogo novo tem o loot em lugares diferentes
 	# 0.72: o loot volta pelo relógio do jogo (horas desde o 1º dia; na rede a hora é a do host)
@@ -697,6 +739,7 @@ func _criar_jogo() -> void:
 	jogo.add_child(voo)
 	voo.ligar(jogador, controles, mundo, tela_inventario)
 	jogador.camera.make_current()
+	await _respiro()
 	aplicador.aplicar()
 	# música: tiros e acertos aumentam a tensão (ela desce sozinha)
 	Musica.definir_modo("jogo")

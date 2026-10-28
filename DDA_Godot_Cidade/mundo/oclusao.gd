@@ -30,6 +30,8 @@ func montar(c) -> void:
 			_cels[k] = []
 		_cels[k].append(i)
 	for k in _cels:
+		if c.has_method("pausa"):
+			await c.pausa()                  # 0.99.1: a tela de carregamento não congela
 		var oi := OccluderInstance3D.new()
 		oi.name = "Oclusor_%d_%d" % [k.x, k.y]
 		oi.position = Vector3((k.x + 0.5) * CEL, 0.0, (k.y + 0.5) * CEL)   # vértices relativos a este centro (AABB do tamanho do pedaço: mundo/chunks.gd)
