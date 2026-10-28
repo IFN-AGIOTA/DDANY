@@ -5,7 +5,7 @@ extends Node
 
 signal mudou(chave: String)          # "gfx" quando os gráficos foram aplicados; "hud" quando a HUD foi editada
 
-const VERSAO := "0.96.1"
+const VERSAO := "0.97"
 const ARQUIVO := "user://opcoes.cfg"
 
 const PADRAO := {
@@ -38,6 +38,7 @@ const PADRAO := {
 	"z_reaparecer": true,                 # lugar esvaziado volta a ter infectados (72 h)
 	"z_ativos": "ambos",                  # "ambos", "dia" ou "noite"
 	"rec_tempo": 0.0, "rec_abates": 0,    # recordes (tela de morte)
+	"voz_mic": true, "voz_ouvir": true,   # 0.97: chat de voz: seu microfone ligado · ouvir os outros (rede/voz.gd)
 	"nome_rede": "", "ip_rede": "",       # multijogador: seu nome e o último IP digitado (menu/tela_multijogador.gd)
 }
 

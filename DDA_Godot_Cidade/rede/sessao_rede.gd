@@ -29,6 +29,7 @@ extends Node
 #     o bit 256 do estado diz que o jogador está protegido (não fere e não é ferido).
 #     0.94: o bit 512 diz que o jogador está MUTADO (jogador/mutacao.gd: os infectados do host o ignoram e a cópia
 #     dele fica com o corpo do mutado).
+#     0.97: CHAT DE VOZ por proximidade: rede/voz.gd (criado aqui; botões MIC e VOZES).
 #     0.95: evento "estalo" = o mutado estalou os dentes (som no lugar e ele aparece no mapa por 10 s).
 # AINDA NÃO: dano entre jogadores, salvar a partida em rede, missões do rádio (cada um tem as suas), infectados
 # não entram em prédio atrás de um amigo (o host não tem as paredes do interior onde o amigo está).
@@ -40,6 +41,7 @@ const ItemCls := preload("res://inventario/item.gd")
 const LootMundo := preload("res://mundo/loot_mundo.gd")
 const Locais := preload("res://mundo/locais.gd")
 const MensagensCls := preload("res://hud/mensagens.gd")
+const VozCls := preload("res://rede/voz.gd")             # 0.97: chat de voz por proximidade
 const PortaCls := preload("res://mundo/porta.gd")
 const Hospitais := preload("res://npc/hospitais.gd")
 const INFECTADOS_POR_SEG := 10.0
@@ -52,6 +54,7 @@ const DIST_SOM_TIRO := 450.0                  # mais longe que isso não se ouve
 var main: Node
 var jogador: Node
 var remotos := {}                             # id -> jogador_remoto.gd
+var voz: Node = null                          # 0.97: rede/voz.gd
 var _t_envio := 0.0
 var _t_mundo := 0.0
 var _t_inf := 0.0
@@ -80,6 +83,16 @@ func ligar(m: Node) -> void:
 	if main.controles != null:
 		main.controles.ocultos["MSG"] = false
 		main.controles.mensagem_pedida.connect(_mensagens.abrir)
+	# 0.97: chat de voz por proximidade
+	voz = VozCls.new()
+	voz.name = "Voz"
+	add_child(voz)
+	voz.ligar(self)
+	if main.controles != null:
+		main.controles.ocultos["MIC"] = false
+		main.controles.ocultos["VOZES"] = false
+		main.controles.mic_pedido.connect(voz.alternar_mic)
+		main.controles.vozes_pedido.connect(voz.alternar_ouvir)
 	for id in Rede.jogadores:
 		if id != Rede.meu_id():
 			_criar(id)
@@ -99,6 +112,8 @@ func _exit_tree() -> void:
 			(s[0] as Signal).disconnect(s[1])
 	if main != null and main.controles != null and is_instance_valid(main.controles):
 		main.controles.ocultos["MSG"] = true
+		main.controles.ocultos["MIC"] = true
+		main.controles.ocultos["VOZES"] = true
 	ItemMundo.ao_soltar = Callable()
 	ItemMundo.ao_pegar = Callable()
 	ItemMundo.por_uid.clear()

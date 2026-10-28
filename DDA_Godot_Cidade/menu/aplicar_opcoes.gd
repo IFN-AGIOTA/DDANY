@@ -52,6 +52,8 @@ func aplicar(chave := "") -> void:
 		return
 	if chave.begins_with("z_"):
 		return                          # 0.89: regras dos infectados (lidas na hora por inimigos/regras_infectados.gd)
+	if chave.begins_with("voz_"):
+		return                          # 0.97: botões do chat de voz (rede/voz.gd lê na hora; nada a reaplicar)
 	var o: Dictionary = Config.o
 	var g: Dictionary = Config.g
 	# som e tela (valem no menu também)

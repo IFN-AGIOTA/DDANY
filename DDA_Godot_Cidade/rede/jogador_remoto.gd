@@ -30,6 +30,12 @@ var nadando := false                           # 0.72
 var afundando := false
 var protegido := false                         # 0.91: na zona neutra do hospital ou na trégua (não fere nem é ferido)
 var mutado := false                            # 0.94: mutado (bit 512): os infectados ignoram, corpo do mutado
+var falando := false:                          # 0.97: chat de voz (rede/voz.gd): ")))" junto do nome
+	set(v):
+		if v != falando and _rotulo != null:
+			_rotulo.text = (nome + "  )))") if v else nome
+			_rotulo.modulate = Color(0.55, 1.0, 0.55) if v else Color.WHITE
+		falando = v
 var mira_pitch := 0.0
 var morto := false
 var armas := _Armas.new()

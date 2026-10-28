@@ -5,6 +5,7 @@
 #   GODOT=... ferramentas/testes/rodar.sh rede_carro               (dois jogos conectados: amigo dirigindo)
 #   GODOT=... ferramentas/testes/rodar.sh rede_save                (salvar em rede: duas sessões seguidas)
 #   GODOT=... ferramentas/testes/rodar.sh rede_trocas              (0.91: trocas do Lucas entre dois jogos, PvP no hospital)
+#   GODOT=... ferramentas/testes/rodar.sh rede_voz                 (0.97: chat de voz por proximidade entre dois jogos)
 #   GODOT=... ferramentas/testes/rodar.sh rede_turn                (0.85: amigo entra pelo retransmissor TURN)
 #   TURN_CF=1 (ou cai) GODOT=... rodar.sh rede_turn                 (0.88: senha pedida à "Cloudflare"; cai = vai para a reserva)
 #   GODOT=... sudo ferramentas/testes/rodar.sh rede_nat            (0.86: ligação direta atrás de NAT de mentira)
@@ -59,6 +60,15 @@ elif [ "$alvo" = rede_trocas ]; then
 	grep -E "CLI:|SCRIPT ERROR" "$DADOS/cli.txt"
 	grep -q "comprou true · faca true · tábuas [3-9]" "$DADOS/host.txt" && grep -q "tiro nele vale false" "$DADOS/host.txt" \
 		&& grep -q "buscou com o Lucas US\$ 120" "$DADOS/cli.txt" && grep -q "atum voltou true" "$DADOS/cli.txt" || falhou=1
+elif [ "$alvo" = rede_voz ]; then
+	XDG_DATA_HOME="$DADOS/h" timeout 300 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_voz_host.gd > "$DADOS/host.txt" 2>&1 &
+	sleep 2
+	XDG_DATA_HOME="$DADOS/c" timeout 300 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_voz_cliente.gd > "$DADOS/cli.txt" 2>&1
+	wait
+	grep -E "HOST:|SCRIPT ERROR" "$DADOS/host.txt"
+	grep -E "CLI:|SCRIPT ERROR" "$DADOS/cli.txt"
+	grep -q "som 3D no amigo true (até 45 m) · ))) no nome true" "$DADOS/host.txt" && grep -q "VOZES mudas tocou mais 0 · guardado false" "$DADOS/host.txt" \
+		&& grep -q "silêncio mandou 0" "$DADOS/cli.txt" && grep -q "longe mandou 0" "$DADOS/cli.txt" && grep -q "mic mudo mandou 0 · guardado false" "$DADOS/cli.txt" || falhou=1
 elif [ "$alvo" = rede_carro ]; then
 	XDG_DATA_HOME="$DADOS/h" timeout 300 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_carro_host.gd > "$DADOS/host.txt" 2>&1 &
 	sleep 2

@@ -38,6 +38,7 @@ signal estado_recebido(id: int, d: Array)      # posição/animação de um joga
 signal comecou                                 # o host tocou em COMEÇAR (a sala vira partida)
 signal evento_recebido(id: int, tipo: String, d: Dictionary)   # tiro, ação, roupa, mundo... (sessao_rede.gd)
 signal infectados_recebidos(d: PackedFloat32Array)             # cliente: posição dos infectados que o host manda
+signal voz_recebida(id: int, d: PackedByteArray)                # 0.97: pedaço de voz de um jogador (rede/voz.gd)
 
 const PORTA := 24560                           # partida (UDP, ENet)
 const PORTA_ANUNCIO := 24561                   # anúncio "tem partida aqui" na rede local (UDP broadcast)
@@ -647,6 +648,16 @@ func enviar_infectados(para: int, d: PackedFloat32Array) -> void:
 @rpc("authority", "call_remote", "unreliable_ordered", 1)
 func _infectados(d: PackedFloat32Array) -> void:
 	infectados_recebidos.emit(d)
+
+# 0.97 · VOZ (rede/voz.gd): 40 ms de voz em μ-law, no canal rápido (pode perder pacote: a voz segue)
+func enviar_voz(d: PackedByteArray) -> void:
+	if ligado:
+		_voz.rpc(d)
+
+@rpc("any_peer", "call_remote", "unreliable_ordered", 1)
+func _voz(d: PackedByteArray) -> void:
+	if d.size() <= 2048:
+		voz_recebida.emit(multiplayer.get_remote_sender_id(), d)
 
 # evento: chega sempre e na ordem (tiro, ação, roupa, clima...). para = 0: todos
 func enviar_evento(tipo: String, d: Dictionary, para := 0) -> void:

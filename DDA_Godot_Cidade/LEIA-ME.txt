@@ -22,7 +22,8 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 - Celular: instale DiasDeUmApocalipse.apk (pasta principal do repositório; Android arm64, paisagem).
   Ele é assinado sempre com a mesma chave (chave nova desde a 0.48, com "rotação" a partir da antiga), então cada
-  versão nova instala por cima da antiga e o jogo salvo continua. APK atual: 0.75 (versão/código 45).
+  versão nova instala por cima da antiga e o jogo salvo continua. APK atual: 0.97 (versão/código 46; pede o
+  MICROFONE para o chat de voz).
 - PC: Godot 4.3 > Importar projeto > escolha esta pasta (a que tem project.godot) > Rodar (F5).
   Renderizador "Compatibilidade" (GL Compatibility), o mesmo do celular.
   Ao entrar no jogo, a cidade leva ~2 s para ser montada (veja "Cidade pronta em ... ms" na Saída).
@@ -39,6 +40,39 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.97 · CHAT DE VOZ POR PROXIMIDADE NO MULTIJOGADOR (APP NOVO)
+  · No MULTIJOGADOR dá para FALAR com quem está perto: o microfone fica aberto e manda a sua voz só quando você fala
+    (silêncio não manda nada). A voz de cada jogador sai DO BONECO DELE: perto = alto, longe = baixo, a mais de 45 m não
+    se ouve. Em cima de quem está falando aparece ")))" junto do nome (o nome fica verde).
+  · DOIS BOTÕES NOVOS no alto da tela (só no multijogador):
+      - MIC: muta / desmuta o SEU microfone (aceso enquanto a sua voz está saindo; mudo mostra "MUDO");
+      - VOZES: muta / desmuta OS OUTROS jogadores (mudo mostra "SEM VOZ").
+    No PC: tecla J (microfone) e K (vozes), trocáveis em Opções › Teclado e mouse. Os dois ficam guardados.
+  · CELULAR: precisa do APP NOVO (APK 0.97), porque ele pede a permissão do MICROFONE (na 1ª vez que entrar numa
+    partida o Android pergunta). Sem a permissão você só não fala; ouvir continua. O jogo avisa do APK novo sozinho.
+  · PC: funciona com o microfone padrão do Windows.
+  · A voz vai comprimida (μ-law, 16 kHz, ~16 KB/s só enquanto fala) pelo canal rápido da partida (Wi-Fi, internet
+    direta ou o retransmissor da Cloudflare).
+  ARQUIVOS MEXIDOS (testado: rede_voz com DOIS JOGOS conectados: silêncio não manda, a voz chega e toca no boneco com
+  ")))", longe não manda, MIC mudo não manda, VOZES mudas não toca, os botões ficam guardados; a partida caindo com
+  alguém falando não trava):
+    rede/voz.gd .................... NOVO · o chat de voz (microfone, detecção de fala, μ-law, voz 3D, botões, permissão)
+    rede/rede.gd ................... enviar_voz / voz_recebida (canal rápido)
+    rede/sessao_rede.gd ............ cria o chat de voz e mostra os botões MIC e VOZES
+    rede/jogador_remoto.gd ......... ")))" e nome verde enquanto o amigo fala
+    jogador/controles.gd ........... botões MIC e VOZES (sinais mic_pedido / vozes_pedido)
+    jogador/teclas.gd .............. teclas J e K
+    menu/config.gd ................. "voz_mic" e "voz_ouvir" · VERSAO "0.97"
+    menu/aplicar_opcoes.gd ......... trocar os botões da voz não reaplica gráficos
+    project.godot .................. microfone ligado (audio/driver/enable_input)
+    export_presets.cfg ............. Android: permissão RECORD_AUDIO · versão 0.97 / código 46
+    rede/atualizador.gd ............ CODIGO_APK 46
+    ferramentas/testes/rede_voz_host.gd, rede_voz_cliente.gd  NOVOS · o teste com dois jogos
+    ferramentas/testes/rodar.sh .... alvo rede_voz
+    menu/novidades_lista.gd ........ refeita
+    DiasDeUmApocalipse.apk ......... APK NOVO 0.97 (na pasta principal do repositório)
+    LEIA-ME.txt .................... este bloco + seções 1, 3, 7 (mapa) e 10
+
 ATUALIZAÇÃO 0.96.1 · DÁ PARA ARRASTAR A LISTA DE NOVIDADES COM O DEDO
   · CONSERTO: na tela NOVIDADES não dava para ARRASTAR com o dedo para ver as atualizações mais antigas (os cartões
     seguravam o toque). Agora arrastar em qualquer lugar da lista rola, e ela continua deslizando um pouco ao soltar
@@ -2228,6 +2262,7 @@ TOQUE (vários dedos ao mesmo tempo)
   na frente vira PISÃO) · CONSTRUIR (0.90: menu da base; com a peça na mão: GIRAR, OK, CANCELAR) · INV · II (pausa) · CAM (1ª/3ª pessoa) · VOO (câmera livre: SOBE / DESCE / VEL)
   · OMBRO (0.79): troca a câmera de ombro (direito <-> esquerdo).
   · BALÃO (só no multijogador): mensagens rápidas.
+  · MIC e VOZES (0.97, só no multijogador): mutar o seu microfone / mutar os outros jogadores (chat de voz).
   · SENTIDO (0.95, só para o mutado/controlado): FAREJAR (mutado) ou ESCUTAR (controlado) por 10 s, espera 20 s.
 - CARRO (0.76): PEGAR perto de um carro que funciona = ENTRAR; joystick frente/trás = acelerar/freio e ré, lados =
   virar; PULAR = freio de mão; PEGAR = SAIR. PC: W/S/A/D (setas), Espaço freio de mão, E sair.
@@ -2239,7 +2274,8 @@ PC (todas as teclas trocáveis em Opções › Teclado e mouse)
   E pegar / abrir e fechar porta / falar com o NPC do hospital · Tab inventário · M mapa · Esc/P pausa · F 1ª/3ª pessoa · botão do meio do mouse
   trocar de ombro · V câmera livre (E sobe, Q desce) ·
   T mensagens rápidas (multijogador; 1..8 escolhe) · F11 tela cheia · G empurrar/pisar · B construir (com a
-  peça na mão: R gira, E ou clique constrói, botão direito cancela) · H sentido do mutado (farejar / escutar).
+  peça na mão: R gira, E ou clique constrói, botão direito cancela) · H sentido do mutado (farejar / escutar) ·
+  J muta o seu microfone · K muta as vozes dos outros (chat de voz, 0.97).
 
 -----------------------------------------------------------------------------------------------------
 4. NÚMEROS DO JOGO
@@ -2499,6 +2535,8 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - FAREJAR / ESCUTAR / estalo de dentes
   (tempos, alcances, cores) ........... jogador/sentidos.gd · botão SENTIDO: jogador/controles.gd · tecla: teclas.gd
 - tela NOVIDADES do menu (aparência) .. menu/tela_novidades.gd · botão: menu/menu_principal.gd
+- CHAT DE VOZ (alcance, sensibilidade
+  do microfone, volume das vozes) ..... rede/voz.gd (ALCANCE, LIMIAR, VOLUME_DB) · botões: jogador/controles.gd
 - textos das NOVIDADES ................ vêm dos blocos ATUALIZAÇÃO deste LEIA-ME: rodar ferramentas/gerar_novidades.gd
                                         (gera menu/novidades_lista.gd)
 - salvar no multijogador .............. menu/salvamento.gd (salvar_rede/carregar_rede; arquivo user://save_rede.json)
@@ -2846,6 +2884,9 @@ MÚSICA (pasta audio/)
   inventário); o soro da 2ª parte ainda não existe. No multijogador o sorteio é feito no aparelho de quem morreu.
   Sentidos (0.95): o farejar mostra uma aura (não o corpo) e sozinho só acha os sobreviventes do hospital; o ESCUTAR
   do controlado está pronto, mas só vale quando o soro existir.
+- Chat de voz (0.97): sem cancelamento de eco (no celular sem fone, quem está perto pode ouvir a própria voz voltando
+  baixinho); a voz não é criptografada no caminho (como o resto da partida); quem está com o app antigo ouve, mas não
+  fala, até instalar o APK 0.97. Testado com dois jogos no PC (sem microfone de verdade: um som de teste no lugar).
 - Ideias para depois: loot por região, lugares
   especiais (quarentena), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, veículos consertáveis,
   outros sobreviventes (NPCs), o modo história novo, base com andares e telhado.

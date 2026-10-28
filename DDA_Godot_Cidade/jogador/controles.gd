@@ -37,6 +37,8 @@ signal pausa_pedida
 signal selecionou(id: String)      # modo de edição da HUD: botão tocado
 signal mensagem_pedida             # 0.71: mensagens rápidas do multijogador (botão MSG, tecla T)
 signal empurrar_pedido             # 0.90: empurrão / pisão (botão EMPURRAR, tecla G)
+signal mic_pedido                  # 0.97: chat de voz: mutar/desmutar o SEU microfone (botão MIC, tecla J · rede/voz.gd)
+signal vozes_pedido                # 0.97: chat de voz: mutar/desmutar os OUTROS jogadores (botão VOZES, tecla K)
 signal sentido_pedido              # 0.95: mutado/controlado: FAREJAR / ESCUTAR (botão SENTIDO, tecla H · jogador/sentidos.gd)
 signal construir_pedido            # 0.90: abrir/fechar a construção (botão CONSTRUIR, tecla B)
 signal girar_pedido                # 0.90: construindo: girar a peça (botão GIRAR, tecla R)
@@ -142,6 +144,8 @@ func _ready() -> void:
 	_bt("CAM", "CAM", "tr", Vector2(284, 46), 30, Color(0.75, 0.85, 1.0), "tocar", false, false)
 	_bt("MSG", "MSG", "tr", Vector2(360, 46), 30, Color(0.45, 1.0, 0.45), "tocar", false, false)
 	_bt("CONSTRUIR", "CONSTRUIR", "tr", Vector2(436, 46), 30, Color(0.85, 0.62, 0.35), "tocar", false, false)
+	_bt("MIC", "MIC", "tr", Vector2(512, 46), 30, Color(0.45, 0.85, 1.0), "tocar", false, false)
+	_bt("VOZES", "VOZES", "tr", Vector2(588, 46), 30, Color(0.85, 0.7, 1.0), "tocar", false, false)
 	_bt("EMPURRAR", "EMPURRAR", "br", Vector2(585, 360), 40, Color(0.92, 0.55, 0.25), "tocar", false, false)
 	_bt("SENTIDO", "SENTIDO", "br", Vector2(605, 235), 38, Color(0.88, 0.16, 0.14), "tocar", false, false)
 	_bt("GIRAR", "GIRAR", "br", Vector2(355, 335), 46, Color(0.75, 0.85, 1.0), "tocar", false, false)
@@ -151,6 +155,8 @@ func _ready() -> void:
 		ocultos[b] = true                 # só aparecem construindo (mundo/construcao.gd)
 	ocultos["PEGAR"] = true
 	ocultos["MSG"] = true                 # só aparece no multijogador (rede/sessao_rede.gd mostra)
+	ocultos["MIC"] = true                 # 0.97: chat de voz, só no multijogador (rede/voz.gd mostra)
+	ocultos["VOZES"] = true
 	ocultos["SENTIDO"] = true             # 0.95: só para o mutado/controlado (jogador/sentidos.gd mostra)
 	_bt("SOBE", "SOBE", "br", Vector2(80, 330), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
 	_bt("DESCE", "DESCE", "br", Vector2(80, 210), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
@@ -440,6 +446,12 @@ func _acao(acao: String, apertou: bool) -> void:
 		"sentido":
 			if not modo_voo and not bool(ocultos.get("SENTIDO", true)):
 				sentido_pedido.emit()
+		"mutar_mic":
+			if not bool(ocultos.get("MIC", true)):
+				mic_pedido.emit()
+		"mutar_vozes":
+			if not bool(ocultos.get("VOZES", true)):
+				vozes_pedido.emit()
 		"construir":
 			if not modo_voo:
 				construir_pedido.emit()
@@ -555,6 +567,8 @@ func _tocou(id: String) -> void:
 		"MSG": mensagem_pedida.emit()
 		"EMPURRAR": empurrar_pedido.emit()
 		"SENTIDO": sentido_pedido.emit()
+		"MIC": mic_pedido.emit()
+		"VOZES": vozes_pedido.emit()
 		"CONSTRUIR": construir_pedido.emit()
 		"GIRAR": girar_pedido.emit()
 		"OK": confirmar_pedido.emit()
