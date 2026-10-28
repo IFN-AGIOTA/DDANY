@@ -5,7 +5,7 @@ extends Node
 
 signal mudou(chave: String)          # "gfx" quando os gráficos foram aplicados; "hud" quando a HUD foi editada
 
-const VERSAO := "0.97.1"
+const VERSAO := "0.98"
 const ARQUIVO := "user://opcoes.cfg"
 
 const PADRAO := {
@@ -19,6 +19,7 @@ const PADRAO := {
 	"roda_mouse": true,                   # rodinha do mouse troca de arma
 	"dicas_teclas": true,                 # mostra "E  PEGAR" etc. na tela
 	"teclas": {},                         # teclas trocadas: ação -> código (jogador/teclas.gd)
+	"mira_ferro": true,                   # 0.98: em 3ª pessoa, MIRAR com arma de fogo entra na mira de ferro
 	"cam": 0, "dist": "near", "pos": "left", "fov": 42,
 	"map": true, "op": 100, "sc": 100,
 	"fps": false, "som": true, "vol": 100, "awake": false, "mus": true, "mvol": 70,

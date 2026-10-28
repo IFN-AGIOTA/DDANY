@@ -56,6 +56,7 @@ const SobrevivenciaCls := preload("res://jogador/sobrevivencia.gd")
 const PortaCls := preload("res://mundo/porta.gd")
 const PortaBunkerCls := preload("res://mundo/porta_bunker.gd")
 const Mutacao := preload("res://jogador/mutacao.gd")
+const MiraFerro := preload("res://armas/mira_ferro.gd")
 
 @export_group("Câmera")
 @export var distancia_camera := 2.35
@@ -126,6 +127,7 @@ var fator_mira := 0.0
 
 var _mirar_ligado := false
 var primeira_pessoa := false          # 0.65: câmera nos olhos (Opções › Câmera, tecla F ou botão CAM)
+var mira_ferro_3p := true             # 0.98: em 3ª pessoa, MIRAR com arma de fogo entra na MIRA DE FERRO (Opções › Câmera)
 var _fp := 0.0                        # 0 = 3ª pessoa · 1 = 1ª pessoa (suavizado na troca)
 var _near_3p := 0.05
 var _pulo_ant := false
@@ -801,10 +803,29 @@ func _physics_process(delta: float) -> void:
 # (jogador/cabeca_oculta.gd): você vê os próprios braços, mãos, arma e pernas, como no DayZ. O corpo sempre vira
 # para onde você olha. Dá para olhar mais para cima e para baixo. Mirando, o campo de visão fecha (zoom).
 func _pit_min() -> float:
-	return -1.25 if primeira_pessoa else -0.35
+	return -1.25 if _em_1p() else -0.35
 
 func _pit_max() -> float:
-	return 1.3 if primeira_pessoa else 1.15
+	return 1.3 if _em_1p() else 1.15
+
+# 0.98 · MIRA DE FERRO (armas/mira_ferro.gd). Em 1ª pessoa, MIRAR com arma de fogo (sem luneta) olha pela mira da arma:
+# a arma sobe, o olho fica na coronha e a linha alça -> massa fica no centro (onde o tiro vai). Em 3ª pessoa, MIRAR
+# entra direto nela (a câmera vai para os olhos enquanto mira; Opções › Câmera › "Mirar em 3ª pessoa").
+func _arma_de_fogo() -> bool:
+	return armas.atual != "" and not armas.eh_corpo() and MiraFerro.tem(armas.atual)
+
+func mirando_com_luneta() -> bool:
+	return mirando and _arma_de_fogo() and armas.zoom_mira() > 1.0
+
+func _quer_mira_ferro() -> bool:
+	return mirando and _arma_de_fogo() and armas.zoom_mira() <= 1.0 and not nadando and veiculo == null and not morto
+
+# câmera nos olhos agora? (1ª pessoa ligada, ou mirando pela mira de ferro em 3ª pessoa)
+func _em_1p() -> bool:
+	return veiculo == null and (primeira_pessoa or (mira_ferro_3p and _quer_mira_ferro()))
+
+func em_mira_ferro() -> bool:
+	return _fp > 0.5 and _quer_mira_ferro() and armas.rel <= 0.0
 
 # 0.79: TROCAR DE OMBRO (tecla do meio do mouse ou botão OMBRO): a câmera passa para o outro lado do personagem
 # (e mirando, para cima do outro ombro). Fica guardado em Opções › Câmera › Posição do personagem.
@@ -816,11 +837,11 @@ func alternar_camera() -> void:
 	Config.definir("cam", 0 if primeira_pessoa else 1)     # menu/aplicar_opcoes.gd liga primeira_pessoa
 
 func _camera_primeira_pessoa(delta: float, fov_alvo: float) -> void:
-	_fp = move_toward(_fp, 1.0 if primeira_pessoa and veiculo == null else 0.0, delta * 5.0)   # dirigindo: 3ª pessoa
+	_fp = move_toward(_fp, 1.0 if _em_1p() else 0.0, delta * 5.0)   # dirigindo: 3ª pessoa · 0.98: mira de ferro
 	var m = _slot.get_child(0) if _slot.get_child_count() > 0 else null
 	if m != null and m.has_method("primeira_pessoa"):
 		m.primeira_pessoa(_fp > 0.5)
-	if not primeira_pessoa:
+	if not _em_1p():
 		cam_pit = clampf(cam_pit, -0.35, 1.15)
 	if _fp <= 0.0:
 		camera.near = _near_3p
@@ -832,6 +853,8 @@ func _camera_primeira_pessoa(delta: float, fov_alvo: float) -> void:
 	_braco.position.x = lerpf(_braco.position.x, 0.0, k)
 	camera.near = lerpf(_near_3p, 0.03, k)
 	var fov_fp := lerpf(fov_camera + 18.0, (fov_camera + 18.0) * 0.55 / armas.zoom_mira(), fator_mira)
+	if _quer_mira_ferro():
+		fov_fp = lerpf(fov_camera + 18.0, (fov_camera + 18.0) / MiraFerro.zoom(armas.atual), fator_mira)   # 0.98: zoom da mira de ferro
 	camera.fov = lerpf(camera.fov, lerpf(fov_alvo, fov_fp, k), minf(1.0, delta * 6.0 + 0.02))
 	if not morto:
 		rotation.y = lerp_angle(rotation.y, cam_yaw, minf(1.0, delta * 16.0))   # o corpo vira para onde você olha

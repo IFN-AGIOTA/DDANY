@@ -345,6 +345,9 @@ func _pagina_camera(v: float) -> Control:
 	var g := _grade(v)
 	_secao(g, "Câmera", _seg("cam", [[0, "3ª pessoa"], [1, "1ª pessoa"]],
 		{1: "Câmera nos olhos: você vê os braços, a arma e as pernas. Troque no jogo com F ou o botão CAM."}))
+	_secao(g, "Mirar em 3ª pessoa", _seg("mira_ferro", [[true, "Mira de ferro"], [false, "Por cima do ombro"]],
+		{true: "Com arma de fogo, MIRAR leva a câmera para os olhos e você mira pela mira da própria arma.",
+		false: "MIRAR aproxima a câmera por cima do ombro (a mira de ferro só em 1ª pessoa)."}))
 	_secao(g, "Distância (câmera traseira)", _seg("dist", [["near", "Perto"], ["mid", "Média"], ["far", "Longe"]]))
 	_secao(g, "Posição do personagem", _seg("pos", [["left", "Esquerda"], ["center", "Centro"], ["right", "Direita"]],
 		{"left": "Câmera no ombro direito. Troque de ombro no jogo com o botão OMBRO ou o botão do meio do mouse.",

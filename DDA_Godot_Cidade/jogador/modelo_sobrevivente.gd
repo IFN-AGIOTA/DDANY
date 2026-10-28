@@ -33,6 +33,7 @@ const CamadaAcao := preload("res://jogador/camada_acao.gd")
 const CamadaPostura := preload("res://jogador/camada_postura.gd")
 const CamadaMira := preload("res://jogador/camada_mira.gd")
 const CamadaMutado := preload("res://jogador/camada_mutado.gd")
+const MiraFerro := preload("res://armas/mira_ferro.gd")
 const CabecaOculta := preload("res://jogador/cabeca_oculta.gd")
 const ModelosItens := preload("res://inventario/modelos_itens.gd")
 const PASTA := "res://jogador/sobrevivente/"
@@ -516,6 +517,11 @@ func _process(dt: float) -> void:
 		_t_item -= dt
 		if _t_item <= 0.0:
 			_soltar_item()
+	# 0.98 · 1ª PESSOA: a arma fica presa à câmera (quadril / mira de ferro); a pistola vai para as duas mãos
+	var fp_jog: float = float(j.get("_fp")) if j != null and j.get("_fp") != null else 0.0
+	var luneta: bool = j != null and j.has_method("mirando_com_luneta") and j.mirando_com_luneta()
+	_fp_arma = move_toward(_fp_arma, 0.0 if luneta else fp_jog, dt * 6.0)
+	_pistola_nas_duas_maos(_fp_arma > 0.02)
 	# IK só com um fuzil visível na mão (e não segurando um item)
 	var arma: Node3D = null
 	for c in _ponto_fuzil.get_children():
@@ -523,18 +529,56 @@ func _process(dt: float) -> void:
 			arma = c
 	if _t_item > 0.0:
 		arma = null
-	_ik.active = arma != null
+	# 0.98: GUARDA em 1ª pessoa sem arma de fogo (punhos / arma branca); no golpe ela sai (a animação aparece)
+	var guarda_alvo := 0.0
+	if arma == null and _t_item <= 0.0 and j != null and j.get("armas") != null and fp_jog > 0.5 \
+			and not bool(j.get("nadando")) and j.get("veiculo") == null and not bool(j.get("morto")):
+		var at := str(j.armas.atual)
+		if at != "" and j.armas.eh_corpo():
+			guarda_alvo = 0.0 if float(j.armas.since) < 0.55 else 1.0
+			_ik.guarda_punhos = at == "punhos"
+	_guarda = move_toward(_guarda, guarda_alvo, dt * (10.0 if guarda_alvo < _guarda else 4.0))
+	_ik.guarda = _guarda if arma == null else 0.0
+	_ik.camera = j.camera if j != null and j.get("camera") != null else null
+	_ik.active = arma != null or _guarda > 0.001
 	if arma == null:
 		return
 	# a mão esquerda segura mais ou menos no meio do caminho entre a empunhadura e a boca do cano
 	var cano := arma.get_node_or_null("Cano") as Node3D
 	_ik.mao_esq_z = clampf(cano.position.z * 0.5, 0.22, 0.38) if cano != null else 0.25
+	if _fp_arma > 0.5 and cano != null:
+		_ik.mao_esq_z = clampf(cano.position.z * 0.4, 0.15, 0.28)    # 0.98: 1ª pessoa: a mão esquerda mais perto (alcança)
 	var alvo := 0.0
 	if j != null and j.get("armas") != null:
 		alvo = clampf(float(j.armas.aim), 0.0, 1.0)
 	_mira = move_toward(_mira, alvo, dt * 5.0)
 	_ik.mira = _mira
 	_ik.pitch = mira_camada.aplicado
+	# 0.98: 1ª pessoa / mira de ferro
+	var tipo := str(arma.name).trim_prefix("Arma_")
+	_ik.tipo = tipo
+	_ik.pistola = tipo == "pistola"
+	if _ik.pistola:
+		_ik.mao_esq_z = 0.0
+	_ik.camera = j.camera if j != null and j.get("camera") != null else null
+	_ik.fp = _fp_arma if MiraFerro.tem(tipo) else 0.0
+	var ads_alvo := 1.0 if j != null and j.has_method("em_mira_ferro") and j.em_mira_ferro() else 0.0
+	_ads = move_toward(_ads, ads_alvo, dt * 7.0)
+	_ik.ads = _ads
+
+var _fp_arma := 0.0                     # 0.98: 1ª pessoa (suavizado; 0 mirando com luneta)
+var _guarda := 0.0                      # 0.98: guarda em 1ª pessoa (punhos / arma branca)
+var _ads := 0.0                         # 0.98: mira de ferro (suavizado)
+
+# 0.98: em 1ª pessoa a pistola sai da mão direita e vai para o encaixe das duas mãos (o mesmo dos fuzis)
+func _pistola_nas_duas_maos(sim: bool) -> void:
+	var de := _ponto_arma if sim else _ponto_fuzil
+	var para := _ponto_fuzil if sim else _ponto_arma
+	var p := de.get_node_or_null("Arma_pistola") as Node3D
+	if p != null:
+		de.remove_child(p)
+		para.add_child(p)
+		p.transform = Transform3D.IDENTITY
 
 # ---------- MUTADO (0.94) ----------
 # nível 0 = humano · 1 = mutado (pele escura, veios, olhos, curvado) · 2 = controlado (só os veios, mais fracos)
@@ -572,7 +616,9 @@ func pos_olhos() -> Vector3:
 	if esqueleto == null or _osso_cabeca < 0:
 		return global_position + Vector3(0, 1.65, 0)
 	var t := esqueleto.global_transform * esqueleto.get_bone_global_pose(_osso_cabeca)
-	return t.origin + esqueleto.global_basis * Vector3(0.0, 0.09, 0.11)
+	# 0.98: 4 cm à frente (era 11): a câmera fica nos olhos, mais perto dos ombros; assim os braços alcançam a arma
+	# na mira de ferro e aparecem mais na tela (a cabeça some em 1ª pessoa, não atrapalha)
+	return t.origin + esqueleto.global_basis * Vector3(0.0, 0.09, 0.04)
 
 # ITEM NA MÃO direita (lata, garrafa, remédio, atadura) por "duracao" segundos; a arma some enquanto isso
 func segurar_item(id: String, duracao: float) -> void:

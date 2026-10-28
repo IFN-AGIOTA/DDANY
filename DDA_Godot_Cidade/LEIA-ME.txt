@@ -40,6 +40,39 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.98 · MIRA DE FERRO E 1ª PESSOA COM OS BRAÇOS À VISTA
+  · MIRA DE FERRO (1ª etapa do sistema de miras; as LUNETAS vêm depois): com arma de fogo, MIRAR leva a arma até o
+    rosto e você olha pela MIRA DA PRÓPRIA ARMA: a alça e a massa de verdade dos modelos (pistola, MP5, M4, AKM,
+    espingarda com a conta na ponta e o rifle de caça), com a massa exatamente no CENTRO DA TELA, onde o tiro vai. A
+    câmera aproxima um pouco (cada arma o seu tanto) e a cruz do meio some (a própria mira mostra onde vai).
+  · EM 3ª PESSOA, MIRAR entra direto na mira de ferro (a câmera vai para os olhos enquanto você mira e volta quando
+    solta). Quem prefere o jeito antigo: Opções › Câmera › "Mirar em 3ª pessoa" = "Por cima do ombro".
+  · 1ª PESSOA MENOS SUFOCANTE: antes não se via nada do personagem (nem braços nem arma). Agora:
+      - com ARMA DE FOGO, ela fica embaixo à direita, nas duas mãos, à vista (a pistola também vai nas duas mãos);
+      - com PUNHOS, as duas mãos ficam em guarda na frente; com ARMA BRANCA (faca, taco, machado...), a mão direita
+        com a arma levantada. Na hora do golpe a guarda sai e você vê o golpe;
+      - a câmera ficou mais perto dos ombros (os braços alcançam a arma e aparecem mais).
+  · Com MIRA 4x ou LUNETA encaixada, mirar continua como antes (a vista pela luneta é a próxima etapa).
+  ARQUIVOS MEXIDOS (testado: teste_mira_ferro.gd NOVO, 36 conferências: a massa de cada uma das 6 armas no centro da
+  tela, as mãos alcançando, a arma à vista sem mirar, a 3ª pessoa entrando e saindo, a opção "por cima do ombro", os
+  punhos à vista; teste_ombro ajustado para a opção "por cima do ombro"; + fotos e a bateria):
+    armas/mira_ferro.gd ............ NOVO · alça, massa, olho e zoom de cada arma; posição sem mirar (quadril)
+    jogador/ik_fuzil.gd ............ em 1ª pessoa a arma presa à câmera (quadril <-> mira de ferro); pistola nas duas
+                                     mãos (esquerda em concha por baixo); GUARDA dos punhos e da arma branca
+    jogador/modelo_sobrevivente.gd . passa 1ª pessoa / mira / guarda para o IK; pistola para as duas mãos em 1ª
+                                     pessoa; câmera 4 cm à frente dos olhos (era 11)
+    jogador/jogador.gd ............. em_mira_ferro(), mirar em 3ª pessoa vai para a mira de ferro, zoom de cada arma
+    armas/hud_combate.gd ........... a cruz some olhando pela mira de ferro
+    menu/opcoes.gd ................. Opções › Câmera › "Mirar em 3ª pessoa" (mira de ferro / por cima do ombro)
+    menu/config.gd ................. "mira_ferro" · VERSAO "0.98"
+    menu/aplicar_opcoes.gd ......... aplica a opção (sem reaplicar os gráficos)
+    ferramentas/testes/teste_mira_ferro.gd  NOVO · o teste
+    ferramentas/testes/teste_ombro.gd  mira por cima do ombro com a opção certa
+    ferramentas/testes/rodar.sh .... teste_mira_ferro na bateria; testes com tela podem levar até 15 min
+                                     (antes 10: o teste_camera_paredes estourava em máquina lenta)
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + seções 3, 4, 7 (mapa) e 10
+
 ATUALIZAÇÃO 0.97.1 · CONSERTOS NO "PERSONALIZAR HUD"
   · CONSERTO: aberto pelo MENU PRINCIPAL, o editor da HUD ficava com o título, os botões do menu, o botão
     "Novidades" e o perfil POR CIMA dos botões que você estava arrastando. Agora os botões ficam por cima de tudo e o
@@ -2277,7 +2310,7 @@ TOQUE (vários dedos ao mesmo tempo)
 - Metade ESQUERDA: joystick que aparece onde você toca (fraco = andar, forte = trote).
 - Metade DIREITA: arrastar = olhar. Minimapa: toque = mapa grande.
 - ATIRAR / GOLPEAR (segurar; dá para arrastar o dedo em cima dele para mirar enquanto atira) · CORRER (segurar)
-- PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga) · RECARREGAR · ARMA (troca coldre/ombro) · PEGAR
+- PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga; 0.98: com arma de fogo olha pela MIRA DE FERRO) · RECARREGAR · ARMA (troca coldre/ombro) · PEGAR
   (aparece perto de um item; perto de uma PORTA: abrir / fechar / tirar tábua; 0.90: JANELA: quebrar / pular /
   tirar tábua; CAMA da base: renascer aqui; COLETOR: encher garrafa; 0.91: NPC do hospital: LOJA da Mônica,
   TROCAS do Lucas, falar com os outros) · EMPURRAR (0.90; com um infectado caído
@@ -2349,6 +2382,8 @@ PORTAS (0.73): porta 100 de vida, cada tábua mais 140 (até 3) · golpe de infe
 MUTADO (0.94, jogador/mutacao.gd): 1% ao morrer pelos infectados · levanta em 6 s · dano recebido x0,45 · sangramento
   x0,4 · trote/corrida x1,22 · pulo x1,4 · estamina correndo x0,5 · queda x1,35 · garras 30 de dano (1,65 m, 0,55 s) ·
   armas brancas x1,3 · sem arma de fogo · infectados ignoram · (controlado, 2ª parte: x1,1 · x1,2 · dano x0,7 · garras 20)
+MIRA DE FERRO (0.98, armas/mira_ferro.gd): zoom pistola 1,15x · MP5 1,25x · M4/AKM 1,3x · espingarda 1,2x · rifle 1,35x ·
+  olho a 36 cm da pistola (braços quase esticados) e encostado na coronha dos fuzis
 SENTIDOS (0.95, jogador/sentidos.gd): ligado 10 s, espera 20 s · farejar até 250 m (até 24 pessoas) · escutar até 40 m ·
   estalo de dentes a cada 30 s (ouvido a ~45 m; no mapa dos outros por 10 s)
 HOSPITAIS (0.91): zona neutra = terreno + 8 m · trégua ao sair 120 s · guardas a cada 0,5 s · NPCs: falar até 2,4 m
@@ -2559,6 +2594,10 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - tela NOVIDADES do menu (aparência) .. menu/tela_novidades.gd · botão: menu/menu_principal.gd
 - CHAT DE VOZ (alcance, sensibilidade
   do microfone, volume das vozes) ..... rede/voz.gd (ALCANCE, LIMIAR, VOLUME_DB) · botões: jogador/controles.gd
+- MIRA DE FERRO (alinhar a mira de uma
+  arma, olho, zoom, arma sem mirar) ... armas/mira_ferro.gd (DADOS, QUADRIL)
+- 1ª pessoa: arma presa à câmera,
+  mãos, guarda dos punhos ............. jogador/ik_fuzil.gd (GUARDA_DIR/ESQ) + jogador/modelo_sobrevivente.gd
 - textos das NOVIDADES ................ vêm dos blocos ATUALIZAÇÃO deste LEIA-ME: rodar ferramentas/gerar_novidades.gd
                                         (gera menu/novidades_lista.gd)
 - salvar no multijogador .............. menu/salvamento.gd (salvar_rede/carregar_rede; arquivo user://save_rede.json)
@@ -2909,6 +2948,9 @@ MÚSICA (pasta audio/)
 - Chat de voz (0.97): sem cancelamento de eco (no celular sem fone, quem está perto pode ouvir a própria voz voltando
   baixinho); a voz não é criptografada no caminho (como o resto da partida); quem está com o app antigo ouve, mas não
   fala, até instalar o APK 0.97. Testado com dois jogos no PC (sem microfone de verdade: um som de teste no lugar).
+- Mira de ferro (0.98): só a vista pela mira de ferro; a LUNETA/mira 4x ainda mira como antes (próxima etapa). Em 1ª
+  pessoa a animação de RECARREGAR não aparece (a arma fica parada na mão); os outros jogadores te veem mirando do
+  jeito de sempre (a mira de ferro é só a sua câmera).
 - Ideias para depois: loot por região, lugares
   especiais (quarentena), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, veículos consertáveis,
   outros sobreviventes (NPCs), o modo história novo, base com andares e telhado.

@@ -103,7 +103,9 @@ func _desenhar() -> void:
 	var c := vs * 0.5
 	# ----- mira (0.65: só no modo MIRA) -----
 	var esp := maxf(2.0, 0.36 * vh)
-	if jogador == null or bool(jogador.get("mirando")):
+	# 0.98: olhando pela MIRA DE FERRO a cruz some (a própria mira da arma mostra onde vai)
+	var ferro: bool = jogador != null and jogador.has_method("em_mira_ferro") and jogador.em_mira_ferro()
+	if (jogador == null or bool(jogador.get("mirando"))) and not ferro:
 		var g := _gap * vh
 		var comp := 1.5 * vh
 		var sombra := Color(0, 0, 0, 0.6)

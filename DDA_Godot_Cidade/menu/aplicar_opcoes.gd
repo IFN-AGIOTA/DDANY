@@ -43,7 +43,7 @@ func _ready() -> void:
 # 0.89: opções que só mexem na câmera/controle do jogador. Trocar uma delas (tecla F = 1ª/3ª pessoa, botão do meio =
 # ombro, sensibilidade...) NÃO reaplica gráficos, texturas, modelos, luzes e chunks: antes cada troca de câmera
 # travava o jogo por ~0,5 s.
-const SO_JOGADOR := ["cam", "pos", "dist", "fov", "sens", "inv", "msens", "msens_mira", "minv", "gsens", "gyro_inv",
+const SO_JOGADOR := ["mira_ferro", "cam", "pos", "dist", "fov", "sens", "inv", "msens", "msens_mira", "minv", "gsens", "gyro_inv",
 	"gyro_zero", "ctrl", "vib"]
 
 func aplicar(chave := "") -> void:
@@ -160,6 +160,7 @@ func _aplicar_jogador() -> void:
 		j.ombro = -1.0 if o["pos"] == "right" else 1.0         # 0.79: lado da câmera (e do ombro ao mirar)
 		j.fov_camera = float(o["fov"])
 		j.primeira_pessoa = int(o.get("cam", 0)) == 1     # 0.65: 1ª pessoa
+		j.mira_ferro_3p = bool(o.get("mira_ferro", true))   # 0.98: mirar em 3ª pessoa = mira de ferro
 		j.armas.vibrar = bool(o["vib"])
 		j.sens_mouse = float(o.get("msens", 100)) / 100.0
 		j.sens_mouse_mira = float(o.get("msens_mira", 70)) / 100.0

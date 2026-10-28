@@ -7,7 +7,14 @@ extends SkeletonModifier3D
 #      para um "polo" (direito: para fora e para baixo; esquerdo: para baixo), e gira a mão para pegar a arma:
 #      direita na empunhadura (igual à pistola), esquerda espalmada embaixo do guarda-mão;
 #   3) mirando, abaixa um pouco a cabeça para encostar o rosto na coronha.
+#   4) 0.98 · 1ª PESSOA (fp): a arma fica presa à CÂMERA (armas/mira_ferro.gd): embaixo à direita sem mirar e, mirando
+#      (ads), com o olho na câmera e a linha alça -> massa no centro da tela. As mãos vão até ela do mesmo jeito.
+#      A pistola também entra aqui em 1ª pessoa (duas mãos: a esquerda por baixo da empunhadura).
+#   5) 0.98 · GUARDA em 1ª pessoa sem arma de fogo (punhos / arma branca): as mãos sobem na frente, à vista (punhos:
+#      as duas; arma branca: a direita, com a arma para cima e para a frente). No golpe a guarda sai (animação).
 # Tudo no espaço do esqueleto (frente = +Z, cima = +Y). Mexa AQUI para: posição do fuzil e das mãos.
+
+const MiraFerro := preload("res://armas/mira_ferro.gd")
 
 var ponto: Node3D                      # onde o fuzil fica pendurado (filho do esqueleto)
 var mira := 0.0
@@ -18,6 +25,16 @@ var baixo := Transform3D.IDENTITY      # relativo ao osso do peito (spine_03)
 var mirando := Transform3D.IDENTITY    # relativo ao ombro direito (upperarm_r)
 var mao_dir := Transform3D.IDENTITY    # punho direito no espaço da arma
 var dir_lado := -1.0                   # x do lado direito do corpo (-1 ou 1)
+# 0.98 · 1ª pessoa / mira de ferro (jogador/modelo_sobrevivente.gd preenche)
+var camera: Camera3D = null
+var fp := 0.0                          # 0 = 3ª pessoa · 1 = 1ª pessoa (arma presa à câmera)
+var ads := 0.0                         # 0 = sem mirar · 1 = mirando pela mira de ferro
+var tipo := ""                         # arma na mão (para a tabela da mira de ferro)
+var pistola := false                   # pistola nas duas mãos: a esquerda por baixo da empunhadura
+var guarda := 0.0                      # 0.98: 0..1 guarda em 1ª pessoa (sem arma de fogo)
+var guarda_punhos := false             # as duas mãos (punhos) · false = arma branca na direita
+const GUARDA_DIR := Vector3(0.15, -0.19, 0.36)   # mão direita no quadro da câmera (x lado direito, y cima, z frente)
+const GUARDA_ESQ := Vector3(-0.14, -0.20, 0.34)
 
 var _i := {}
 var _mao_esq_local := Basis.IDENTITY     # eixos (palma, dedos, lado) da mão esquerda no espaço do osso dela
@@ -57,15 +74,24 @@ func _mao_esq() -> Transform3D:
 	var d := dir_lado
 	var dedos := Vector3(d * 0.45, 0.1, 0.88).normalized()
 	var palma := Vector3(d * 0.35, 1.0, 0.0)
+	if pistola:
+		# 0.98: pistola: a esquerda em CONCHA por baixo do carregador (fica abaixo da linha de mira, não tampa)
+		dedos = Vector3(d * 0.25, 0.25, 0.93).normalized()
+		palma = Vector3(d * 0.2, 1.0, 0.0)
 	palma = (palma - dedos * palma.dot(dedos)).normalized()
 	# na mão esquerda o eixo X local aponta para o lado da palma (espelho da direita)
 	var b := Basis(palma, dedos, palma.cross(dedos)) * _mao_esq_local.inverse()
 	var contato := Vector3(0, -0.05, mao_esq_z)
+	if pistola:
+		contato = Vector3(-d * 0.005, -0.125, -0.01)      # 0.98: por baixo do fundo do carregador
 	return Transform3D(b, contato - dedos * 0.075 - palma * 0.035)
 
 func _process_modification() -> void:
 	var sk := get_skeleton()
 	if sk == null or ponto == null or _i.is_empty():
+		return
+	if guarda > 0.001:
+		_guarda(sk)
 		return
 	var peito := sk.get_bone_global_pose(_i["spine_03"]).origin
 	var ombro := sk.get_bone_global_pose(_i["upperarm_r"]).origin
@@ -73,10 +99,17 @@ func _process_modification() -> void:
 	var giro := Basis(Vector3.RIGHT, -pitch)          # o fuzil gira em volta do ombro junto com o tronco
 	var tm := Transform3D(giro * mirando.basis, ombro + giro * mirando.origin)
 	var t := tb.interpolate_with(tm, smoothstep(0.0, 1.0, mira))
+	if fp > 0.001 and camera != null and is_instance_valid(camera) and MiraFerro.tem(tipo):
+		# 0.98: 1ª pessoa: a arma presa à câmera (quadril <-> mira de ferro)
+		var w := MiraFerro.transform_arma(tipo, camera.global_transform, ads)
+		var t_fp := sk.global_transform.affine_inverse() * w
+		t = t.interpolate_with(t_fp, smoothstep(0.0, 1.0, fp))
 	ponto.transform = t
 	if mira > 0.01:
 		_inclinar_cabeca(sk, mira)
-	_dois_ossos(sk, "r", t * mao_dir, Vector3(dir_lado * 0.45, -0.55, -0.1))
+	# 0.98: pistola: a mão do personagem é grande para ela; mais baixa na empunhadura deixa a alça e a massa livres
+	var md := mao_dir if not pistola else Transform3D(mao_dir.basis, mao_dir.origin + Vector3(0, -0.035, -0.012))
+	_dois_ossos(sk, "r", t * md, Vector3(dir_lado * 0.45, -0.55, -0.1))
 	_dois_ossos(sk, "l", t * _mao_esq(), Vector3(-dir_lado * 0.15, -0.8, 0.1))
 
 # encosta o rosto na coronha: cabeça um pouco para baixo e para o lado da arma
@@ -90,6 +123,28 @@ func _inclinar_cabeca(sk: Skeleton3D, f: float) -> void:
 	sk.set_bone_pose_rotation(i, (gp.inverse() * ng).get_rotation_quaternion())
 
 # IK analítico de dois ossos: ombro A, cotovelo B, punho C -> punho no alvo, cotovelo para o polo
+# 0.98: GUARDA (1ª pessoa, punhos ou arma branca): as mãos num ponto preso à câmera
+func _guarda(sk: Skeleton3D) -> void:
+	if camera == null or not is_instance_valid(camera):
+		return
+	var d := dir_lado
+	# quadro da câmera no espaço do esqueleto, virado como o esqueleto (+Z = frente)
+	var f := sk.global_transform.affine_inverse() * camera.global_transform * Transform3D(Basis(Vector3.UP, PI), Vector3.ZERO)
+	var k := smoothstep(0.0, 1.0, guarda)
+	var incl := 0.35 if guarda_punhos else 1.0        # punho para a frente · arma branca para cima e para a frente
+	var pd := Vector3(d * GUARDA_DIR.x, GUARDA_DIR.y, GUARDA_DIR.z)
+	var alvo_d := f * Transform3D(Basis(Vector3.RIGHT, -incl), pd) * mao_dir
+	var atual_d := sk.get_bone_global_pose(_i["hand_r"])
+	_dois_ossos(sk, "r", atual_d.interpolate_with(alvo_d, k), Vector3(d * 0.45, -0.55, -0.1))
+	if guarda_punhos:
+		# esquerda: o espelho da direita
+		var s := Basis(Vector3(-1, 0, 0), Vector3(0, 1, 0), Vector3(0, 0, 1))
+		var me := Transform3D(s * mao_dir.basis * s, Vector3(-mao_dir.origin.x, mao_dir.origin.y, mao_dir.origin.z))
+		var pe := Vector3(d * GUARDA_ESQ.x, GUARDA_ESQ.y, GUARDA_ESQ.z)
+		var alvo_e := f * Transform3D(Basis(Vector3.RIGHT, -incl), pe) * me
+		var atual_e := sk.get_bone_global_pose(_i["hand_l"])
+		_dois_ossos(sk, "l", atual_e.interpolate_with(alvo_e, k), Vector3(-d * 0.45, -0.55, -0.1))
+
 func _dois_ossos(sk: Skeleton3D, lado: String, alvo: Transform3D, polo_rel: Vector3) -> void:
 	var ia: int = _i["upperarm_" + lado]
 	var ib: int = _i["lowerarm_" + lado]

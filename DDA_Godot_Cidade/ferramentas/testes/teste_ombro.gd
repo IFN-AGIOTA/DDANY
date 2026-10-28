@@ -36,6 +36,7 @@ func _r():
 	var x1: float = j._braco.position.x
 	ok(x1 < -0.2 and x_meio > -0.99, "trocou para o esquerdo devagar (%.2f -> lado %.2f no 1º quadro -> %.2f)" % [x0, x_meio, x1])
 	ok(Config.valor("pos") == "right", "guardado nas opções (pos = %s)" % Config.valor("pos"))
+	j.mira_ferro_3p = false                     # 0.98: mirar por cima do ombro (a mira de ferro é a outra opção)
 	j._mirar_ligado = true
 	await q(60)
 	ok(j._braco.position.x < -0.3, "mirando: em cima do ombro esquerdo (%.2f)" % j._braco.position.x)
