@@ -557,6 +557,7 @@ func _process(dt: float) -> void:
 	# 0.98: 1ª pessoa / mira de ferro
 	var tipo := str(arma.name).trim_prefix("Arma_")
 	_ik.tipo = tipo
+	_ik.luneta = j.luneta_montada() if j != null and j.has_method("luneta_montada") else ""
 	_ik.pistola = tipo == "pistola"
 	if _ik.pistola:
 		_ik.mao_esq_z = 0.0

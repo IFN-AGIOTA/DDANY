@@ -30,6 +30,7 @@ var camera: Camera3D = null
 var fp := 0.0                          # 0 = 3ª pessoa · 1 = 1ª pessoa (arma presa à câmera)
 var ads := 0.0                         # 0 = sem mirar · 1 = mirando pela mira de ferro
 var tipo := ""                         # arma na mão (para a tabela da mira de ferro)
+var luneta := ""                       # 0.99: luneta encaixada (o olho vai para trás da ocular)
 var pistola := false                   # pistola nas duas mãos: a esquerda por baixo da empunhadura
 var guarda := 0.0                      # 0.98: 0..1 guarda em 1ª pessoa (sem arma de fogo)
 var guarda_punhos := false             # as duas mãos (punhos) · false = arma branca na direita
@@ -101,7 +102,7 @@ func _process_modification() -> void:
 	var t := tb.interpolate_with(tm, smoothstep(0.0, 1.0, mira))
 	if fp > 0.001 and camera != null and is_instance_valid(camera) and MiraFerro.tem(tipo):
 		# 0.98: 1ª pessoa: a arma presa à câmera (quadril <-> mira de ferro)
-		var w := MiraFerro.transform_arma(tipo, camera.global_transform, ads)
+		var w := MiraFerro.transform_arma(tipo, camera.global_transform, ads, luneta)
 		var t_fp := sk.global_transform.affine_inverse() * w
 		t = t.interpolate_with(t_fp, smoothstep(0.0, 1.0, fp))
 	ponto.transform = t

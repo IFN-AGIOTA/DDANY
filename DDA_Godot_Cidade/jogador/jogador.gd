@@ -57,16 +57,20 @@ const PortaCls := preload("res://mundo/porta.gd")
 const PortaBunkerCls := preload("res://mundo/porta_bunker.gd")
 const Mutacao := preload("res://jogador/mutacao.gd")
 const MiraFerro := preload("res://armas/mira_ferro.gd")
+const VistaLunetaCls := preload("res://armas/vista_luneta.gd")
+var vista_luneta = null                 # 0.99: armas/vista_luneta.gd (criada na 1ª vez que você olha pela luneta)
 
 @export_group("Câmera")
 @export var distancia_camera := 2.35
-@export var lateral_camera := 0.32      # 0,32 = personagem à esquerda · 0 = centro · -0,32 = direita
+@export var lateral_camera := 0.17      # 0.99: CÂMERA DE OMBRO: metros para o lado por metro de distância (0,17 =
+										# a câmera logo atrás do ombro e o personagem pouco à esquerda do meio) · 0 = centro
+const LADO_MIN := 0.24                  # 0.99: com a parede puxando a câmera para perto, ela fica pelo menos atrás do ombro
 @export var fov_camera := 42.0
 @export var altura_alvo := 1.52
 @export var altura_alvo_agachado := 1.02
 @export var distancia_mirando := 1.6
 @export var fov_mirando := 34.0
-@export var ombro_mirando := 0.55      # mirando, a câmera vai para cima do ombro direito (metros)
+@export var ombro_mirando := 0.4       # mirando (por cima do ombro), a câmera vai para cima do ombro direito (metros)
 var ombro := 1.0                        # 0.79: 1 = câmera no ombro DIREITO (personagem à esquerda) · -1 = ombro ESQUERDO
 var _ombro_s := 1.0                     # o mesmo, suavizado (a câmera desliza de um lado para o outro)
 const RAIO_CAM := 0.25                  # 0.89: esfera da câmera (a mesma do braço) contra as paredes
@@ -814,11 +818,20 @@ func _pit_max() -> float:
 func _arma_de_fogo() -> bool:
 	return armas.atual != "" and not armas.eh_corpo() and MiraFerro.tem(armas.atual)
 
+# mirando com uma mira que aproxima e que NÃO tem a vista de luneta (aproxima a câmera, como antes)
 func mirando_com_luneta() -> bool:
-	return mirando and _arma_de_fogo() and armas.zoom_mira() > 1.0
+	return mirando and _arma_de_fogo() and armas.zoom_mira() > 1.0 and luneta_montada() == ""
+
+# 0.99: a luneta encaixada na arma da mão que tem a VISTA DE LUNETA (armas/vista_luneta.gd) · "" = nenhuma
+func luneta_montada() -> String:
+	if armas.item_arma == null or not armas.item_arma.acessorios.has("mira"):
+		return ""
+	var id := str(armas.item_arma.acessorios["mira"])
+	return id if MiraFerro.tem_luneta(armas.atual, id) else ""
 
 func _quer_mira_ferro() -> bool:
-	return mirando and _arma_de_fogo() and armas.zoom_mira() <= 1.0 and not nadando and veiculo == null and not morto
+	return mirando and _arma_de_fogo() and (armas.zoom_mira() <= 1.0 or luneta_montada() != "") \
+		and not nadando and veiculo == null and not morto
 
 # câmera nos olhos agora? (1ª pessoa ligada, ou mirando pela mira de ferro em 3ª pessoa)
 func _em_1p() -> bool:
@@ -826,6 +839,16 @@ func _em_1p() -> bool:
 
 func em_mira_ferro() -> bool:
 	return _fp > 0.5 and _quer_mira_ferro() and armas.rel <= 0.0
+
+# 0.99: olhando pela luneta agora (a vista ampliada aparece no vidro)
+func em_luneta() -> bool:
+	return em_mira_ferro() and luneta_montada() != ""
+
+# 0.99: olhar mais devagar pela luneta (com 6x de aumento o mesmo arrasto andaria 6x mais na tela)
+func _sens_luneta() -> float:
+	if not em_luneta():
+		return 1.0
+	return clampf(1.6 / float(MiraFerro.LUNETAS[luneta_montada()]["aumento"]), 0.2, 1.0)
 
 # 0.79: TROCAR DE OMBRO (tecla do meio do mouse ou botão OMBRO): a câmera passa para o outro lado do personagem
 # (e mirando, para cima do outro ombro). Fica guardado em Opções › Câmera › Posição do personagem.
@@ -854,7 +877,7 @@ func _camera_primeira_pessoa(delta: float, fov_alvo: float) -> void:
 	camera.near = lerpf(_near_3p, 0.03, k)
 	var fov_fp := lerpf(fov_camera + 18.0, (fov_camera + 18.0) * 0.55 / armas.zoom_mira(), fator_mira)
 	if _quer_mira_ferro():
-		fov_fp = lerpf(fov_camera + 18.0, (fov_camera + 18.0) / MiraFerro.zoom(armas.atual), fator_mira)   # 0.98: zoom da mira de ferro
+		fov_fp = lerpf(fov_camera + 18.0, (fov_camera + 18.0) / MiraFerro.zoom(armas.atual, luneta_montada()), fator_mira)   # 0.98: zoom da mira de ferro
 	camera.fov = lerpf(camera.fov, lerpf(fov_alvo, fov_fp, k), minf(1.0, delta * 6.0 + 0.02))
 	if not morto:
 		rotation.y = lerp_angle(rotation.y, cam_yaw, minf(1.0, delta * 16.0))   # o corpo vira para onde você olha
@@ -867,13 +890,13 @@ func _process(delta: float) -> void:
 		_aplicar_mutacao(nivel_mut)
 	if controles != null:
 		var r: Vector2 = controles.consumir_olhar()
-		var s := sensibilidade * (0.6 if mirando else 1.0)     # mirando: olhar mais preciso
+		var s := sensibilidade * (0.6 if mirando else 1.0) * _sens_luneta()     # mirando: olhar mais preciso
 		cam_yaw -= r.x * 0.006 * s
 		cam_pit = clampf(cam_pit + r.y * 0.004 * s * (-1.0 if inverter_y else 1.0), _pit_min(), _pit_max())
 		# 0.62: mouse preso (modo PC) com sensibilidade, sensibilidade mirando e eixo próprios (Opções › Teclado e mouse)
 		var rm: Vector2 = controles.consumir_olhar_mouse()
 		if rm != Vector2.ZERO:
-			var sm := sens_mouse * (sens_mouse_mira if mirando else 1.0)
+			var sm := sens_mouse * (sens_mouse_mira if mirando else 1.0) * _sens_luneta()
 			cam_yaw -= rm.x * 0.0022 * sm
 			cam_pit = clampf(cam_pit + rm.y * 0.0018 * sm * (-1.0 if inverter_y_mouse else 1.0), _pit_min(), _pit_max())
 		if veiculo != null:
@@ -907,16 +930,25 @@ func _process(delta: float) -> void:
 	var dist := lerpf(distancia_camera, distancia_mirando, fator_mira)
 	if veiculo != null:
 		dist = CAMERA_CARRO
-	var asp := get_viewport().get_visible_rect().size.aspect()
-	var meia_largura := tan(deg_to_rad(camera.fov) * 0.5) * asp
 	_ombro_s = move_toward(_ombro_s, ombro, delta * 5.0)
 	# 0.81: o deslocamento para o lado (ombro) vai na ORIGEM do braço, testado por um raio para o lado: assim o braço
 	# (esfera de colisão) sai do ponto já deslocado e a câmera não entra mais nas paredes de lado (corredor, escada)
 	# 0.89: o lado NÃO depende mais da distância do quadro anterior (um puxava o outro e a câmera tremia na parede)
-	var lado := lerpf(dist * meia_largura * absf(lateral_camera) * _ombro_s, ombro_mirando * _ombro_s, fator_mira)
+	# 0.99: CÂMERA DE OMBRO: o lado é proporcional à distância de verdade até a parede de trás (medida do MEIO do
+	# personagem, que não depende do lado: sem tremor), então o personagem fica sempre no mesmo lugar da tela, perto do
+	# meio; antes, com a parede puxando a câmera para perto, o lado continuava grande e o personagem ia para a borda
+	var esp := get_world_3d().direct_space_state
+	var dist_meio := dist
+	if dist > 0.01 and lateral_camera != 0.0:
+		_cast_cam.transform = Transform3D(Basis.IDENTITY, _pivo.global_position)
+		_cast_cam.motion = _pivo.global_basis.z * (dist + RAIO_CAM)
+		var fm := esp.cast_motion(_cast_cam)
+		if fm[0] < 1.0:
+			dist_meio = clampf(fm[0] * (dist + RAIO_CAM) - RAIO_CAM * 0.4, 0.0, dist)
+	var lado_ombro := maxf(dist_meio * absf(lateral_camera), LADO_MIN) if lateral_camera != 0.0 else 0.0
+	var lado := lerpf(lado_ombro * _ombro_s, ombro_mirando * _ombro_s, fator_mira)
 	if veiculo != null:
 		lado = 0.0                                # dirigindo: o carro no meio da tela
-	var esp := get_world_3d().direct_space_state
 	var lim := absf(lado)
 	if lim > 0.01:
 		var de := _pivo.global_position
@@ -948,5 +980,10 @@ func _process(delta: float) -> void:
 		_dist_cam = move_toward(_dist_cam, seguro, delta * 2.5)
 	_braco.spring_length = _dist_cam
 	_camera_primeira_pessoa(delta, fov_alvo)
+	if vista_luneta == null and em_luneta():
+		vista_luneta = VistaLunetaCls.new()
+		vista_luneta.name = "VistaLuneta"
+		vista_luneta.jogador = self
+		add_child(vista_luneta)
 	_tela_submersa()
 	animador.atualizar(delta, self)

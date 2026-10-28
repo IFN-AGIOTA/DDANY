@@ -40,7 +40,22 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
-ATUALIZAÇÃO 0.99 · TELA DE CARREGAMENTO
+ATUALIZAÇÃO 0.99 · TELA DE CARREGAMENTO, CÂMERA DE OMBRO E LUNETAS DE VERDADE
+  · LUNETAS COM EFEITO DE LENTE (a 2ª etapa do sistema de miras): com a LUNETA no rifle de caça ou a MIRA 4X na
+    M4A1/AKM, MIRAR leva o olho para trás da ocular, como numa luneta de verdade:
+      - dentro do vidro aparece a vista AMPLIADA (6x na luneta, 4x na mira) e, em volta, a própria luneta, a arma e a
+        cena de fora, um pouco desfocada (o olho está focado na lente);
+      - o vidro tem a borda escura, a sombra em meia-lua quando o olho sai do centro (entrando na mira, no coice),
+        uma leve curvatura com as cores separando na borda e um reflexo fraco;
+      - RETÍCULO na lente: luneta = cruz fina com os traços grossos nas pontas; mira 4x = divisa vermelha acesa com a
+        escala de queda embaixo. O centro do retículo é onde a arma aponta;
+      - olhando pela luneta o olhar fica mais lento (com 6x de aumento, o mesmo arrasto andaria 6 vezes mais).
+    Em 3ª pessoa, MIRAR também vai para a luneta. Com Opções › Câmera › "Mirar em 3ª pessoa" = "Por cima do ombro",
+    a luneta aproxima a câmera como antes.
+  · CÂMERA DE OMBRO DE VERDADE: o personagem fica mais perto do meio da tela, com a câmera logo atrás do ombro (no
+    direito e no esquerdo). Antes ele ficava longe do meio e, em lugar apertado (a parede de trás puxando a câmera
+    para perto), ia parar na borda da tela; agora ele fica sempre no mesmo lugar e, bem perto da parede, a câmera
+    fica colada atrás do ombro.
   · TELA DE CARREGAMENTO de verdade (antes era só "CARREGANDO A CIDADE…" por cima do menu, com tudo parado): ao
     JOGAR, CONTINUAR, entrar pelo MULTIJOGADOR e no "Voltar ao início" da pausa. Ela tem:
       - de fundo, a última imagem da tela (o pôr do sol do menu, ou o jogo) desfocada e escurecida, chegando bem
@@ -56,7 +71,20 @@ ATUALIZAÇÃO 0.99 · TELA DE CARREGAMENTO
     no computador de teste); agora levam bem menos (1,6 s, já com as luzes da rua). Visual igual.
   ARQUIVOS MEXIDOS (testado: teste_carregamento.gd NOVO: a tela cobre tudo antes de o menu sumir, 33 etapas na
   ordem, a barra só anda para a frente e chega a 100%, nada do jogo anda montando, a tela some sozinha, o jogador no
-  chão e o "Voltar ao início" com a mesma tela; + fotos e a bateria toda):
+  chão e o "Voltar ao início" com a mesma tela; teste_luneta.gd NOVO, 20 conferências: as duas lunetas com o vidro no
+  centro e em cima da ocular, a 2ª câmera pelo tubo, o aumento, o olhar mais lento, a 2ª câmera desligando, a 3ª
+  pessoa e a opção "por cima do ombro"; teste_camera_paredes, teste_ombro, teste_troca_camera com a câmera nova;
+  + fotos e a bateria toda):
+    armas/vista_luneta.gd .......... NOVO · a vista da luneta: 2ª câmera ampliada no vidro, lente, retículos, desfoque
+    armas/mira_ferro.gd ............ LUNETAS (eixo, vidro, olho, aumento, retículo) e ENCAIXE de cada arma; o olho
+                                     atrás da ocular
+    jogador/jogador.gd ............. luneta_montada(), em_luneta(), olhar mais lento pela luneta, cria a vista;
+                                     CÂMERA DE OMBRO (lateral_camera em metros por metro de distância, medida do meio
+                                     do personagem até a parede de trás; LADO_MIN)
+    jogador/ik_fuzil.gd ............ a arma no olho também com luneta
+    jogador/modelo_sobrevivente.gd . passa a luneta para o IK
+    menu/aplicar_opcoes.gd ......... LADO da câmera de ombro (0,17)
+    ferramentas/testes/teste_luneta.gd  NOVO · o teste das lunetas
     menu/tela_carregamento.gd ...... NOVO · a tela: fundo, título, etapa, barra, porcentagem, dicas (lista DICAS)
     main.gd ........................ _jogar e "Voltar ao início" (_recomecar) montam em etapas com a tela;
                                      ETAPAS_JOGO (texto e peso de cada parte de _criar_jogo); o jogo fica parado
@@ -66,9 +94,9 @@ ATUALIZAÇÃO 0.99 · TELA DE CARREGAMENTO
     mundo/luzes_rua.gd ............. fios dos postes montados direto nos arrays (bem mais rápido, mesmo visual)
     menu/config.gd ................. VERSAO "0.99"
     ferramentas/testes/teste_carregamento.gd  NOVO · o teste (FOTOS=<pasta> salva fotos da tela)
-    ferramentas/testes/rodar.sh .... teste_carregamento na bateria
+    ferramentas/testes/rodar.sh .... teste_carregamento e teste_luneta na bateria
     menu/novidades_lista.gd ........ refeita
-    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..." + seção 10
+    LEIA-ME.txt .................... este bloco + seções 3 e 4 + mapa "QUERO MEXER EM..." + seção 10
 
 ATUALIZAÇÃO 0.98 · MIRA DE FERRO E 1ª PESSOA COM OS BRAÇOS À VISTA
   · MIRA DE FERRO (1ª etapa do sistema de miras; as LUNETAS vêm depois): com arma de fogo, MIRAR leva a arma até o
@@ -2340,7 +2368,7 @@ TOQUE (vários dedos ao mesmo tempo)
 - Metade ESQUERDA: joystick que aparece onde você toca (fraco = andar, forte = trote).
 - Metade DIREITA: arrastar = olhar. Minimapa: toque = mapa grande.
 - ATIRAR / GOLPEAR (segurar; dá para arrastar o dedo em cima dele para mirar enquanto atira) · CORRER (segurar)
-- PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga; 0.98: com arma de fogo olha pela MIRA DE FERRO) · RECARREGAR · ARMA (troca coldre/ombro) · PEGAR
+- PULAR · AGACHAR (liga/desliga) · MIRAR (liga/desliga; 0.98: com arma de fogo olha pela MIRA DE FERRO; 0.99: com luneta/mira 4x, pela LUNETA) · RECARREGAR · ARMA (troca coldre/ombro) · PEGAR
   (aparece perto de um item; perto de uma PORTA: abrir / fechar / tirar tábua; 0.90: JANELA: quebrar / pular /
   tirar tábua; CAMA da base: renascer aqui; COLETOR: encher garrafa; 0.91: NPC do hospital: LOJA da Mônica,
   TROCAS do Lucas, falar com os outros) · EMPURRAR (0.90; com um infectado caído
@@ -2367,6 +2395,7 @@ PC (todas as teclas trocáveis em Opções › Teclado e mouse)
 -----------------------------------------------------------------------------------------------------
 JOGADOR: andar 1,7 · trote 3,9 · correr 7,2 · agachado 1,0/1,8 · mirando 2,2 m/s · pulo 5,2 · gravidade 15.
   Agachado: mira 0,6x mais firme; mirando: 0,5x. Câmera FOV 42, 2,35 m atrás, personagem à esquerda.
+  0.99 CÂMERA DE OMBRO: 0,17 m para o lado por metro de distância (personagem a ~40% da tela), no mínimo 0,24 m.
 
 ARMAS (dano por bala/golpe · cadência · alcance · barulho em metros; 0.89: barulho do tiro x1,4 e do golpe x2)
   pistola ......... 34 · 0,17 s · 150 m · 39 m · pente 12
@@ -2412,6 +2441,8 @@ PORTAS (0.73): porta 100 de vida, cada tábua mais 140 (até 3) · golpe de infe
 MUTADO (0.94, jogador/mutacao.gd): 1% ao morrer pelos infectados · levanta em 6 s · dano recebido x0,45 · sangramento
   x0,4 · trote/corrida x1,22 · pulo x1,4 · estamina correndo x0,5 · queda x1,35 · garras 30 de dano (1,65 m, 0,55 s) ·
   armas brancas x1,3 · sem arma de fogo · infectados ignoram · (controlado, 2ª parte: x1,1 · x1,2 · dano x0,7 · garras 20)
+LUNETAS (0.99, armas/mira_ferro.gd LUNETAS): luneta 6x (olho a 8,5 cm da ocular) · mira 4x 4x (olho a 4,5 cm) ·
+  olhar pela luneta: sensibilidade x1,6/aumento · a imagem ampliada em 85% da resolução do vidro (até 900 px)
 MIRA DE FERRO (0.98, armas/mira_ferro.gd): zoom pistola 1,15x · MP5 1,25x · M4/AKM 1,3x · espingarda 1,2x · rifle 1,35x ·
   olho a 36 cm da pistola (braços quase esticados) e encostado na coronha dos fuzis
 SENTIDOS (0.95, jogador/sentidos.gd): ligado 10 s, espera 20 s · farejar até 250 m (até 24 pessoas) · escutar até 40 m ·
@@ -2626,6 +2657,9 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   do microfone, volume das vozes) ..... rede/voz.gd (ALCANCE, LIMIAR, VOLUME_DB) · botões: jogador/controles.gd
 - MIRA DE FERRO (alinhar a mira de uma
   arma, olho, zoom, arma sem mirar) ... armas/mira_ferro.gd (DADOS, QUADRIL)
+- LUNETAS: vista ampliada, lente,
+  retículos, desfoque de fora ......... armas/vista_luneta.gd · medidas e aumento: armas/mira_ferro.gd (LUNETAS)
+- câmera de ombro (quanto para o lado) . jogador/jogador.gd (lateral_camera, LADO_MIN) + menu/aplicar_opcoes.gd (LADO)
 - TELA DE CARREGAMENTO (aparência,
   DICAS, tempo de cada dica) .......... menu/tela_carregamento.gd
 - etapas do carregamento (textos e
@@ -2982,7 +3016,9 @@ MÚSICA (pasta audio/)
 - Chat de voz (0.97): sem cancelamento de eco (no celular sem fone, quem está perto pode ouvir a própria voz voltando
   baixinho); a voz não é criptografada no caminho (como o resto da partida); quem está com o app antigo ouve, mas não
   fala, até instalar o APK 0.97. Testado com dois jogos no PC (sem microfone de verdade: um som de teste no lugar).
-- Mira de ferro (0.98): só a vista pela mira de ferro; a LUNETA/mira 4x ainda mira como antes (próxima etapa). Em 1ª
+- Mira de ferro (0.98) e lunetas (0.99): a imagem ampliada mostra só o que já está carregado perto (de longe,
+  coisas que somem pela distância, como infectados e objetos pequenos, não aparecem mesmo com 6x); o retículo não
+  tem regulagem de distância nem de aumento. Em 1ª
   pessoa a animação de RECARREGAR não aparece (a arma fica parada na mão); os outros jogadores te veem mirando do
   jeito de sempre (a mira de ferro é só a sua câmera).
 - Tela de carregamento (0.99): cada etapa é um pedaço inteiro de trabalho, então nas etapas mais pesadas (ruas,

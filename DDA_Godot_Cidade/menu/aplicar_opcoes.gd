@@ -7,7 +7,7 @@ extends Node
 const FiltroCls := preload("res://menu/filtro_tela.gd")
 
 const DIST_CAMERA := {"near": 2.35, "mid": 3.3, "far": 4.4}          # mesmos números do HTML
-const LADO := {"left": 0.32, "center": 0.0, "right": -0.32}
+const LADO := {"left": 0.17, "center": 0.0, "right": -0.17}      # 0.99: câmera de ombro (m de lado por m de distância)
 const RESOLUCAO := [0.5, 0.65, 0.8, 1.0]
 const ALCANCE := [900.0, 1800.0, 3200.0, 5000.0]                     # distância de visão (m)
 const NEVOA_DIST := [2.2, 1.45, 1.0, 0.75]
@@ -156,7 +156,7 @@ func _aplicar_jogador() -> void:
 		j.giro_inv = bool(o.get("gyro_inv", false))
 		j.giro_zero = o.get("gyro_zero", Vector3.ZERO)
 		j.distancia_camera = DIST_CAMERA.get(o["dist"], 2.35)
-		j.lateral_camera = LADO.get(o["pos"], 0.32)
+		j.lateral_camera = LADO.get(o["pos"], 0.17)
 		j.ombro = -1.0 if o["pos"] == "right" else 1.0         # 0.79: lado da câmera (e do ombro ao mirar)
 		j.fov_camera = float(o["fov"])
 		j.primeira_pessoa = int(o.get("cam", 0)) == 1     # 0.65: 1ª pessoa
