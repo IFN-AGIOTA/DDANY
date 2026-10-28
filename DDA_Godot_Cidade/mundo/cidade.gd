@@ -68,6 +68,19 @@ var oclusao                                 # mundo/oclusao.gd (caixas oclusoras
 var _mascara: ImageTexture                  # terra (1) / água (0) para praias, mar raso e espuma
 var _nos := {}                              # Vector2i (m) -> {"n": quantas ruas chegam, "r": raio}
 
+# 0.99.1 · FATIAR: com a tela de carregamento (main.gd liga "fatiar"), as partes pesadas param a cada FATIA_MS e
+# deixam a tela desenhar um quadro (a barra e as brasas não congelam); "progresso" diz quanto da etapa já foi
+# (0..1, -1 = não sabe). Sem a tela (servidor, editor, testes) nada para: tudo é montado de uma vez, como antes.
+const FATIA_MS := 35
+var fatiar := false
+var progresso := -1.0
+var t_fatia := 0
+func respirar(feito: int, total: int) -> void:
+	progresso = clampf(float(feito) / float(maxi(total, 1)), 0.0, 1.0)
+	if fatiar and Time.get_ticks_msec() - t_fatia > FATIA_MS and is_inside_tree():
+		await get_tree().process_frame
+		t_fatia = Time.get_ticks_msec()
+
 func construir() -> void:
 	var t0 := Time.get_ticks_msec()
 	for e in etapas():
@@ -80,7 +93,7 @@ func etapas() -> Array:
 	var r: Array = [
 		["Lendo o mapa de Nova York", 1.5, _comecar],
 		["Chão, praias e o mar", 1.2, func(): _ground(dados_cidade)],
-		["Ruas e avenidas", 16.0, func(): _roads(dados_cidade)],
+		["Ruas e avenidas", 16.0, func(): await _roads(dados_cidade)],
 		["Levantando os prédios", 11.0, _buildings],
 		["Quarteirões e calçadas", 5.0, _lotes],
 		["Escadas de incêndio e fachadas", 5.0, _fachadas],
@@ -484,7 +497,10 @@ func _roads(data) -> void:
 	var asf := PackedVector3Array()
 	var mv := PackedVector3Array()
 	var mc := PackedColorArray()
+	var n_rua := 0
 	for rd in data["roads"]:
+		n_rua += 1
+		await respirar(n_rua, data["roads"].size())
 		var w: float = rd[0]
 		var f: Array = rd[1]
 		var hw := w * 0.5
@@ -635,6 +651,7 @@ func _buildings() -> void:
 		rets_locais.append(LocaisCls.retangulo(i, 3.0))
 	var n_068: int = LocaisCls.N_LOCAIS_068
 	for lr in range(0, H - 1, 2):
+		await respirar(lr, H * 2)                   # a grade é ~metade do tempo; os blocos, a outra metade
 		for lc in range(0, W - 1, 2):
 			var n_land := 0
 			var bad := false
@@ -746,7 +763,10 @@ func _buildings() -> void:
 	mat_predio = Mat.material(Mat.PREDIO, {"detalhe": 1.0})
 	var caixa := BoxMesh.new()
 	caixa.material = mat_predio
+	var n_bloco := 0
 	for chave in blocos:
+		n_bloco += 1
+		await respirar(blocos.size() + n_bloco, blocos.size() * 2)
 		var lista: Array = blocos[chave]
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
@@ -966,6 +986,8 @@ func _lotes() -> void:
 	# topo: células seguidas na mesma linha viram um retângulo só (menos triângulos)
 	var tr := _trechos(idx)
 	for n in range(0, tr.size(), 2):
+		if n % 64 == 0:
+			await respirar(n, tr.size() * 3)
 		var a := tr[n]
 		var b := tr[n + 1]
 		var r := a / W
@@ -1011,7 +1033,11 @@ func _lotes() -> void:
 			ini = k
 			ant = k
 	# cantos de fora (as duas rampas vizinhas não se encostam): um quadradinho inclinado
+	var n_canto := 0
 	for i in idx:
+		n_canto += 1
+		if n_canto % 256 == 0:
+			await respirar(idx.size() * 2 + n_canto, idx.size() * 3)
 		var c := i % W
 		var r := i / W
 		for d in [Vector2i(-1, -1), Vector2i(1, -1), Vector2i(1, 1), Vector2i(-1, 1)]:
@@ -1091,7 +1117,7 @@ func _oclusao() -> void:
 # ---------- cidade abandonada (carros, barreiras, lixo, entulho) ----------
 # escadas de incêndio e aparelhos de ar-condicionado nas fachadas
 func _fachadas() -> void:
-	for mi in FachadasCls.new().montar(self, Y_RUA):
+	for mi in await FachadasCls.new().montar(self, Y_RUA):
 		_adopt(mi)
 		detalhes_fachada.append(mi)
 
@@ -1173,6 +1199,8 @@ const PERTO_ARVORE := 320.0                 # até aqui a árvore completa; depo
 func _arvores() -> void:
 	var celulas := PackedInt32Array()
 	for i in W * H:
+		if i % 16384 == 0:
+			await respirar(i, W * H * 3)
 		if park[i] == 1 and land[i] == 1 and road[i] == 0:
 			celulas.append(i)
 	if celulas.is_empty():
@@ -1184,7 +1212,11 @@ func _arvores() -> void:
 	var veg := {}                                   # modelo -> {bloco: [[Transform3D, Color], ...]}
 	var chance := minf(0.6, float(MAX_ARVORES) / celulas.size())
 	var blocos := {}
+	var n_cel := 0
 	for i in celulas:
+		n_cel += 1
+		if n_cel % 1024 == 0:
+			await respirar(celulas.size() + n_cel, celulas.size() * 3)
 		if rng.randf() > chance:
 			continue
 		var x := (i % W + rng.randf()) * CELL - WORLD.x
@@ -1226,7 +1258,10 @@ func _arvores() -> void:
 	copa_longe.rings = 2
 	var malha_longe := _juntar([[copa_longe, Vector3(0, 4.2, 0), _mat_simples(Color.WHITE, 1.0, true)]])
 	var total := 0
+	var n_bl := 0
 	for chave in blocos:
+		n_bl += 1
+		await respirar(blocos.size() + n_bl, blocos.size() * 2)
 		var lista: Array = blocos[chave]
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D

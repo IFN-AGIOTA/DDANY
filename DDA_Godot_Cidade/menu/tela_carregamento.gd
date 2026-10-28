@@ -50,6 +50,7 @@ var modo := "MUNDO LIVRE"               # escrito embaixo do título (main.gd tr
 var total := 1.0                        # soma dos pesos de todas as etapas (main.gd)
 var feito := 0.0                        # soma dos pesos das etapas já terminadas
 var texto_etapa := "Preparando"
+var fonte_progresso := Callable()       # 0.99.1: quanto da etapa atual já foi (0..1, -1 = não sabe) · main.gd
 var peso_vista := 0.0                  # peso de "Preparando a vista" (main.gd ETAPAS_JOGO)
 var tempos: Array = []                  # [texto, ms] de cada etapa (aparece no console no fim; ajuda a acertar os pesos)
 
@@ -58,6 +59,7 @@ var _saindo := false
 var _peso_atual := 0.0
 var _t_etapa := 0
 var _barra := 0.0                       # o que a barra mostra (anda suave até "feito")
+var _dentro := 0.0                      # 0.99.1: quanto da etapa atual a barra já mostra (só cresce)
 var _dica := -1
 var _t_dica := 0.0
 var _t := 0.0
@@ -243,7 +245,8 @@ func etapa(texto: String, peso: float) -> void:
 	texto_etapa = texto
 	_peso_atual = peso
 	_t_etapa = Time.get_ticks_msec()
-	_barra = feito                      # trabalho pesado não deixa animar: a barra mostra o que já foi feito
+	_dentro = 0.0
+	_barra = maxf(_barra, feito)
 	_atualizar_textos()
 	await get_tree().process_frame
 
@@ -257,16 +260,21 @@ func _fechar_etapa() -> void:
 func terminar() -> void:
 	await etapa("Preparando a vista", peso_vista)
 	var t0 := Time.get_ticks_msec()
+	var qd := PackedStringArray()
 	for i in QUADROS_VISTA:
+		var tq := Time.get_ticks_msec()
 		await get_tree().process_frame
+		qd.append(str(Time.get_ticks_msec() - tq))
 		if Time.get_ticks_msec() - t0 > MAX_VISTA * 1000.0:
 			break
+	print("VISTA quadros (ms): ", " ".join(qd))
 	_fechar_etapa()
 	feito = total
 	var linha := PackedStringArray()
 	for e in tempos:
 		linha.append("%s %d" % [e[0], e[1]])
 	print("CARREGAMENTO (ms): ", " · ".join(linha))
+	print("CARREGAMENTO: maior tempo parado %d ms (%s) · paradas de mais de 0,2 s: %s" % [int(maior_quadro * 1000.0), _quadro_de, ", ".join(paradas)])
 	texto_etapa = "Pronto"
 	var t1 := Time.get_ticks_msec()
 	while _barra < total - 0.001 and Time.get_ticks_msec() - t1 < 600:
@@ -277,12 +285,37 @@ func terminar() -> void:
 	sumiu.emit()
 	queue_free()
 
+var maior_quadro := 0.0                 # 0.99.1: o maior tempo sem desenhar a tela (s) · testes e console
+var _quadro_de := ""                    # em que etapa foi
+var _us := 0
+var paradas: Array = []                 # quadros de mais de 0,2 s (etapa e ms) · aparecem no console no fim
 func _process(dt: float) -> void:
 	_t += dt
+	var agora := Time.get_ticks_usec()      # o relógio de verdade (o "dt" da Godot é suavizado e esconde os picos)
+	var real := float(agora - _us) / 1000000.0 if _us > 0 else dt
+	_us = agora
+	if _alfa >= 1.0 and not _saindo:
+		if real > 0.2:
+			paradas.append("%s %d" % [texto_etapa, int(real * 1000.0)])
+		if real > maior_quadro:
+			maior_quadro = real
+			_quadro_de = texto_etapa
 	_alfa = clampf(_alfa + (-dt / SAIR if _saindo else dt / ENTRAR), 0.0, 1.0)
 	if _raiz != null:
 		_raiz.modulate.a = _alfa
-	_barra = move_toward(_barra, feito, maxf(total, 0.001) * dt * 1.6)
+	# 0.99.1: a barra anda DENTRO da etapa: pelo progresso que a etapa informa (as partes fatiadas) ou, sem ele,
+	# devagar com o tempo (até 80% da etapa), para nunca parecer parada
+	var sub := -1.0
+	if fonte_progresso.is_valid() and _peso_atual > 0.0:
+		sub = float(fonte_progresso.call())
+	var dentro := 0.0
+	if _peso_atual > 0.0:
+		var seg := float(Time.get_ticks_msec() - _t_etapa) / 1000.0
+		dentro = 0.8 * (1.0 - exp(-seg / maxf(0.15, _peso_atual * 0.1)))
+		if sub >= 0.0:
+			dentro = maxf(dentro * 0.25, sub * 0.97)
+	_dentro = maxf(_dentro, dentro)
+	_barra = maxf(_barra, move_toward(_barra, feito + _peso_atual * _dentro, maxf(total, 0.001) * dt * 1.6))
 	_t_dica += dt
 	if _t_dica >= TEMPO_DICA:
 		_proxima_dica()

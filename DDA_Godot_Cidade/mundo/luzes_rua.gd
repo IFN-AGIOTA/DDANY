@@ -76,9 +76,14 @@ static func _bloco(p: Vector3) -> Vector2i:
 # fios: [[a, b], ...] (pontos de amarração no topo dos postes) · devolve os nós (um por bloco)
 # 0.99: cada pedaço de fio é um tubo de 4 lados escrito direto nos arrays (antes: caixa de 6 faces pelo construtor
 # genérico, que levava vários segundos no carregamento); as pontas não aparecem porque os pedaços se encostam.
-static func montar_fios(fios: Array) -> Array:
+# "respirar" (0.99.1, opcional): mundo/cidade.gd respirar, para a tela de carregamento não congelar
+static func montar_fios(fios: Array, respirar := Callable()) -> Array:
 	var por_bloco := {}
+	var n_fio := 0
 	for f in fios:
+		n_fio += 1
+		if respirar.is_valid() and n_fio % 32 == 0:
+			await respirar.call(n_fio, fios.size())
 		var a: Vector3 = f[0]
 		var b: Vector3 = f[1]
 		var k := _bloco((a + b) * 0.5)

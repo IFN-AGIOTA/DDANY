@@ -74,7 +74,7 @@ func etapas() -> Array:
 	]
 
 func _fios_e_halos() -> void:
-	nos_fios = LuzesRua.montar_fios(fios)
+	nos_fios = await LuzesRua.montar_fios(fios, cid.respirar)
 	nos_halos = LuzesRua.montar_halos(halos)
 	for n in nos_fios + nos_halos:
 		nos.append(n)
@@ -473,7 +473,10 @@ func _lixo_nas_calcadas() -> void:
 
 # postes (alguns caídos), semáforos nos cruzamentos (alguns tortos), hidrantes, bancos e árvores de calçada
 func _mobiliario_urbano() -> void:
+	var n_rua := 0
 	for rd in cid.dados_cidade["roads"]:
+		n_rua += 1
+		await cid.respirar(n_rua, cid.dados_cidade["roads"].size() + 1)
 		var hw: float = float(rd[0]) * 0.5
 		var pts: PackedVector2Array = cid._pts(rd[1])
 		var com_arvores := rng.randf() < 0.45
@@ -645,7 +648,10 @@ func _montar() -> void:
 		"hidrante": 200.0, "banco": 250.0, "arvore_rua": 700.0, "lixeira": 220.0, "caixa_energia": 250.0, "caixa_energia_2": 250.0,
 		"bueiro": 120.0, "pneu": 160.0, "caixote": 200.0, "caixa_papelao": 140.0, "carro_coberto": 900.0, "placa_pare": 260.0,
 		"placa_proibido": 220.0, "placa_atencao": 220.0, "poste_duplo": 600.0}
+	var n_nome := 0
 	for nome in _inst:
+		n_nome += 1
+		await cid.respirar(n_nome, _inst.size())        # 0.99.1: a tela de carregamento não congela
 		var base := _base(nome)
 		var concreto: bool = base in ["barreira", "entulho", "cacos", "lixo", "arvore_rua", "banco"]
 		var malha: Mesh
@@ -663,6 +669,7 @@ func _montar() -> void:
 			longe = modelo_longe(base)
 			longe.surface_set_material(0, mat_concreto if concreto else mat_metal)
 		for k in _inst[nome]:
+			await cid.respirar(n_nome, _inst.size())
 			var lista: Array = _inst[nome][k]
 			var mm := MultiMesh.new()
 			mm.transform_format = MultiMesh.TRANSFORM_3D

@@ -26,7 +26,11 @@ func montar(cidade: Node3D, y_rua: float) -> Array:
 	r.seed = 5150
 	var escadas := {}                   # Vector2i -> [Transform3D]
 	var ares := {}                      # Vector2i -> [[Transform3D, Color]]
+	var n_pr := 0
 	for info in cidade.predio_info:
+		n_pr += 1
+		if n_pr % 256 == 0 and cidade.has_method("respirar"):
+			await cidade.respirar(n_pr, cidade.predio_info.size())   # 0.99.1: a tela de carregamento não congela
 		if info["ruina"] or not info.has("t"):
 			continue
 		var tipo: int = info["tipo"]

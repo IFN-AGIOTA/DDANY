@@ -276,9 +276,11 @@ func _jogar(carregar_salvo := false) -> void:
 			carregamento.total += 2.0
 		if Rede.ligado:
 			carregamento.total += 1.0
+	cidade.fatiar = carregamento != null    # 0.99.1: as partes pesadas param de vez em quando (a tela não congela)
 	for e in etapas_cidade:
 		await _etapa_texto(e[0], e[1])
-		e[2].call()
+		await e[2].call()
+	cidade.fatiar = false
 	cidade.visible = true
 	await _criar_jogo()
 	if carregar_salvo:
@@ -310,21 +312,27 @@ func _abrir_carregamento(modo: String) -> void:
 	carregamento.modo = modo
 	for k in ETAPAS_JOGO:
 		carregamento.total += float(ETAPAS_JOGO[k][1])
+	carregamento.fonte_progresso = func() -> float: return float(cidade.progresso) if cidade != null else -1.0
 	add_child(carregamento)                 # a foto é tirada aqui
 	for n in escondidas:                    # o que continua (um aviso de convite, por exemplo) volta, por baixo da tela
 		if is_instance_valid(n):
 			n.visible = true
 	while is_instance_valid(carregamento) and carregamento._alfa < 1.0:
 		await get_tree().process_frame
+	# 0.99.1: com a tela cobrindo tudo, o 3D não é desenhado (cada quadro desenhando a cidade por baixo compilava
+	# shaders e travava a animação); volta na "Preparando a vista" (_fim_carregamento)
+	get_viewport().disable_3d = true
 
 # antes de cada parte da montagem: mostra o texto e deixa a tela ser desenhada (sem tela: segue direto, como antes)
 func _etapa(chave: String) -> void:
-	if carregamento != null:
-		await carregamento.etapa(ETAPAS_JOGO[chave][0], ETAPAS_JOGO[chave][1])
+	await _etapa_texto(ETAPAS_JOGO[chave][0], ETAPAS_JOGO[chave][1])
 
 func _etapa_texto(texto: String, peso: float) -> void:
 	if carregamento != null:
 		await carregamento.etapa(texto, peso)
+		if cidade != null:
+			cidade.progresso = -1.0             # quanto da etapa já foi (mundo/cidade.gd respirar)
+			cidade.t_fatia = Time.get_ticks_msec()
 
 # tudo montado: o jogo volta a andar, desenha alguns quadros por baixo e a tela some devagar
 func _fim_carregamento() -> void:
@@ -333,6 +341,7 @@ func _fim_carregamento() -> void:
 	if carregamento == null:
 		return
 	carregamento.peso_vista = ETAPAS_JOGO["vista"][1]
+	get_viewport().disable_3d = false
 	var c = carregamento
 	carregamento = null                     # o jogo já pode ser pausado/salvo enquanto a tela some
 	await c.terminar()
