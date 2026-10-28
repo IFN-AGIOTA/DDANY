@@ -167,6 +167,19 @@ func _bt(id: String, txt: String, canto: String, off: Vector2, r: float, cor: Co
 	botoes.append({"id": id, "txt": txt, "canto": canto, "off": off, "r": r, "off0": off, "r0": r, "cor": cor, "modo": modo, "olhar": olhar, "voo": voo, "toque": -1})
 
 # posições/tamanhos: padrão do botão, ou o que foi salvo no editor da HUD; tudo vezes a escala geral
+# 0.97.1: os botões da CONSTRUÇÃO aparecem no lugar de outro (OK no do ATIRAR, GIRAR no do MIRAR, CANCELAR no do
+# RECARREGAR): seguem a posição e o tamanho dele e não aparecem no editor da HUD (antes ficavam soltos, repetidos).
+const NO_LUGAR_DE := {"OK": "ATIRAR", "GIRAR": "MIRAR", "CANCELAR": "RECARREGAR"}
+
+func _seguir_iguais() -> void:
+	for id in NO_LUGAR_DE:
+		var b := _botao(id)
+		var o := _botao(NO_LUGAR_DE[id])
+		if not b.is_empty() and not o.is_empty():
+			b["off"] = o["off"]
+			b["r"] = o["r"]
+			b["canto"] = o["canto"]
+
 func aplicar_layout(pos: Dictionary, esc: float, opacidade: float) -> void:
 	layout = pos.duplicate(true)
 	escala = esc
@@ -180,6 +193,7 @@ func aplicar_layout(pos: Dictionary, esc: float, opacidade: float) -> void:
 			r = p[2]
 		b["off"] = off * escala
 		b["r"] = r * escala
+	_seguir_iguais()
 	_visual.queue_redraw()
 
 func tamanho_do(id: String) -> float:
@@ -224,7 +238,7 @@ func _editar(e: InputEvent) -> void:
 			var md := INF
 			for i in botoes.size():
 				var b: Dictionary = botoes[i]
-				if b["voo"]:
+				if b["voo"] or NO_LUGAR_DE.has(b["id"]):
 					continue
 				var d: float = e.position.distance_to(_centro(b))
 				if d <= float(b["r"]) * 1.2 and d < md:
@@ -244,6 +258,7 @@ func _editar(e: InputEvent) -> void:
 		var off := Vector2(vs.x - c.x, c.y if b["canto"] == "tr" else vs.y - c.y)
 		layout[b["id"]] = [off.x / escala, off.y / escala, float(b["r"]) / escala]
 		b["off"] = off
+		_seguir_iguais()
 		_visual.queue_redraw()
 
 func _centro(b: Dictionary) -> Vector2:
@@ -255,7 +270,7 @@ func _centro(b: Dictionary) -> Vector2:
 
 func _visivel(b: Dictionary) -> bool:
 	if editando:
-		return not b["voo"]
+		return not b["voo"] and not NO_LUGAR_DE.has(b["id"])
 	if bloqueado or ocultos.get(b["id"], false):
 		return false
 	if b["id"] == "VOO":

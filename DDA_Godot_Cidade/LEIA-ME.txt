@@ -40,6 +40,28 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.97.1 · CONSERTOS NO "PERSONALIZAR HUD"
+  · CONSERTO: aberto pelo MENU PRINCIPAL, o editor da HUD ficava com o título, os botões do menu, o botão
+    "Novidades" e o perfil POR CIMA dos botões que você estava arrastando. Agora os botões ficam por cima de tudo e o
+    fundo escurece (no menu e no jogo).
+  · CONSERTO: o painel do editor ficava no alto, no meio, e cobria os botões de cima (o VOZES ficava embaixo dele e
+    não dava para arrastar). Agora ele fica no meio do lado esquerdo, onde não tem botão.
+  · CONSERTO: os botões da CONSTRUÇÃO (✓ OK, GIRAR e CANCELAR) apareciam soltos no editor, repetidos por cima dos
+    outros, e não acompanhavam quando você movia o ATIRAR, o MIRAR ou o RECARREGAR. Agora eles não aparecem no
+    editor e sempre ficam no lugar (e no tamanho) do botão que substituem.
+  · CONSERTO: apertar VOLTAR (Android) ou Esc no meio da edição fechava as Opções por trás e deixava o editor aberto.
+    Agora VOLTAR conclui a edição (salva), como o botão Concluir.
+  ARQUIVOS MEXIDOS (testado: teste_editor_hud.gd NOVO, 15 conferências, pelo menu e pela pausa, na tela do celular
+  1600x720 e em 1280x720; + a bateria inteira):
+    menu/editor_hud.gd ............. botões por cima de tudo enquanto edita, fundo escuro, painel no lado esquerdo
+    jogador/controles.gd ........... OK/GIRAR/CANCELAR seguem ATIRAR/MIRAR/RECARREGAR e não aparecem no editor
+    main.gd ........................ VOLTAR/Esc no editor da HUD = Concluir
+    ferramentas/testes/teste_editor_hud.gd  NOVO · o teste
+    ferramentas/testes/rodar.sh .... teste_editor_hud na bateria
+    menu/novidades_lista.gd ........ refeita
+    menu/config.gd ................. VERSAO "0.97.1"
+    LEIA-ME.txt .................... este bloco
+
 ATUALIZAÇÃO 0.97 · CHAT DE VOZ POR PROXIMIDADE NO MULTIJOGADOR (APP NOVO)
   · No MULTIJOGADOR dá para FALAR com quem está perto: o microfone fica aberto e manda a sua voz só quando você fala
     (silêncio não manda nada). A voz de cada jogador sai DO BONECO DELE: perto = alto, longe = baixo, a mais de 45 m não

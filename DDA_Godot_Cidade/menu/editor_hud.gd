@@ -2,6 +2,9 @@ extends CanvasLayer
 # EDITOR DA HUD (Opções › HUD › Personalizar HUD): arraste cada botão para onde quiser e ajuste o tamanho
 # do botão escolhido. Concluir salva em Config (posições usadas pelos controles de toque).
 # Se for aberto pelo menu principal (sem jogo), cria uns controles só para editar.
+# 0.97.1: enquanto edita, os botões sobem para cima de tudo (antes, aberto pelo menu principal, o título, os botões do
+# menu, "Novidades" e o perfil ficavam POR CIMA deles), o fundo escurece e o painel fica no meio do lado esquerdo
+# (antes ficava no alto e cobria os botões de cima, que não dava para arrastar).
 # Mexa AQUI para: o painel do editor (botões e textos).
 
 signal concluido
@@ -15,6 +18,8 @@ var _painel: PanelContainer
 var _sel: Label
 var _tam: UI.Deslizante
 var _tam_v: Label
+var _camada_antes := 10
+var _veu: CanvasLayer
 
 func abrir(c) -> void:
 	layer = 35
@@ -25,6 +30,17 @@ func abrir(c) -> void:
 		add_child(c)
 		_proprio = true
 	controles = c
+	# fundo escurecido embaixo e os botões por cima de tudo (menu, HUD, pausa), só embaixo do painel
+	_veu = CanvasLayer.new()
+	_veu.layer = 33
+	var escuro := ColorRect.new()
+	escuro.set_anchors_preset(Control.PRESET_FULL_RECT)
+	escuro.color = Color(0.0, 0.0, 0.0, 0.72)
+	escuro.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_veu.add_child(escuro)
+	add_child(_veu)
+	_camada_antes = controles.layer
+	controles.layer = 34
 	controles.set_editando(true)
 	controles.aplicar_layout(Config.hud_pos, float(Config.valor("sc")) / 100.0, 1.0)
 	controles.selecionou.connect(_selecionou)
@@ -80,7 +96,7 @@ func _montar() -> void:
 func _posicionar() -> void:
 	var vs := get_viewport().get_visible_rect().size
 	_painel.reset_size()
-	_painel.position = Vector2((vs.x - _painel.size.x) * 0.5, 2.0 * UI.vh(self))
+	_painel.position = Vector2(2.0 * UI.vh(self), (vs.y - _painel.size.y) * 0.5)
 	controles.editar_ignorar = Rect2(_painel.position, _painel.size).grow(8.0)
 
 func _bt(t: String, v: float, acao: Callable, fundo := Color(1, 1, 1, 0.12), texto := Color.WHITE) -> Button:
@@ -120,6 +136,7 @@ func _concluir() -> void:
 	Config.definir_hud(controles.layout)
 	controles.selecionou.disconnect(_selecionou)
 	controles.set_editando(false)
+	controles.layer = _camada_antes
 	if _proprio:
 		controles.queue_free()
 	concluido.emit()

@@ -323,6 +323,10 @@ func _notification(what: int) -> void:
 
 # botão VOLTAR do Android (e Esc): fecha a tela de cima; no jogo, pausa; no menu, sai
 func _voltar() -> void:
+	var ed = get_node_or_null("EditorHud")
+	if ed != null:
+		ed._concluir()                          # 0.97.1: Voltar/Esc no editor da HUD = Concluir (antes fechava as Opções por trás)
+		return
 	if tela_perfil != null:
 		tela_perfil._sair()
 	elif tela_login != null:
