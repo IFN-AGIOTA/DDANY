@@ -69,23 +69,38 @@ var _mascara: ImageTexture                  # terra (1) / água (0) para praias,
 var _nos := {}                              # Vector2i (m) -> {"n": quantas ruas chegam, "r": raio}
 
 func construir() -> void:
-	is_built = true
 	var t0 := Time.get_ticks_msec()
+	for e in etapas():
+		e[2].call()
+	print("Cidade pronta em ", Time.get_ticks_msec() - t0, " ms")
+
+# 0.99: construir() em ETAPAS, na ordem: a tela de carregamento (menu/tela_carregamento.gd) chama uma por quadro e
+# mostra o texto; o peso é o tempo relativo de cada uma (a barra anda proporcional) · [texto, peso, Callable]
+func etapas() -> Array:
+	var r: Array = [
+		["Lendo o mapa de Nova York", 1.5, _comecar],
+		["Chão, praias e o mar", 1.2, func(): _ground(dados_cidade)],
+		["Ruas e avenidas", 16.0, func(): _roads(dados_cidade)],
+		["Levantando os prédios", 11.0, _buildings],
+		["Quarteirões e calçadas", 5.0, _lotes],
+		["Escadas de incêndio e fachadas", 5.0, _fachadas],
+	]
+	var ab := AbandonoCls.new()              # só vira o "abandono" da cidade quando estas etapas rodam
+	r.append(["Espalhando o abandono", 0.5, func(): _abandono_comecar(ab)])
+	r.append_array(ab.etapas())
+	r.append(["Juntando o abandono", 1.3, _abandono_fim])
+	r.append(["Árvores e canteiros", 8.0, _arvores])
+	r.append(["Escondendo o que a câmera não vê", 3.0, _oclusao])
+	return r
+
+func _comecar() -> void:
+	is_built = true
 	W = int(WORLD.x * 2.0 / CELL)
 	H = int(WORLD.y * 2.0 / CELL)
 	var data = JSON.parse_string(FileAccess.get_file_as_string("res://data/city.json"))
 	_ligar_pontas(data)
 	dados_cidade = data
 	_env()
-	_ground(data)
-	_roads(data)
-	_buildings()
-	_lotes()
-	_fachadas()
-	_abandono()
-	_arvores()
-	_oclusao()
-	print("Cidade pronta em ", Time.get_ticks_msec() - t0, " ms")
 
 func _adopt(n: Node) -> void:
 	built.append(n)
@@ -1080,13 +1095,15 @@ func _fachadas() -> void:
 		_adopt(mi)
 		detalhes_fachada.append(mi)
 
-func _abandono() -> void:
+func _abandono_comecar(ab) -> void:
 	var dens := 1.0
 	var cfg = get_node_or_null("/root/Config") if is_inside_tree() else null
 	if cfg != null:
 		dens = [0.45, 0.75, 1.0][clampi(int(cfg.g.get("den", 1)), 0, 2)]
-	abandono = AbandonoCls.new()
-	abandono.construir(self, ruinas, dens)
+	abandono = ab
+	abandono.preparar(self, ruinas, dens)
+
+func _abandono_fim() -> void:
 	for no in abandono.nos:
 		_adopt(no)
 		detalhes_abandono.append(no)

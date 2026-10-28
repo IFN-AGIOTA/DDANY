@@ -40,6 +40,36 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.99 · TELA DE CARREGAMENTO
+  · TELA DE CARREGAMENTO de verdade (antes era só "CARREGANDO A CIDADE…" por cima do menu, com tudo parado): ao
+    JOGAR, CONTINUAR, entrar pelo MULTIJOGADOR e no "Voltar ao início" da pausa. Ela tem:
+      - de fundo, a última imagem da tela (o pôr do sol do menu, ou o jogo) desfocada e escurecida, chegando bem
+        devagar, com brasas subindo;
+      - o título e o modo (MUNDO LIVRE, CONTINUANDO O JOGO SALVO, MULTIJOGADOR, RECOMEÇANDO);
+      - o que está sendo montado AGORA, etapa por etapa (ruas e avenidas, prédios, carros abandonados, fios e luzes
+        da rua, o seu sobrevivente, o mapa, os infectados, o loot...), com a BARRA e a PORCENTAGEM andando de
+        verdade (antes a tela ficava congelada até o fim);
+      - DICAS DE SOBREVIVÊNCIA que trocam sozinhas a cada 7 s (tocar na tela passa para a próxima).
+  · No fim ela espera o jogo desenhar a vista em volta (sem aparecer prédio "brotando") e some devagar.
+  · Enquanto carrega, nada do jogo anda (infectados, fome, relógio) e os toques não passam para o jogo.
+  · MAIS RÁPIDO: os FIOS DOS POSTES eram montados de um jeito lento e levavam vários segundos do carregamento (8 s
+    no computador de teste); agora levam bem menos (1,6 s, já com as luzes da rua). Visual igual.
+  ARQUIVOS MEXIDOS (testado: teste_carregamento.gd NOVO: a tela cobre tudo antes de o menu sumir, 33 etapas na
+  ordem, a barra só anda para a frente e chega a 100%, nada do jogo anda montando, a tela some sozinha, o jogador no
+  chão e o "Voltar ao início" com a mesma tela; + fotos e a bateria toda):
+    menu/tela_carregamento.gd ...... NOVO · a tela: fundo, título, etapa, barra, porcentagem, dicas (lista DICAS)
+    main.gd ........................ _jogar e "Voltar ao início" (_recomecar) montam em etapas com a tela;
+                                     ETAPAS_JOGO (texto e peso de cada parte de _criar_jogo); o jogo fica parado
+                                     até o fim; sem autosave nem Voltar enquanto carrega
+    mundo/cidade.gd ................ construir() dividido em etapas() (texto, peso e o que fazer de cada parte)
+    mundo/abandono.gd .............. construir() dividido em etapas() (carros, lixo, postes, entulho, fios...)
+    mundo/luzes_rua.gd ............. fios dos postes montados direto nos arrays (bem mais rápido, mesmo visual)
+    menu/config.gd ................. VERSAO "0.99"
+    ferramentas/testes/teste_carregamento.gd  NOVO · o teste (FOTOS=<pasta> salva fotos da tela)
+    ferramentas/testes/rodar.sh .... teste_carregamento na bateria
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..." + seção 10
+
 ATUALIZAÇÃO 0.98 · MIRA DE FERRO E 1ª PESSOA COM OS BRAÇOS À VISTA
   · MIRA DE FERRO (1ª etapa do sistema de miras; as LUNETAS vêm depois): com arma de fogo, MIRAR leva a arma até o
     rosto e você olha pela MIRA DA PRÓPRIA ARMA: a alça e a massa de verdade dos modelos (pistola, MP5, M4, AKM,
@@ -2596,6 +2626,10 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   do microfone, volume das vozes) ..... rede/voz.gd (ALCANCE, LIMIAR, VOLUME_DB) · botões: jogador/controles.gd
 - MIRA DE FERRO (alinhar a mira de uma
   arma, olho, zoom, arma sem mirar) ... armas/mira_ferro.gd (DADOS, QUADRIL)
+- TELA DE CARREGAMENTO (aparência,
+  DICAS, tempo de cada dica) .......... menu/tela_carregamento.gd
+- etapas do carregamento (textos e
+  pesos da barra) ..................... mundo/cidade.gd e mundo/abandono.gd (etapas) · main.gd (ETAPAS_JOGO)
 - 1ª pessoa: arma presa à câmera,
   mãos, guarda dos punhos ............. jogador/ik_fuzil.gd (GUARDA_DIR/ESQ) + jogador/modelo_sobrevivente.gd
 - textos das NOVIDADES ................ vêm dos blocos ATUALIZAÇÃO deste LEIA-ME: rodar ferramentas/gerar_novidades.gd
@@ -2951,6 +2985,10 @@ MÚSICA (pasta audio/)
 - Mira de ferro (0.98): só a vista pela mira de ferro; a LUNETA/mira 4x ainda mira como antes (próxima etapa). Em 1ª
   pessoa a animação de RECARREGAR não aparece (a arma fica parada na mão); os outros jogadores te veem mirando do
   jeito de sempre (a mira de ferro é só a sua câmera).
+- Tela de carregamento (0.99): cada etapa é um pedaço inteiro de trabalho, então nas etapas mais pesadas (ruas,
+  fios, HUD na 1ª vez) a barra, as brasas e o girador param por alguns segundos até a etapa acabar. Os pesos da
+  barra foram medidos no computador de teste: no celular a barra pode andar mais rápido em umas e mais devagar em
+  outras. Voltar ao menu pela pausa ainda não usa a tela (é rápido).
 - Ideias para depois: loot por região, lugares
   especiais (quarentena), elevadores/arranha-céus por dentro, cozinhar, pescar/caçar, veículos consertáveis,
   outros sobreviventes (NPCs), o modo história novo, base com andares e telhado.

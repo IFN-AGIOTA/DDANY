@@ -55,6 +55,25 @@ const TelaMultiCls := preload("res://menu/tela_multijogador.gd")
 const TelaLoginCls := preload("res://menu/tela_login.gd")
 const TelaPerfilCls := preload("res://menu/tela_perfil.gd")
 const AvisoChamadoCls := preload("res://menu/aviso_chamado.gd")
+const TelaCarregamentoCls := preload("res://menu/tela_carregamento.gd")
+# 0.99: as partes de _criar_jogo() na TELA DE CARREGAMENTO: chave -> [texto, peso (tempo relativo; os da cidade estão
+# em mundo/cidade.gd etapas())]
+const ETAPAS_JOGO := {
+	"colisao": ["Chão firme e colisão", 7.0],
+	"jogador": ["O seu sobrevivente", 6.0],
+	"hud": ["Vida, fome, sede e munição", 20.0],
+	"mapa": ["Desenhando o mapa da cidade", 6.0],
+	"clima": ["Céu, clima e dia/noite", 10.0],
+	"infectados": ["Acordando os infectados", 2.0],
+	"mato": ["Mato e fumaça", 2.0],
+	"base": ["Base militar e estande de tiro", 2.0],
+	"loot": ["Espalhando o loot", 2.0],
+	"interiores": ["Prédios por dentro e locais especiais", 2.0],
+	"carros": ["Carros que ainda funcionam", 1.5],
+	"sobreviventes": ["Missões, base e hospitais", 1.5],
+	"sons": ["Sons da cidade", 7.0],
+	"vista": ["Preparando a vista", 30.0],
+}
 
 var cidade: Node3D
 var jogo: Node3D                            # tudo do jogo em andamento (apagado ao voltar ao menu)
@@ -96,6 +115,8 @@ var tela_perfil: CanvasLayer = null         # menu/tela_perfil.gd (ícone de per
 var abates := 0
 var _tempo_jogo := 0.0
 var _t_salvar := 0.0
+var carregamento = null                     # 0.99: menu/tela_carregamento.gd enquanto o jogo é montado
+var carregar_em_etapas := true              # falso nos testes automáticos (montam tudo de uma vez, como antes)
 
 # Preview dentro do editor (não é salvo na cena; leva alguns segundos e pesa no celular)
 @export var preview_no_editor := false:
@@ -133,6 +154,7 @@ func _ready() -> void:
 	Conta.chamado.connect(_chamado)
 	# 0.93: logo da produtora (Infinity Studio) antes de tudo; os testes (rodando um script com -s) pulam
 	if "-s" in OS.get_cmdline_args() or "--script" in OS.get_cmdline_args():
+		carregar_em_etapas = false
 		_abrir_menu()
 		return
 	var logo := LogoProdutoraCls.new()
@@ -232,27 +254,88 @@ func _aceitar_chamado(c: Dictionary) -> void:
 	tela_multi.entrar_na_sala(c)
 
 func _jogar(carregar_salvo := false) -> void:
-	menu.mostrar_carregando()
-	await get_tree().process_frame          # deixa o "CARREGANDO" aparecer antes de montar a cidade
-	await get_tree().process_frame
-	menu.queue_free()
-	menu = null
-	cena_menu.queue_free()
-	cena_menu = null
-	if not _cidade().is_built:
-		cidade.construir()
+	if carregamento != null:
+		return
+	if carregar_em_etapas:
+		await _abrir_carregamento("CONTINUANDO O JOGO SALVO" if carregar_salvo else ("MULTIJOGADOR · NOVA YORK" if Rede.ligado else "MUNDO LIVRE · NOVA YORK"))
+	else:
+		menu.mostrar_carregando()
+		await get_tree().process_frame          # deixa o "CARREGANDO" aparecer antes de montar a cidade
+		await get_tree().process_frame
+	if menu != null:
+		menu.queue_free()
+		menu = null
+	if cena_menu != null:
+		cena_menu.queue_free()
+		cena_menu = null
+	var etapas_cidade: Array = [] if _cidade().is_built else cidade.etapas()
+	if carregamento != null:
+		for e in etapas_cidade:
+			carregamento.total += float(e[1])
+		if carregar_salvo:
+			carregamento.total += 2.0
+		if Rede.ligado:
+			carregamento.total += 1.0
+	for e in etapas_cidade:
+		await _etapa_texto(e[0], e[1])
+		e[2].call()
 	cidade.visible = true
-	_criar_jogo()
+	await _criar_jogo()
 	if carregar_salvo:
+		await _etapa_texto("Abrindo o jogo salvo", 2.0)
 		var d := Salvamento.ler()
 		if not d.is_empty():
 			Salvamento.carregar(self, d)
 			if d.get("morto", false):                # morreu e saiu: volta já renascido, longe das coisas
 				jogador.morto = true
 				_renascer()
-	Sons.tocar("partida/entrada", -3.0)        # 0.49: entrada da partida (pancada grave + eco + coração)
 	jogador.usar_sobrevivente()             # o personagem do jogador: jogador/modelo_sobrevivente.gd
+	if Rede.ligado:
+		await _etapa_texto("Entrando na partida", 1.0)
 	_ligar_rede()
+	await _fim_carregamento()
+	Sons.tocar("partida/entrada", -3.0)        # 0.49: entrada da partida (pancada grave + eco + coração)
+
+# ---------- 0.99: tela de carregamento (menu/tela_carregamento.gd) ----------
+# esconde o menu, tira a "foto" da tela para o fundo e espera a tela de carregamento aparecer por inteiro
+func _abrir_carregamento(modo: String) -> void:
+	var escondidas: Array = []              # menu, pausa, HUD...: um quadro sem eles, para a foto do fundo
+	for n in find_children("*", "CanvasLayer", true, false):
+		if n.visible:
+			n.visible = false
+			escondidas.append(n)
+	await get_tree().process_frame
+	carregamento = TelaCarregamentoCls.new()
+	carregamento.name = "TelaCarregamento"
+	carregamento.modo = modo
+	for k in ETAPAS_JOGO:
+		carregamento.total += float(ETAPAS_JOGO[k][1])
+	add_child(carregamento)                 # a foto é tirada aqui
+	for n in escondidas:                    # o que continua (um aviso de convite, por exemplo) volta, por baixo da tela
+		if is_instance_valid(n):
+			n.visible = true
+	while is_instance_valid(carregamento) and carregamento._alfa < 1.0:
+		await get_tree().process_frame
+
+# antes de cada parte da montagem: mostra o texto e deixa a tela ser desenhada (sem tela: segue direto, como antes)
+func _etapa(chave: String) -> void:
+	if carregamento != null:
+		await carregamento.etapa(ETAPAS_JOGO[chave][0], ETAPAS_JOGO[chave][1])
+
+func _etapa_texto(texto: String, peso: float) -> void:
+	if carregamento != null:
+		await carregamento.etapa(texto, peso)
+
+# tudo montado: o jogo volta a andar, desenha alguns quadros por baixo e a tela some devagar
+func _fim_carregamento() -> void:
+	if jogo != null:
+		jogo.process_mode = Node.PROCESS_MODE_PAUSABLE
+	if carregamento == null:
+		return
+	carregamento.peso_vista = ETAPAS_JOGO["vista"][1]
+	var c = carregamento
+	carregamento = null                     # o jogo já pode ser pausado/salvo enquanto a tela some
+	await c.terminar()
 
 # ---------- multijogador (rede/rede.gd) ----------
 func _abrir_multijogador() -> void:
@@ -304,6 +387,8 @@ func _rede_caiu(motivo: String) -> void:
 		menu.avisar(motivo)
 
 func salvar_jogo() -> void:
+	if carregamento != null:                 # 0.99: o jogo ainda está sendo montado
+		return
 	if Rede.ligado:
 		if jogo != null and jogador != null:  # 0.77: partida em rede salva no arquivo dela (não estraga o jogo salvo sozinho)
 			_t_salvar = 0.0
@@ -323,6 +408,8 @@ func _notification(what: int) -> void:
 
 # botão VOLTAR do Android (e Esc): fecha a tela de cima; no jogo, pausa; no menu, sai
 func _voltar() -> void:
+	if carregamento != null:                 # 0.99: carregando: o Voltar espera
+		return
 	var ed = get_node_or_null("EditorHud")
 	if ed != null:
 		ed._concluir()                          # 0.97.1: Voltar/Esc no editor da HUD = Concluir (antes fechava as Opções por trás)
@@ -399,16 +486,22 @@ func _pausar() -> void:
 	pausa.continuar.connect(_continuar)
 	pausa.chamar_amigos.connect(_abrir_multijogador)
 	pausa.opcoes.connect(_abrir_opcoes)
-	pausa.reiniciar.connect(func():
-		_continuar()
-		_fechar_jogo()
-		_criar_jogo()
-		jogador.usar_sobrevivente()
-		_ligar_rede())
+	pausa.reiniciar.connect(_recomecar)
 	pausa.menu_principal.connect(func():
 		salvar_jogo()
 		_continuar()
 		_abrir_menu())
+
+# pausa › Voltar ao início: monta o jogo de novo (com a tela de carregamento)
+func _recomecar() -> void:
+	_continuar()
+	if carregar_em_etapas:
+		await _abrir_carregamento("RECOMEÇANDO · MUNDO LIVRE" if not Rede.ligado else "RECOMEÇANDO · MULTIJOGADOR")
+	_fechar_jogo()
+	await _criar_jogo()
+	jogador.usar_sobrevivente()
+	_ligar_rede()
+	await _fim_carregamento()
 
 func _continuar() -> void:
 	if opcoes != null:
@@ -442,8 +535,10 @@ func _criar_jogo() -> void:
 	_tempo_jogo = 0.0
 	jogo = Node3D.new()
 	jogo.name = "Jogo"
-	jogo.process_mode = Node.PROCESS_MODE_PAUSABLE
+	# 0.99: montando com a tela de carregamento, nada do jogo anda entre uma parte e outra (_fim_carregamento liga)
+	jogo.process_mode = Node.PROCESS_MODE_DISABLED if carregamento != null else Node.PROCESS_MODE_PAUSABLE
 	add_child(jogo)
+	await _etapa("colisao")
 	controles = ControlesCls.new()
 	controles.name = "Controles"
 	jogo.add_child(controles)
@@ -460,11 +555,13 @@ func _criar_jogo() -> void:
 	chunks.configurar(cidade, AplicarOpcoesCls.raio_chunks())
 	if cidade.abandono != null:
 		mundo.configurar_obstaculos(cidade.abandono.obstaculos)
+	await _etapa("jogador")
 	jogador = JOGADOR_CENA.instantiate()
 	jogador.name = "Jogador"
 	jogador.mundo = mundo
 	jogo.add_child(jogador)
 	jogador.ligar_controles(controles)
+	await _etapa("hud")
 	hud = HudCls.new()
 	hud.name = "HudCombate"
 	jogo.add_child(hud)
@@ -473,20 +570,24 @@ func _criar_jogo() -> void:
 	hud_status.name = "HudStatus"
 	jogo.add_child(hud_status)
 	hud_status.ligar(jogador)
+	await _etapa("mapa")
 	mapa = MapaCls.new()
 	mapa.name = "Mapa"
 	jogo.add_child(mapa)
 	mapa.ligar(cidade, jogador, controles)
+	await _etapa("clima")
 	clima = ClimaCls.new()
 	clima.name = "Clima"
 	jogo.add_child(clima)
 	clima.ligar(cidade, jogador)
 	jogador.sobrevivencia.clima = clima
+	await _etapa("infectados")
 	vagos = VagosCls.new()
 	vagos.name = "Vagos"
 	jogo.add_child(vagos)
 	vagos.ligar(cidade, mundo, jogador, jogador.armas)
 	vagos.clima = clima
+	await _etapa("mato")
 	mato = MatoCls.new()
 	mato.name = "Mato"
 	jogo.add_child(mato)
@@ -501,6 +602,7 @@ func _criar_jogo() -> void:
 	jogador.sobrevivencia.morreu.connect(_morreu)
 	jogador.sobrevivencia.aviso.connect(func(t): hud.mostrar_aviso(t))
 	abates = 0
+	await _etapa("base")
 	estande = EstandeCls.new()
 	estande.name = "EstandeTiro"
 	estande.mundo = mundo
@@ -519,6 +621,7 @@ func _criar_jogo() -> void:
 	jogo.add_child(roda_armas)
 	roda_armas.ligar(controles, jogador.inventario)
 	roda_armas.aviso.connect(func(t): hud.mostrar_aviso(t))
+	await _etapa("loot")
 	LootCls.espalhar(jogo, mundo, SPAWN)
 	loot_mundo = LootMundoCls.new()
 	loot_mundo.semente = randi()                      # cada jogo novo tem o loot em lugares diferentes
@@ -531,6 +634,7 @@ func _criar_jogo() -> void:
 	PortaCls.barulho = func(pos: Vector3, raio: float) -> void:
 		if vagos != null:
 			vagos.barulho(pos, raio, true)
+	await _etapa("interiores")
 	interiores = InterioresCls.new()
 	interiores.name = "Interiores"
 	jogo.add_child(interiores)
@@ -544,11 +648,13 @@ func _criar_jogo() -> void:
 	locais.mundo = mundo
 	locais.clima = clima
 	locais.hud = hud
+	await _etapa("carros")
 	veiculos = VeiculosCls.new()
 	veiculos.name = "Veiculos"
 	jogo.add_child(veiculos)
 	veiculos.ligar(cidade, mundo, jogador, loot_mundo, vagos)
 	jogador.veiculos_mgr = veiculos
+	await _etapa("sobreviventes")
 	missoes = MissoesCls.new()
 	missoes.name = "Missoes"
 	jogo.add_child(missoes)
@@ -572,6 +678,7 @@ func _criar_jogo() -> void:
 	eventos.name = "Eventos"
 	jogo.add_child(eventos)
 	eventos.ligar(self)
+	await _etapa("sons")
 	var amb := AmbienteCls.new()
 	amb.name = "AmbienteCidade"
 	jogo.add_child(amb)
@@ -760,7 +867,7 @@ func _fechar_jogo() -> void:
 	sessao_rede = null
 
 func _process(dt: float) -> void:
-	if Engine.is_editor_hint() or controles == null or not is_instance_valid(controles) or get_tree().paused:
+	if Engine.is_editor_hint() or controles == null or not is_instance_valid(controles) or get_tree().paused or carregamento != null:
 		return
 	_tempo_jogo += dt
 	_t_salvar += dt

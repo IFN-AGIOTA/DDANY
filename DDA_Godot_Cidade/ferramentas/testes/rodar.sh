@@ -142,6 +142,7 @@ elif [ "$alvo" = todos ]; then
 	rodar teste_novidades 1
 	rodar teste_editor_hud 1
 	rodar teste_mira_ferro 1
+	rodar teste_carregamento 1
 	rodar_turn
 else
 	rodar "$alvo" 1

@@ -8,7 +8,6 @@ extends RefCounted
 #     Um MultiMesh por bloco de 500 m.
 # Mexa AQUI para: cor/tamanho dos halos, quantos postes acesos, quanto o fio cai e até onde aparecem.
 
-const Malhas := preload("res://mundo/malhas.gd")
 
 const BLOCO := 500.0                     # blocos grandes: poucos desenhos
 const CHANCE_ACESO := 0.3
@@ -75,6 +74,8 @@ static func _bloco(p: Vector3) -> Vector2i:
 	return Vector2i(floori(p.x / BLOCO), floori(p.z / BLOCO))
 
 # fios: [[a, b], ...] (pontos de amarração no topo dos postes) · devolve os nós (um por bloco)
+# 0.99: cada pedaço de fio é um tubo de 4 lados escrito direto nos arrays (antes: caixa de 6 faces pelo construtor
+# genérico, que levava vários segundos no carregamento); as pontas não aparecem porque os pedaços se encostam.
 static func montar_fios(fios: Array) -> Array:
 	var por_bloco := {}
 	for f in fios:
@@ -82,8 +83,8 @@ static func montar_fios(fios: Array) -> Array:
 		var b: Vector3 = f[1]
 		var k := _bloco((a + b) * 0.5)
 		if not por_bloco.has(k):
-			por_bloco[k] = Malhas.Construtor.new()
-		var c = por_bloco[k]
+			por_bloco[k] = [PackedVector3Array(), PackedVector3Array()]
+		var c: Array = por_bloco[k]
 		var lado := Vector3(b.z - a.z, 0, a.x - b.x).normalized() * 0.18
 		for desvio in [lado, -lado]:
 			var n := 5
@@ -91,28 +92,47 @@ static func montar_fios(fios: Array) -> Array:
 			for i in range(1, n + 1):
 				var t := float(i) / n
 				var q: Vector3 = a.lerp(b, t) + desvio - Vector3(0, CAIDA * 4.0 * t * (1.0 - t), 0)
-				var m := (ant + q) * 0.5
 				var d := q - ant
 				var L := d.length()
 				if L > 0.01:
 					var z := d / L
 					var x := Vector3.UP.cross(z).normalized()
-					var y := z.cross(x)
-					c.caixa(m, Vector3(0.025, 0.025, L), COR_FIO, Basis(x, y, z))
+					_tubo(c[0], c[1], ant, q, x, z.cross(x), 0.0125)
 				ant = q
 	var nos: Array = []
 	var mat := StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
+	mat.albedo_color = COR_FIO
 	mat.roughness = 0.8
 	for k in por_bloco:
+		var arr := []
+		arr.resize(Mesh.ARRAY_MAX)
+		arr[Mesh.ARRAY_VERTEX] = por_bloco[k][0]
+		arr[Mesh.ARRAY_NORMAL] = por_bloco[k][1]
+		var malha := ArrayMesh.new()
+		malha.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+		malha.surface_set_material(0, mat)
 		var mi := MeshInstance3D.new()
 		mi.name = "Fios_%d_%d" % [k.x, k.y]
-		mi.mesh = por_bloco[k].malha(mat)
+		mi.mesh = malha
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		mi.visibility_range_end = FIO_ALCANCE
 		mi.add_to_group("fios_poste")
 		nos.append(mi)
 	return nos
+
+# tubo de seção quadrada (meia largura h) de s até e; x, y, (e-s) formam a base (lados no sentido horário de fora)
+static func _tubo(v: PackedVector3Array, n: PackedVector3Array, s: Vector3, e: Vector3, x: Vector3, y: Vector3, h: float) -> void:
+	for lado in 4:
+		var nn: Vector3 = [x, y, -x, -y][lado]
+		var t: Vector3 = [y, -x, -y, x][lado]
+		var a := s + (nn - t) * h
+		var b := s + (nn + t) * h
+		var cc := e + (nn + t) * h
+		var d := e + (nn - t) * h
+		v.append(a); v.append(cc); v.append(b)
+		v.append(a); v.append(d); v.append(cc)
+		for i in 6:
+			n.append(nn)
 
 # halos: [[posição, é semáforo], ...] · devolve os nós (um MultiMesh por bloco)
 static func montar_halos(halos: Array) -> Array:

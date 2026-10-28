@@ -50,16 +50,30 @@ var nos_fios: Array = []
 var nos_halos: Array = []
 
 func construir(cidade, ruinas: Array, dens: float) -> void:
+	preparar(cidade, ruinas, dens)
+	for e in etapas():
+		e[2].call()
+
+var _ruinas: Array = []
+func preparar(cidade, ruinas: Array, dens: float) -> void:
 	cid = cidade
+	_ruinas = ruinas
 	densidade = dens
 	rng.seed = 777
-	_carros_nas_ruas()
-	_engavetamentos()
-	_barreiras()
-	_lixo_nas_calcadas()
-	_mobiliario_urbano()
-	_entulho(ruinas)
-	_montar()
+
+# 0.99: as partes de construir(), uma de cada vez (a tela de carregamento mostra cada uma) · [texto, peso, Callable]
+func etapas() -> Array:
+	return [
+		["Carros abandonados nas ruas", 1.5, _carros_nas_ruas],
+		["Engavetamentos e barreiras", 0.5, func(): _engavetamentos(); _barreiras()],
+		["Lixo nas calçadas", 1.3, _lixo_nas_calcadas],
+		["Postes, semáforos e placas", 3.5, _mobiliario_urbano],
+		["Entulho das ruínas", 1.3, func(): _entulho(_ruinas)],
+		["Juntando os objetos da rua", 11.5, _montar],
+		["Fios e luzes da rua", 16.0, _fios_e_halos],
+	]
+
+func _fios_e_halos() -> void:
 	nos_fios = LuzesRua.montar_fios(fios)
 	nos_halos = LuzesRua.montar_halos(halos)
 	for n in nos_fios + nos_halos:
