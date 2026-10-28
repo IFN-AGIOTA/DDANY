@@ -21,7 +21,7 @@ const PADRAO := {
 	"teclas": {},                         # teclas trocadas: ação -> código (jogador/teclas.gd)
 	"mira_ferro": true,                   # 0.98: em 3ª pessoa, MIRAR com arma de fogo entra na mira de ferro
 	"cam": 0, "dist": "near", "pos": "left", "fov": 42,
-	"map": true, "op": 100, "sc": 100,
+	"map": true, "op": 100, "sc": 100, "avisos": false, "icone_mun": false,
 	"fps": false, "som": true, "vol": 100, "awake": false, "mus": true, "mvol": 70,
 	"svol": 100,                          # volume dos efeitos (tiros, passos, infectados, chuva)
 	"dif": 1,                             # dificuldade do modo livre: 0 fácil, 1 normal, 2 difícil

@@ -377,6 +377,12 @@ func _pagina_hud(v: float) -> Control:
 	_secao(g, "Posição e tamanho dos botões", col)
 	_secao(g, "Minimapa", _seg("map", [[true, "Visível"], [false, "Oculto"]],
 		{true: "Minimapa no canto de cima (toque nele para abrir o mapa grande).", false: "Sem minimapa: só a bússola. O mapa grande abre com M."}))
+	_secao(g, "Avisos no meio da tela", _seg("avisos", [[false, "Desligados"], [true, "Ligados"]],
+		{false: "Sem os textos no meio da tela (MICROFONE LIGADO, SANGRANDO, AGARRADO...).",
+		true: "Mostra os avisos no meio da tela (microfone, ferimentos, itens, zonas...)."}))
+	_secao(g, "Ícone da munição", _seg("icone_mun", [[false, "Oculto"], [true, "Visível"]],
+		{false: "Sem o ícone do pente embaixo, no meio da tela.",
+		true: "Ícone do pente embaixo: muda de cor conforme a munição acaba e pisca vazio."}))
 	_deslizante("op", 35, 100, 5, "%", g, "Opacidade da HUD")
 	_deslizante("sc", 70, 125, 5, "%", g, "Tamanho geral da HUD")
 	return _rolavel(g)

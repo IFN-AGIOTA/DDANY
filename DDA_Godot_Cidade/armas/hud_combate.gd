@@ -44,7 +44,10 @@ func ligar(a: Node, j: Node) -> void:
 	if inv != null:
 		inv.aviso.connect(mostrar_aviso)
 
+# 0.99: Opções › HUD › "Avisos no meio da tela" (desligados por padrão): sem eles, nenhum aviso aparece
 func mostrar_aviso(t: String, dur := DUR_AVISO) -> void:
+	if not bool(Config.valor("avisos")):
+		return
 	for a in _avisos:                   # o mesmo aviso de novo só renova o tempo
 		if a[0] == t:
 			a[1] = dur
@@ -130,8 +133,8 @@ func _desenhar() -> void:
 	# ----- munição (0.65 · HUD mínima): um ícone de PENTE que muda de cor, sem números nem barra -----
 	# branco = cheio · amarelo · laranja · vermelho piscando = vazio · âmbar pulsando = recarregando
 	# chave inglesa vermelha (ou X) = EMPERRADA · pente apagado (ou só contorno) = SEM PENTE
-	if armas.atual == "" or armas.eh_corpo():
-		return
+	if armas.atual == "" or armas.eh_corpo() or not bool(Config.valor("icone_mun")):
+		return                          # 0.99: Opções › HUD › "Ícone da munição" (oculto por padrão)
 	var A: Dictionary = armas.estado()
 	var cap: int = maxi(1, armas.capacidade())
 	var f := float(A["mag"]) / float(cap)

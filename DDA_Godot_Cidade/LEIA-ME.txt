@@ -40,7 +40,10 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
-ATUALIZAÇÃO 0.99 · TELA DE CARREGAMENTO, CÂMERA DE OMBRO E LUNETAS DE VERDADE
+ATUALIZAÇÃO 0.99 · TELA DE CARREGAMENTO, CÂMERA DE OMBRO, LUNETAS DE VERDADE E SEM AVISOS NA TELA
+  · SEM AVISOS: os textos no meio da tela (MICROFONE LIGADO, SANGRANDO, AGARRADO, itens, zonas...) e o ícone do
+    pente embaixo, no meio, agora vêm DESLIGADOS. Para ligar de novo: Opções › HUD › "Avisos no meio da tela" e
+    "Ícone da munição". (Os ícones de estado embaixo à esquerda, como o de sangrando, continuam.)
   · LUNETAS COM EFEITO DE LENTE (a 2ª etapa do sistema de miras): com a LUNETA no rifle de caça ou a MIRA 4X na
     M4A1/AKM, MIRAR leva o olho para trás da ocular, como numa luneta de verdade:
       - dentro do vidro aparece a vista AMPLIADA (6x na luneta, 4x na mira) e, em volta, a própria luneta, a arma e a
@@ -83,7 +86,11 @@ ATUALIZAÇÃO 0.99 · TELA DE CARREGAMENTO, CÂMERA DE OMBRO E LUNETAS DE VERDAD
                                      do personagem até a parede de trás; LADO_MIN)
     jogador/ik_fuzil.gd ............ a arma no olho também com luneta
     jogador/modelo_sobrevivente.gd . passa a luneta para o IK
-    menu/aplicar_opcoes.gd ......... LADO da câmera de ombro (0,17)
+    menu/aplicar_opcoes.gd ......... LADO da câmera de ombro (0,17); "avisos"/"icone_mun" sem reaplicar nada
+    armas/hud_combate.gd ........... avisos e ícone da munição só com as opções ligadas
+    menu/opcoes.gd ................. Opções › HUD › "Avisos no meio da tela" e "Ícone da munição"
+    ferramentas/testes/teste_infectados_pz.gd  o tiro chamando a horda: um grupo posto a 60 m (antes dependia da
+                                     sorte de sobrar um grupo perto e às vezes falhava)
     ferramentas/testes/teste_luneta.gd  NOVO · o teste das lunetas
     menu/tela_carregamento.gd ...... NOVO · a tela: fundo, título, etapa, barra, porcentagem, dicas (lista DICAS)
     main.gd ........................ _jogar e "Voltar ao início" (_recomecar) montam em etapas com a tela;
@@ -92,7 +99,7 @@ ATUALIZAÇÃO 0.99 · TELA DE CARREGAMENTO, CÂMERA DE OMBRO E LUNETAS DE VERDAD
     mundo/cidade.gd ................ construir() dividido em etapas() (texto, peso e o que fazer de cada parte)
     mundo/abandono.gd .............. construir() dividido em etapas() (carros, lixo, postes, entulho, fios...)
     mundo/luzes_rua.gd ............. fios dos postes montados direto nos arrays (bem mais rápido, mesmo visual)
-    menu/config.gd ................. VERSAO "0.99"
+    menu/config.gd ................. VERSAO "0.99" · "avisos" e "icone_mun" desligados
     ferramentas/testes/teste_carregamento.gd  NOVO · o teste (FOTOS=<pasta> salva fotos da tela)
     ferramentas/testes/rodar.sh .... teste_carregamento e teste_luneta na bateria
     menu/novidades_lista.gd ........ refeita
@@ -2660,6 +2667,8 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - LUNETAS: vista ampliada, lente,
   retículos, desfoque de fora ......... armas/vista_luneta.gd · medidas e aumento: armas/mira_ferro.gd (LUNETAS)
 - câmera de ombro (quanto para o lado) . jogador/jogador.gd (lateral_camera, LADO_MIN) + menu/aplicar_opcoes.gd (LADO)
+- avisos no meio da tela e ícone da
+  munição (ligar/desligar) ............ Opções › HUD (menu/opcoes.gd) · desenho: armas/hud_combate.gd
 - TELA DE CARREGAMENTO (aparência,
   DICAS, tempo de cada dica) .......... menu/tela_carregamento.gd
 - etapas do carregamento (textos e

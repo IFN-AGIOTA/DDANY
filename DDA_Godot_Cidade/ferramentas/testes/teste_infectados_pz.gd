@@ -319,8 +319,17 @@ func _r():
 		if bool(v.da_horda):
 			reais += 1
 	ok(reais > 0 and reais <= 22, "perto de você viram infectados de verdade, até o limite (%d)" % reais)
-	# tiro: os grupos a até 100 m vêm
+	# tiro: os grupos a até 100 m vêm (0.99: um grupo virtual posto a 60 m; antes dependia de sobrar um grupo perto
+	# depois de os de perto virarem infectados de verdade, e às vezes não sobrava nenhum)
 	var indo := 0
+	var longe_g: Dictionary = {}
+	for g in hd.grupos:
+		if (g["p"] as Vector2).distance_to(Vector2(j.global_position.x, j.global_position.z)) > 200.0:
+			longe_g = g
+			break
+	if not longe_g.is_empty():
+		longe_g["p"] = Vector2(j.global_position.x + 60.0, j.global_position.z)
+		longe_g["d"] = Vector2.INF
 	m.vagos.barulho(j.global_position, 150.0, true)
 	for g in hd.grupos:
 		if g["d"] != Vector2.INF and (g["d"] as Vector2).distance_to(Vector2(j.global_position.x, j.global_position.z)) < 15.0:
