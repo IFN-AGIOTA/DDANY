@@ -40,6 +40,34 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.99.1 · CARREGAMENTO QUE NÃO PARECE TRAVADO
+  · A tela de carregamento não congela mais: antes, várias partes eram um bloco só de trabalho e a barra, as brasas
+    e o girador ficavam parados por 1 a 5 segundos (parecia que o jogo tinha travado). Agora:
+      - as partes pesadas (ruas, prédios, quarteirões, fachadas, objetos da rua, fios, árvores, oclusão) param a
+        cada ~35 ms para a tela se mexer, e a BARRA ANDA DENTRO de cada etapa (não só entre uma e outra);
+      - enquanto a tela cobre tudo, o jogo não desenha a cidade 3D por baixo (era isso que mais travava);
+      - os arquivos grandes (objetos da rua, o seu sobrevivente, infectados, armas, itens, equipamentos) são lidos
+        do disco EM SEGUNDO PLANO assim que a tela aparece: na 1ª vez que o jogo abre, criar o sobrevivente
+        travava a tela por ~4,6 s; agora ~0,3 s;
+      - no fim ("Preparando a vista") a cidade aparece aos poucos, em 12 lotes, ainda debaixo da tela;
+      - a barra ficou mais grossa, com trilho e contorno.
+    No computador de teste, a maior parada caiu de 4,6 s para ~0,75 s na 1ª vez e ~0,5 s nas outras.
+  ARQUIVOS MEXIDOS (testado: teste_carregamento com a conferência nova "a tela nunca fica parada mais de 1,5 s",
+  rodado também com o cache do disco limpo, como na 1ª vez; + a bateria toda):
+    main.gd ........................ PRE_CARREGAR (leitura em segundo plano), 3D desligado com a tela por cima,
+                                     a vista aparecendo em lotes, pausas (_respiro) entre partes do _criar_jogo
+    menu/tela_carregamento.gd ...... a barra anda dentro da etapa (progresso da etapa ou devagar com o tempo); barra
+                                     mais grossa; mede as paradas (maior_quadro, paradas) e mostra no console
+    mundo/cidade.gd ................ respirar()/pausa() e "fatiar": as partes pesadas param de vez em quando
+    mundo/abandono.gd .............. pausas nos postes/placas e em "Juntando os objetos da rua"
+    mundo/luzes_rua.gd ............. pausas nos fios
+    mundo/fachadas.gd .............. pausas nas fachadas
+    mundo/oclusao.gd ............... pausas na oclusão
+    menu/config.gd ................. VERSAO "0.99.1"
+    ferramentas/testes/teste_carregamento.gd  confere a maior parada
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa + seção 10
+
 ATUALIZAÇÃO 0.99 · TELA DE CARREGAMENTO, CÂMERA DE OMBRO, LUNETAS DE VERDADE E SEM AVISOS NA TELA
   · SEM AVISOS: os textos no meio da tela (MICROFONE LIGADO, SANGRANDO, AGARRADO, itens, zonas...) e o ícone do
     pente embaixo, no meio, agora vêm DESLIGADOS. Para ligar de novo: Opções › HUD › "Avisos no meio da tela" e
@@ -2673,6 +2701,8 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   DICAS, tempo de cada dica) .......... menu/tela_carregamento.gd
 - etapas do carregamento (textos e
   pesos da barra) ..................... mundo/cidade.gd e mundo/abandono.gd (etapas) · main.gd (ETAPAS_JOGO)
+- carregamento sem travar (fatias,
+  leitura em segundo plano) ........... mundo/cidade.gd (FATIA_MS, respirar) · main.gd (PRE_CARREGAR, _fim_carregamento)
 - 1ª pessoa: arma presa à câmera,
   mãos, guarda dos punhos ............. jogador/ik_fuzil.gd (GUARDA_DIR/ESQ) + jogador/modelo_sobrevivente.gd
 - textos das NOVIDADES ................ vêm dos blocos ATUALIZAÇÃO deste LEIA-ME: rodar ferramentas/gerar_novidades.gd
@@ -3030,8 +3060,8 @@ MÚSICA (pasta audio/)
   tem regulagem de distância nem de aumento. Em 1ª
   pessoa a animação de RECARREGAR não aparece (a arma fica parada na mão); os outros jogadores te veem mirando do
   jeito de sempre (a mira de ferro é só a sua câmera).
-- Tela de carregamento (0.99): cada etapa é um pedaço inteiro de trabalho, então nas etapas mais pesadas (ruas,
-  fios, HUD na 1ª vez) a barra, as brasas e o girador param por alguns segundos até a etapa acabar. Os pesos da
+- Tela de carregamento (0.99/0.99.1): ainda há algumas paradas curtas (até ~0,75 s no computador de teste) em partes
+  que não dá para fatiar: criar o sobrevivente, o céu/clima na 1ª vez e os primeiros quadros da cidade. Os pesos da
   barra foram medidos no computador de teste: no celular a barra pode andar mais rápido em umas e mais devagar em
   outras. Voltar ao menu pela pausa ainda não usa a tela (é rápido).
 - Ideias para depois: loot por região, lugares
