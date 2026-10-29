@@ -437,6 +437,11 @@ func _pagina_infectados(v: float) -> Control:
 		{true: "Três infectados te acertando juntos te derrubam (morte)."}))
 	_secao(g, "Reaparecem", _seg("z_reaparecer", [[true, "Sim"], [false, "Não"]],
 		{true: "Lugar que você limpou volta a ter infectados depois de 3 dias sem ninguém por perto."}))
+	_secao(g, "Ritmo", _seg("z_ritmo", [[0, "Sem Diretor"], [1, "Calmo"], [2, "Normal"], [3, "Intenso"]],
+		{0: "Sem tensão e alívio: só a população da cidade, sem hordas mandadas atrás de você.",
+		1: "Momentos de calma depois de cada luta e hordas raras.",
+		2: "Depois de cada luta a cidade acalma; na rua, de vez em quando uma horda vem atrás de você.",
+		3: "Hordas mais frequentes."}))
 	_secao(g, "Andam", _seg("z_ativos", [["ambos", "Dia e noite"], ["dia", "Só de dia"], ["noite", "Só de noite"]],
 		{"dia": "De noite ficam parados e quase não sentem nada.", "noite": "De dia ficam parados e quase não sentem nada."}))
 	return _rolavel(g)

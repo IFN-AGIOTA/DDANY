@@ -22,6 +22,8 @@ extends Node
 # Mexa AQUI para: quantos infectados de verdade cabem (MAX_ATIVOS_PADRAO, FATOR_PC), distância de sumir, corpos.
 # (população e hordas: inimigos/horda.gd · barulho dos passos e números do estilo Project Zomboid: regras_infectados.gd)
 # (velocidade, vida e dano de cada Vago ficam em inimigos/vago.gd)
+# 1.00 · DIRETOR DE IA (inimigos/diretor.gd): mede a intensidade de cada jogador e alterna crescendo, pico,
+#   esfriando e alívio (menos infectados novos perto) e manda hordas atrás de você de tempos em tempos.
 
 signal abatido(cabeca: bool)            # um Vago morreu (cabeca = tiro na cabeça)
 signal atacou_jogador(dano: float)      # um Vago acertou o jogador (útil para HUD, tremer a tela e testes)
@@ -29,6 +31,7 @@ signal atacou_jogador(dano: float)      # um Vago acertou o jogador (útil para 
 const Locais := preload("res://mundo/locais.gd")
 const VagoCls := preload("res://inimigos/vago.gd")
 const HordaCls := preload("res://inimigos/horda.gd")
+const DiretorCls := preload("res://inimigos/diretor.gd")
 const Regras := preload("res://inimigos/regras_infectados.gd")
 const Hospitais := preload("res://npc/hospitais.gd")
 
@@ -42,6 +45,7 @@ const MAX_CORPOS := 20
 
 var max_ativos := MAX_ATIVOS_PADRAO
 var horda: Node = null                  # 0.89: inimigos/horda.gd (população da cidade; solo e host)
+var diretor: Node = null                # 1.00: inimigos/diretor.gd (ritmo: tensão e alívio, hordas; solo e host)
 var _mult_pop := 1.0
 var _golpes: Array = []                 # 0.89: [hora (s), infectado] dos últimos golpes no jogador (puxar para o chão)
 var mult_dano := 1.0                    # dificuldade: força das mordidas
@@ -138,12 +142,18 @@ func _garantir_horda() -> void:
 		horda.name = "Horda"
 		horda.gerente = self
 		add_child(horda)
+	if diretor == null:
+		diretor = DiretorCls.new()
+		diretor.name = "Diretor"
+		diretor.gerente = self
+		add_child(diretor)
 
-# quantos infectados de verdade ainda cabem (o limite do aparelho)
+# quantos infectados de verdade ainda cabem (o limite do aparelho; 1.00: menos no alívio do Diretor)
 func vagas_reais() -> int:
 	if not ativo:
 		return 0
-	return max_ativos - vivos.size()
+	var teto := max_ativos if diretor == null else int(diretor.teto_reais(max_ativos))
+	return teto - vivos.size()
 
 func mult_populacao() -> float:
 	return _mult_pop
@@ -165,7 +175,7 @@ func escuridao() -> float:
 
 # 0.94: jogador MUTADO (jogador/mutacao.gd): os infectados não veem, não ouvem e não atacam
 static func ignorado(n) -> bool:
-	return n != null and is_instance_valid(n) and bool(n.get("mutado"))
+	return n != null and is_instance_valid(n) and n.get("mutado") == true
 
 # quem este infectado vai caçar: o jogador ou outro jogador da partida (o mais perto, de pé)
 # (o mutado só fica de "alvo" quando não tem mais ninguém: aí o infectado não o vê nem ataca, vago.gd)
@@ -196,6 +206,9 @@ func barulho_real(posicao: Vector3, raio: float, do_jogador := true) -> void:
 		v.ouvir(posicao, r, do_jogador)
 
 func _vago_acertou(_v: Node, dano: float) -> void:
+	if diretor != null:
+		var quem = _v.get("_alvo")
+		diretor.ferido(quem if quem != null and is_instance_valid(quem) else jogador, dano)
 	if _v.get("_alvo") == null or _v._alvo == jogador:      # mordida num amigo: o aparelho dele que treme
 		atacou_jogador.emit(dano)
 		_contar_golpe(_v)
@@ -214,6 +227,8 @@ func _contar_golpe(quem) -> void:
 		var sv = jogador.get("sobrevivencia")
 		if sv != null and sv.has_method("derrubado"):
 			sv.derrubado()
+		if diretor != null:
+			diretor.derrubado(jogador)
 		_golpes.clear()
 
 func _process(dt: float) -> void:
@@ -252,6 +267,7 @@ func _process(dt: float) -> void:
 	if ativo and not (sem_jogador and _centros().is_empty()):
 		_garantir_horda()
 		horda.processar(dt)
+		diretor.processar(dt)
 	# passos do jogador
 	_t_ruido -= dt
 	if _t_ruido <= 0.0:
@@ -496,6 +512,8 @@ func _ao_morrer(v: Node, cabeca: bool) -> void:
 	corpos.append(v)
 	if horda != null and not espelho:
 		horda.morreu_em(v.global_position)          # 0.89: a quadra perdeu um (pode reaparecer depois)
+	if diretor != null and not espelho:
+		diretor.morte_perto(v.global_position)       # 1.00: infectado morrendo perto deixa o jogador mais tenso
 	# multijogador: o abate conta para quem matou (host: "_quem_bateu" do Vago · cliente: o host diz "por")
 	var meu := true
 	if espelho:

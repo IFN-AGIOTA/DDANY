@@ -38,6 +38,7 @@ const PADRAO := {
 	"z_derrubar": true,                   # 3 infectados juntos te puxam para o chão
 	"z_reaparecer": true,                 # lugar esvaziado volta a ter infectados (72 h)
 	"z_ativos": "ambos",                  # "ambos", "dia" ou "noite"
+	"z_ritmo": 2,                         # 1.00: Diretor de IA (inimigos/diretor.gd): 0 desligado, 1 calmo, 2 normal, 3 intenso
 	"rec_tempo": 0.0, "rec_abates": 0,    # recordes (tela de morte)
 	"voz_mic": true, "voz_ouvir": true,   # 0.97: chat de voz: seu microfone ligado · ouvir os outros (rede/voz.gd)
 	"nome_rede": "", "ip_rede": "",       # multijogador: seu nome e o último IP digitado (menu/tela_multijogador.gd)

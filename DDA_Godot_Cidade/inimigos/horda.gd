@@ -14,6 +14,8 @@ extends Node
 #     passam por você) e, uma vez por jogo, o HELICÓPTERO: passa em cima de você por alguns minutos fazendo um barulho
 #     enorme e trazendo as hordas da região.
 #   · Quadra que perdeu infectados e ficou SEM_VER_H horas sem ninguém por perto volta a ganhar 10% a cada 72 h.
+# 1.00 · DIRETOR DE IA (inimigos/diretor.gd): no esfriando/alívio nada novo nasce perto e não há eventos ao longe;
+#   os grupos marcados "diretor" são a horda que ele mandou atrás de você (ele corrige o caminho deles).
 # Mexa AQUI para: tamanho das quadras, distâncias (gerar / virar real / sumir), densidade por bairro, eventos.
 # (os números do estilo Project Zomboid ficam em inimigos/regras_infectados.gd)
 
@@ -335,11 +337,13 @@ func _virar_reais(centros: Array) -> void:
 	var livres: int = mini(gerente.vagas_reais(), POR_VEZ)
 	if livres <= 0:
 		return
+	var dir = gerente.get("diretor")
+	var longe_min: float = dir.dist_min_nascer() if dir != null else 0.0
 	var perto: Array = []
 	for i in grupos.size():
 		var g: Dictionary = grupos[i]
 		var dmin := _dist_menor(g["p"], centros)
-		if dmin < REAL:
+		if dmin < REAL and (dmin >= longe_min or g.has("diretor")):
 			perto.append([dmin, i])
 	if perto.is_empty():
 		return
@@ -369,7 +373,9 @@ func _virar_reais(centros: Array) -> void:
 			for t in 4:
 				var q := p + Vector2(_rng.randf_range(-r, r), _rng.randf_range(-r, r))
 				if gerente._livre(q.x, q.y):
-					gerente._criar(Vector3(q.x, gerente.mundo.altura(q.x, q.y), q.y), destino, true)
+					var nv = gerente._criar(Vector3(q.x, gerente.mundo.altura(q.x, q.y), q.y), destino, true)
+					if dir != null and g.has("diretor"):
+						dir.novo_membro(nv)
 					feitos += 1
 					break
 		livres -= feitos
@@ -439,7 +445,8 @@ func _metagame(dt: float, centros: Array) -> void:
 	var h := hora()
 	if _prox_evento < 0.0:
 		_prox_evento = h + _rng.randf_range(EVENTO_H.x, EVENTO_H.y)
-	if h >= _prox_evento and not bool(gerente.get("sem_jogador")):
+	var dir = gerente.get("diretor")
+	if h >= _prox_evento and not bool(gerente.get("sem_jogador")) and (dir == null or dir.pode_evento()):
 		_prox_evento = h + _rng.randf_range(EVENTO_H.x, EVENTO_H.y)
 		evento_ao_longe(centros[_rng.randi() % centros.size()])
 	if heli_dia < 0:
