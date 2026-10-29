@@ -17,11 +17,17 @@ extends Node
 # chunks ativos. Ativo = a até RAIO chunks da câmera; no HOST do multijogador também em volta de cada amigo
 # (centros_extra), porque os infectados perto dele precisam continuar vivos. Quem tem pausar_por_chunk(bool)
 # decide sozinho o que para (o jogador remoto para só a animação: a posição continua chegando).
+# 1.00 (estudos/ESTUDO_AAA.md 1.13, como o World Partition da Epic): o trabalho de cada quadro tem um ORÇAMENTO EM
+#   TEMPO (ORCAMENTO_US, no mínimo MIN_OPS nós) e pode parar no MEIO de um chunk (continua no quadro seguinte); com
+#   a mesma distância, os chunks NA FRENTE da câmera entram antes dos de trás. (A cidade inteira já fica montada
+#   na memória: "carregar" aqui é só pôr de volta na cena.)
 # Mexa AQUI para: tamanho do chunk, folga, quantos nós por quadro, de quanto em quanto tempo confere a pausa.
 
 const TAM_CHUNK := 500.0
 const FOLGA := 1                       # descarrega só em RAIO + FOLGA
-const OPS_POR_QUADRO := 90
+const OPS_POR_QUADRO := 90             # (antes de 1.00: o limite era só este)
+const ORCAMENTO_US := 1500              # 1.00: até 1,5 ms por quadro pondo/tirando nós
+const MIN_OPS := 8
 const MAX_CHUNKS_POR_NO := 16          # nó que encosta em mais chunks que isso fica sempre na cena
 const RAIO_AUTO := [2, 4, 7, 10]       # AUTO: por "Distância de visão" (900, 1800, 3200, 5000 m)
 
@@ -39,6 +45,8 @@ var _carregados := {}                  # Vector2i -> true
 var _centro := Vector2i(1 << 30, 1 << 30)
 var _fila: Array = []                  # [Vector2i, carregar?] pendentes, mais perto primeiro
 var _sempre := 0
+var us_maior := 0                      # 1.00: (testes) o quadro mais caro de _processar no orçamento
+var _dir := Vector2.ZERO               # 1.00: para onde a câmera olha (no chão)
 
 # estatística (FPS/depuração e testes)
 var nos_na_cena := 0
@@ -97,6 +105,8 @@ func _process(_dt: float) -> void:
 		return
 	var cam := get_viewport().get_camera_3d()
 	if cam != null:
+		var f := -cam.global_basis.z
+		_dir = Vector2(f.x, f.z).normalized() if Vector2(f.x, f.z).length_squared() > 0.0001 else Vector2.ZERO
 		atualizar(cam.global_position)
 	_t_pausa -= _dt
 	if _t_pausa <= 0.0:
@@ -112,7 +122,7 @@ func atualizar(pos: Vector3) -> void:
 		if pulo > 1:
 			_processar(1 << 30)            # pulou longe: carrega tudo agora (sem buraco na tela)
 			return
-	_processar(OPS_POR_QUADRO)
+	_processar(1 << 30, ORCAMENTO_US)
 
 func forcar(pos: Vector3) -> void:
 	_centro = Vector2i(1 << 30, 1 << 30)
@@ -122,6 +132,10 @@ func forcar(pos: Vector3) -> void:
 # ---------- chunks: quais devem estar ativos ----------
 func _refazer_fila(c: Vector2i) -> void:
 	_centro = c
+	# 1.00: um chunk pela metade termina agora (senão ficaria marcado como pronto sem todos os nós)
+	if not _fila.is_empty() and (_fila[0] as Array).size() > 2:
+		_fila = [_fila[0]]
+		_processar(1 << 30)
 	_fila.clear()
 	# 1. carregar: os que estão no raio e ainda não foram carregados (mais perto primeiro)
 	var novos := []
@@ -130,7 +144,12 @@ func _refazer_fila(c: Vector2i) -> void:
 			var k := Vector2i(c.x + dx, c.y + dz)
 			if _chunks.has(k) and not _carregados.has(k):
 				novos.append(k)
-	novos.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return (a - c).length_squared() < (b - c).length_squared())
+	# mais perto primeiro; com a mesma distância, o que está na frente da câmera (1.00)
+	var dir := _dir
+	var chave := func(k: Vector2i) -> float:
+		var d := Vector2(k - c)
+		return d.length_squared() - (0.75 * d.normalized().dot(dir) if d != Vector2.ZERO else 0.0)
+	novos.sort_custom(func(a: Vector2i, b: Vector2i) -> bool: return chave.call(a) < chave.call(b))
 	for k in novos:
 		_fila.append([k, true])
 	# 2. descarregar: os que passaram do raio + folga
@@ -138,30 +157,47 @@ func _refazer_fila(c: Vector2i) -> void:
 		if maxi(absi(k.x - c.x), absi(k.y - c.y)) > raio + FOLGA:
 			_fila.append([k, false])
 
-func _processar(orcamento: int) -> void:
+# orcamento = quantos nós no máximo; limite_us > 0 = para quando passar desse tempo (1.00), mesmo no meio de um chunk
+func _processar(orcamento: int, limite_us := 0) -> void:
+	var t0 := Time.get_ticks_usec()
+	var feitos := 0
 	while not _fila.is_empty() and orcamento > 0:
-		var item: Array = _fila.pop_front()
+		var item: Array = _fila[0]
 		var k: Vector2i = item[0]
-		if item[1]:
-			if _carregados.has(k):
+		var carregar: bool = item[1]
+		if item.size() < 3:                    # começando este chunk
+			if carregar == _carregados.has(k):
+				_fila.pop_front()
 				continue
-			_carregados[k] = true
-			for n in _chunks[k]:
+			if carregar:
+				_carregados[k] = true
+			else:
+				_carregados.erase(k)
+			item.append(0)
+		var lista: Array = _chunks[k]
+		var i: int = item[2]
+		while i < lista.size() and orcamento > 0:
+			var n = lista[i]
+			i += 1
+			if carregar:
 				_cont[n] += 1
 				if _cont[n] == 1 and is_instance_valid(n):
 					cidade.add_child(n)
 					nos_na_cena += 1
-				orcamento -= 1
-		else:
-			if not _carregados.has(k):
-				continue
-			_carregados.erase(k)
-			for n in _chunks[k]:
+			else:
 				_cont[n] -= 1
 				if _cont[n] == 0 and is_instance_valid(n) and n.is_inside_tree():
 					cidade.remove_child(n)
 					nos_na_cena -= 1
-				orcamento -= 1
+			orcamento -= 1
+			feitos += 1
+			if limite_us > 0 and feitos >= MIN_OPS and Time.get_ticks_usec() - t0 > limite_us:
+				orcamento = 0
+		item[2] = i
+		if i >= lista.size():
+			_fila.pop_front()
+	if limite_us > 0 and feitos > 0:
+		us_maior = maxi(us_maior, Time.get_ticks_usec() - t0)
 
 # chunks que a caixa do nó encosta ([] = fica sempre na cena)
 func _chunks_do_no(n: VisualInstance3D) -> Array:

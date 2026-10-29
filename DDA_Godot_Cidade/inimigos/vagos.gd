@@ -36,6 +36,7 @@ const Locais := preload("res://mundo/locais.gd")
 const VagoCls := preload("res://inimigos/vago.gd")
 const HordaCls := preload("res://inimigos/horda.gd")
 const DiretorCls := preload("res://inimigos/diretor.gd")
+const HordaLongeCls := preload("res://inimigos/horda_longe.gd")
 const Regras := preload("res://inimigos/regras_infectados.gd")
 const Hospitais := preload("res://npc/hospitais.gd")
 
@@ -57,6 +58,7 @@ var custo_ms := 0.0                     # média do tempo dos infectados (ms a c
 var _t_orc := 1.0
 var horda: Node = null                  # 0.89: inimigos/horda.gd (população da cidade; solo e host)
 var diretor: Node = null                # 1.00: inimigos/diretor.gd (ritmo: tensão e alívio, hordas; solo e host)
+var horda_longe: Node3D = null          # 1.00: inimigos/horda_longe.gd (silhuetas da horda virtual de longe)
 var _mult_pop := 1.0
 var _golpes: Array = []                 # 0.89: [hora (s), infectado] dos últimos golpes no jogador (puxar para o chão)
 var mult_dano := 1.0                    # dificuldade: força das mordidas
@@ -92,7 +94,7 @@ var espelho := false
 var sessao: Node = null                 # rede/sessao_rede.gd
 var por_id := {}                        # id de rede -> vago
 var _prox_id := 1
-const TIPOS_REDE := ["lento", "rapido", "corredor", "rastejante"]   # 0.89: o jeito de andar (vago.gd CLASSES)
+const TIPOS_REDE := ["lento", "rapido", "corredor", "rastejante", "mutado"]   # 0.89: o jeito de andar (vago.gd CLASSES; 1.00: mutado)
 
 func ligar(c, m, j, a) -> void:
 	cidade = c
@@ -153,11 +155,25 @@ func _garantir_horda() -> void:
 		horda.name = "Horda"
 		horda.gerente = self
 		add_child(horda)
+	if horda_longe == null and not sem_jogador:
+		horda_longe = HordaLongeCls.new()
+		horda_longe.name = "HordaLonge"
+		horda_longe.horda = horda
+		horda_longe.gerente = self
+		add_child(horda_longe)
 	if diretor == null:
 		diretor = DiretorCls.new()
 		diretor.name = "Diretor"
 		diretor.gerente = self
 		add_child(diretor)
+
+# 1.00: quantos mutados estão vivos agora
+func mutados_vivos() -> int:
+	var n := 0
+	for v in vivos:
+		if is_instance_valid(v) and v.classe == "mutado" and int(v.estado) != VagoCls.MORTO:
+			n += 1
+	return n
 
 # quantos infectados de verdade ainda cabem (o limite do aparelho; 1.00: menos no alívio do Diretor)
 func vagas_reais() -> int:
@@ -542,12 +558,14 @@ func vivos_perto(p: Vector3, raio: float) -> int:
 				n += 1
 	return n
 
-func _criar(p: Vector3, destino: Vector3, da_horda := false) -> Node:
+func _criar(p: Vector3, destino: Vector3, da_horda := false, classe := "") -> Node:
 	if espelho:
 		return null       # 0.70: no cliente quem cria é o host (prédio infestado, local, missão e evento chamam aqui)
 	var v = VagoCls.new()
 	v.gerente = self
 	v.da_horda = da_horda
+	if classe != "":
+		v.tipo_fixo = classe                     # 1.00: o Diretor solta um "mutado"
 	v.position = p + Vector3(0, 0.02, 0)
 	v.rotation.y = randf() * TAU
 	add_child(v)
@@ -563,7 +581,7 @@ func _criar(p: Vector3, destino: Vector3, da_horda := false) -> Node:
 func _ao_morrer(v: Node, cabeca: bool) -> void:
 	vivos.erase(v)
 	corpos.append(v)
-	if horda != null and not espelho:
+	if horda != null and not espelho and v.classe != "mutado":
 		horda.morreu_em(v.global_position)          # 0.89: a quadra perdeu um (pode reaparecer depois)
 	if diretor != null and not espelho:
 		diretor.morte_perto(v.global_position)       # 1.00: infectado morrendo perto deixa o jogador mais tenso

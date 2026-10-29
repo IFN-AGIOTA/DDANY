@@ -16,6 +16,10 @@ extends Node
 #     HORDA_DIST m, na maioria (HORDA_DE_TRAS) ATRÁS de você, e eles vêm na sua direção, seguindo você por
 #     HORDA_SEGUE s. Se não tem gente bastante ali, nasce um grupo novo onde você não vê. Começa com HORDA_TAM.x e
 #     cresce a cada horda (até HORDA_TAM.y). Você ouve os gemidos chegando, do lado de onde vêm.
+#   · MUTADOS (especiais, como os do L4D; lore: Bíblia 2.7): no crescendo, com alguém na rua, de ESPECIAL_S em
+#     ESPECIAL_S s (mais vezes à noite) solta um mutado a ESPECIAL_DIST m, onde ninguém está vendo, que já vem
+#     farejando o jogador. No máximo MAX_MUTADOS vivos. O estalo de dentes avisa que ele está vindo.
+#     Opções › Infectados › Mutados (z_mutados): não · raros · frequentes.
 # A opção Opções › Infectados › Ritmo (z_ritmo) desliga o Diretor ou muda a frequência das hordas.
 # "motivo" guarda a frase da última troca de fase (para depurar, como as "ações" do L4D).
 # Mexa AQUI para: quanto cada coisa aumenta a intensidade, o pico, quanto dura cada fase, as hordas.
@@ -64,6 +68,14 @@ const HORDA_ERRO := 5.0                       # m de erro (não sabem o ponto ex
 const MULT_RITMO := [0.0, 1.8, 1.0, 0.6]      # Ritmo: desligado · calmo · normal · intenso
 const MULT_DIFICULDADE := [1.4, 1.0, 0.75]    # fácil · normal · difícil
 
+# ----- mutados -----
+const ESPECIAL_S := Vector2(300.0, 600.0)     # s entre um mutado e outro (Mutados: raros)
+const ESPECIAL_PRIMEIRO := 240.0              # o primeiro não vem antes disso (mais o sorteio)
+const MULT_ESPECIAL := [0.0, 1.0, 0.45]       # Mutados: não · raros · frequentes
+const MAX_MUTADOS := [0, 1, 2]
+const NOITE_ESPECIAL := 0.6                   # à noite vêm mais vezes (o relógio corre 1/0,6 mais rápido)
+const ESPECIAL_DIST := Vector2(45.0, 85.0)
+
 var gerente: Node = null              # inimigos/vagos.gd
 var fase := CRESCENDO
 var motivo := "começou"
@@ -77,6 +89,8 @@ var _horda_alvo: Node3D = null
 var _horda_t := 0.0                   # > 0 = a horda está seguindo alguém
 var _t_seguir := 0.0
 var membros: Array = []               # infectados de verdade da horda do Diretor
+var mutados_soltos := 0               # 1.00: quantos mutados o Diretor já soltou
+var _t_especial := -1.0
 var _rng := RandomNumberGenerator.new()
 
 func _ready() -> void:
@@ -146,6 +160,7 @@ func processar(dt: float) -> void:
 	_cair(dt, js)
 	_fases(dt, js)
 	_hordas(dt, js)
+	_especiais(dt, js)
 
 func _jogadores() -> Array:
 	var l: Array = []
@@ -380,6 +395,57 @@ func _parar_horda() -> void:
 	if gerente != null and gerente.horda != null:
 		for g in gerente.horda.grupos:
 			g.erase("diretor")
+
+# ---------- mutados ----------
+func intervalo_especial() -> Vector2:
+	return ESPECIAL_S * float(MULT_ESPECIAL[Regras.mutados()])
+
+func _especiais(dt: float, js: Array) -> void:
+	var nivel := Regras.mutados()
+	if nivel <= 0:
+		return
+	if _t_especial < 0.0:
+		var iv := intervalo_especial()
+		_t_especial = ESPECIAL_PRIMEIRO + _rng.randf_range(iv.x, iv.y) * 0.5
+	if fase != CRESCENDO or gerente.mutados_vivos() >= int(MAX_MUTADOS[nivel]):
+		return
+	var expostos: Array = []
+	for c in js:
+		if exposto(c):
+			expostos.append(c)
+	if expostos.is_empty():
+		return
+	_t_especial -= dt / (NOITE_ESPECIAL if gerente.escuridao() > 0.5 else 1.0)
+	if _t_especial > 0.0:
+		return
+	var v = soltar_mutado(expostos[_rng.randi() % expostos.size()])
+	if v != null:
+		var iv := intervalo_especial()
+		_t_especial = _rng.randf_range(iv.x, iv.y)
+	else:
+		_t_especial = 15.0
+
+# um mutado nasce onde ninguém está vendo (na maioria das vezes atrás), já farejando o jogador
+func soltar_mutado(alvo: Node3D) -> Node:
+	if alvo == null or not is_instance_valid(alvo) or gerente.mundo == null:
+		return null
+	var pa := alvo.global_position
+	var frente := _frente(alvo)
+	for t in 24:
+		var dir := -frente if _rng.randf() < HORDA_DE_TRAS else frente.rotated(_rng.randf_range(-PI * 0.5, PI * 0.5))
+		dir = dir.rotated(_rng.randf_range(-0.7, 0.7))
+		var d := _rng.randf_range(ESPECIAL_DIST.x, ESPECIAL_DIST.y)
+		var q := Vector2(pa.x, pa.z) + dir * d
+		if not gerente._livre(q.x, q.y):
+			continue
+		var p3 := Vector3(q.x, gerente.mundo.altura(q.x, q.y), q.y)
+		if gerente._visivel(p3):
+			continue
+		var v = gerente._criar(p3, pa, false, "mutado")
+		if v != null:
+			mutados_soltos += 1
+		return v
+	return null
 
 # gemidos ao longe, do lado de onde a horda vem (só no aparelho de quem é o alvo; os amigos ouvem os infectados chegando)
 func _anunciar(alvo: Node3D, dir: Vector2) -> void:

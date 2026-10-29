@@ -437,6 +437,10 @@ func _pagina_infectados(v: float) -> Control:
 		{true: "Três infectados te acertando juntos te derrubam (morte)."}))
 	_secao(g, "Reaparecem", _seg("z_reaparecer", [[true, "Sim"], [false, "Não"]],
 		{true: "Lugar que você limpou volta a ter infectados depois de 3 dias sem ninguém por perto."}))
+	_secao(g, "Mutados", _seg("z_mutados", [[0, "Não"], [1, "Raros"], [2, "Frequentes"]],
+		{0: "Só os infectados comuns.",
+		1: "De vez em quando um mutado aparece onde você não vê: corre e salta como bicho. O estalo dos dentes avisa.",
+		2: "Mutados mais vezes (até 2 ao mesmo tempo)."}))
 	_secao(g, "Ritmo", _seg("z_ritmo", [[0, "Sem Diretor"], [1, "Calmo"], [2, "Normal"], [3, "Intenso"]],
 		{0: "Sem tensão e alívio: só a população da cidade, sem hordas mandadas atrás de você.",
 		1: "Momentos de calma depois de cada luta e hordas raras.",

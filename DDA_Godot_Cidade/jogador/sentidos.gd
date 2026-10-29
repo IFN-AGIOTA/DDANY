@@ -186,6 +186,12 @@ func estalo_remoto(id: int, d: Dictionary) -> void:
 	estalos[id] = [Vector2(p.x, p.z), DURA]
 	_tocar_estalo(p, false)
 
+# 1.00: o mesmo som serve para os MUTADOS infectados (inimigos/vago.gd)
+static func som_estalo() -> AudioStreamWAV:
+	if _som_estalo == null:
+		_som_estalo = _fazer_estalo()
+	return _som_estalo
+
 func _tocar_estalo(p: Vector3, meu: bool) -> void:
 	if _som_estalo == null:
 		_som_estalo = _fazer_estalo()

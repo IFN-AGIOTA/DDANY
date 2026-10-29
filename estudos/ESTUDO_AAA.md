@@ -390,9 +390,8 @@ fareja sangue de longe e faz o estalo rápido de dentes.
 
 - Isso casa com o modelo de "especiais" do L4D e do TLOU: **raros, com papel próprio e sempre anunciados por som**
   (o estalo), nascendo onde o jogador não vê.
-- ⚠ **Decisão para o dono do jogo:** hoje o padrão "Misturado" tem 20% de rápidos e 8% de corredores
-  (`inimigos/regras_infectados.gd MISTO`). Pela Bíblia, os comuns são lentos. Uma opção fiel à lore: comuns
-  lentos por padrão e a "corrida" vir dos mutados (especiais raros). A opção "Velocidade" continuaria existindo.
+- ✅ **Conferido no código:** o padrão já é "Lentos" (`menu/config.gd z_vel`), fiel à lore; "Misturado" é só uma
+  opção. Na 1.00 a "corrida" veio dos mutados (especiais raros, `inimigos/diretor.gd`).
 
 ---
 
@@ -547,26 +546,27 @@ mira assistida não estavam acessíveis; esses valores ficam para testar jogando
 
 ## 7. Plano de ação (por prioridade)
 
-Impacto e esforço estimados por mim; cada item cita a seção acima.
+Impacto e esforço estimados por mim; cada item cita a seção acima. **Todos os 16 foram feitos na versão 1.00**
+(o que mudou em cada um está no `LEIA-ME.txt`, bloco ATUALIZAÇÃO 1.00).
 
 | # | O quê | Por quê | Esforço | Onde |
 |---|---|---|---|---|
-| 1 | **Diretor de IA** (intensidade, crescendo/pico/esfriando/alívio, hordas de trás a cada 90–180 s) | Maior ganho de jogabilidade: ritmo de tensão e alívio, o que fez o L4D ser rejogável (2.1) | Médio | novo `inimigos/diretor.gd` + `vagos.gd`/`horda.gd` |
-| 2 | **Arremessar garrafa/tijolo** para distrair | Furtividade e estratégia; "tão valioso quanto uma arma" no TLOU (2.2) | Baixo | `inventario/`, `armas/`, `vagos.barulho` |
-| 3 | **Estado "desconfiado"** antes de perseguir (gemido, virar a cabeça) | O jogador entende o que vai acontecer (2.2) | Baixo | `inimigos/vago.gd` |
-| 4 | **Sinal visual de prédio que dá para entrar** | Legibilidade; o jogador não testa porta por porta (3.4) | Médio | `mundo/cidade.gd`/`fachadas.gd` |
-| 5 | **Orçamento de infectados em ms** (menos reais quando o quadro pesa) | Estabilidade no celular (2.4) | Médio | `inimigos/vagos.gd` |
-| 6 | **Validar posição dos clientes no host** | Anti-trapaça básica (5) | Baixo | `rede/sessao_rede.gd` |
-| 7 | **Teste automático de desempenho** a cada versão | Não piorar sem perceber (1.1) | Baixo | `ferramentas/testes/` |
-| 8 | Pré-aquecer os materiais que aparecem depois (tiro, sangue, explosão) na "Preparando a vista" | Engasgo no primeiro tiro (1.6) | Baixo | `main.gd`/`tela_carregamento.gd` |
-| 9 | Fatiar "abrir prédio/local" durante o jogo | Engasgos andando pela cidade (1.12) | Médio | `mundo/interiores.gd`, `locais.gd` |
-| 10 | Opção de **45 FPS** e **resolução dinâmica** | Calor e bateria em sessões longas (1.11) | Baixo/Médio | `menu/opcoes.gd`, `aplicar_opcoes.gd` |
-| 11 | Mutados como **especiais raros** (escalam, saltam, estalo de dentes) | Fiel à lore e cria picos de tensão (2.6) | Alto | `inimigos/` (e decidir o padrão de velocidade) |
-| 12 | Infectados de longe como **MultiMesh animado** | Cidade cheia sem custo de IA (2.5) | Alto | novo sistema |
-| 13 | Infectados **dormindo** em grupos dentro de prédios | Encontros furtivos variados (2.3) | Baixo | `vago.gd`, `interiores.gd` |
-| 14 | `get_nodes_in_group` fora do `_process` | Pequeno ganho de CPU (1.8) | Baixo | `npc/hospitais.gd`, `jogador/sobrevivencia.gd` |
-| 15 | HLOD com *Visibility Parent* nas fachadas/quarteirões | Menos triângulos de longe (0, 1.3, 1.13) | Médio | `mundo/fachadas.gd`, `cidade.gd` |
-| 16 | Chunks com estado **preparado** + orçamento em **ms** + frente da câmera primeiro | Cruzar a borda do chunk sem engasgo (1.13) | Médio | `mundo/chunks.gd` |
+| 1 ✅ | **Diretor de IA** (intensidade, crescendo/pico/esfriando/alívio, hordas de trás a cada 90–180 s) | Maior ganho de jogabilidade: ritmo de tensão e alívio, o que fez o L4D ser rejogável (2.1) | Médio | novo `inimigos/diretor.gd` + `vagos.gd`/`horda.gd` |
+| 2 ✅ | **Arremessar garrafa/tijolo** para distrair | Furtividade e estratégia; "tão valioso quanto uma arma" no TLOU (2.2) | Baixo | `inventario/`, `armas/`, `vagos.barulho` |
+| 3 ✅ | **Estado "desconfiado"** (já existia desde a 0.65; 1.00: audição pelo estado) antes de perseguir (gemido, virar a cabeça) | O jogador entende o que vai acontecer (2.2) | Baixo | `inimigos/vago.gd` |
+| 4 ✅ | **Sinal visual de prédio que dá para entrar** (portas de aço no térreo de quem não entra) | Legibilidade; o jogador não testa porta por porta (3.4) | Médio | `mundo/cidade.gd`/`fachadas.gd` |
+| 5 ✅ | **Orçamento de infectados em ms** (menos reais quando o quadro pesa) | Estabilidade no celular (2.4) | Médio | `inimigos/vagos.gd` |
+| 6 ✅ | **Validar no host** (feito como validação do DANO: distância, dano máximo, pedidos por segundo) | Anti-trapaça básica (5) | Baixo | `rede/sessao_rede.gd` |
+| 7 ✅ | **Teste automático de desempenho** a cada versão | Não piorar sem perceber (1.1) | Baixo | `ferramentas/testes/` |
+| 8 ✅ | Pré-aquecer os materiais que aparecem depois (tiro, sangue, explosão) na "Preparando a vista" | Engasgo no primeiro tiro (1.6) | Baixo | `main.gd`/`tela_carregamento.gd` |
+| 9 ✅ | Fatiar "abrir prédio/local" (+ colisão sem nós; achado: móveis mudavam a cada abertura) durante o jogo | Engasgos andando pela cidade (1.12) | Médio | `mundo/interiores.gd`, `locais.gd` |
+| 10 ✅ | Opção de **45 FPS** e **resolução dinâmica** (já existiam; 1.00: celular trava em 45 sozinho) | Calor e bateria em sessões longas (1.11) | Baixo/Médio | `menu/opcoes.gd`, `aplicar_opcoes.gd` |
+| 11 ✅ | Mutados como **especiais raros** (escalam, saltam, estalo de dentes) | Fiel à lore e cria picos de tensão (2.6) | Alto | `inimigos/` (e decidir o padrão de velocidade) |
+| 12 ✅ | Infectados de longe como **MultiMesh animado** (silhuetas-cartaz, não animação em textura) | Cidade cheia sem custo de IA (2.5) | Alto | novo sistema |
+| 13 ✅ | Infectados **dormindo** em grupos dentro de prédios | Encontros furtivos variados (2.3) | Baixo | `vago.gd`, `interiores.gd` |
+| 14 ✅ | `get_nodes_in_group` fora do `_process` | Pequeno ganho de CPU (1.8) | Baixo | `npc/hospitais.gd`, `jogador/sobrevivencia.gd` |
+| 15 ✅ | HLOD: feito nos móveis dos interiores (a medição mostrou que o peso estava lá, não nas fachadas) | Menos triângulos de longe (0, 1.3, 1.13) | Médio | `mundo/fachadas.gd`, `cidade.gd` |
+| 16 ✅ | Chunks com estado **preparado** (a cidade já fica toda na memória) + orçamento em **ms** + frente da câmera primeiro | Cruzar a borda do chunk sem engasgo (1.13) | Médio | `mundo/chunks.gd` |
 
 ---
 

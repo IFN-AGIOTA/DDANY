@@ -40,6 +40,98 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.00 · O QUE OS JOGOS AAA FAZEM (DIRETOR, ARREMESSO, MUTADOS, DESEMPENHO)
+  Tudo o que saiu do estudo de técnicas de jogos grandes (estudos/ESTUDO_AAA.md, os 16 itens do plano):
+  · DIRETOR DE IA (como o do Left 4 Dead): o jogo mede o quanto você está sob pressão (mordidas, infectados
+    morrendo perto, ser puxado para o chão) e alterna CRESCENDO -> PICO -> ESFRIANDO -> ALÍVIO. Depois de uma luta
+    pesada a cidade "respira" por 30-45 s: nada novo nasce perto (só a mais de 60 m), no máximo 60% dos infectados
+    de verdade, sem tiros/alarmes ao longe. No crescendo, se você está NA RUA (fora de prédio, base, zona do hospital,
+    carro e água), de 2 a 4 min vem uma HORDA atrás de você (75% das vezes por trás): você ouve os gemidos chegando
+    do lado de onde vêm e ela segue você por 75 s. Começa com 6 infectados e cresce 2 a cada horda (até 20).
+    Opções › Infectados › RITMO: Sem Diretor · Calmo · Normal · Intenso.
+  · ARREMESSO: TIJOLO e GARRAFA DE VIDRO (novos; no lixo, no chão dos prédios, depósitos, postos) e a garrafa vazia
+    de metal. Com um deles NA MÃO, segure ATIRAR (ou MIRAR) e aparece o ARCO até onde vai cair e um anel no chão;
+    solte o ATIRAR e ele voa. Onde bate faz barulho e os infectados vão ver o que foi (a garrafa de vidro quebra
+    alto: eles vão direto; o tijolo faz eles desconfiarem e irem ver). Acertar um infectado machuca e atordoa (o
+    tijolo tira 24), mas ele te descobre. Tijolo e garrafa de metal ficam no chão (pega de volta); o vidro quebra.
+  · INFECTADOS: distraídos (vagando) ouvem 15% pior e desconfiados/investigando escutam 15% melhor (The Last of Us).
+    Novos: GRUPOS DORMINDO dentro de prédios infestados (2 a 4 em pé, quietos, marcador "zz"): não veem; passando
+    perto devagar ele geme e se mexe (aviso); colado, correndo perto ou com barulho alto, acorda bravo.
+  · MUTADOS (lore, Bíblia 2.7): de vez em quando (5-10 min; mais à noite) o Diretor solta um mutado onde você não
+    vê, que já vem farejando você. Corre como você no sprint, SALTA em cima de você de 3,5 a 7 m, aguenta 2,2x,
+    morde 1,4x mais forte, fareja sangue a 40 m e vem fazendo o ESTALO DE DENTES (o aviso). Pele de barro seco
+    rachada com veios escuros que pulsam, braços longos e sempre meio à frente. Opções › Infectados › MUTADOS: Não ·
+    Raros (padrão, 1 por vez) · Frequentes (até 2).
+  · HORDA DE LONGE: os grupos da população entre 100 e 230 m agora aparecem como silhuetas andando (um "cartaz"
+    virado para a câmera por infectado, tudo numa chamada de desenho só): a cidade parece cheia sem custo.
+  · PRÉDIOS: quem NÃO dá para entrar tem o térreo com PORTAS DE AÇO baixadas (enferrujadas e pichadas); quem dá
+    tem as vitrines e portas abertas (escuras), sem tábuas. É o mesmo sinal na cidade inteira: dá para saber de
+    longe onde entrar. CONSERTO: os móveis de um prédio eram sorteados de novo a cada vez que ele abria (o loot
+    guardado num armário podia ir parar em outro móvel ou sumir); agora o prédio sai sempre igual.
+  · DESEMPENHO:
+      - prédio abrindo perto: o que pesava na hora (caixas de loot dos móveis, portas, janelas, loot do chão e os
+        infectados de dentro) é montado aos poucos, até 2,5 ms por quadro (no computador de teste o quadro mais
+        pesado caiu de ~14-23 ms para ~3 ms); a colisão não usa mais um nó por caixa (~500 nós a menos por prédio,
+        de ~900 para ~400);
+      - os móveis e objetos de dentro (~80% dos triângulos de um prédio aberto) só aparecem a até 34 m dele;
+      - CHUNKS: o trabalho de cada quadro tem orçamento em TEMPO (1,5 ms, pode parar no meio de um chunk) e, com a
+        mesma distância, os chunks da frente da câmera entram antes;
+      - os INFECTADOS têm um orçamento de tempo (3 ms no celular, 4,5 no PC): passou, cabem menos de verdade
+        (até 8) e os menos importantes (longe, fora da tela, sem caçar) voltam a ser grupo; com folga, volta;
+      - PRÉ-AQUECIMENTO: debaixo da tela de carregamento, uma peça por quadro, o jogo mostra tudo o que só aparece
+        depois (traçante, clarão, faísca, poeira, sangue, marca de bala, arco e cacos do arremesso, chuva, céu da
+        noite, lente da luneta, fundo da pausa, pele do mutado, silhuetas): o primeiro tiro não engasga mais;
+      - CELULAR: sem limite escolhido, se nem com a resolução no mínimo ele segura 60 FPS, trava em 45 estáveis;
+      - os NPCs do hospital não são mais procurados na árvore inteira todo quadro.
+  · REDE: o host confere os pedidos de dano dos amigos (distância possível, dano que cabe numa arma, no máximo 40
+    por segundo) e joga fora o que não bate (anti-trapaça básico). O arremesso vai para os outros (eles veem o voo e
+    os infectados de lá ouvem a batida).
+  ARQUIVOS MEXIDOS (testado: teste_diretor NOVO 34 conferências, teste_arremesso NOVO 22, teste_mutados NOVO 27
+  (mutados e dormindo), teste_interior_fatias NOVO 6, teste_chunks NOVO 5, teste_desempenho NOVO (compara com a
+  referência gravada), teste_validar_rede NOVO 8, teste_ritmo NOVO 5, teste_graficos e teste_carregamento com
+  conferências novas; + a bateria toda):
+    inimigos/diretor.gd ............ NOVO · o Diretor (intensidade, fases, hordas, mutados)
+    inimigos/horda_longe.gd ........ NOVO · silhuetas da horda de longe
+    armas/arremesso.gd ............. NOVO · arco, voo, batida, barulho, item no chão
+    menu/pre_aquecer.gd ............ NOVO · pré-aquecimento dos shaders debaixo da tela de carregamento
+    inventario/icones/tijolo.png ... NOVO · ícone
+    inventario/icones/garrafa_vidro.png  NOVO · ícone
+    inimigos/vagos.gd .............. cria Diretor e silhuetas; orçamento em ms (_orcamento, _aliviar); mutado na
+                                     rede; _criar(classe); mutados_vivos
+    inimigos/horda.gd .............. respeita o Diretor (nada novo perto no alívio, sem eventos ao longe; grupos
+                                     da horda do Diretor)
+    inimigos/vago.gd ............... custo medido; audição pelo estado; MUTADO (salto, estalo, faro); DORMINDO
+    inimigos/modelo_infectado.gd ... virar_mutado (pele, braços longos, postura)
+    inimigos/regras_infectados.gd .. velocidades e números do mutado; opção Mutados
+    inventario/itens.gd ............ tijolo, garrafa de vidro; a garrafa vazia pode ser arremessada
+    inventario/modelos_itens.gd .... modelos do tijolo e da garrafa de vidro
+    mundo/loot_mundo.gd ............ tijolo e garrafa de vidro no loot
+    jogador/jogador.gd ............. nó de arremesso; nome do item de arremesso no botão ARMA
+    jogador/sentidos.gd ............ som_estalo() (o mesmo som do mutado infectado)
+    rede/sessao_rede.gd ............ evento "arremesso"; dano_valido (validar no host)
+    mundo/cidade.gd ................ dado_predio (entra ou não no 4º dado do prédio)
+    mundo/materiais_cidade.gd ...... shader PREDIO: portas de aço no térreo de quem não entra
+    mundo/interior.gd .............. caixas de colisão sem nós; tarefas (montar aos poucos); móveis num nó só de
+                                     perto (Detalhes); embaralhar com a semente do prédio (móveis sempre iguais)
+    mundo/interiores.gd ............ monta em fatias de 2,5 ms; grupos dormindo; fechar no meio não perde o chão
+    mundo/local.gd ................. colisão sem nós
+    mundo/chunks.gd ................ orçamento em tempo; frente da câmera primeiro
+    npc/hospitais.gd ............... lista dos NPCs guardada (sem get_nodes_in_group todo quadro)
+    armas/efeitos_tiro.gd .......... pecas_aquecer/aquecer (pré-aquecimento)
+    armas/vista_luneta.gd .......... shader() compartilhado
+    menu/pausa.gd .................. shader_veu()/shader_xadrez() compartilhados
+    main.gd ........................ chama o pré-aquecimento no fim do carregamento
+    menu/aplicar_opcoes.gd ......... 45 FPS estável no celular (_vigiar_ritmo)
+    menu/opcoes.gd ................. Opções › Infectados: Ritmo e Mutados
+    menu/config.gd ................. z_ritmo, z_mutados; VERSAO "1.00"
+    ferramentas/gerar_icones.gd .... tijolo e garrafa de vidro
+    ferramentas/testes/ ............ teste_diretor, teste_arremesso, teste_mutados, teste_interior_fatias,
+                                     teste_chunks, teste_desempenho (+ desempenho_base.json), teste_validar_rede,
+                                     teste_ritmo NOVOS; teste_graficos, teste_carregamento, teste_locais_novos e
+                                     rodar.sh mexidos
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + seções 3, 4, 5, 7 (mapa) e 10
+
 ATUALIZAÇÃO 0.99.3 · NÃO CAI MAIS NO VOID
   · CONSERTO: voltando ao mundo (Continuar, renascer, entrar na partida de um amigo...), às vezes o personagem
     aparecia antes do chão daquele lugar estar pronto (o piso de um prédio por dentro ou de um local especial é
@@ -2455,6 +2547,8 @@ TOQUE (vários dedos ao mesmo tempo)
   · BALÃO (só no multijogador): mensagens rápidas.
   · MIC e VOZES (0.97, só no multijogador): mutar o seu microfone / mutar os outros jogadores (chat de voz).
   · SENTIDO (0.95, só para o mutado/controlado): FAREJAR (mutado) ou ESCUTAR (controlado) por 10 s, espera 20 s.
+- ARREMESSO (1.00): com TIJOLO, GARRAFA DE VIDRO ou garrafa vazia NA MÃO, segurar ATIRAR (ou MIRAR) mostra o arco
+  e o anel onde cai; soltar o ATIRAR joga. PC: segurar e soltar o botão esquerdo do mouse.
 - CARRO (0.76): PEGAR perto de um carro que funciona = ENTRAR; joystick frente/trás = acelerar/freio e ré, lados =
   virar; PULAR = freio de mão; PEGAR = SAIR. PC: W/S/A/D (setas), Espaço freio de mão, E sair.
 - Desde a 0.67 os botões mostram ÍCONES (balas = atirar, mira = mirar, mochila = INV, drone = VOO...); o botão
@@ -2518,6 +2612,22 @@ PORTAS (0.73): porta 100 de vida, cada tábua mais 140 (até 3) · golpe de infe
   (8–14 x 2,2) · abrir/fechar: barulho de 7 m · martelar tábua 10,5 m · porta quebrando 14 m · usar até 1,9 m
 VOID (0.99.3, jogador/jogador.gd): depois de teleporte espera o chão até 4 s (chão até 1,6 m embaixo) · ponto seguro a
   cada 0,5 s em pé · resgate abaixo de y -70 m (o fundo do bunker mais fundo fica a ~-38 m)
+DIRETOR DE IA (1.00, inimigos/diretor.gd): intensidade 0-1 (mordida = dano/100 x2,5 · infectado morrendo a até 15 m
+  = até +0,12 · puxado para o chão = 1); cai 0,05/s depois de 2 s sem infectado caçando a até 25 m. PICO a 0,85, dura
+  3-5 s · ESFRIANDO até abaixo de 0,35 sem ninguém caçando · ALÍVIO 30-45 s (ou andar 150 m): infectado novo só a
+  mais de 60 m e no máximo 60% de verdade. HORDA: a cada 120-240 s (Ritmo Calmo x1,8, Intenso x0,6; fácil x1,4,
+  difícil x0,75), grupos de 100-230 m num cone de 70°, 75% atrás · 6 + 2 por horda (até 20) · vêm a 1,2 m/s e seguem
+  você 75 s (corrigem o caminho a cada 4 s). ORÇAMENTO dos infectados: 3 ms (celular) / 4,5 ms (PC) a cada 1/60 s;
+  passou: limite -2 por segundo (mínimo 8) e 2 dos menos importantes voltam a ser grupo; abaixo de 75%: +1 por s.
+MUTADO INFECTADO (1.00, especial): 7,0-7,6 m/s caçando · salto de 3,5-7 m (0,5 s, 12 m/s, arco de ~0,9 m) a cada 3 s
+  · vida x2,2 · mordida x1,4 · fareja gente a 8 m e sangue a 40 m · estalo a cada 0,6-1,4 s (ouve até 80 m) · nasce
+  a 45-85 m fora da vista a cada 300-600 s (Frequentes x0,45; à noite o relógio corre 1/0,6 mais rápido), o 1º depois
+  de 4 min · no máximo 1 (Raros) ou 2 (Frequentes).
+DORMINDO (1.00): grupos de 2-4 em 45% dos prédios infestados · acordam com você a menos de 2,2 m, correndo a menos
+  de 7 m, barulho alto até 60% do alcance dele ou qualquer barulho até 30% · a menos de 5 m gemem (aviso, a cada 4 s).
+ARREMESSO (1.00): força 15 (tijolo) · 17 (vidro) · 16 (metal) m/s, sai 0,28 acima de onde você olha, gravidade 12 ·
+  barulho 22 (tijolo) · 32 (vidro) · 24 (metal) m · dano 24 · 12 · 8 · quica com 35% da velocidade e para abaixo de 2,2 m/s.
+AUDIÇÃO PELO ESTADO (1.00): vagando x0,85 · desconfiado/investigando x1,15.
 MUTADO (0.94, jogador/mutacao.gd): 1% ao morrer pelos infectados · levanta em 6 s · dano recebido x0,45 · sangramento
   x0,4 · trote/corrida x1,22 · pulo x1,4 · estamina correndo x0,5 · queda x1,35 · garras 30 de dano (1,65 m, 0,55 s) ·
   armas brancas x1,3 · sem arma de fogo · infectados ignoram · (controlado, 2ª parte: x1,1 · x1,2 · dano x0,7 · garras 20)
@@ -2562,6 +2672,9 @@ ITENS (inventario/itens.gd; item novo = 1 linha na tabela DB)
 - Munição: 9mm, 5.56, 7.62, cartucho 12, .308 · Pentes: de pistola (12), STANAG (30), de AK (30).
 - Acessórios: silenciador, mira 4x, luneta.
 - Novos: galhos, tala, lança, garrafa vazia, água suja, pastilhas purificadoras, carvão ativado.
+- 1.00: TIJOLO (2x1, até 3, 1,8 kg) e GARRAFA DE VIDRO (1x2, até 3) para ARREMESSAR (distrair os infectados); a
+  garrafa vazia de metal também serve. Aparecem no lixo, no chão das casas, lojas, armazéns e metrô, depósitos e
+  nas bebidas do posto.
 - Médico: atadura, trapos (estancam), analgésicos (+15 vida), soro (+1200 sangue), kit de primeiros socorros
   (estanca tudo, +40 vida), vitaminas, antibióticos (curam infecção).
 - Comida: feijão, atum, sardinha, pêssegos em calda, biscoitos, barra de cereal, salgadinho (dá sede), maçã.
@@ -2737,6 +2850,15 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - tela NOVIDADES do menu (aparência) .. menu/tela_novidades.gd · botão: menu/menu_principal.gd
 - CHAT DE VOZ (alcance, sensibilidade
   do microfone, volume das vozes) ..... rede/voz.gd (ALCANCE, LIMIAR, VOLUME_DB) · botões: jogador/controles.gd
+- ARREMESSO (arco, força, quicar) ..... armas/arremesso.gd · ruído/dano de cada item: inventario/itens.gd ("arremesso")
+- pré-aquecer shaders no carregamento  menu/pre_aquecer.gd (o que entra na lista)
+- térreo com portas de aço (prédio sem
+  entrada) ............................ mundo/materiais_cidade.gd (PREDIO) + mundo/cidade.gd (dado_predio)
+- abrir prédio aos poucos, móveis só
+  de perto ............................ mundo/interiores.gd (FATIA_US) + mundo/interior.gd (DETALHES_ALCANCE)
+- validar dano dos amigos no host .... rede/sessao_rede.gd (dano_valido, ALCANCE_*, DANO_MAX_*, MAX_PEDIDOS_S)
+- 45 FPS estável no celular .......... menu/aplicar_opcoes.gd (RITMO_ESTAVEL, _vigiar_ritmo)
+- teste de desempenho (referência) ... ferramentas/testes/teste_desempenho.gd + desempenho_base.json (GRAVAR=1 refaz)
 - MIRA DE FERRO (alinhar a mira de uma
   arma, olho, zoom, arma sem mirar) ... armas/mira_ferro.gd (DADOS, QUADRIL)
 - LUNETAS: vista ampliada, lente,
@@ -2871,6 +2993,14 @@ INFECTADOS (pasta inimigos/; o nome "vagos" nos arquivos veio do HTML)
   helicóptero ......................... inimigos/horda.gd (0.89)
 - quantos de verdade, barulho, manada,
   puxar para o chão ................... inimigos/vagos.gd (MAX_ATIVOS_PADRAO, raio_passos, _separar, _contar_golpe)
+- DIRETOR DE IA (ritmo, alívio, hordas
+  atrás de você, mutados) ............. inimigos/diretor.gd (1.00) · opções Ritmo e Mutados (z_ritmo, z_mutados)
+- orçamento de tempo dos infectados .. inimigos/vagos.gd (ORCAMENTO_MS, MIN_REAIS, _orcamento, _aliviar)
+- MUTADO infectado (velocidade, salto,
+  estalo, faro) ....................... inimigos/vago.gd (mutado, DURA_SALTO) + inimigos/regras_infectados.gd
+                                        (VEL["mutado"], MUTADO_*) · visual: inimigos/modelo_infectado.gd (SHADER_MUTADO)
+- infectados DORMINDO .................. inimigos/vago.gd (DORMINDO_*) · grupos: mundo/interiores.gd (CHANCE_DORMINDO)
+- silhuetas da horda de longe ........ inimigos/horda_longe.gd (LONGE_MIN/MAX, MAX, desenho da silhueta)
 - ferimentos e o vírus (fase febril) .. jogador/sobrevivencia.gd (receber_ataque, pegar_virus, _virus)
 - aparência e animação ................ inimigos/modelo_infectado.gd (tipos e pesos em TIPOS; 0.89: cair,
                                         deitado, levantar, rastejante)
@@ -3055,6 +3185,10 @@ MÚSICA (pasta audio/)
 -----------------------------------------------------------------------------------------------------
 10. LIMITAÇÕES CONHECIDAS E PRÓXIMOS PASSOS
 -----------------------------------------------------------------------------------------------------
+- 1.00: as silhuetas da horda de longe só existem no jogo solo e no host (o cliente não tem a população). O mutado
+  infectado ainda não escala paredes nem salta entre telhados (só corre e salta no chão). O arremesso de um amigo é
+  simulado de novo em cada aparelho: longe de quem recebe (sem a física dos prédios de lá) ele pode bater num
+  lugar um pouco diferente. O tijolo/garrafa não aparece na mão enquanto você mira (só no movimento de jogar).
 - O jogador é um sobrevivente genérico (Universal Base Characters); o Dominic do livro (jaqueta de couro, cabelo branco) não tem modelo próprio (o 3D dele foi cancelado na 0.27).
 - A gangue VAGOS (Edy, V), Alyce, Nick, Mônica e Carlos ainda não aparecem no jogo (são do Ato 2 em diante).
 - Só abrem até o 3º andar; o telhado só nos prédios de até 3 andares (nos mais altos, o resto fica fechado).

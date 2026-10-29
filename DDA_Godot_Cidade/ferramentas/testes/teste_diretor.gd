@@ -279,5 +279,40 @@ func _r():
 	ok(m.vagos.teto_custo == -1 or m.vagos.teto_custo >= teto1 + 2, "com folga, o limite volta a subir (%d -> %d)" % [teto1, m.vagos.teto_custo])
 	m.vagos.orcamento_ms = orc0
 
+	# ---- 7. a horda de longe aparece como silhuetas (inimigos/horda_longe.gd) ----
+	_limpar()
+	m.vagos.max_ativos = 0
+	var hl = m.vagos.horda_longe
+	ok(hl != null, "o jogo tem as silhuetas da horda de longe")
+	var hd3 = m.vagos.horda
+	hd3.grupos.clear()
+	j.cam_yaw = atan2(-_dir_rua.x, -_dir_rua.z)
+	j.cam_pit = -0.05
+	var g150 := rua + _dir_rua * 150.0
+	var g60 := rua + _dir_rua * 60.0
+	var g400 := rua + _dir_rua * 400.0
+	hd3.grupos.append({"p": Vector2(g150.x, g150.z), "n": 8, "d": Vector2(rua.x, rua.z), "v": 0.4, "t": 0.0})
+	hd3.grupos.append({"p": Vector2(g60.x, g60.z), "n": 5, "d": Vector2.INF, "v": 0.4, "t": 0.0})
+	hd3.grupos.append({"p": Vector2(g400.x, g400.z), "n": 6, "d": Vector2.INF, "v": 0.4, "t": 0.0})
+	hl.atualizar()
+	var perto150 := 0
+	for i in hl.mm.visible_instance_count:
+		var t: Transform3D = hl.mm.get_instance_transform(i)
+		if Vector2(t.origin.x - g150.x, t.origin.z - g150.z).length() < 6.0:
+			perto150 += 1
+	ok(hl.mostrados == 8 and perto150 == 8, "o grupo a 150 m aparece (8 silhuetas); o de 60 m (vira de verdade) e o de 400 m não (%d)" % hl.mostrados)
+	ok(hl.mm.get_instance_custom_data(0).r > 0.5, "o grupo andando anima o andar")
+	if OS.get_environment("FOTO") != "":
+		for g in hd3.grupos:
+			g["d"] = Vector2.INF
+		hd3.grupos[0]["p"] = Vector2(rua.x, rua.z) + Vector2(_dir_rua.x, _dir_rua.z) * 110.0
+		hd3.grupos[0]["n"] = 14
+		hl.atualizar()
+		await q(20)
+		root.get_texture().get_image().save_png(OS.get_environment("FOTO") + "_horda_longe.png")
+	hd3.grupos.clear()
+	hl.atualizar()
+	ok(hl.mostrados == 0 and hl.mm.visible_instance_count == 0, "sem grupos longe, nenhuma silhueta")
+
 	print("falhas: ", falhas)
 	quit()

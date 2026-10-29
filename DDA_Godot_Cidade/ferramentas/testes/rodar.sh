@@ -151,6 +151,8 @@ elif [ "$alvo" = todos ]; then
 	rodar teste_arremesso 1
 	rodar teste_desempenho 1
 	rodar teste_interior_fatias 1
+	rodar teste_mutados 1
+	rodar teste_chunks 1
 	rodar_turn
 else
 	rodar "$alvo" 1

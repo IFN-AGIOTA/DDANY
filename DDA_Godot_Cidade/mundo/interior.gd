@@ -105,6 +105,11 @@ var _pad_piso := 1.0
 # 0.82: o piso (o desenho) fica 1,5 cm acima do chão do lote: na mesma altura os dois "brigavam" e piscavam
 const PISO_Y := 0.015
 var _malha: ArrayMesh = null
+var _malha_detalhes: ArrayMesh = null   # 1.00: móveis, escada, papéis e manchas (só de perto: DETALHES_ALCANCE)
+# 1.00 · DETALHES SÓ DE PERTO (estudos/ESTUDO_AAA.md 1.3 e 1.13): os móveis e objetos são ~80% dos triângulos de um
+# prédio aberto (~27 mil). Ficam num nó próprio que só aparece a até DETALHES_ALCANCE m do meio do prédio (de dentro
+# e de perto, igual; de longe nem se vê pela janela). A colisão dos móveis continua sempre.
+const DETALHES_ALCANCE := 34.0
 var nivel := 0                         # 0 = térreo · 1, 2 = andares de cima
 var extras := 0                        # quantos andares de cima este prédio tem abertos
 var telhado := false                   # prédio baixo: a escada chega ao telhado (com mureta)
@@ -702,9 +707,11 @@ func _criar_malha() -> void:
 	paredes.malha(Mat.material(Mat.INTERIOR, {"caixa": caixa, "padrao": 3.0, "semente": float(info["sem"]), "papel": 1.0,
 		"tipo_predio": float(info.get("tipo", 0))}), am)   # 0.92: papel de parede velho por dentro, o material do prédio por fora
 	piso.malha(Mat.material(Mat.INTERIOR, {"caixa": caixa, "padrao": _pad_piso}), am)
-	resto.malha(Mat.material(Mat.INTERIOR, {"caixa": caixa, "padrao": 0.0}), am)
 	teto.malha(Mat.material(Mat.INTERIOR, {"caixa": caixa, "padrao": 0.0}), am)
 	_malha = am
+	var ad := ArrayMesh.new()
+	resto.malha(Mat.material(Mat.INTERIOR, {"caixa": caixa, "padrao": 0.0}), ad)
+	_malha_detalhes = ad if ad.get_surface_count() > 0 else null
 
 # 2ª parte (thread principal): cria os nós, a malha, a colisão e os contêineres de loot
 # 1.00: com "tarefas" (uma Array, mundo/interiores.gd), as caixas de loot dos móveis, as portas e as janelas não são
@@ -721,6 +728,13 @@ func criar(lm, tarefas = null) -> Node3D:
 	mi.name = "Malha"
 	mi.mesh = _malha
 	raiz.add_child(mi)
+	if _malha_detalhes != null:
+		var md := MeshInstance3D.new()
+		md.name = "Detalhes"
+		md.mesh = _malha_detalhes
+		md.visibility_range_end = DETALHES_ALCANCE
+		md.visibility_range_end_margin = 3.0
+		raiz.add_child(md)
 	# casca dos andares de cima (mesmo shader e janelas do bloco original)
 	var h: float = info["h"]
 	var base := ALTURA_ANDAR * (extras + 1)

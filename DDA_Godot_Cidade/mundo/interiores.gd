@@ -29,6 +29,7 @@ var loot = null
 var abertos := {}                     # índice do prédio -> Node3D do interior
 var vagos = null                      # inimigos/vagos.gd: às vezes há infectados presos dentro do prédio
 const CHANCE_INFESTADO := 0.33
+const CHANCE_DORMINDO := 0.45        # 1.00: dos infestados, quantos têm um GRUPO DORMINDO (2 a 4 juntos num cômodo)
 const CICLO_INFECTADOS := 6.0         # 0.72: horas de jogo (6 h = 12 min de verdade)
 var _infestados := {}                 # prédio -> ciclo em que foi sorteado (nesta partida)
 var ativo := true
@@ -226,6 +227,20 @@ func _infestar(i: int, no: Node3D) -> void:
 	if r.randf() >= CHANCE_INFESTADO:
 		return
 	var pontos: Array = no.get_meta("pontos_chao")
+	# 1.00 · GRUPO DORMINDO (The Last of Us): 2 a 4 em pé, quietos, juntos no mesmo cômodo (vago.gd DORMINDO)
+	if r.randf() < CHANCE_DORMINDO and not pontos.is_empty():
+		var lp0: Vector3 = pontos[r.randi() % pontos.size()][0]
+		var n_d := r.randi_range(2, 4)
+		for k in n_d:
+			var lp := lp0 + Vector3(r.randf_range(-1.4, 1.4), 0.0, r.randf_range(-1.4, 1.4))
+			var gp: Vector3 = no.global_transform * lp
+			if jogador != null and gp.distance_to(jogador.global_position) < 7.0:
+				continue
+			var vd = vagos._criar(gp + Vector3(0, 0.05, 0), Vector3.INF)
+			if vd != null:
+				vd.rotation.y = r.randf() * TAU
+				vd.dormir()
+		return
 	var n := 1 if r.randf() < 0.65 else 2
 	for k in n:
 		if pontos.is_empty():

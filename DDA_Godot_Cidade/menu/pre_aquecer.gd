@@ -10,6 +10,8 @@ extends RefCounted
 
 const VistaLuneta := preload("res://armas/vista_luneta.gd")
 const Pausa := preload("res://menu/pausa.gd")
+const ModeloInfectado := preload("res://inimigos/modelo_infectado.gd")
+const HordaLonge := preload("res://inimigos/horda_longe.gd")
 const QUADROS := 2                     # quadros que cada peça fica na tela
 
 static func rodar(main: Node, progresso := Callable()) -> void:
@@ -58,6 +60,29 @@ static func rodar(main: Node, progresso := Callable()) -> void:
 					func():
 						if is_instance_valid(n):
 							n.visible = antes])
+	# a pele do mutado (raro: sem isso, o 1º que aparece engasgaria o jogo)
+	var quad := MeshInstance3D.new()
+	quad.mesh = QuadMesh.new()
+	quad.material_override = ModeloInfectado.material_mutado()
+	quad.visible = false
+	main.add_child(quad)
+	quad.global_position = p
+	pecas.append([func(): quad.visible = true, func(): quad.queue_free()])
+	# as silhuetas da horda de longe (num MultiMesh igual ao delas: a variante "com instâncias" do shader)
+	var mm1 := MultiMesh.new()
+	mm1.transform_format = MultiMesh.TRANSFORM_3D
+	mm1.use_colors = true
+	mm1.use_custom_data = true
+	mm1.mesh = QuadMesh.new()
+	mm1.instance_count = 1
+	mm1.set_instance_transform(0, Transform3D.IDENTITY)
+	var sil := MultiMeshInstance3D.new()
+	sil.multimesh = mm1
+	sil.material_override = HordaLonge.material()
+	sil.visible = false
+	main.add_child(sil)
+	sil.global_position = p
+	pecas.append([func(): sil.visible = true, func(): sil.queue_free()])
 	# telas: a lente da luneta e o fundo da pausa (um quadradinho, por baixo da tela de carregamento)
 	var camada := CanvasLayer.new()
 	camada.layer = 59

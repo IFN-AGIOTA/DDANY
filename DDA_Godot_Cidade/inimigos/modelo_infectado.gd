@@ -13,6 +13,10 @@ extends Node3D
 # 0.89 (estilo Project Zomboid): cair() (derrubado: cai e fica no chão) · deitado() (fingindo de morto, já no chão)
 #   levantar() (LayToIdle da UAL2: levanta do chão) · rastejante = true (anda de bruços: Swim_Fwd da UAL1 no chão)
 # A frente é -Z (igual à Godot). Altura ~1,75 m.
+# 1.00 · MUTADO (lore, Bíblia 2.7: "braços longos demais, articulações no lugar errado, pele rachada como barro
+#   seco, veios negros que pulsam, unhas como garras"): virar_mutado() troca o material pelo SHADER_MUTADO (pele
+#   cinza de barro rachada e veios escuros pulsando, desenhados na posição de descanso de cada vértice: não
+#   "escorrem" com a animação), alonga os antebraços, entorta a cabeça e deixa os braços sempre meio à frente.
 # Mexa AQUI para: quais tipos aparecem e quanto (TIPOS), altura e velocidade das animações.
 
 const PASTA := "res://inimigos/infectados/"
@@ -57,6 +61,75 @@ var rastejante := false                # 0.89: rastejante (perna ruim): anda de 
 var _y_rastejar := 0.0                 # quanto o corpo desce para o rastejar (a animação é de nado, no ar)
 var _andar := "andar"                  # animação de andar deste infectado (ESTILOS)
 var _ref_andar := VEL_ANDAR_ANIM
+var mutado := false                    # 1.00: mutado (virar_mutado)
+static var _mat_mutado: ShaderMaterial = null
+static var _malhas_mutado := {}         # malha original -> cópia com a posição de descanso no UV/UV2
+const SHADER_MUTADO := """
+shader_type spatial;
+uniform vec3 tinta : source_color = vec3(0.6, 0.53, 0.48);
+float hash3(vec3 p) {
+	p = fract(p * 0.3183099 + 0.1);
+	p *= 17.0;
+	return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+float ruido(vec3 x) {
+	vec3 i = floor(x);
+	vec3 f = fract(x);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(mix(hash3(i), hash3(i + vec3(1, 0, 0)), f.x), mix(hash3(i + vec3(0, 1, 0)), hash3(i + vec3(1, 1, 0)), f.x), f.y),
+		mix(mix(hash3(i + vec3(0, 0, 1)), hash3(i + vec3(1, 0, 1)), f.x), mix(hash3(i + vec3(0, 1, 1)), hash3(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+}
+void fragment() {
+	vec3 p = vec3(UV.x, UV.y, UV2.x);       // posição de descanso do vértice
+	float rach = 1.0 - smoothstep(0.0, 0.07, abs(ruido(p * 16.0) - 0.5));      // barro seco rachado
+	float veia = 1.0 - smoothstep(0.0, 0.04, abs(ruido(p * 6.0 + 3.1) - 0.5)); // veios
+	float pulsa = 0.55 + 0.45 * sin(TIME * 3.5 + p.y * 6.0);
+	vec3 c = COLOR.rgb * tinta * (1.0 - 0.45 * rach);
+	ALBEDO = mix(c, vec3(0.015, 0.01, 0.012), veia * pulsa * 0.85);
+	ROUGHNESS = 0.95;
+}
+"""
+
+static func material_mutado() -> ShaderMaterial:
+	if _mat_mutado == null:
+		var sh := Shader.new()
+		sh.code = SHADER_MUTADO
+		_mat_mutado = ShaderMaterial.new()
+		_mat_mutado.shader = sh
+	return _mat_mutado
+
+# cópia da malha com a posição de descanso no UV (x, y) e no UV2 (z) (uma vez por malha)
+static func _malha_mutado(m: Mesh) -> Mesh:
+	if _malhas_mutado.has(m):
+		return _malhas_mutado[m]
+	var nova := ArrayMesh.new()
+	for s in m.get_surface_count():
+		var a := m.surface_get_arrays(s)
+		var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+		var uv := PackedVector2Array()
+		var uv2 := PackedVector2Array()
+		uv.resize(vs.size())
+		uv2.resize(vs.size())
+		for k in vs.size():
+			uv[k] = Vector2(vs[k].x, vs[k].y)
+			uv2[k] = Vector2(vs[k].z, 0.0)
+		a[Mesh.ARRAY_TEX_UV] = uv
+		a[Mesh.ARRAY_TEX_UV2] = uv2
+		nova.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a)
+	_malhas_mutado[m] = nova
+	return nova
+
+func virar_mutado() -> void:
+	if mutado or corpo == null:
+		return
+	mutado = true
+	for mi in corpo.find_children("*", "MeshInstance3D", true, false):
+		(mi as MeshInstance3D).mesh = _malha_mutado((mi as MeshInstance3D).mesh)
+		mi.material_override = material_mutado()
+	corpo.scale *= 1.07
+	_cab_incl = 0.55 if _cab_incl >= 0.0 else -0.55
+	for nome in ["lowerarm_l", "lowerarm_r"]:
+		_osso[nome] = esqueleto.find_bone(nome)
 
 func montar(semente: int) -> void:
 	var r := RandomNumberGenerator.new()
@@ -274,9 +347,18 @@ var _cabeca_g := Transform3D.IDENTITY
 
 func _postura() -> void:
 	var lista := [["Head", Vector3(0, 0, 1), _cab_incl]]
-	if _corr > 0.05 and _at < 0.0:
+	if mutado and _at < 0.0:
+		# 1.00: mutado: braços sempre meio à frente (garras prontas), mais ainda correndo
+		lista.append(["upperarm_l", Vector3.RIGHT, -0.55 - 0.7 * _corr])
+		lista.append(["upperarm_r", Vector3.RIGHT, -0.5 - 0.7 * _corr])
+	elif _corr > 0.05 and _at < 0.0:
 		lista.append(["upperarm_l", Vector3.RIGHT, -1.0 * _corr])
 		lista.append(["upperarm_r", Vector3.RIGHT, -0.9 * _corr])
+	if mutado:
+		for nome in ["lowerarm_l", "lowerarm_r"]:          # braços longos demais
+			var b: int = _osso.get(nome, -1)
+			if b >= 0:
+				esqueleto.set_bone_pose_scale(b, Vector3(1.0, 1.35, 1.0))
 	var feitos := []
 	for x in lista:                                     # 1) só leituras
 		var i: int = _osso.get(x[0], -1)

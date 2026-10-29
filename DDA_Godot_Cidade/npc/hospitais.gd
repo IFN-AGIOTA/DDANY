@@ -43,6 +43,7 @@ var comprados := {}                     # "hospital|dia" -> {índice do estoque:
 var tela = null
 var _rotulo: Label
 var _t_guardas := 0.0
+var _npcs: Array = []                   # 1.00: os NPCs montados (antes procurava o grupo todo quadro)
 var _camada: CanvasLayer
 
 static func hospitais() -> Array:
@@ -100,11 +101,14 @@ func _montar_npcs(i: int, no: Node3D) -> void:
 		n.position = e[2] + Vector3(0, 0.02, 0)
 		n.rotation.y = e[3]
 		g.add_child(n)
+		_npcs.append(n)
 
 func npc_perto(pos: Vector3):
 	var melhor = null
 	var md := NpcCls.RAIO
-	for n in get_tree().get_nodes_in_group("npcs_hospital"):
+	for n in _npcs:
+		if not is_instance_valid(n):
+			continue
 		var d: float = (n as Node3D).global_position.distance_to(pos)
 		if d < md and absf(n.global_position.y - pos.y) < 1.6:
 			md = d
@@ -192,13 +196,15 @@ func _process(dt: float) -> void:
 	else:
 		_rotulo.text = ""
 	_rotulo.visible = _rotulo.text != "" and (main.tela_inventario == null or not main.tela_inventario.aberto) and tela == null
-	# NPCs olham para quem chega perto
-	for n in get_tree().get_nodes_in_group("npcs_hospital"):
-		if (n as Node3D).global_position.distance_squared_to(jogador.global_position) < 36.0:
-			n.olhar_para(jogador.global_position, dt)
+	# NPCs olham para quem chega perto (só dentro da zona de um hospital, onde eles estão)
+	if na_zona >= 0:
+		for n in _npcs:
+			if is_instance_valid(n) and (n as Node3D).global_position.distance_squared_to(jogador.global_position) < 36.0:
+				n.olhar_para(jogador.global_position, dt)
 	_t_guardas -= dt
 	if _t_guardas <= 0.0:
 		_t_guardas = GUARDAS_A_CADA
+		_npcs = _npcs.filter(func(n): return is_instance_valid(n))     # o hospital fechou: some da lista
 		_guardas()
 
 # os guardas do Carlos derrubam o infectado que entra na zona (só quem manda nos infectados: sozinho ou o host)

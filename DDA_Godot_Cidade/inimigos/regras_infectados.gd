@@ -15,7 +15,15 @@ const VEL := {
 	"rapido": {"vagar": Vector2(0.45, 0.7), "ir": Vector2(1.3, 1.6), "cacar": Vector2(2.2, 2.6)},
 	"corredor": {"vagar": Vector2(0.5, 0.8), "ir": Vector2(1.3, 1.6), "cacar": Vector2(5.3, 6.0)},
 	"rastejante": {"vagar": Vector2(0.08, 0.12), "ir": Vector2(0.18, 0.22), "cacar": Vector2(0.22, 0.28)},
+	# 1.00 · MUTADO (lore, Bíblia 2.7: "muito rápido; corre e salta como animal"): corre como você no sprint
+	"mutado": {"vagar": Vector2(0.7, 1.0), "ir": Vector2(3.0, 3.6), "cacar": Vector2(7.0, 7.6)},
 }
+# ----- 1.00 · MUTADOS (especiais raros; quem os solta é o Diretor, inimigos/diretor.gd) -----
+const MUTADO_VIDA := 2.2              # aguenta 2,2x mais que o comum
+const MUTADO_DANO := 1.4
+const MUTADO_CHEIRO := 8.0            # m: fareja gente viva ...
+const MUTADO_CHEIRO_SANGUE := 40.0    # ... e sangue de BEM longe (lore)
+const MUTADO_SALTO := Vector2(3.5, 7.0)   # m: de quanto ele salta em cima de você
 # "misto" (o "Random" do Project Zomboid): chance de cada um
 const MISTO := {"lento": 0.72, "rapido": 0.2, "corredor": 0.08}
 const CHANCE_RASTEJANTE := 0.03       # já nascem rastejando (pernas ruins)
@@ -91,6 +99,8 @@ static func mult_vida() -> float: return MULT_VIDA[_i("z_resist", 1, 3)]
 static func mult_pop() -> float: return MULT_POP[_i("z_pop", 1, 4)]
 static func abrem_portas() -> bool: return int(valor("z_cog", 0)) == 1
 static func derrubam() -> bool: return bool(valor("z_derrubar", true))
+# 1.00: mutados: 0 = não aparecem · 1 = raros · 2 = frequentes
+static func mutados() -> int: return _i("z_mutados", 1, 3)
 static func reaparecem() -> bool: return bool(valor("z_reaparecer", true))
 # transmissão: 0 = sangue e saliva (arranhão, laceração e mordida podem passar) · 1 = só mordida · 2 = desligada
 static func transmissao() -> int: return _i("z_trans", 0, 3)

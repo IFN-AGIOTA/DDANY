@@ -77,7 +77,10 @@ const LOOT := ["bandagem", "feijao", "agua", "mun_9mm"]
 const IMUNE_ATORDOAR := 1.0           # depois de atordoado por golpe, fica esse tempo sem atordoar de novo
 # tipo: [chance, vida, velocidade (x), dano (x), escala do corpo]
 # 0.89: o jeito de andar vem da opção Velocidade (Regras.sortear_classe); a vida e a força, das opções Resistência e Força
-const CLASSES := ["lento", "rapido", "corredor", "rastejante"]
+const CLASSES := ["lento", "rapido", "corredor", "rastejante", "mutado"]
+# 1.00 · MUTADO (lore, Bíblia 2.7; solto pelo Diretor, inimigos/diretor.gd): corre como você, SALTA em cima de você
+#   de 3,5 a 7 m, aguenta mais, morde mais forte, fareja sangue de 40 m e anda fazendo o ESTALO DE DENTES (o aviso).
+#   Visual em inimigos/modelo_infectado.gd virar_mutado().
 const TEMPO_CORPO := 240.0            # o corpo fica no chão esse tempo e depois afunda (0.89: mais tempo)
 const ALCANCE_SOM := 40.0
 
@@ -90,7 +93,14 @@ const DESCONFIADO := 5                 # 0.65: parado, olhando para o que ouviu/
 const CAIDO := 6                       # 0.89: derrubado no chão
 const LEVANTANDO := 7                  # 0.89: levantando do chão
 const FINGINDO := 8                    # 0.89: deitado "fingindo de morto"
-const NOMES := ["vagando", "investigando", "perseguindo", "atacando", "morto", "desconfiado", "caído", "levantando", "fingindo"]
+const DORMINDO := 9                     # 1.00: dormindo em pé (grupos dentro dos prédios)
+const NOMES := ["vagando", "investigando", "perseguindo", "atacando", "morto", "desconfiado", "caído", "levantando", "fingindo", "dormindo"]
+# 1.00 · DORMINDO (The Last of Us, estudos/ESTUDO_AAA.md 2.3): parado em pé, sem ver nem farejar; ouve pouco. Você
+#   passando perto (DORMINDO_AVISO) ele geme e se mexe (o aviso); colado (DORMINDO_PERTO), correndo perto
+#   (DORMINDO_CORRENDO), barulho alto perto ou um tiro nele = acorda bravo. Marcador "zz".
+const DORMINDO_PERTO := 2.2
+const DORMINDO_CORRENDO := 7.0
+const DORMINDO_AVISO := 5.0
 const PERTO_FINGINDO := 2.5            # quem finge de morto levanta quando você chega a isso
 const DIST_INVESTIDA := Vector2(1.3, 2.4)
 const BARREIRA_BAIXA := 1.15           # obstáculo até essa altura: tomba por cima
@@ -145,6 +155,8 @@ var _pulo_alto := 0.7
 var _mult_dano := 1.0
 var _imune := 0.0
 var som2: AudioStreamPlayer3D          # segundo canal: o baque do tiro não corta o gemido
+var _som_estalo: AudioStreamPlayer3D = null   # 1.00: mutado: estalo de dentes (ouve de mais longe)
+var _t_estalo := 1.0
 var _t_passo := 0.0
 var _dt_longe := 0.0
 var _q_longe := 0
@@ -174,6 +186,7 @@ var _recarga := 0.0
 var _atordoado := 0.0
 var _empurrao := Vector3.ZERO
 var _t_grunhido := 3.0
+var _t_aviso := 0.0                    # 1.00: dormindo: geme de novo só depois disso
 var _t_desvio := 0.0
 var _dir_desvio := Vector3.ZERO
 var _lado := 1.0
@@ -247,8 +260,12 @@ func _ready() -> void:
 			classe = "rastejante"
 	tipo = classe
 	vida = VIDA * Regras.mult_vida()
-	_vida_max = vida
 	_mult_dano = Regras.mult_forca()
+	if classe == "mutado":
+		vida *= Regras.MUTADO_VIDA
+		_mult_dano *= Regras.MUTADO_DANO
+		modelo.virar_mutado()
+	_vida_max = vida
 	som = AudioStreamPlayer3D.new()
 	som.max_distance = ALCANCE_SOM
 	som.unit_size = 5.0
@@ -277,7 +294,7 @@ func _ready() -> void:
 	_rede_pos = global_position
 	_rede_yaw = rotation.y
 	# 0.89 · FINGINDO DE MORTO: alguns da horda ficam deitados como corpos (levantam quando você chega perto)
-	if da_horda and not remoto and classe != "rastejante" and randf() < Regras.CHANCE_FINGINDO:
+	if da_horda and not remoto and classe != "rastejante" and classe != "mutado" and randf() < Regras.CHANCE_FINGINDO:
 		estado = FINGINDO
 		modelo.deitado()
 		_colisao_deitado(true)
@@ -324,6 +341,10 @@ func ani_rede(tipo_ani: String, d: Dictionary) -> void:
 		"golpe":
 			if estado != MORTO:
 				modelo.levar_golpe(float(d.get("f", 0.6)), float(d.get("l", 1.0)))
+		"salto":                                   # 1.00: o mutado saltou (a cópia faz o mesmo arco)
+			if estado != MORTO:
+				_salto_t = DURA_SALTO
+				_tocar("rosnado", randf_range(1.35, 1.5), 3.0)
 		"morrer":
 			if estado != MORTO:
 				var dr: Vector3 = d.get("d", Vector3.FORWARD)
@@ -400,6 +421,10 @@ func ouvir(pos: Vector3, raio: float, do_jogador: bool) -> void:
 			_depois_levantar = INVESTIGANDO          # levanta e vai ver
 			_destino = onde
 		return
+	if estado == DORMINDO:
+		if (alto and d < raio * 0.6) or d < raio * 0.3:
+			despertar(onde, alto)                    # barulho alto (ou bem perto): acorda
+		return
 	if estado == PERSEGUINDO or estado == ATACANDO:
 		# já está atrás de alguém que sumiu de vista: o barulho mostra para onde ir (não a posição exata agora)
 		if do_jogador and _t_sem_ver >= MEMORIA:
@@ -460,7 +485,7 @@ func _no_chao() -> bool:
 
 # 0.89 · MANADA (Project Zomboid): outro infectado perto está caçando -> vai atrás dele (para onde ele vai)
 func seguir_manada(lider: Node) -> void:
-	if remoto or _t_manada > 0.0 or estado == MORTO or esta_cacando() or _no_chao():
+	if remoto or _t_manada > 0.0 or estado == MORTO or esta_cacando() or _no_chao() or estado == DORMINDO:
 		return
 	if not is_instance_valid(lider):
 		return
@@ -469,6 +494,27 @@ func seguir_manada(lider: Node) -> void:
 	if lider._alvo != null and is_instance_valid(lider._alvo) and float(lider._t_sem_ver) < 1.0:
 		alvo = lider._alvo.global_position
 	investigar(alvo + Vector3(randf_range(-2.0, 2.0), 0.0, randf_range(-2.0, 2.0)))
+
+# 1.00 · DORMINDO: começa a dormir em pé (grupos dentro dos prédios: mundo/interiores.gd)
+func dormir() -> void:
+	if estado == MORTO or remoto:
+		return
+	estado = DORMINDO
+	_destino = global_position
+	_vel_alvo = 0.0
+
+# acorda: "bravo" = vem para cima de quem estiver perto (ou vai direto ao barulho); senão vai ver o que foi
+func despertar(onde: Vector3, bravo: bool) -> void:
+	if estado != DORMINDO:
+		return
+	estado = VAGANDO
+	if bravo:
+		_tocar("rosnado", randf_range(0.85, 1.0), 2.0)
+		var quem = gerente.alvo_para(self) if gerente != null else null
+		if quem != null and dist_jogador < 10.0 and not gerente.ignorado(quem):
+			_alertar(quem)
+			return
+	investigar(onde)
 
 # 0.89 · quem fingia de morto levanta (com um rosnado) e vem
 func _acordar() -> void:
@@ -659,6 +705,8 @@ func _process(dt: float) -> void:
 func _animar(dt: float) -> void:
 	if estado == MORTO or gerente == null:
 		return
+	if classe == "mutado":
+		_mutado(dt)
 	_dt_anim += dt
 	_quadro += 1
 	if dist_jogador > 145.0:                 # depois de ~140 m o modelo nem aparece
@@ -677,6 +725,29 @@ func _animar(dt: float) -> void:
 	if dist_jogador < 70.0:
 		_forma_cabeca.position = to_local(modelo.pos_cabeca())
 
+# 1.00 · MUTADO: o estalo de dentes (o aviso, enquanto vem atrás de alguém) e o arco do salto (no host e na cópia)
+const DURA_SALTO := 0.5
+var _salto_t := 0.0
+func _mutado(dt: float) -> void:
+	if estado in [INVESTIGANDO, PERSEGUINDO, ATACANDO, DESCONFIADO] and dist_jogador < 80.0:
+		_t_estalo -= dt
+		if _t_estalo <= 0.0:
+			_t_estalo = randf_range(0.6, 1.4)
+			if _som_estalo == null:
+				_som_estalo = AudioStreamPlayer3D.new()
+				_som_estalo.stream = load("res://jogador/sentidos.gd").som_estalo()
+				_som_estalo.max_distance = 80.0
+				_som_estalo.unit_size = 9.0
+				_som_estalo.position.y = 1.6
+				_som_estalo.bus = som.bus
+				add_child(_som_estalo)
+			_som_estalo.pitch_scale = randf_range(1.05, 1.3)
+			_som_estalo.play()
+	if remoto:
+		_salto_t = maxf(0.0, _salto_t - dt)
+	var s := _salto_t if remoto else _investida
+	modelo.position.y = 0.9 * sin(PI * clampf(1.0 - s / DURA_SALTO, 0.0, 1.0)) if s > 0.0 else 0.0
+
 # ---------- marcador do estado em cima da cabeça (0.65) ----------
 # "hm?" desconfiado · "?" investigando · "!" começou a perseguir. Só perto (até 35 m).
 func _atualizar_marca(dt: float) -> void:
@@ -685,6 +756,7 @@ func _atualizar_marca(dt: float) -> void:
 	if dist_jogador < 35.0:
 		match estado:
 			DESCONFIADO: txt = "hm?"
+			DORMINDO: txt = "zz"
 			INVESTIGANDO: txt = "?"
 			PERSEGUINDO, ATACANDO:
 				if _t_alerta > 0.0:
@@ -705,7 +777,7 @@ func _atualizar_marca(dt: float) -> void:
 		add_child(_marca)
 	_marca.visible = true
 	_marca.text = txt
-	_marca.modulate = Color(1.0, 0.25, 0.15) if txt == "!" else (Color(1.0, 0.85, 0.3) if txt == "hm?" else Color(1, 1, 1, 0.85))
+	_marca.modulate = Color(1.0, 0.25, 0.15) if txt == "!" else (Color(1.0, 0.85, 0.3) if txt == "hm?" else (Color(0.7, 0.75, 0.85, 0.7) if txt == "zz" else Color(1, 1, 1, 0.85)))
 
 # ---------- quadro a quadro ----------
 # 1.00: o tempo gasto aqui (e na animação) entra no ORÇAMENTO dos infectados (inimigos/vagos.gd)
@@ -802,7 +874,7 @@ func _trocar_modo(fisica: bool) -> void:
 	_pos_preso = global_position
 
 func _olhar(j: Node3D) -> void:
-	if bool(j.get("morto")) or estado == FINGINDO or gerente.ignorado(j):
+	if bool(j.get("morto")) or estado == FINGINDO or estado == DORMINDO or gerente.ignorado(j):
 		return                                          # fingindo de morto: quem acorda é a distância (_decidir)
 	var cacando := esta_cacando()
 	# 0.89 · VISÃO (Project Zomboid): ~22 m de dia; no escuro só de pertinho; chuva e neblina atrapalham
@@ -860,10 +932,10 @@ func _olhar(j: Node3D) -> void:
 func _cheirar(j: Node3D) -> void:
 	if esta_cacando() or _no_chao():
 		return
-	var raio := Regras.CHEIRO
+	var raio := Regras.CHEIRO if classe != "mutado" else Regras.MUTADO_CHEIRO
 	var sv = j.get("sobrevivencia")
 	if sv != null and int(sv.get("sangramentos")) > 0:
-		raio = Regras.CHEIRO_SANGUE
+		raio = Regras.CHEIRO_SANGUE if classe != "mutado" else Regras.MUTADO_CHEIRO_SANGUE
 	if dist_jogador > raio:
 		return
 	var p := global_position
@@ -901,6 +973,16 @@ func _decidir(dt: float, j: Node3D) -> void:
 			_vel_alvo = 0.0
 			if dist_jogador < PERTO_FINGINDO and not bool(j.get("morto")) and not gerente.ignorado(j):
 				_acordar()                              # você chegou perto do "corpo"
+		DORMINDO:
+			_vel_alvo = 0.0
+			_t_aviso = maxf(0.0, _t_aviso - dt)
+			if not bool(j.get("morto")) and not gerente.ignorado(j):
+				var correndo: bool = float(j.get("vel_horizontal") if j.get("vel_horizontal") != null else 0.0) > 5.0
+				if dist_jogador < DORMINDO_PERTO or (correndo and dist_jogador < DORMINDO_CORRENDO):
+					despertar(j.global_position, true)
+				elif dist_jogador < DORMINDO_AVISO and _t_aviso <= 0.0:
+					_t_aviso = 4.0                      # se mexe no sono: o aviso (dá tempo de se afastar)
+					_tocar("gemido%d" % (randi() % 4), randf_range(0.6, 0.7), -6.0)
 		CAIDO:
 			_vel_alvo = 0.0
 			# com alguém em pé em cima dele, não levanta (Project Zomboid)
@@ -969,14 +1051,20 @@ func _decidir(dt: float, j: Node3D) -> void:
 			if dist_jogador < 2.5 and classe != "rastejante":
 				_vel_alvo = clampf((dist_jogador - 0.95) * 3.0, 0.0, _vel_correr)
 			# 0.89 · INVESTIDA: perto e de frente para você, dá um bote rápido (os lentos também pegam)
+			# 1.00: o MUTADO salta de bem mais longe (3,5-7 m), quase sempre
+			var mut := classe == "mutado"
+			var faixa: Vector2 = Regras.MUTADO_SALTO if mut else DIST_INVESTIDA
 			if classe != "rastejante" and _recarga_investida <= 0.0 and _t_sem_ver < 0.3 \
-					and dist_jogador > DIST_INVESTIDA.x and dist_jogador < DIST_INVESTIDA.y and _atordoado <= 0.0:
+					and dist_jogador > faixa.x and dist_jogador < faixa.y and _atordoado <= 0.0:
 				var para_j := Vector3(j.global_position.x - p.x, 0.0, j.global_position.z - p.z).normalized()
-				if (-global_basis.z).dot(para_j) > 0.8 and randf() < 0.5:
-					_investida = 0.35
-				_recarga_investida = 2.5
+				if (-global_basis.z).dot(para_j) > 0.8 and randf() < (0.85 if mut else 0.5):
+					_investida = DURA_SALTO if mut else 0.35
+					if mut:
+						_tocar("rosnado", randf_range(1.35, 1.5), 3.0)
+						gerente.rede_ani(self, "salto", {})
+				_recarga_investida = 3.0 if mut else 2.5
 			if _investida > 0.0:
-				_vel_alvo = maxf(_vel_correr, 3.4)
+				_vel_alvo = 12.0 if mut else maxf(_vel_correr, 3.4)
 			var dy := absf(j.global_position.y - p.y)
 			if dist_jogador < reach and _recarga <= 0.0 and _t_sem_ver < VISTO_ATAQUE and dy < (0.9 if classe == "rastejante" else 1.6) and _atordoado <= 0.0:
 				estado = ATACANDO
