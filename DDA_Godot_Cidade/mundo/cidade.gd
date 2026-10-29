@@ -610,6 +610,12 @@ const USOS := ["residencial", "loja", "mercado", "restaurante", "escritorio", "f
 const PESO_USOS := [0.42, 0.12, 0.08, 0.1, 0.1, 0.08, 0.05, 0.05]
 const CHANCE_RUINA := 0.07
 const CHANCE_ENTRA := 0.76                  # 76% dos prédios inteiros = mais de 70% de todos
+# 1.00 · LEITURA DO PRÉDIO (como a hera do The Last of Us Part II, estudos/ESTUDO_AAA.md 3.4): o shader PREDIO
+# (mundo/materiais_cidade.gd) desenha o térreo de quem NÃO dá para entrar com PORTAS DE AÇO baixadas; quem dá para
+# entrar fica com as vitrines e portas abertas (escuras), sem tábuas. O 4º dado do prédio guarda isso:
+# tipo + semente/2 (+ 0,5 se fechado).
+static func dado_predio(tipo: int, sem: float, fechado := false) -> float:
+	return float(tipo) + sem * 0.5 + (0.5 if fechado else 0.0)
 
 var predio_info: Array = []                 # um Dictionary por prédio (mesma ordem de "predios")
 var _mm_predios := {}                       # Vector2i -> MultiMesh dos prédios daquele bloco
@@ -729,11 +735,11 @@ func _buildings() -> void:
 				cz.a = 1.0
 				var pb := Vector2(bx + sx * 0.25, bz) if sx > sz else Vector2(bx, bz + sz * 0.25)
 				if sx > sz:
-					lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * 0.5, h, sz)), Vector3(bx - sx * 0.25, Y_RUA + h * 0.5, bz)), cz, Color(sx * 0.5, h, sz, 4 + sem)])
-					lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * 0.5, h_b, sz * 0.85)), Vector3(bx + sx * 0.25, Y_RUA + h_b * 0.5, bz)), cz, Color(sx * 0.5, h_b, sz * 0.85, 4 + sem)])
+					lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * 0.5, h, sz)), Vector3(bx - sx * 0.25, Y_RUA + h * 0.5, bz)), cz, Color(sx * 0.5, h, sz, dado_predio(4, sem))])
+					lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * 0.5, h_b, sz * 0.85)), Vector3(bx + sx * 0.25, Y_RUA + h_b * 0.5, bz)), cz, Color(sx * 0.5, h_b, sz * 0.85, dado_predio(4, sem))])
 				else:
-					lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx, h, sz * 0.5)), Vector3(bx, Y_RUA + h * 0.5, bz - sz * 0.25)), cz, Color(sx, h, sz * 0.5, 4 + sem)])
-					lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * 0.85, h_b, sz * 0.5)), Vector3(bx, Y_RUA + h_b * 0.5, bz + sz * 0.25)), cz, Color(sx * 0.85, h_b, sz * 0.5, 4 + sem)])
+					lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx, h, sz * 0.5)), Vector3(bx, Y_RUA + h * 0.5, bz - sz * 0.25)), cz, Color(sx, h, sz * 0.5, dado_predio(4, sem))])
+					lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * 0.85, h_b, sz * 0.5)), Vector3(bx, Y_RUA + h_b * 0.5, bz + sz * 0.25)), cz, Color(sx * 0.85, h_b, sz * 0.5, dado_predio(4, sem))])
 				info["h"] = h
 				if fora == "":
 					ruinas.append([bx, bz, sx, sz, h, pb.x, pb.y, h_b])
@@ -748,7 +754,7 @@ func _buildings() -> void:
 				h1 = h * extra.randf_range(0.6, 0.75)
 				var k2 := extra.randf_range(0.55, 0.75)
 				var h2 := h - h1 + extra.randf_range(4.0, 16.0)
-				lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * k2, h2, sz * k2)), Vector3(bx, Y_RUA + h1 + h2 * 0.5, bz)), cor, Color(sx * k2, h2, sz * k2, tipo + sem)])
+				lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * k2, h2, sz * k2)), Vector3(bx, Y_RUA + h1 + h2 * 0.5, bz)), cor, Color(sx * k2, h2, sz * k2, dado_predio(tipo, sem))])
 			elif h < 70.0 and extra.randf() < 0.18:
 				# caixa d'água de madeira no telhado (marca registrada de Nova York)
 				if not caixas.has(chave):
@@ -760,7 +766,7 @@ func _buildings() -> void:
 			info["t"] = t
 			info["idx"] = lista_bloco.size()
 			info["entra"] = sorte.randf() < CHANCE_ENTRA
-			lista_bloco.append([t, cor, Color(sx, h1, sz, tipo + sem)])
+			lista_bloco.append([t, cor, Color(sx, h1, sz, dado_predio(tipo, sem, not info["entra"]))])   # 1.00: térreo fechado = não entra
 			if fora == "":
 				if info["entra"]:
 					n_entra += 1

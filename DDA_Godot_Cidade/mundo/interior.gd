@@ -736,7 +736,7 @@ func criar(lm) -> Node3D:
 		var cc: Color = info["cor"]
 		cc.a = 1.0 - base / 40.0
 		mm.set_instance_color(0, cc)
-		mm.set_instance_custom_data(0, Color(hx * 2.0, hu, hz * 2.0, info["tipo"] + info["sem"]))
+		mm.set_instance_custom_data(0, Color(hx * 2.0, hu, hz * 2.0, cid.dado_predio(int(info["tipo"]), float(info["sem"]))))
 		var casca := MultiMeshInstance3D.new()
 		casca.name = "Casca"
 		casca.multimesh = mm

@@ -248,5 +248,36 @@ func _r():
 	Cfg.o["z_ritmo"] = 2
 	print("  ", D.estado_texto())
 
+	# ---- 6. orçamento em milissegundos (inimigos/vagos.gd) ----
+	D._t_horda = 9999.0
+	D.fase = D.CRESCENDO
+	_limpar()
+	m.vagos.max_ativos = 22
+	m.vagos.teto_custo = -1
+	var hd2 = m.vagos.horda
+	hd2.grupos.clear()
+	j.cam_yaw = 0.0                                  # olhando para -Z: os de +Z ficam fora da tela
+	await q(3)
+	for k in 14:
+		var pt := rua + Vector3(randf_range(-30.0, 30.0), 0, randf_range(55.0, 90.0))
+		if m.vagos._livre(pt.x, pt.z):
+			var vv = m.vagos._criar(Vector3(pt.x, m.mundo.altura(pt.x, pt.z), pt.z), Vector3.INF, true)
+			vv.vagar()
+	await q(10)
+	var reais0: int = m.vagos.vivos.size()
+	print("  custo dos infectados: %.2f ms por quadro (%d de verdade)" % [m.vagos.custo_ms, reais0])
+	ok(m.vagos.custo_ms > 0.0, "o custo dos infectados é medido")
+	var orc0: float = m.vagos.orcamento_ms
+	m.vagos.orcamento_ms = 0.0001                    # orçamento estourado
+	await seg(3.5)
+	ok(m.vagos.teto_custo >= m.vagos.MIN_REAIS and m.vagos.teto_custo < 22, "passou do orçamento: cabem menos de verdade (%d)" % m.vagos.teto_custo)
+	ok(m.vagos.vivos.size() < reais0 and hd2.total_virtuais() > 0, "os menos importantes (longe, fora da tela) voltaram a ser grupo (%d -> %d)" % [reais0, m.vagos.vivos.size()])
+	ok(m.vagos.vagas_reais() <= 0, "e não nasce mais ninguém enquanto isso")
+	var teto1: int = m.vagos.teto_custo
+	m.vagos.orcamento_ms = 1000.0                    # folga
+	await seg(3.5)
+	ok(m.vagos.teto_custo == -1 or m.vagos.teto_custo >= teto1 + 2, "com folga, o limite volta a subir (%d -> %d)" % [teto1, m.vagos.teto_custo])
+	m.vagos.orcamento_ms = orc0
+
 	print("falhas: ", falhas)
 	quit()

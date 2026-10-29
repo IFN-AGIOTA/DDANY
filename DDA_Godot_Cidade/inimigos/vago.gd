@@ -112,6 +112,7 @@ const VISTO_ATAQUE := 0.35             # só ataca quem viu há menos disso (e c
 # sons (gerados uma vez; o gerente chama sintetizar_sons() numa thread e depois definir_sons())
 const TAXA_SOM := 16000
 static var sons := {}
+static var custo_us := 0               # 1.00: microssegundos gastos por TODOS os infectados (inimigos/vagos.gd: orçamento)
 
 var gerente: Node = null              # inimigos/vagos.gd (jogador, mundo, clima)
 var estado := VAGANDO
@@ -651,6 +652,11 @@ func _soltar_loot() -> void:
 var _cam: Camera3D = null
 
 func _process(dt: float) -> void:
+	var t0 := Time.get_ticks_usec()
+	_animar(dt)
+	custo_us += Time.get_ticks_usec() - t0
+
+func _animar(dt: float) -> void:
 	if estado == MORTO or gerente == null:
 		return
 	_dt_anim += dt
@@ -702,7 +708,13 @@ func _atualizar_marca(dt: float) -> void:
 	_marca.modulate = Color(1.0, 0.25, 0.15) if txt == "!" else (Color(1.0, 0.85, 0.3) if txt == "hm?" else Color(1, 1, 1, 0.85))
 
 # ---------- quadro a quadro ----------
+# 1.00: o tempo gasto aqui (e na animação) entra no ORÇAMENTO dos infectados (inimigos/vagos.gd)
 func _physics_process(dt: float) -> void:
+	var t0 := Time.get_ticks_usec()
+	_quadro_fisico(dt)
+	custo_us += Time.get_ticks_usec() - t0
+
+func _quadro_fisico(dt: float) -> void:
 	if gerente == null or gerente.jogador == null:
 		return
 	if estado == MORTO:

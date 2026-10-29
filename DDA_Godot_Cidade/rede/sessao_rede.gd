@@ -34,6 +34,10 @@ extends Node
 #     0.95: evento "estalo" = o mutado estalou os dentes (som no lugar e ele aparece no mapa por 10 s).
 # AINDA NÃO: dano entre jogadores, salvar a partida em rede, missões do rádio (cada um tem as suas), infectados
 # não entram em prédio atrás de um amigo (o host não tem as paredes do interior onde o amigo está).
+# 1.00 · VALIDAR NO HOST (anti-trapaça básico, estudos/ESTUDO_AAA.md 5): pedido de dano de um amigo (num infectado do
+#   host ou em você, PvP) só vale se quem bateu estava perto o bastante (tiro até ALCANCE_TIRO, golpe/empurrão até
+#   ALCANCE_GOLPE, pela posição que chegou dele), o dano cabe numa arma de verdade e ele não mandou pedidos demais
+#   (MAX_PEDIDOS_S por segundo). O resto é jogado fora (contado em "rejeitados").
 # Mexa AQUI para: o que vai em cada mensagem e de quanto em quanto tempo.
 
 const RemotoCls := preload("res://rede/jogador_remoto.gd")
@@ -51,6 +55,11 @@ const ENVIOS_POR_SEG := 15.0
 const MUNDO_A_CADA := 5.0                     # host: hora/clima para todos (segundos)
 const SLOTS_ROUPA := ["cabeca", "camisa", "colete", "cinto", "ombro", "coldre", "calca", "mochila"]
 const DIST_SOM_TIRO := 450.0                  # mais longe que isso não se ouve o tiro do outro
+const ALCANCE_TIRO := 480.0                   # 1.00 · VALIDAR: rifle de caça (450 m) + folga
+const ALCANCE_GOLPE := 6.5                    # lança (2,6 m) + o atraso da posição que chega pela rede
+const DANO_MAX_TIRO := 300.0                  # rifle (95) x3 na cabeça, com folga
+const DANO_MAX_GOLPE := 200.0                 # machado/garras com folga
+const MAX_PEDIDOS_S := 40                     # (a espingarda manda 8 chumbos por tiro)
 
 var main: Node
 var jogador: Node
@@ -63,6 +72,8 @@ var _sig := {}                                # id da grade -> assinatura do con
 var _mexidas := {}                            # grades que mudaram desde o sorteio (vão para quem chega)
 var _cont_uid := 0
 var _colisoes := {}                           # 0.74: host: id -> colisão que segue o amigo (mundo/colisao_mundo.gd)
+var _pedidos := {}                            # 1.00: id -> [segundo, quantos pedidos de dano nesse segundo]
+var rejeitados := 0                           # 1.00: pedidos de dano jogados fora (testes)
 
 func ligar(m: Node) -> void:
 	main = m
@@ -427,12 +438,31 @@ func _inf_dano(de: int, d: Dictionary) -> void:
 		return
 	var quem = remotos.get(de)
 	var dir: Vector3 = d.get("d", Vector3.FORWARD)
+	var corpo_a_corpo: bool = int(d.get("f", 0)) == -1 or bool(d.get("g", false))
+	if not dano_valido(de, quem.global_position if quem != null else Vector3.INF, v.global_position, corpo_a_corpo, float(d.get("dn", 0.0))):
+		return
 	if int(d.get("f", 0)) == -1:
 		v.empurrado(dir, quem)                        # 0.90: empurrão do amigo
 	elif bool(d.get("g", false)):
 		v.receber_golpe(float(d.get("dn", 0.0)), dir, quem)
 	else:
 		v.receber_tiro(float(d.get("dn", 0.0)), v.global_position, dir, int(d.get("f", 0)), quem)
+
+# 1.00 · VALIDAR: o pedido de dano do amigo "de" (que está em "de_pos", pelo que chegou dele) em algo em "alvo" é possível?
+func dano_valido(de: int, de_pos: Vector3, alvo: Vector3, corpo_a_corpo: bool, dano: float) -> bool:
+	var ok := de_pos != Vector3.INF and dano >= 0.0 and dano <= (DANO_MAX_GOLPE if corpo_a_corpo else DANO_MAX_TIRO) \
+		and de_pos.distance_to(alvo) <= (ALCANCE_GOLPE if corpo_a_corpo else ALCANCE_TIRO)
+	var s := int(Time.get_ticks_msec() / 1000)
+	var p: Array = _pedidos.get(de, [s, 0])
+	if int(p[0]) != s:
+		p = [s, 0]
+	p[1] = int(p[1]) + 1
+	_pedidos[de] = p
+	if int(p[1]) > MAX_PEDIDOS_S:
+		ok = false
+	if not ok:
+		rejeitados += 1
+	return ok
 
 # ---------- itens no chão ----------
 # alguém largou um item AQUI: ganha um uid novo (deste aparelho) e aparece para todos
@@ -606,6 +636,9 @@ func _pvp_recebido(de: int, d: Dictionary) -> void:
 		return
 	if _protegido() or (remotos.has(de) and remotos[de].protegido):
 		return                                        # 0.91: trégua (vale para os dois lados)
+	var atirador = remotos.get(de)
+	if not dano_valido(de, atirador.global_position if atirador != null else Vector3.INF, jogador.global_position, bool(d.get("g", false)), float(d.get("dn", 0.0))):
+		return
 	_ultimo_atirador = de
 	_t_ultimo_tiro = Time.get_ticks_msec() / 1000.0
 	_ultima_arma = str(d.get("a", ""))

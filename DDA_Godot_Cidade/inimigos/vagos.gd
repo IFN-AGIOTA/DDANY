@@ -24,6 +24,10 @@ extends Node
 # (velocidade, vida e dano de cada Vago ficam em inimigos/vago.gd)
 # 1.00 · DIRETOR DE IA (inimigos/diretor.gd): mede a intensidade de cada jogador e alterna crescendo, pico,
 #   esfriando e alívio (menos infectados novos perto) e manda hordas atrás de você de tempos em tempos.
+# 1.00 · ORÇAMENTO EM MILISSEGUNDOS (como o "budget allocator" da Epic, estudos/ESTUDO_AAA.md 2.4): mede quanto
+#   tempo os infectados gastam por quadro (inimigos/vago.gd custo_us). Passou do ORCAMENTO_MS: cabem menos de
+#   verdade (até MIN_REAIS) e os menos importantes (da horda, longe, fora da tela, sem caçar) voltam a ser grupo;
+#   com folga (abaixo de 75% do orçamento), o limite volta a subir devagar até max_ativos.
 
 signal abatido(cabeca: bool)            # um Vago morreu (cabeca = tiro na cabeça)
 signal atacou_jogador(dano: float)      # um Vago acertou o jogador (útil para HUD, tremer a tela e testes)
@@ -42,8 +46,15 @@ const DANO_DIFICULDADE := [0.7, 1.0, 1.3]
 const DIST_MAX := 120.0
 const DIST_SUMIR := 160.0
 const MAX_CORPOS := 20
+const ORCAMENTO_MS := 3.0                   # 1.00: ms por quadro para todos os infectados juntos (celular; PC x1,5)
+const MIN_REAIS := 8                        # nunca menos que isso de verdade por causa do orçamento
+const LONGE_ALIVIAR := 45.0                 # só recolhe (vira grupo) quem está mais longe que isso de todos
 
 var max_ativos := MAX_ATIVOS_PADRAO
+var orcamento_ms := ORCAMENTO_MS * (1.0 if OS.has_feature("mobile") else 1.5)
+var teto_custo := -1                    # 1.00: limite pelo orçamento (-1 = sem limite além de max_ativos)
+var custo_ms := 0.0                     # média do tempo dos infectados por quadro
+var _t_orc := 1.0
 var horda: Node = null                  # 0.89: inimigos/horda.gd (população da cidade; solo e host)
 var diretor: Node = null                # 1.00: inimigos/diretor.gd (ritmo: tensão e alívio, hordas; solo e host)
 var _mult_pop := 1.0
@@ -153,6 +164,8 @@ func vagas_reais() -> int:
 	if not ativo:
 		return 0
 	var teto := max_ativos if diretor == null else int(diretor.teto_reais(max_ativos))
+	if teto_custo >= 0:
+		teto = mini(teto, teto_custo)
 	return teto - vivos.size()
 
 func mult_populacao() -> float:
@@ -237,6 +250,7 @@ func _process(dt: float) -> void:
 	if espelho:
 		_processar_espelho(dt)
 		return
+	_orcamento(dt)
 	var pj := jogador.global_position
 	# vivos longe demais somem
 	var lim2 := DIST_SUMIR * DIST_SUMIR
@@ -284,6 +298,43 @@ func _process(dt: float) -> void:
 			if v.esta_cacando():
 				_musica.adicionar_tensao(dt * 0.06)
 				break
+
+# 1.00 · ORÇAMENTO: média do tempo dos infectados; acima do orçamento corta, com folga devolve (com histerese)
+func _orcamento(dt: float) -> void:
+	custo_ms = lerpf(custo_ms, float(VagoCls.custo_us) / 1000.0, 0.08)
+	VagoCls.custo_us = 0
+	_t_orc -= dt
+	if _t_orc > 0.0:
+		return
+	_t_orc = 1.0
+	var teto := max_ativos if teto_custo < 0 else teto_custo
+	if custo_ms > orcamento_ms:
+		teto_custo = maxi(MIN_REAIS, mini(teto, vivos.size()) - 2)
+		_aliviar(2)
+	elif custo_ms < orcamento_ms * 0.75 and teto_custo >= 0:
+		teto_custo += 1
+		if teto_custo >= max_ativos:
+			teto_custo = -1
+
+# os menos importantes (da horda, longe de todos, fora da tela e sem caçar) voltam a ser grupo virtual
+func _aliviar(n: int) -> void:
+	if horda == null:
+		return
+	var cand: Array = []
+	for v in vivos:
+		if not is_instance_valid(v) or not bool(v.get("da_horda")) or v.esta_cacando() or int(v.estado) == VagoCls.MORTO:
+			continue
+		var p: Vector3 = v.global_position
+		if not _longe_de_todos(p, LONGE_ALIVIAR * LONGE_ALIVIAR) or _visivel(p):
+			continue
+		cand.append([v.dist_jogador, v])
+	cand.sort_custom(func(a, b): return a[0] > b[0])
+	for k in mini(n, cand.size()):
+		var v = cand[k][1]
+		horda.recolher(v)
+		vivos.erase(v)
+		por_id.erase(v.id_rede)
+		v.queue_free()
 
 func _ruido_jogador() -> void:
 	if sem_jogador or bool(jogador.get("morto")) or ignorado(jogador):
@@ -459,6 +510,7 @@ var _matou_eu := false
 
 # cliente: tira as cópias que o host parou de mandar (saíram de perto ou sumiram) e cuida da música
 func _processar_espelho(dt: float) -> void:
+	VagoCls.custo_us = 0                      # (o orçamento é do host)
 	var cacando := false
 	for i in range(vivos.size() - 1, -1, -1):
 		var v = vivos[i]

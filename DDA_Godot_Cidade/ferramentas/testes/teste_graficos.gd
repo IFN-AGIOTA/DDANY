@@ -55,6 +55,24 @@ func _r():
 	await _aplicar(m, {"models": 3})
 	await q(2)
 	ok(a0 > 0.0 and no.visibility_range_end > a0 * 2.0, "modelos: alcance dos carros %.0f -> %.0f m" % [a0, no.visibility_range_end])
+	# ---- 1.00: leitura do prédio (sem entrada = térreo com portas de aço, no 4º dado do shader PREDIO) ----
+	var certos := 0
+	var conferidos := 0
+	var n_fechados := 0
+	for info in cid.predio_info:
+		if info["ruina"] or int(info["idx"]) < 0 or not cid._mm_predios.has(info["bloco"]):
+			continue
+		var mmp: MultiMesh = cid._mm_predios[info["bloco"]]
+		var w: float = mmp.get_instance_custom_data(int(info["idx"])).a
+		var fech := fposmod(w, 1.0) >= 0.5
+		conferidos += 1
+		if fech:
+			n_fechados += 1
+		if fech == (not info["entra"]) and floori(w) == int(info["tipo"]) and absf(fposmod(fposmod(w, 1.0) * 2.0, 1.0) - float(info["sem"])) < 0.02:      # (o dado vai em meia precisão)
+			certos += 1
+		if conferidos >= 4000:
+			break
+	ok(conferidos > 1000 and certos == conferidos and n_fechados > conferidos / 10, "prédio sem entrada = portas de aço no térreo (%d de %d certos, %d fechados)" % [certos, conferidos, n_fechados])
 	# ---- fios e halos ----
 	var fios: Array = get_nodes_in_group("fios_poste")
 	var halos: Array = get_nodes_in_group("halos_luz")

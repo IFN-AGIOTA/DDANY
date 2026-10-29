@@ -424,7 +424,9 @@ vec3 grafite(vec3 c, float u, float v, float sg, float forca) {
 }
 """
 
-# prédios (MultiMesh): INSTANCE_CUSTOM = (largura x, altura, largura z, tipo + semente)
+# prédios (MultiMesh): INSTANCE_CUSTOM = (largura x, altura, largura z, tipo + semente/2 + 0,5 se não dá para entrar)
+# 1.00: prédio em que NÃO dá para entrar = térreo com PORTAS DE AÇO baixadas; em que dá = vitrines/portas escuras, sem
+# tábuas (o mesmo sinal na cidade inteira: mundo/cidade.gd dado_predio)
 # tipo: 0 concreto · 1 tijolo · 2 pedra clara · 3 vidro (torres) · 4 ruína (queimada)
 # Cidade abandonada: sujeira escorrendo, janelas quebradas (pretas), vitrines tapadas com tábuas.
 # COLOR.a < 1 = bloco que começa acima do chão (casca de prédio com interior): a = 1 - altura_da_base / 40
@@ -449,6 +451,7 @@ varying vec3 lp;
 varying flat vec3 tam;                     // flat = igual no prédio todo (interpolado, o sorteio por janela "chiava")
 varying flat float tipo;
 varying flat float sem;
+varying flat float fechado;                // 1.00: 1 = não dá para entrar (térreo com portas de aço)
 varying vec3 nl;
 // "aleatório" sem sin(): sin() de número grande (coordenadas de milhares de metros) perde a precisão na placa do
 // celular (Mali) e o resultado vira quase constante -> bolinhas iguais em grade e listras. Números pequenos (mod) e
@@ -469,7 +472,9 @@ float ruido(vec2 p) {
 void vertex() {
 	tam = INSTANCE_CUSTOM.xyz;
 	tipo = floor(INSTANCE_CUSTOM.w);
-	sem = fract(INSTANCE_CUSTOM.w);
+	float fw = fract(INSTANCE_CUSTOM.w);
+	fechado = step(0.5, fw);
+	sem = fract(fw * 2.0);
 	// a base desce 0,8 m para dentro do chão (o prédio nunca fica "flutuando" sobre o lote/terra); lp é calculado
 	// DEPOIS, então a grade de janelas continua no mesmo lugar (bate com as escadas de incêndio)
 	if (VERTEX.y < 0.0) VERTEX.y -= 0.8 / max(tam.y, 1.0);
@@ -573,11 +578,13 @@ void fragment() {
 			cor_placa = mix(cor_placa, cor_letra, letra) * (0.6 + 0.4 * ruido(vec2(u * 3.0, v * 9.0)));   // desbotada
 			float ht = hash(vec2(floor(u / 6.0), sem));
 			vec3 cor_toldo = ht < 0.33 ? vec3(0.32, 0.12, 0.10) : (ht < 0.66 ? vec3(0.12, 0.22, 0.16) : vec3(0.14, 0.15, 0.22));
-			vec3 cor_vitrine = vec3(0.07, 0.07, 0.08);
-			if (hash(vec2(floor(u / 6.0), sem * 13.0)) < 0.45) {
-				// vitrine tapada com tábuas
-				float tab = fract(v / 0.32);
-				cor_vitrine = vec3(0.36, 0.26, 0.17) * (0.75 + 0.35 * hash(vec2(floor(v / 0.32), floor(u / 6.0)))) * (0.8 + 0.2 * step(0.08, tab));
+			vec3 cor_vitrine = vec3(0.07, 0.07, 0.08);          // dá para entrar: vitrine e porta abertas (escuras)
+			if (fechado > 0.5) {
+				// 1.00: NÃO dá para entrar: porta de aço de enrolar baixada (frisos, ferrugem), em todo o térreo
+				float friso = step(0.45, fract(v / 0.1));
+				cor_vitrine = vec3(0.33, 0.34, 0.35) * (0.82 + 0.2 * friso) * (0.8 + 0.25 * ruido(vec2(u * 0.6, v * 0.3) + sem * 5.0));
+				cor_vitrine = mix(cor_vitrine, vec3(0.36, 0.19, 0.09), smoothstep(0.55, 0.85, ruido(vec2(u * 0.8, v * 1.2) + sem * 11.0)) * 0.65);
+				cor_vitrine *= 1.0 - 0.45 * max(step(fs, 0.14), step(0.86, fs));      // trilhos dos lados
 			}
 			c = mix(c, cor_vitrine, vitrine * (1.0 - longe));
 			c = mix(c, cor_toldo, toldo * (1.0 - longe));
