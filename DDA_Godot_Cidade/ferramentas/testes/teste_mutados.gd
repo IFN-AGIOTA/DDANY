@@ -237,20 +237,24 @@ func _r():
 	it._infestados.clear()
 	var c = m.cidade
 	var abertos := 0
+	var dentro := 0
+	var dormindo := 0
 	for i in c.predio_info.size():
 		var inf: Dictionary = c.predio_info[i]
-		if not inf["entra"] or inf["ruina"] or Vector2(inf["x"] - rua.x, inf["z"] - rua.z).length() > 600.0:
+		if not inf["entra"] or inf["ruina"] or Vector2(inf["x"] - 436.0, inf["z"] - 1500.0).length() > 600.0:   # (o centro: cheio de prédios)
 			continue
 		it.abrir(i, true)
 		abertos += 1
+		for v in m.vagos.vivos:
+			if is_instance_valid(v):
+				dentro += 1
+				if v.estado == V.DORMINDO:
+					dormindo += 1
+		_limpar()                                  # (infectado por perto não deixa o vizinho ser infestado)
 		it.fechar(i)
 		if abertos >= 40:
 			break
-	var dormindo := 0
-	for v in m.vagos.vivos:
-		if is_instance_valid(v) and v.estado == V.DORMINDO:
-			dormindo += 1
-	print("  %d prédios abertos: %d infectados dentro, %d dormindo" % [abertos, m.vagos.vivos.size(), dormindo])
+	print("  %d prédios abertos: %d infectados dentro, %d dormindo" % [abertos, dentro, dormindo])
 	ok(dormindo >= 2, "prédios infestados têm grupos dormindo (%d)" % dormindo)
 	print("falhas: ", falhas)
 	quit()

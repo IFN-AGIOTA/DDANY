@@ -170,7 +170,7 @@ func _r():
 		"def": Item.novo("tijolo", 1).def()["arremesso"], "giro": Vector3.ZERO}
 	A._bateu(pj, {"position": v3.global_position + Vector3(0, 1.6, 0), "normal": _dir, "collider": v3}, _dir * 12.0)
 	await q(3)
-	ok(v3.vida < vida0 and v3.esta_cacando(), "tijolo na cabeça machuca (%.0f -> %.0f) e ele te descobre" % [vida0, v3.vida])
+	ok(v3.vida < vida0 and (v3.esta_cacando() or v3._depois_levantar == V.PERSEGUINDO), "tijolo na cabeça machuca (%.0f -> %.0f) e ele te descobre (às vezes cai e levanta vindo)" % [vida0, v3.vida])
 	_limpar()
 
 	# ---- 5. arremesso de um amigo (rede): voa e faz barulho, mas não deixa item nem machuca ----

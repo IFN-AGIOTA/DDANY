@@ -367,9 +367,10 @@ func _encontro_livre(f: int, p: Vector2) -> bool:
 			return false
 	return true
 
-# valor mais perto de "v" (dentro de mn..mx) que passa no teste (de 0,25 em 0,25 m, até 3 m); senão, o próprio v
+# valor mais perto de "v" (dentro de mn..mx) que passa no teste (de 0,25 em 0,25 m, até 10 m; 1.00: antes 3 m, e
+# numa fachada cheia de janelas dos dois lados a divisória acabava encostando numa janela); senão, o próprio v
 func _ajustar(v: float, mn: float, mx: float, teste: Callable) -> float:
-	for k in 25:
+	for k in 81:
 		var off := ceilf(k * 0.5) * 0.25 * (1.0 if k % 2 == 1 else -1.0)
 		var c := v + off
 		if c >= mn and c <= mx and teste.call(c):
@@ -586,7 +587,7 @@ func _grades_cela(sala: Rect2) -> void:
 	var meio := sala.get_center()
 	var horiz := sala.size.x >= sala.size.y
 	var achou := false
-	for k in 13:                                   # do meio para os lados, de 0,4 em 0,4 m
+	for k in 31:                                   # do meio para os lados, de 0,4 em 0,4 m (1.00: até 6 m; antes 2,4)
 		var off := ceilf(k * 0.5) * 0.4 * (1.0 if k % 2 == 1 else -1.0)
 		for tenta in [horiz, not horiz]:
 			var m2 := sala.get_center() + (Vector2(0, off) if tenta else Vector2(off, 0))
@@ -594,7 +595,8 @@ func _grades_cela(sala: Rect2) -> void:
 				continue
 			var a2 := Vector2(sala.position.x - 0.2, m2.y) if tenta else Vector2(m2.x, sala.position.y - 0.2)
 			var b2 := Vector2(sala.end.x + 0.2, m2.y) if tenta else Vector2(m2.x, sala.end.y + 0.2)
-			var lat := Vector2(0, 0.35) if tenta else Vector2(0.35, 0)        # com folga até a borda da janela
+			# com folga até a borda da janela (1.00: 0,45; com 0,35 a grade de 0,1 m de espessura ainda encostava nela)
+			var lat := Vector2(0, 0.45) if tenta else Vector2(0.45, 0)
 			if _tem_parede(a2, 1.8) and _tem_parede(b2, 1.8) and _tem_parede(a2 + lat, 1.8) and _tem_parede(a2 - lat, 1.8) \
 					and _tem_parede(b2 + lat, 1.8) and _tem_parede(b2 - lat, 1.8):
 				horiz = tenta
@@ -603,6 +605,8 @@ func _grades_cela(sala: Rect2) -> void:
 				break
 		if achou:
 			break
+	if not achou:
+		return                                     # 1.00: sem lugar com parede cheia nas duas pontas: cela sem grade
 	var L := sala.size.x if horiz else sala.size.y
 	var ini := (sala.position.x if horiz else sala.position.y)
 	var porta := r.randf_range(0.2, 0.7) * L

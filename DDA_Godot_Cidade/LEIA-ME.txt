@@ -67,7 +67,8 @@ ATUALIZAÇÃO 1.00 · O QUE OS JOGOS AAA FAZEM (DIRETOR, ARREMESSO, MUTADOS, DES
   · PRÉDIOS: quem NÃO dá para entrar tem o térreo com PORTAS DE AÇO baixadas (enferrujadas e pichadas); quem dá
     tem as vitrines e portas abertas (escuras), sem tábuas. É o mesmo sinal na cidade inteira: dá para saber de
     longe onde entrar. CONSERTO: os móveis de um prédio eram sorteados de novo a cada vez que ele abria (o loot
-    guardado num armário podia ir parar em outro móvel ou sumir); agora o prédio sai sempre igual.
+    guardado num armário podia ir parar em outro móvel ou sumir); agora o prédio sai sempre igual. E a grade das
+    celas da delegacia e as divisórias não encostam mais na borda de uma janela (mais folga e busca mais longe).
   · DESEMPENHO:
       - prédio abrindo perto: o que pesava na hora (caixas de loot dos móveis, portas, janelas, loot do chão e os
         infectados de dentro) é montado aos poucos, até 2,5 ms por quadro (no computador de teste o quadro mais
@@ -112,7 +113,8 @@ ATUALIZAÇÃO 1.00 · O QUE OS JOGOS AAA FAZEM (DIRETOR, ARREMESSO, MUTADOS, DES
     mundo/cidade.gd ................ dado_predio (entra ou não no 4º dado do prédio)
     mundo/materiais_cidade.gd ...... shader PREDIO: portas de aço no térreo de quem não entra
     mundo/interior.gd .............. caixas de colisão sem nós; tarefas (montar aos poucos); móveis num nó só de
-                                     perto (Detalhes); embaralhar com a semente do prédio (móveis sempre iguais)
+                                     perto (Detalhes); embaralhar com a semente do prédio (móveis sempre iguais);
+                                     _ajustar procura até 10 m; grade da cela com 0,45 m de folga da janela
     mundo/interiores.gd ............ monta em fatias de 2,5 ms; grupos dormindo; fechar no meio não perde o chão
     mundo/local.gd ................. colisão sem nós
     mundo/chunks.gd ................ orçamento em tempo; frente da câmera primeiro
