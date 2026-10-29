@@ -59,6 +59,7 @@ const Mutacao := preload("res://jogador/mutacao.gd")
 const MiraFerro := preload("res://armas/mira_ferro.gd")
 const VistaLunetaCls := preload("res://armas/vista_luneta.gd")
 var vista_luneta = null                 # 0.99: armas/vista_luneta.gd (criada na 1ª vez que você olha pela luneta)
+var _estava_na_luneta := false
 
 @export_group("Câmera")
 @export var distancia_camera := 2.35
@@ -879,6 +880,12 @@ func _camera_primeira_pessoa(delta: float, fov_alvo: float) -> void:
 	if _quer_mira_ferro():
 		fov_fp = lerpf(fov_camera + 18.0, (fov_camera + 18.0) / MiraFerro.zoom(armas.atual, luneta_montada()), fator_mira)   # 0.98: zoom da mira de ferro
 	camera.fov = lerpf(camera.fov, lerpf(fov_alvo, fov_fp, k), minf(1.0, delta * 6.0 + 0.02))
+	var na_luneta: bool = vista_luneta != null and vista_luneta.ativa
+	if na_luneta:
+		camera.fov = vista_luneta.fov_luneta    # 0.99.2: olhando pela luneta a própria câmera aproxima (armas/vista_luneta.gd)
+	elif _estava_na_luneta:
+		camera.fov = lerpf(fov_alvo, fov_fp, k) # saiu (no escuro do piscar): volta na hora, sem "desaproximar" devagar
+	_estava_na_luneta = na_luneta
 	if not morto:
 		rotation.y = lerp_angle(rotation.y, cam_yaw, minf(1.0, delta * 16.0))   # o corpo vira para onde você olha
 

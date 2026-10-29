@@ -1,8 +1,9 @@
 extends SceneTree
-# TESTE: LUNETAS COM EFEITO DE LENTE (0.99). Rifle de caça com luneta e M4A1 com mira 4x: MIRAR em 1ª pessoa põe o
-# olho atrás da ocular; o vidro (vista ampliada) fica no centro da tela, em cima da ocular 3D, a 2ª câmera olha
-# pelo tubo (para onde a arma aponta) com o campo de visão dividido pelo aumento, o olhar fica mais lento, e ao parar
-# de mirar a 2ª câmera desliga. Em 3ª pessoa MIRAR também vai para a luneta; com "por cima do ombro", aproxima como antes.
+# TESTE: LUNETAS (0.99; 0.99.2 leve, uma câmera só). Rifle de caça com luneta e M4A1 com mira 4x: MIRAR em 1ª
+# pessoa leva a luneta ao olho e troca para a vista da luneta: a câmera do jogo aproxima pelo aumento, a arma some da
+# frente do olho, o vidro fica no centro da tela, NÃO existe 2ª câmera e o quadro não fica mais pesado que sem mirar;
+# o olhar fica mais lento; ao parar de mirar tudo volta. Em 3ª pessoa MIRAR também vai para a luneta; com "por cima do
+# ombro", aproxima como antes.
 var falhas := 0
 func ok(c: bool, msg: String) -> void:
 	if c: print("  ok   ", msg)
@@ -16,6 +17,12 @@ func q(n):
 	for i in n:
 		await physics_frame
 		await process_frame
+func _medir(n: int) -> float:
+	var t0 := Time.get_ticks_usec()
+	for i in n:
+		await process_frame
+	return float(Time.get_ticks_usec() - t0) / n / 1000.0
+
 func _r():
 	await q(20)
 	var m = current_scene
@@ -40,33 +47,33 @@ func _r():
 		j.cam_pit = 0.0
 		await q(30)
 		ok(j.luneta_montada() == par[1] and not j.em_luneta(), "%s: luneta encaixada, sem mirar não olha por ela" % par[0])
+		var t_sem := await _medir(40)
 		j._mirar_ligado = true
 		await q(50)
 		var v = j.vista_luneta
-		ok(v != null and j.em_luneta() and v.alfa > 0.99 and v.visible, "%s: mirando, olha pela luneta" % par[0])
+		ok(v != null and j.em_luneta() and v.ativa and v.visible, "%s: mirando, olha pela luneta" % par[0])
 		if v == null:
 			continue
-		ok(v.centro.distance_to(tela * 0.5) < 3.0, "%s: o vidro no centro da tela (%.1f, %.1f)" % [par[0], v.centro.x, v.centro.y])
-		var arma: Node3D = j.armas.nos[par[0]]
-		var oc: Vector2 = j.camera.unproject_position(arma.global_transform * MF.ocular(par[0], par[1]))
-		ok(oc.distance_to(v.centro) < 3.0, "%s: o vidro em cima da ocular 3D" % par[0])
-		ok(v.raio > tela.y * 0.12 and v.raio < tela.y * 0.35, "%s: tamanho do vidro (raio %.0f px)" % [par[0], v.raio])
-		var tubo: Vector3 = (arma.global_transform.basis * Vector3(0, 0, 1)).normalized()
-		var olhar: Vector3 = -v._cam.global_basis.z
-		ok(rad_to_deg(tubo.angle_to(olhar)) < 0.3 and rad_to_deg(olhar.angle_to(-j.camera.global_basis.z)) < 0.5, "%s: a 2ª câmera olha pelo tubo, para onde a arma aponta" % par[0])
 		var l: Dictionary = MF.LUNETAS[par[1]]
-		var esperado := rad_to_deg(2.0 * atan(float(l["vidro"]) / float(l["olho"]) / float(l["aumento"])))
-		ok(absf(v._cam.fov - esperado) < 0.01 and v._sv.render_target_update_mode == SubViewport.UPDATE_ALWAYS, "%s: aumento %.0fx (campo %.2f°)" % [par[0], l["aumento"], v._cam.fov])
+		var base: float = j.fov_camera + 18.0
+		var esperado := rad_to_deg(2.0 * atan(tan(deg_to_rad(base) * 0.5) / float(l["aumento"])))
+		ok(absf(j.camera.fov - esperado) < 0.05, "%s: a câmera do jogo aproxima %.0fx (FOV %.1f°)" % [par[0], l["aumento"], j.camera.fov])
+		ok(v.find_children("*", "SubViewport", true, false).is_empty() and v.find_children("*", "Camera3D", true, false).is_empty(), "%s: sem 2ª câmera (a cidade é desenhada uma vez só)" % par[0])
+		var mod = j._slot.get_child(0)
+		ok(not mod._ponto_fuzil.visible, "%s: a arma some da frente do olho" % par[0])
+		ok(v.centro.distance_to(tela * 0.5) < 1.0 and v.raio > tela.y * 0.3 and v.raio < tela.y * 0.48, "%s: o vidro no centro da tela (raio %.0f px)" % [par[0], v.raio])
 		ok(j._sens_luneta() < 0.5, "%s: olhar mais lento pela luneta (x%.2f)" % [par[0], j._sens_luneta()])
+		var t_com := await _medir(40)
+		ok(t_com < t_sem * 1.25, "%s: pela luneta o quadro não fica mais pesado (%.1f ms sem mirar · %.1f ms pela luneta)" % [par[0], t_sem, t_com])
 		j._mirar_ligado = false
 		await q(30)
-		ok(not v.visible and v._sv.render_target_update_mode == SubViewport.UPDATE_DISABLED, "%s: parou de mirar: a 2ª câmera desliga" % par[0])
+		ok(not v.ativa and not v.visible and mod._ponto_fuzil.visible and j.camera.fov > esperado * 2.0, "%s: parou de mirar: volta ao normal (FOV %.0f°, arma à vista)" % [par[0], j.camera.fov])
 	# 3ª pessoa
 	j.primeira_pessoa = false
 	await q(30)
 	j._mirar_ligado = true
 	await q(50)
-	ok(j.em_luneta() and j.vista_luneta.visible, "3ª pessoa: MIRAR vai para a luneta")
+	ok(j.em_luneta() and j.vista_luneta.ativa, "3ª pessoa: MIRAR vai para a luneta")
 	j._mirar_ligado = false
 	await q(30)
 	j.mira_ferro_3p = false

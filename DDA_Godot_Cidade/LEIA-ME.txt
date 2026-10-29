@@ -40,6 +40,29 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.99.2 · LUNETA LEVE (SEM PERDER FPS)
+  · A LUNETA PESAVA DEMAIS: a 0.99 desenhava a cidade DUAS vezes enquanto você olhava por ela (uma 2ª câmera só
+    para o vidro, o "picture-in-picture" de jogos como Tarkov e Insurgency, famoso por derrubar o FPS). No
+    computador de teste o quadro ficava 67% mais lento. Agora ela usa a técnica dos jogos de celular e do modo
+    simples dos jogos grandes, "uma câmera só":
+      - a arma sobe com a luneta 3D até o olho e um piscar escuro rapidinho (0,2 s) esconde a troca;
+      - a PRÓPRIA câmera do jogo aproxima (6x na luneta, 4x na mira) e a arma some da frente do olho;
+      - por cima, uma passada 2D desenha a lente: imagem nítida no vidro, leve curvatura e cores separando na
+        borda, a sombra da borda, o RETÍCULO, o tubo escuro em volta e, fora, a cena DESFOCADA e escura (o desfoque
+        usa a imagem já reduzida que a placa de vídeo faz, quase de graça);
+      - soltando a mira (ou recarregando), o mesmo piscar volta tudo ao normal.
+    Com o campo de visão estreito entram menos coisas na tela: olhar pela luneta ficou até MAIS LEVE que sem mirar
+    (no computador de teste: 97 ms sem mirar, 78 ms pela luneta; antes, 124 ms e 210 ms).
+  ARQUIVOS MEXIDOS (testado: teste_luneta refeito, 20 conferências: aproxima 6x/4x, sem 2ª câmera, a arma some, o
+  vidro no centro, o olhar mais lento, o quadro não fica mais pesado que sem mirar, volta ao normal, 3ª pessoa e
+  "por cima do ombro"; + teste_mira_ferro, teste_jogo, teste_ombro, teste_troca_camera, teste_mutado e fotos):
+    armas/vista_luneta.gd .......... refeito: sem 2ª câmera; troca com piscar, esconde a arma, a lente numa passada 2D
+    jogador/jogador.gd ............. olhando pela luneta a câmera usa o campo de visão dela; ao sair volta na hora
+    menu/config.gd ................. VERSAO "0.99.2"
+    ferramentas/testes/teste_luneta.gd  refeito para a luneta leve (mede o tempo de quadro)
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + seções 4, 7 (mapa) e 10
+
 ATUALIZAÇÃO 0.99.1 · CARREGAMENTO QUE NÃO PARECE TRAVADO
   · A tela de carregamento não congela mais: antes, várias partes eram um bloco só de trabalho e a barra, as brasas
     e o girador ficavam parados por 1 a 5 segundos (parecia que o jogo tinha travado). Agora:
@@ -2477,7 +2500,9 @@ MUTADO (0.94, jogador/mutacao.gd): 1% ao morrer pelos infectados · levanta em 6
   x0,4 · trote/corrida x1,22 · pulo x1,4 · estamina correndo x0,5 · queda x1,35 · garras 30 de dano (1,65 m, 0,55 s) ·
   armas brancas x1,3 · sem arma de fogo · infectados ignoram · (controlado, 2ª parte: x1,1 · x1,2 · dano x0,7 · garras 20)
 LUNETAS (0.99, armas/mira_ferro.gd LUNETAS): luneta 6x (olho a 8,5 cm da ocular) · mira 4x 4x (olho a 4,5 cm) ·
-  olhar pela luneta: sensibilidade x1,6/aumento · a imagem ampliada em 85% da resolução do vidro (até 900 px)
+  olhar pela luneta: sensibilidade x1,6/aumento · 0.99.2 (armas/vista_luneta.gd): troca 0,12 s depois da arma no
+  olho, piscar de 0,08 s + 0,14 s · campo de visão = o da 1ª pessoa / aumento (60° vira 11° na luneta, 16,4° na mira)
+  · vidro com raio de 42% (luneta) / 38% (mira) da altura da tela · tubo de 9% · uma câmera só
 MIRA DE FERRO (0.98, armas/mira_ferro.gd): zoom pistola 1,15x · MP5 1,25x · M4/AKM 1,3x · espingarda 1,2x · rifle 1,35x ·
   olho a 36 cm da pistola (braços quase esticados) e encostado na coronha dos fuzis
 SENTIDOS (0.95, jogador/sentidos.gd): ligado 10 s, espera 20 s · farejar até 250 m (até 24 pessoas) · escutar até 40 m ·
@@ -2693,7 +2718,8 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - MIRA DE FERRO (alinhar a mira de uma
   arma, olho, zoom, arma sem mirar) ... armas/mira_ferro.gd (DADOS, QUADRIL)
 - LUNETAS: vista ampliada, lente,
-  retículos, desfoque de fora ......... armas/vista_luneta.gd · medidas e aumento: armas/mira_ferro.gd (LUNETAS)
+  retículos, desfoque de fora, tamanho
+  do vidro, o piscar da troca ......... armas/vista_luneta.gd (RAIO, TUBO, FECHAR, ABRIR) · aumento: armas/mira_ferro.gd
 - câmera de ombro (quanto para o lado) . jogador/jogador.gd (lateral_camera, LADO_MIN) + menu/aplicar_opcoes.gd (LADO)
 - avisos no meio da tela e ícone da
   munição (ligar/desligar) ............ Opções › HUD (menu/opcoes.gd) · desenho: armas/hud_combate.gd
@@ -3057,7 +3083,8 @@ MÚSICA (pasta audio/)
   fala, até instalar o APK 0.97. Testado com dois jogos no PC (sem microfone de verdade: um som de teste no lugar).
 - Mira de ferro (0.98) e lunetas (0.99): a imagem ampliada mostra só o que já está carregado perto (de longe,
   coisas que somem pela distância, como infectados e objetos pequenos, não aparecem mesmo com 6x); o retículo não
-  tem regulagem de distância nem de aumento. Em 1ª
+  tem regulagem de distância nem de aumento. 0.99.2: a cena em volta da luneta é a mesma imagem aproximada, só que
+  desfocada (é o truque que deixa leve; de verdade, em volta se veria sem aumento). Em 1ª
   pessoa a animação de RECARREGAR não aparece (a arma fica parada na mão); os outros jogadores te veem mirando do
   jeito de sempre (a mira de ferro é só a sua câmera).
 - Tela de carregamento (0.99/0.99.1): ainda há algumas paradas curtas (até ~0,75 s no computador de teste) em partes
