@@ -16,6 +16,20 @@ const Teclas := preload("res://jogador/teclas.gd")
 var estatisticas: Array = []          # [[rótulo, valor], ...] preenchido por quem abre (main.gd)
 var _raiz: Control
 
+# 1.00: os MESMOS Shaders sempre (menu/pre_aquecer.gd compila debaixo da tela de carregamento: a 1ª pausa não engasga)
+static var _sh_veu: Shader = null
+static var _sh_xadrez: Shader = null
+static func shader_veu() -> Shader:
+	if _sh_veu == null:
+		_sh_veu = Shader.new()
+		_sh_veu.code = SHADER_VEU
+	return _sh_veu
+static func shader_xadrez() -> Shader:
+	if _sh_xadrez == null:
+		_sh_xadrez = Shader.new()
+		_sh_xadrez.code = SHADER_XADREZ
+	return _sh_xadrez
+
 func _ready() -> void:
 	layer = 25
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -53,9 +67,7 @@ func _montar() -> void:
 	veu.set_anchors_preset(Control.PRESET_FULL_RECT)
 	veu.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var sm := ShaderMaterial.new()
-	var sh := Shader.new()
-	sh.code = SHADER_VEU
-	sm.shader = sh
+	sm.shader = shader_veu()
 	veu.material = sm
 	_raiz.add_child(veu)
 	var lin := HBoxContainer.new()
@@ -107,9 +119,7 @@ func _montar() -> void:
 	xd.offset_top = -3.2 * v
 	xd.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var xm := ShaderMaterial.new()
-	var xs := Shader.new()
-	xs.code = SHADER_XADREZ
-	xm.shader = xs
+	xm.shader = shader_xadrez()
 	xm.set_shader_parameter("lado", 3.2 * v)
 	xd.material = xm
 	_raiz.add_child(xd)

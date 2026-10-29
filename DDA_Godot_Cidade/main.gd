@@ -56,6 +56,7 @@ const TelaLoginCls := preload("res://menu/tela_login.gd")
 const TelaPerfilCls := preload("res://menu/tela_perfil.gd")
 const AvisoChamadoCls := preload("res://menu/aviso_chamado.gd")
 const TelaCarregamentoCls := preload("res://menu/tela_carregamento.gd")
+const PreAquecer := preload("res://menu/pre_aquecer.gd")   # 1.00
 # 0.99: as partes de _criar_jogo() na TELA DE CARREGAMENTO: chave -> [texto, peso (tempo relativo; os da cidade estão
 # em mundo/cidade.gd etapas())]
 const ETAPAS_JOGO := {
@@ -380,6 +381,10 @@ func _fim_carregamento() -> void:
 		if cidade != null:
 			cidade.progresso = float(i + 1) / N_LOTES * 0.8
 		await get_tree().process_frame
+	# 1.00: efeitos, luneta, pausa, chuva... compilam aqui (uma peça por quadro), não no 1º uso
+	await PreAquecer.rodar(self, func(f: float):
+		if cidade != null:
+			cidade.progresso = 0.8 + 0.2 * f)
 	jogo.process_mode = Node.PROCESS_MODE_PAUSABLE   # o jogo volta a andar (os quadros finais trazem os prédios perto)
 	var c = carregamento
 	carregamento = null                     # o jogo já pode ser pausado/salvo enquanto a tela some

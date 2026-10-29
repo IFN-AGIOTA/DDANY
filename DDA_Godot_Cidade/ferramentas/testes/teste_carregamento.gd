@@ -84,6 +84,18 @@ func _r():
 		await process_frame
 	ok(absf(m.jogador.global_position.y - p0.y) < 0.5 and m.jogador.is_on_floor(), "o jogador está no chão (y %.2f)" % m.jogador.global_position.y)
 	await _foto("jogo")
+	# 1.00 · pré-aquecer (menu/pre_aquecer.gd): depois da tela, nada do aquecimento fica aparecendo
+	var ef = m.jogador.armas.efeitos
+	var sobrou: Array = []
+	for n in [ef._trac[0]["no"], ef._fais[0]["no"], ef._fum[0]["no"], ef._clarao, ef._luz_tiro, m.jogador.arremesso._arco, m.jogador.arremesso._alvo]:
+		if (n as Node3D).visible:
+			sobrou.append(n.name)
+	var camada59 := false
+	for c2 in m.get_children():
+		if c2 is CanvasLayer and (c2 as CanvasLayer).layer == 59:
+			camada59 = true
+	ok(sobrou.is_empty() and not camada59 and m.jogador.arremesso.get_child_count() == 2, "o pré-aquecimento não deixa nada na tela (%s)" % [sobrou])
+	ok(load("res://armas/vista_luneta.gd")._shader != null and load("res://menu/pausa.gd")._sh_veu != null, "a lente da luneta e a pausa já foram aquecidas")
 	# dicas: trocam sozinhas e com toque
 	var T = load("res://menu/tela_carregamento.gd")
 	ok(T.DICAS.size() >= 20, "%d dicas" % T.DICAS.size())

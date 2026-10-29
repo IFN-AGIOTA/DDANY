@@ -148,6 +148,7 @@ elif [ "$alvo" = todos ]; then
 	rodar teste_void 1
 	rodar teste_diretor 1
 	rodar teste_arremesso 1
+	rodar teste_desempenho 1
 	rodar_turn
 else
 	rodar "$alvo" 1

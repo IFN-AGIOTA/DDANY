@@ -241,6 +241,23 @@ func fumaca(p: Vector3, cor: Color, tam: float, vida: float) -> void:
 	_mat_fum[_fi].albedo_color = Color(cor.r, cor.g, cor.b, 1.0)
 	no.visible = true
 
+# 1.00 · PRÉ-AQUECER (menu/pre_aquecer.gd): mostra uma peça de cada efeito em "p" (liga) ou esconde tudo de novo;
+# assim o shader de cada um compila debaixo da tela de carregamento, não no primeiro tiro
+# (uma peça por vez: cada uma compila o seu shader num quadro diferente)
+func pecas_aquecer() -> Array:
+	var nos: Array = [_trac[0]["no"], _fais[0]["no"], _fum[0]["no"], _clarao, _luz_tiro]
+	if not _marcas.is_empty():
+		nos.append(_marcas[0])
+	if not _sangue.is_empty():
+		nos.append(_sangue[0])
+	return nos
+
+func aquecer(n: Node3D, p: Vector3, liga: bool) -> void:
+	n.visible = liga
+	if liga:
+		n.global_position = p
+	_trac[0]["on"] = false
+
 # OTIMIZAÇÃO: sem nenhum efeito na tela, não percorre as listas (antes: todo quadro, sempre)
 var _ocioso := false
 

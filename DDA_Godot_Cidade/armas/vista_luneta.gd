@@ -113,15 +113,22 @@ void fragment() {
 }
 """
 
+# 1.00: o MESMO Shader para todo mundo (menu/pre_aquecer.gd o compila debaixo da tela de carregamento: a 1ª luneta
+# não engasga)
+static var _shader: Shader = null
+static func shader() -> Shader:
+	if _shader == null:
+		_shader = Shader.new()
+		_shader.code = SHADER
+	return _shader
+
 func _ready() -> void:
 	layer = 2                           # por cima da cena, embaixo da HUD e dos botões
 	_rect = ColorRect.new()
 	_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var sh := Shader.new()
-	sh.code = SHADER
 	_mat = ShaderMaterial.new()
-	_mat.shader = sh
+	_mat.shader = shader()
 	_rect.material = _mat
 	add_child(_rect)
 	visible = false

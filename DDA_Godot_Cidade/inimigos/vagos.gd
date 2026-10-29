@@ -53,7 +53,7 @@ const LONGE_ALIVIAR := 45.0                 # só recolhe (vira grupo) quem est�
 var max_ativos := MAX_ATIVOS_PADRAO
 var orcamento_ms := ORCAMENTO_MS * (1.0 if OS.has_feature("mobile") else 1.5)
 var teto_custo := -1                    # 1.00: limite pelo orçamento (-1 = sem limite além de max_ativos)
-var custo_ms := 0.0                     # média do tempo dos infectados por quadro
+var custo_ms := 0.0                     # média do tempo dos infectados (ms a cada 1/60 s)
 var _t_orc := 1.0
 var horda: Node = null                  # 0.89: inimigos/horda.gd (população da cidade; solo e host)
 var diretor: Node = null                # 1.00: inimigos/diretor.gd (ritmo: tensão e alívio, hordas; solo e host)
@@ -301,7 +301,8 @@ func _process(dt: float) -> void:
 
 # 1.00 · ORÇAMENTO: média do tempo dos infectados; acima do orçamento corta, com folga devolve (com histerese)
 func _orcamento(dt: float) -> void:
-	custo_ms = lerpf(custo_ms, float(VagoCls.custo_us) / 1000.0, 0.08)
+	# em ms por 1/60 s (com o quadro lento, cada quadro tem vários passos de física: sem isso pareceria mais caro)
+	custo_ms = lerpf(custo_ms, float(VagoCls.custo_us) / 1000.0 / maxf(dt * 60.0, 0.25), 0.08)
 	VagoCls.custo_us = 0
 	_t_orc -= dt
 	if _t_orc > 0.0:
