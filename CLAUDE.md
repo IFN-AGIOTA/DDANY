@@ -20,6 +20,10 @@
 - Imagens de referência dos personagens também ficam em `lore/` (ex.: `lore/Mavie_referencia.png`); o visual no jogo fica em `npc/modelo_humano.gd` (tabela VISUAIS).
 - Quando o usuário mandar lore nova, substituir os arquivos em `lore/` e atualizar o jogo e o `LEIA-ME.txt`.
 
+# Estudos
+
+- `estudos/ESTUDO_AAA.md` reúne técnicas de jogos AAA (otimização, streaming, IA dos infectados, level design, código, rede e sensação de jogo), já comparadas com o nosso código, com um plano de ação por prioridade. Consultar antes de mexer nessas áreas e marcar ✅ no plano o que for feito.
+
 # Créditos
 
 - O usuário autorizou baixar da internet qualquer coisa útil para o jogo (modelos, texturas, sons, músicas, fontes, ferramentas, bibliotecas), sem precisar perguntar antes.
