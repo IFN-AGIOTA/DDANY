@@ -103,6 +103,10 @@ const RUIDO_INVESTIGAR := 28.0         # barulho deste raio para cima (tiro) faz
 const PERTO_SENTIR := 1.6              # mais perto que isso nota você mesmo fora do cone (mas a parede ainda tapa)
 const MEMORIA := 0.6                   # depois de perder de vista, ainda segue a posição exata por esse tempo
 const ABAFADO := 0.5                   # barulho do outro lado de parede/prédio: o círculo de audição cai a isso
+# 1.00 · AUDIÇÃO PELO ESTADO (The Last of Us, estudos/ESTUDO_AAA.md 2.2): vagando à toa ele está distraído e ouve um
+# pouco pior (dá para passar furtivo); desconfiado ou investigando, escuta com atenção
+const OUVIR_DISTRAIDO := 0.85
+const OUVIR_ATENTO := 1.15
 const VISTO_ATAQUE := 0.35             # só ataca quem viu há menos disso (e com a linha livre no golpe)
 
 # sons (gerados uma vez; o gerente chama sintetizar_sons() numa thread e depois definir_sons())
@@ -372,6 +376,11 @@ func ouvir(pos: Vector3, raio: float, do_jogador: bool) -> void:
 	var d := global_position.distance_to(pos)
 	if gerente != null and not Regras.ativo_agora(gerente.escuridao()):
 		raio *= 0.4                                  # 0.89: fora do horário em que andam: quase não ouvem
+	var alto := raio >= RUIDO_INVESTIGAR              # (o volume do barulho, antes da atenção dele)
+	if estado == VAGANDO:
+		raio *= OUVIR_DISTRAIDO
+	elif estado == DESCONFIADO or estado == INVESTIGANDO:
+		raio *= OUVIR_ATENTO
 	if d > raio:
 		return
 	# 0.80 · CÍRCULO DE AUDIÇÃO: com parede/prédio no meio o som chega abafado (círculo menor)
@@ -397,7 +406,7 @@ func ouvir(pos: Vector3, raio: float, do_jogador: bool) -> void:
 			_t_sem_ver = clampf(_t_sem_ver, MEMORIA + 0.01, Regras.memoria() * 0.5)
 		return
 	# ouvir não é ver: vai até o lugar do barulho e só persegue se te VIR lá
-	if raio >= RUIDO_INVESTIGAR or estado == INVESTIGANDO or d < 4.0:
+	if alto or estado == INVESTIGANDO or d < 4.0:
 		investigar(onde)                                # tiro/grito (ou passos bem perto): vai ver direto
 	else:
 		desconfiar(onde)                                # passos: para e escuta ("hm?")

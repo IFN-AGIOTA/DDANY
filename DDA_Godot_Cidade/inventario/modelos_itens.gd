@@ -47,7 +47,7 @@ static var _cenas := {}
 static var _mats := {}
 
 static func tem(id: String) -> bool:
-	return ITENS.has(id) or id in ["refrigerante", "analgesico", "vitaminas", "antibiotico", "carvao", "pastilha", "tabuas", "galao", "martelo"]
+	return ITENS.has(id) or id in ["refrigerante", "analgesico", "vitaminas", "antibiotico", "carvao", "pastilha", "tabuas", "galao", "martelo", "tijolo", "garrafa_vidro"]
 
 static func cena(nome: String) -> PackedScene:
 	if not _cenas.has(nome):
@@ -182,6 +182,44 @@ static func _por_codigo(id: String) -> Node3D:
 					pm.material_override = prego
 					pm.position = mi.position + Vector3(0.0, 0.02, z)
 					n.add_child(pm)
+		"tijolo":
+			# 1.00: tijolo maciço de barro (com a marca dos furos em cima)
+			var mi := MeshInstance3D.new()
+			var bm := BoxMesh.new()
+			bm.size = Vector3(0.215, 0.065, 0.1)
+			mi.mesh = bm
+			mi.material_override = _mat(Color(0.6, 0.27, 0.17), 0.0, 0.95)
+			mi.position.y = 0.0325
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			n.add_child(mi)
+			for x in [-0.06, 0.0, 0.06]:
+				_cil(n, 0.014, 0.004, 0.064, _mat(Color(0.38, 0.17, 0.1), 0.0, 1.0))
+				(n.get_child(n.get_child_count() - 1) as Node3D).position.x = x
+		"garrafa_vidro":
+			# 1.00: garrafa de vidro verde (corpo, ombro e gargalo) com rótulo velho
+			if not _mats.has("vidro_verde"):
+				var v := StandardMaterial3D.new()
+				v.albedo_color = Color(0.16, 0.42, 0.2, 0.72)
+				v.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+				v.roughness = 0.08
+				v.metallic_specular = 0.8
+				_mats["vidro_verde"] = v
+			var vidro: Material = _mats["vidro_verde"]
+			_cil(n, 0.033, 0.16, 0.0, vidro)
+			_cil(n, 0.0335, 0.06, 0.045, _mat(Color(0.82, 0.76, 0.6), 0.0, 0.8))      # rótulo
+			var om := MeshInstance3D.new()
+			var cm := CylinderMesh.new()
+			cm.top_radius = 0.013
+			cm.bottom_radius = 0.033
+			cm.height = 0.04
+			cm.radial_segments = 16
+			cm.rings = 1
+			om.mesh = cm
+			om.material_override = vidro
+			om.position.y = 0.18
+			om.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			n.add_child(om)
+			_cil(n, 0.013, 0.07, 0.2, vidro)
 		_:
 			n.free()
 			return null

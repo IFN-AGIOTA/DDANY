@@ -58,6 +58,7 @@ const PortaBunkerCls := preload("res://mundo/porta_bunker.gd")
 const Mutacao := preload("res://jogador/mutacao.gd")
 const MiraFerro := preload("res://armas/mira_ferro.gd")
 const VistaLunetaCls := preload("res://armas/vista_luneta.gd")
+const ArremessoCls := preload("res://armas/arremesso.gd")
 var vista_luneta = null                 # 0.99: armas/vista_luneta.gd (criada na 1ª vez que você olha pela luneta)
 var _estava_na_luneta := false
 
@@ -92,6 +93,7 @@ var giro_zero := Vector3.ZERO
 var controles = null                # controles.gd (toque/teclado)
 var inventario: Node = null         # inventario/inventario.gd
 var sobrevivencia: Node = null      # jogador/sobrevivencia.gd (vida, sangue, fome, sede, temperatura)
+var arremesso: Node3D = null        # 1.00: armas/arremesso.gd (garrafa, tijolo: segurar ATIRAR mira, soltar joga)
 var mundo = null                    # colisao_mundo.gd (altura do chão e raio dos tiros)
 var ativo := true
 var _agachar_ant := -1               # 0.64: agachar "segurar": último estado da tecla (só age quando muda)
@@ -178,6 +180,9 @@ func _ready() -> void:
 		if not morto:
 			animador.acao(["levar_golpe_a", "levar_golpe_b"][randi() % 2], 1.3, false))
 	armas.ligar_inventario(inventario)
+	arremesso = ArremessoCls.new()
+	arremesso.name = "Arremesso"
+	add_child(arremesso)
 	_carregar_modelo_do_projeto()
 	# sons do corpo: passos e dor (audio/sons_corpo.gd)
 	var bus := "SFX" if AudioServer.get_bus_index("SFX") >= 0 else "Master"
@@ -988,7 +993,8 @@ func _process(delta: float) -> void:
 			cam_pit = clampf(cam_pit - gv.y * delta * gs * (-1.0 if inverter_y else 1.0), _pit_min(), _pit_max())
 		controles.indicadores["AGACHAR"] = agachado
 		controles.indicadores["MIRAR"] = mirando
-		controles.textos["ARMA"] = armas.nome_atual()
+		var arr = arremesso.item_na_mao() if arremesso != null else null       # 1.00: tijolo/garrafa na mão
+		controles.textos["ARMA"] = armas.nome_atual() if arr == null else str(arr.def().get("sigla", "JOGAR"))
 		controles.icones["ARMA"] = armas.atual                    # 0.67: ícone da arma no botão (faca, pistola...)
 	fator_agachado = lerpf(fator_agachado, 1.0 if agachado else 0.0, minf(1.0, delta * 10.0))
 	fator_mira = lerpf(fator_mira, 1.0 if mirando else 0.0, minf(1.0, delta * 12.0))

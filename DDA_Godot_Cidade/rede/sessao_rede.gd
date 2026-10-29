@@ -4,7 +4,8 @@ extends Node
 #   · ESTADO (15 vezes por segundo, pode perder pacote): posição, giro, velocidade, agachado/mirando/morto,
 #     arma das mãos e mira  -> os outros mostram um rede/jogador_remoto.gd;
 #   · EVENTOS (sempre chegam): "cheguei" (terminou de carregar: os outros respondem), "roupa" (o que está vestido), "acao" (recarregar, golpe, comer...),
-#     "tiro" (som + traçante + os infectados de quem ouviu escutam), "mundo" (só o host: hora e clima).
+#     "tiro" (som + traçante + os infectados de quem ouviu escutam), "mundo" (só o host: hora e clima),
+#     1.00: "arremesso" (garrafa/tijolo voando: os infectados de quem recebe ouvem onde bate).
 # O HOST manda no mundo: a semente do loot (todo mundo acha as mesmas coisas nos mesmos lugares) e a hora/clima
 # (os clientes não trocam o tempo sozinhos).
 # MUNDO SINCRONIZADO (0.44):
@@ -73,6 +74,8 @@ func ligar(m: Node) -> void:
 	jogador.inventario.mudou.connect(_mandar_roupa)
 	jogador.animador.tocou_acao.connect(func(n, v, c): Rede.enviar_evento("acao", {"n": n, "v": v, "c": c}))
 	jogador.armas.disparou.connect(_mandar_tiro)
+	if jogador.get("arremesso") != null:
+		jogador.arremesso.arremessou.connect(func(id, de, v): Rede.enviar_evento("arremesso", {"i": id, "de": de, "v": v}))
 	jogador.sobrevivencia.morreu.connect(_morri)
 	# 0.71: mensagens rápidas (botão MSG / tecla T)
 	_mensagens = MensagensCls.new()
@@ -259,6 +262,9 @@ func _evento(id: int, tipo: String, d: Dictionary) -> void:
 				remotos[id].tocar_acao(str(d.get("n", "")), float(d.get("v", 1.0)), bool(d.get("c", true)))
 		"tiro":
 			_tiro_remoto(id, d)
+		"arremesso":                           # 1.00: garrafa/tijolo de um amigo (voa aqui também; os infectados daqui ouvem)
+			if jogador.get("arremesso") != null and remotos.has(id):
+				jogador.arremesso.lancar(str(d.get("i", "tijolo")), d.get("de", Vector3.ZERO), d.get("v", Vector3.ZERO), null)
 		"mundo":
 			_aplicar_mundo(d)
 		"inf_dano":
