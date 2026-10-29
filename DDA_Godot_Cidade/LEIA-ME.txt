@@ -40,6 +40,26 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 0.99.3 · NÃO CAI MAIS NO VOID
+  · CONSERTO: voltando ao mundo (Continuar, renascer, entrar na partida de um amigo...), às vezes o personagem
+    aparecia antes do chão daquele lugar estar pronto (o piso de um prédio por dentro ou de um local especial é
+    montado alguns quadros depois) e caía no "void", embaixo do mapa. Agora, depois de qualquer teleporte, ele fica
+    PARADO NO AR esperando até ter chão de verdade logo embaixo (até 4 s). Se o chão não aparecer: com chão mais
+    embaixo, ele desce até ele; sem nada embaixo, vai para o chão da cidade naquele ponto.
+  · RESGATE DO VOID: o jogo anota o último lugar onde você ficou em pé (a cada 0,5 s). Se mesmo assim você cair
+    para fora do mapa (abaixo de 70 m sob a rua, bem mais fundo que o bunker mais fundo), volta na hora para esse
+    lugar seguro (dirigindo, sai do carro antes). Com os avisos ligados aparece "VOCÊ CAIU PARA FORA DO MAPA".
+  ARQUIVOS MEXIDOS (testado: teste_void.gd NOVO, 7 conferências: espera no ar até o chão aparecer e fica em pé nele;
+  sem chão perto desce até o chão da cidade; o ponto seguro anotado; caindo no void volta para ele e fica em pé;
+  "Continuar" de verdade, com a tela de carregamento, volta onde salvou sem cair; + a bateria toda):
+    jogador/jogador.gd ............. teleportar() liga a CHEGADA SEGURA (_esperando_chao); _vigiar_void anota o
+                                     ponto seguro e chama _resgatar() abaixo de Y_VOID
+    menu/config.gd ................. VERSAO "0.99.3"
+    ferramentas/testes/teste_void.gd  NOVO · o teste
+    ferramentas/testes/rodar.sh .... teste_void na bateria
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + seções 4 e 7 (mapa)
+
 ATUALIZAÇÃO 0.99.2 · LUNETA LEVE (SEM PERDER FPS)
   · A LUNETA PESAVA DEMAIS: a 0.99 desenhava a cidade DUAS vezes enquanto você olhava por ela (uma 2ª câmera só
     para o vidro, o "picture-in-picture" de jogos como Tarkov e Insurgency, famoso por derrubar o FPS). No
@@ -2496,6 +2516,8 @@ VEÍCULOS (0.76): tanque 30 L · ~1,6 L/km + 0,03 L/min ligado · até ~86 km/h 
   m/s · motor ouvido a ~38 m · ~4% dos sedãs/táxis/vans inteiros funcionam
 PORTAS (0.73): porta 100 de vida, cada tábua mais 140 (até 3) · golpe de infectado na porta = mordida x2,2
   (8–14 x 2,2) · abrir/fechar: barulho de 7 m · martelar tábua 10,5 m · porta quebrando 14 m · usar até 1,9 m
+VOID (0.99.3, jogador/jogador.gd): depois de teleporte espera o chão até 4 s (chão até 1,6 m embaixo) · ponto seguro a
+  cada 0,5 s em pé · resgate abaixo de y -70 m (o fundo do bunker mais fundo fica a ~-38 m)
 MUTADO (0.94, jogador/mutacao.gd): 1% ao morrer pelos infectados · levanta em 6 s · dano recebido x0,45 · sangramento
   x0,4 · trote/corrida x1,22 · pulo x1,4 · estamina correndo x0,5 · queda x1,35 · garras 30 de dano (1,65 m, 0,55 s) ·
   armas brancas x1,3 · sem arma de fogo · infectados ignoram · (controlado, 2ª parte: x1,1 · x1,2 · dano x0,7 · garras 20)
@@ -2720,6 +2742,8 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - LUNETAS: vista ampliada, lente,
   retículos, desfoque de fora, tamanho
   do vidro, o piscar da troca ......... armas/vista_luneta.gd (RAIO, TUBO, FECHAR, ABRIR) · aumento: armas/mira_ferro.gd
+- não cair no void (espera do chão,
+  ponto seguro, altura do resgate) .... jogador/jogador.gd (Y_VOID, ESPERA_CHAO, SEGURO_A_CADA, _resgatar)
 - câmera de ombro (quanto para o lado) . jogador/jogador.gd (lateral_camera, LADO_MIN) + menu/aplicar_opcoes.gd (LADO)
 - avisos no meio da tela e ícone da
   munição (ligar/desligar) ............ Opções › HUD (menu/opcoes.gd) · desenho: armas/hud_combate.gd
