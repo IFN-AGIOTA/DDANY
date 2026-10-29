@@ -403,10 +403,10 @@ func _layout(uso_forcado := "") -> void:
 			var tipos := ["cozinha", "quarto", "banheiro"] if largura > 23.0 else ["cozinha", "quarto"]
 			if largura > 29.0:
 				tipos = ["cozinha", "quarto", "quarto", "banheiro"]
-			tipos.shuffle()
+			_embaralhar(tipos)
 			var frentes := ["sala"]
 			var extras := ["sala_jantar", "quarto", "escritorio_casa"]
-			extras.shuffle()
+			_embaralhar(extras)
 			for k in clampi(int(largura / 11.0), 1, 3) - 1:
 				frentes.append(extras[k])
 			_dividir(prof * r.randf_range(0.42, 0.55), frentes, tipos)
@@ -481,7 +481,7 @@ func _por_parede(nome: String, sala: Rect2, uso: String) -> bool:
 		cands.append([Vector2(sala.position.x + tam.y * 0.5, z), PI * 0.5, Rect2(sala.position.x, z - tam.x * 0.5, tam.y, tam.x)])
 		cands.append([Vector2(sala.end.x - tam.y * 0.5, z), -PI * 0.5, Rect2(sala.end.x - tam.y, z - tam.x * 0.5, tam.y, tam.x)])
 		z += 0.45
-	cands.shuffle()
+	_embaralhar(cands)
 	for c in cands:
 		if _livre(c[2], sala) and _parede_atras(nome, c[0], c[1], tam):
 			_colocar(nome, c[1], c[0], c[2], uso)
@@ -707,7 +707,9 @@ func _criar_malha() -> void:
 	_malha = am
 
 # 2ª parte (thread principal): cria os nós, a malha, a colisão e os contêineres de loot
-func criar(lm) -> Node3D:
+# 1.00: com "tarefas" (uma Array, mundo/interiores.gd), as caixas de loot dos móveis, as portas e as janelas não são
+# montadas aqui: cada uma vira uma tarefa que o interiores.gd faz aos poucos, sem engasgar o quadro
+func criar(lm, tarefas = null) -> Node3D:
 	loot = lm
 	var uso: String = info["uso"]
 	var raiz := Node3D.new()
@@ -742,66 +744,99 @@ func criar(lm) -> Node3D:
 		casca.multimesh = mm
 		raiz.add_child(casca)
 		col.append([Vector3(0, base + hu * 0.5, 0), Vector3(hx * 2.0, hu, hz * 2.0), 0.0])
-	# colisão
+	# colisão (1.00: as caixas vão direto no corpo, sem um nó CollisionShape3D para cada: ~500 nós a menos por prédio)
 	var corpo := StaticBody3D.new()
 	corpo.name = "Colisao"
 	corpo.collision_layer = 1
 	corpo.collision_mask = 0
-	for c in col:
-		var cs := CollisionShape3D.new()
-		var bs := BoxShape3D.new()
-		bs.size = c[1]
-		cs.shape = bs
-		cs.transform = Transform3D(c[3] if c.size() > 3 else Basis(Vector3.UP, c[2]), c[0])
-		corpo.add_child(cs)
+	adicionar_caixas(corpo, col)
 	raiz.add_child(corpo)
 	# loot nos móveis (contêineres invisíveis) e no chão
 	if loot != null:
 		for k in cont.size():
-			var c: Dictionary = cont[k]
-			var cx = CaixaMundo.new()
-			cx.invisivel = true
-			cx.nome = c["nome"]
-			cx.tamanho = c["tam"]
-			cx.grade = loot.grade("p%d_%d" % [idx, k], c["loot"], c["nome"], c["tam"])
-			raiz.add_child(cx)
-			cx.position = c["pos"] + Vector3(0, 0.1, 0)
+			_fazer(tarefas, func(): _caixa(raiz, k))
 		raiz.set_meta("pontos_chao", _pontos)
-	# 0.73: portas (o estado mexido fica guardado no loot: loot.portas)
 	for k in portas.size():
-		var e: Dictionary = portas[k]
-		var pt = PortaCls.new()
-		pt.id = "p%d:%d" % [idx, k]
-		pt.largura = e["larg"]
-		pt.altura = e["alt"]
-		pt.parede = e["parede"]
-		pt.dupla = e["dupla"]
-		pt.cor = Moveis.MADEIRA * (0.75 if e["dupla"] else 0.95)
-		pt.aberta = e["estado"] == "aberta"
-		pt.quebrada = e["estado"] == "quebrada"
-		pt.abertura = e["abertura"]
-		if loot != null and loot.get("portas") != null and loot.portas.has(pt.id):
-			pt.aplicar(loot.portas[pt.id])
-		pt.position = e["pos"]
-		pt.rotation.y = e["giro"]
-		raiz.add_child(pt)
-	# 0.90: janelas do térreo (mesmo esquema das portas: id "j<prédio>:<n>", estado no loot)
+		_fazer(tarefas, func(): _porta(raiz, k))
 	for k in janelas.size():
-		var e: Dictionary = janelas[k]
-		var jn = JanelaCls.new()
-		jn.id = "j%d:%d" % [idx, k]
-		jn.largura = e["larg"]
-		jn.y0 = e["y0"]
-		jn.y1 = e["y1"]
-		jn.parede = e["parede"]
-		jn.vidro = e["vidro"]
-		jn.tabuas = e["tabuas"]
-		if loot != null and loot.get("portas") != null and loot.portas.has(jn.id):
-			jn.aplicar(loot.portas[jn.id])
-		jn.position = e["pos"]
-		jn.rotation.y = e["giro"]
-		raiz.add_child(jn)
+		_fazer(tarefas, func(): _janela(raiz, k))
 	return raiz
+
+static func _fazer(tarefas, f: Callable) -> void:
+	if tarefas == null:
+		f.call()
+	else:
+		tarefas.append(f)
+
+# 1.00: caixas de colisão [centro, tamanho, giro (, Basis)] num corpo, como "donos de forma" (sem nós filhos)
+static func adicionar_caixas(corpo: CollisionObject3D, caixas: Array) -> void:
+	for c in caixas:
+		var bs := BoxShape3D.new()
+		bs.size = (c[1] as Vector3).abs() + Vector3(0.001, 0.001, 0.001)
+		var dono := corpo.create_shape_owner(corpo)
+		corpo.shape_owner_add_shape(dono, bs)
+		corpo.shape_owner_set_transform(dono, Transform3D(c[3] if c.size() > 3 else Basis(Vector3.UP, c[2]), c[0]))
+
+func _caixa(raiz: Node3D, k: int) -> void:
+	if not is_instance_valid(raiz):
+		return
+	var c: Dictionary = cont[k]
+	var cx = CaixaMundo.new()
+	cx.invisivel = true
+	cx.nome = c["nome"]
+	cx.tamanho = c["tam"]
+	cx.grade = loot.grade("p%d_%d" % [idx, k], c["loot"], c["nome"], c["tam"])
+	raiz.add_child(cx)
+	cx.position = c["pos"] + Vector3(0, 0.1, 0)
+
+# 0.73: portas (o estado mexido fica guardado no loot: loot.portas)
+func _porta(raiz: Node3D, k: int) -> void:
+	if not is_instance_valid(raiz):
+		return
+	var e: Dictionary = portas[k]
+	var pt = PortaCls.new()
+	pt.id = "p%d:%d" % [idx, k]
+	pt.largura = e["larg"]
+	pt.altura = e["alt"]
+	pt.parede = e["parede"]
+	pt.dupla = e["dupla"]
+	pt.cor = Moveis.MADEIRA * (0.75 if e["dupla"] else 0.95)
+	pt.aberta = e["estado"] == "aberta"
+	pt.quebrada = e["estado"] == "quebrada"
+	pt.abertura = e["abertura"]
+	if loot != null and loot.get("portas") != null and loot.portas.has(pt.id):
+		pt.aplicar(loot.portas[pt.id])
+	pt.position = e["pos"]
+	pt.rotation.y = e["giro"]
+	raiz.add_child(pt)
+
+# 0.90: janelas do térreo (mesmo esquema das portas: id "j<prédio>:<n>", estado no loot)
+func _janela(raiz: Node3D, k: int) -> void:
+	if not is_instance_valid(raiz):
+		return
+	var e: Dictionary = janelas[k]
+	var jn = JanelaCls.new()
+	jn.id = "j%d:%d" % [idx, k]
+	jn.largura = e["larg"]
+	jn.y0 = e["y0"]
+	jn.y1 = e["y1"]
+	jn.parede = e["parede"]
+	jn.vidro = e["vidro"]
+	jn.tabuas = e["tabuas"]
+	if loot != null and loot.get("portas") != null and loot.portas.has(jn.id):
+		jn.aplicar(loot.portas[jn.id])
+	jn.position = e["pos"]
+	jn.rotation.y = e["giro"]
+	raiz.add_child(jn)
+
+# 1.00: embaralha com o sorteio do PRÉDIO (o shuffle() da Godot usa o sorteio global: o mesmo prédio saía com outros
+# móveis cada vez que abria, e o loot guardado nas caixas "p<prédio>_<n>" trocava de móvel ou sumia)
+func _embaralhar(a: Array) -> void:
+	for k in range(a.size() - 1, 0, -1):
+		var j := r.randi_range(0, k)
+		var t = a[k]
+		a[k] = a[j]
+		a[j] = t
 
 # lugares livres no chão para itens soltos (entre os móveis)
 func _pontos_chao() -> Array:

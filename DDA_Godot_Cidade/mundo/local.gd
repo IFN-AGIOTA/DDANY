@@ -15,6 +15,7 @@ const Malhas := preload("res://mundo/malhas.gd")
 const Moveis := preload("res://mundo/moveis.gd")
 const Mat := preload("res://mundo/materiais_cidade.gd")
 const CaixaMundo := preload("res://inventario/caixa_mundo.gd")
+const InteriorCls := preload("res://mundo/interior.gd")      # 1.00: adicionar_caixas (colisão sem nós)
 
 const PE := 4.0                        # pé-direito dos prédios de 2 andares (hospital)
 const LAJE := 0.6
@@ -163,13 +164,7 @@ func criar(lm, y: float) -> Node3D:
 	corpo.name = "Colisao"
 	corpo.collision_layer = 1
 	corpo.collision_mask = 0
-	for c in col:
-		var cs := CollisionShape3D.new()
-		var bs := BoxShape3D.new()
-		bs.size = (c[1] as Vector3).abs() + Vector3(0.001, 0.001, 0.001)
-		cs.shape = bs
-		cs.transform = Transform3D(c[3] if c.size() > 3 else Basis(Vector3.UP, c[2]), c[0])
-		corpo.add_child(cs)
+	InteriorCls.adicionar_caixas(corpo, col)      # 1.00: sem um nó CollisionShape3D para cada caixa
 	raiz.add_child(corpo)
 	if lm != null:
 		for k in cont.size():

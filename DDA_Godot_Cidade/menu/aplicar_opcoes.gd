@@ -31,6 +31,11 @@ var _dinamica := 1.0               # fator da resolução dinâmica
 var _t_fps := 0.0
 var _fps_soma := 0.0
 var _fps_n := 0
+# 1.00 · RITMO ESTÁVEL (estudos/ESTUDO_AAA.md 1.11): no celular sem limite escolhido, se nem com a resolução no mínimo
+# ele segura 60, trava em 45 (quadros sempre iguais parecem mais lisos que 60 oscilando, e esquenta menos)
+const RITMO_ESTAVEL := 45
+var ritmo_estavel := false
+var _abaixo := 0
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -73,7 +78,7 @@ func aplicar(chave := "") -> void:
 	if bu != -1:
 		AudioServer.set_bus_volume_db(bu, linear_to_db(maxf(0.0001, float(o.get("svol", 100)) / 100.0)))
 	DisplayServer.screen_set_keep_on(bool(o["awake"]))
-	Engine.max_fps = int(g["cap"]) if int(g["cap"]) > 0 else (60 if OS.has_feature("mobile") else 0)   # celular: no máximo 60 (esquenta menos)
+	Engine.max_fps = int(g["cap"]) if int(g["cap"]) > 0 else ((RITMO_ESTAVEL if ritmo_estavel else 60) if OS.has_feature("mobile") else 0)   # celular: no máximo 60 (esquenta menos)
 	var vp := get_viewport()
 	vp.msaa_3d = MSAA[clampi(int(g["aa"]), 0, 3)]
 	vp.use_occlusion_culling = bool(g.get("ocl", true))     # não desenha o que está escondido atrás dos prédios
@@ -222,6 +227,15 @@ func _aplicar_resolucao() -> void:
 	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
 	vp.scaling_3d_scale = clampf(base * f, 0.25, 1.0)
 
+# 1.00: 3 conferências seguidas (4,5 s) abaixo de 50 FPS com a resolução já no mínimo = trava em 45
+func _vigiar_ritmo(media: float, celular: bool) -> void:
+	if not celular or ritmo_estavel or int(Config.g["cap"]) > 0:
+		return
+	_abaixo = _abaixo + 1 if (_dinamica <= 0.61 and media < 50.0) else 0
+	if _abaixo >= 3:
+		ritmo_estavel = true
+		Engine.max_fps = RITMO_ESTAVEL
+
 # resolução dinâmica: baixa a resolução quando o FPS cai e sobe de novo quando sobra
 func _process(dt: float) -> void:
 	if not bool(Config.g.get("dyn", false)) or get_tree().paused:
@@ -235,7 +249,8 @@ func _process(dt: float) -> void:
 	_t_fps = 0.0
 	_fps_soma = 0.0
 	_fps_n = 0
-	var alvo := float(Config.g["cap"]) if int(Config.g["cap"]) > 0 else 60.0
+	_vigiar_ritmo(media, OS.has_feature("mobile"))
+	var alvo := float(Config.g["cap"]) if int(Config.g["cap"]) > 0 else (float(RITMO_ESTAVEL) if ritmo_estavel else 60.0)
 	var antes := _dinamica
 	if media < alvo * 0.75:
 		_dinamica = maxf(0.6, _dinamica - 0.08)

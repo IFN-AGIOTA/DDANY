@@ -58,7 +58,7 @@ func _r():
 		if no == null:
 			continue
 		var corpo: StaticBody3D = no.get_node("Colisao")
-		var n_col := corpo.get_child_count()
+		var n_col := corpo.get_shape_owners().size()          # (1.00: as caixas ficam no corpo, sem nós)
 		var n_cont := 0
 		var n_txt := 0
 		for f in no.get_children():

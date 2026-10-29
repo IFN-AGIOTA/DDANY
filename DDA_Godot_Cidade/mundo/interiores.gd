@@ -37,7 +37,14 @@ var _hash := {}                       # Vector2i -> PackedInt32Array (prédios c
 var _hash_carros := {}                # Vector2i -> PackedInt32Array (carros)
 var _malas := {}                      # índice do carro -> CaixaMundo
 var _t := 0.0
-var ms_ultimo := 0.0                  # tempo para montar o último interior (diagnóstico)
+var ms_ultimo := 0.0                  # tempo para montar o último interior (diagnóstico; 1.00: só o 1º quadro)
+# 1.00 · MONTAR AOS POUCOS (estudos/ESTUDO_AAA.md 1.12/1.13): o que é da thread principal (caixas de loot dos móveis,
+# portas, janelas, o loot do chão e os infectados de dentro) é feito em fatias de até FATIA_US por quadro
+const FATIA_US := 2500
+var usar_fatias := true
+var ms_maior_fatia := 0.0             # (testes) o quadro mais pesado montando aos poucos
+var _montando := -1                   # prédio sendo montado aos poucos (-1 = nenhum)
+var _sem_chao := {}                   # prédios cujo loot do chão ainda não foi espalhado (fechar não guarda nada)
 var usar_thread := true               # a parte pesada (paredes, móveis) roda numa thread: o jogo não trava
 var _tarefa := -1                     # id da tarefa no WorkerThreadPool
 var _tarefa_i := -1
@@ -137,14 +144,14 @@ static func _dist_centros(centros: Array[Vector2], inf: Dictionary) -> float:
 	return m
 
 func abrir(i: int, ja := false) -> void:
-	if abertos.has(i) or _tarefa >= 0:
+	if abertos.has(i) or _tarefa >= 0 or (_montando >= 0 and not ja):
 		return
 	var inf: Dictionary = cidade.predio_info[i]
 	if usar_thread and not ja:
 		_tarefa_i = i
 		_tarefa = WorkerThreadPool.add_task(func(): _tarefa_res = InteriorCls.preparar(inf, i, cidade), false, "interior")
 		return
-	_terminar(i, InteriorCls.preparar(inf, i, cidade))
+	_terminar(i, InteriorCls.preparar(inf, i, cidade), ja)
 
 # abre já, sem thread (ao nascer/carregar dentro de um prédio)
 func abrir_agora(p: Vector2) -> void:
@@ -163,21 +170,45 @@ func _perto(p: Vector2, raio: float) -> Array:
 						r.append(i)
 	return r
 
-func _terminar(i: int, prep) -> void:
+func _terminar(i: int, prep, ja := false) -> void:
 	if prep == null or abertos.has(i):
 		return
 	var t0 := Time.get_ticks_usec()
 	var inf: Dictionary = cidade.predio_info[i]
-	var no: Node3D = prep.criar(loot)
+	var tarefas: Array = []
+	var no: Node3D = prep.criar(loot, tarefas)     # paredes, móveis e colisão já; o resto vira tarefa
 	add_child(no)
 	abertos[i] = no
 	cidade.esconder_predio(i, true)
 	mundo.abertos[i] = true
 	mundo.refazer_predios()      # refaz a colisão dos prédios perto (sem o bloco deste)
-	if loot != null and no.has_meta("pontos_chao"):
-		loot.espalhar_chao("p%d" % i, String(inf.get("uso", "")), no.get_meta("pontos_chao"), no)
-	_infestar(i, no)
+	_sem_chao[i] = true
+	tarefas.append(func():
+		if loot != null and no.has_meta("pontos_chao"):
+			loot.espalhar_chao("p%d" % i, String(inf.get("uso", "")), no.get_meta("pontos_chao"), no)
+		_sem_chao.erase(i))
+	tarefas.append(func(): _infestar(i, no))
+	if ja or not usar_fatias:
+		for f in tarefas:
+			f.call()
+		ms_ultimo = (Time.get_ticks_usec() - t0) / 1000.0
+		return
 	ms_ultimo = (Time.get_ticks_usec() - t0) / 1000.0
+	# o resto aos poucos (ele abre a ~40 m: ninguém chega antes de terminar)
+	_montando = i
+	await get_tree().process_frame
+	var ini := Time.get_ticks_usec()
+	for f in tarefas:
+		if not is_instance_valid(no) or abertos.get(i) != no:
+			break                            # fechou no meio
+		f.call()
+		var gasto := Time.get_ticks_usec() - ini
+		if gasto > FATIA_US:
+			ms_maior_fatia = maxf(ms_maior_fatia, gasto / 1000.0)
+			await get_tree().process_frame
+			ini = Time.get_ticks_usec()
+	ms_maior_fatia = maxf(ms_maior_fatia, (Time.get_ticks_usec() - ini) / 1000.0)
+	_montando = -1
 
 # um ou dois infectados presos lá dentro (saquear não é sempre seguro)
 func _infestar(i: int, no: Node3D) -> void:
@@ -214,8 +245,9 @@ func fechar(i: int) -> void:
 		return
 	var no: Node3D = abertos[i]
 	abertos.erase(i)
-	if loot != null and is_instance_valid(no):
+	if loot != null and is_instance_valid(no) and not _sem_chao.has(i):      # (1.00: ainda montando = nada a guardar)
 		loot.guardar_chao("p%d" % i, no)
+	_sem_chao.erase(i)
 	if is_instance_valid(no):
 		no.queue_free()
 	cidade.esconder_predio(i, false)
