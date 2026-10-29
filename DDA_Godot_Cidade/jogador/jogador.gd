@@ -638,6 +638,72 @@ func teleportar(pos: Vector3, yaw_camera: float) -> void:
 	cam_yaw = yaw_camera
 	rotation.y = yaw_camera
 	_y_cam = pos.y
+	_chegada = ESPERA_CHAO              # 0.99.3: fica parado até o chão daqui existir (ver _esperando_chao)
+	_pos_chegada = pos
+
+# ---------- 0.99.3 · NÃO CAIR NO VOID ----------
+# CHEGADA SEGURA: depois de qualquer teleporte (voltar ao jogo salvo, renascer, entrar na partida de um amigo, sair do
+# carro, do bunker...) o jogador fica PARADO NO AR até ter chão de verdade logo abaixo (o piso de um prédio por
+# dentro ou de um local especial é montado alguns quadros depois: antes, ele às vezes caía pelo buraco e sumia no
+# void). Se o chão não aparecer em ESPERA_CHAO s: com chão mais embaixo, cai até ele; sem nada embaixo, vai para a
+# altura do chão da cidade (calculada pelos dados, sempre existe).
+# RESGATE: o último lugar onde você ficou em pé (PONTO SEGURO, guardado a cada SEGURO_A_CADA s) fica anotado; caindo
+# abaixo de Y_VOID (bem abaixo do fundo do bunker mais fundo, ~38 m), volta para ele na hora.
+const Y_VOID := -70.0
+const ESPERA_CHAO := 4.0
+const SEGURO_A_CADA := 0.5
+var _chegada := 0.0                     # > 0: acabou de chegar e espera o chão (s restantes)
+var _pos_chegada := Vector3.ZERO
+var ponto_seguro := Vector3.INF         # último lugar onde ficou em pé (testes leem)
+var _t_seguro := 0.0
+var resgates := 0                       # quantas vezes voltou do void (testes)
+
+func _tem_chao(p: Vector3, ate: float) -> bool:
+	var q := PhysicsRayQueryParameters3D.create(p + Vector3(0, 0.6, 0), p - Vector3(0, ate, 0), collision_mask, [get_rid()])
+	return not get_world_3d().direct_space_state.intersect_ray(q).is_empty()
+
+# true = ainda esperando o chão (o _physics_process para aqui)
+func _esperando_chao(delta: float) -> bool:
+	if _chegada <= 0.0:
+		return false
+	_chegada -= delta
+	global_position = _pos_chegada
+	velocity = Vector3.ZERO
+	var agua: float = mundo.nivel_agua(_pos_chegada.x, _pos_chegada.z) if mundo != null and mundo.has_method("nivel_agua") else -INF
+	if _tem_chao(_pos_chegada, 1.6) or (agua > -INF and _pos_chegada.y < agua + 0.5):
+		_chegada = 0.0                  # chão aqui (ou na água: nada)
+		return false
+	if _chegada > 0.0:
+		return true
+	if not _tem_chao(_pos_chegada, 80.0) and mundo != null:
+		mundo.forcar(Vector2(_pos_chegada.x, _pos_chegada.z))
+		global_position.y = mundo.altura(_pos_chegada.x, _pos_chegada.z) + 0.1
+	return false
+
+func _vigiar_void(delta: float) -> void:
+	if global_position.y < Y_VOID:
+		_resgatar()
+		return
+	if is_on_floor() and not nadando and not morto and veiculo == null and _passando <= 0.0:
+		_t_seguro += delta
+		if _t_seguro >= SEGURO_A_CADA:
+			_t_seguro = 0.0
+			ponto_seguro = global_position
+	else:
+		_t_seguro = 0.0
+
+func _resgatar() -> void:
+	if veiculo != null:
+		sair_veiculo(global_position)
+	var p := ponto_seguro
+	if p == Vector3.INF and mundo != null:      # nunca ficou em pé: o chão da cidade aqui mesmo
+		p = Vector3(global_position.x, mundo.altura(global_position.x, global_position.z) + 0.1, global_position.z)
+	if mundo != null:
+		mundo.forcar(Vector2(p.x, p.z))
+	teleportar(p + Vector3(0, 0.05, 0), cam_yaw)
+	resgates += 1
+	if sobrevivencia != null:
+		sobrevivencia.aviso.emit("VOCÊ CAIU PARA FORA DO MAPA: DE VOLTA AO ÚLTIMO LUGAR SEGURO")
 
 func alternar_agachar() -> void:
 	if morto:
@@ -678,6 +744,9 @@ func _physics_process(delta: float) -> void:
 		return
 	agarrado = maxf(0.0, agarrado - delta)
 	_t_empurrao = maxf(0.0, _t_empurrao - delta)
+	if _esperando_chao(delta):
+		return
+	_vigiar_void(delta)
 	if _passando > 0.0:
 		_passando -= delta
 		var u := clampf(1.0 - _passando / TEMPO_JANELA, 0.0, 1.0)
