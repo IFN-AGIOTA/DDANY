@@ -211,12 +211,23 @@ func _r():
 		if m.vagos._livre(t.x, t.z):
 			p80 = t
 			break
+	# só a horda disputa as vagas (sem os grupos da população nem o teto do orçamento: com a CPU ocupada eles
+	# ficavam com as vagas antes e dava "0 de 0")
+	hd.grupos = hd.grupos.filter(func(g): return g.has("diretor"))
+	var orc_h: float = m.vagos.orcamento_ms
+	m.vagos.orcamento_ms = 1000.0
+	m.vagos.teto_custo = -1
 	um["p"] = Vector2(p80.x, p80.z)
-	await seg(2.0)
 	var vindo := 0
-	for v in D.membros:
-		if is_instance_valid(v) and (v.estado == V.INVESTIGANDO or v.esta_cacando()) and Vector2(v._destino.x - rua.x, v._destino.z - rua.z).length() < 12.0:
-			vindo += 1
+	for k in 20:
+		await seg(0.25)
+		vindo = 0
+		for v in D.membros:
+			if is_instance_valid(v) and (v.estado == V.INVESTIGANDO or v.esta_cacando()) and Vector2(v._destino.x - rua.x, v._destino.z - rua.z).length() < 12.0:
+				vindo += 1
+		if k >= 7 and D.membros.size() > 0 and vindo == D.membros.size():
+			break
+	m.vagos.orcamento_ms = orc_h
 	ok(D.membros.size() > 0 and vindo == D.membros.size(), "viraram infectados de verdade indo até você (%d de %d)" % [vindo, D.membros.size()])
 	D._parar_horda()
 	ok(not D.horda_ativa() and D.membros.is_empty(), "a horda para de te seguir depois de um tempo")
