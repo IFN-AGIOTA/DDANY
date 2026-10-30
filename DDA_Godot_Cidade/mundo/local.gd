@@ -314,6 +314,9 @@ func _janelas(L: float, passo: float, larg: float, yb: float, yc: float, portas:
 		s += passo
 	return v + portas
 
+const RAMPA_ANTES := 0.15            # 1.04: a rampa de colisão chega no topo esse tanto antes do fim (e fica plana)
+const RAMPA_DEPOIS := 0.35           # o pedaço plano passa do fim da escada (cobre a borda do patamar)
+
 # escada reta: pé em "ini", sobe na direção "dir" (eixo X ou Z) por "comp" metros até subir "dy"
 func _escada(ini: Vector2, dir: Vector2, larg: float, y0: float, dy: float, comp: float, cor: Color, corrimao := 0) -> void:
 	escadas.append([ini, dir, larg, y0, dy, comp, corrimao])   # 1.02: + lado do corrimão (0 = sem)
@@ -339,20 +342,35 @@ func _escada(ini: Vector2, dir: Vector2, larg: float, y0: float, dy: float, comp
 		var bb := Basis(Vector3.UP, atan2(dir.x, dir.y)) * Basis(Vector3.RIGHT, -atan2(dy, comp))
 		resto.caixa(Vector3(meio.x, y0 + dy * 0.5 + 1.0, meio.y), Vector3(0.05, 0.05, u3.length()), METAL_ESC, bb)
 	# rampa invisível de colisão (o personagem sobe sem tropeçar nos degraus)
+	# 1.04: a rampa chega na altura do topo RAMPA_ANTES m antes do fim e dali é PLANA até passar da borda do patamar.
+	# Antes ela ia até o fim (e um pouco além) e o patamar/laje de cima começava ~10 cm antes: sobrava um degrauzinho de
+	# ~5 cm em cima da rampa inclinada que a cápsula do personagem tomava por parede (só passava pulando; posto,
+	# supermercado, metrô, quartel). O prolongamento da rampa fica só embaixo (enterrado no chão).
 	var dir3 := Vector3(dir.x, 0.0, dir.y)
-	var u := (dir3 * comp + Vector3.UP * dy).normalized()
+	var c_r := comp - RAMPA_ANTES
+	var u := (dir3 * c_r + Vector3.UP * dy).normalized()
 	var x := Vector3(lat.x, 0.0, lat.y)
 	var y := u.cross(x)
 	if y.y < 0.0:
 		x = -x
 		y = -y
-	var meio2 := ini + dir * comp * 0.5
-	col.append([Vector3(meio2.x, y0 + dy * 0.5, meio2.y) - y * 0.15, Vector3(larg, 0.3, sqrt(comp * comp + dy * dy) + 0.3), 0.0, Basis(x, y, u)])
+	var l_r := sqrt(c_r * c_r + dy * dy)
+	var meio2 := ini + dir * c_r * 0.5
+	col.append([Vector3(meio2.x, y0 + dy * 0.5, meio2.y) - y * 0.15 - u * 0.075, Vector3(larg, 0.3, l_r + 0.15), 0.0, Basis(x, y, u)])
+	var pl := ini + dir * (c_r + (RAMPA_ANTES + RAMPA_DEPOIS) * 0.5)
+	var l_p := RAMPA_ANTES + RAMPA_DEPOIS
+	col.append([Vector3(pl.x, y0 + dy - 0.1, pl.y), Vector3(l_p, 0.2, larg) if absf(dir.x) > 0.5 else Vector3(larg, 0.2, l_p), 0.0, Basis.IDENTITY])
 	# 1.02: o CORRIMÃO segura (antes era só desenho: dava para cair da escada por baixo dele e quebrar a perna).
 	# Uma "parede" fina inclinada como a escada, da rampa até a altura do corrimão.
+	# 1.03: em PEDAÇOS RETOS em pé seguindo a subida (uma caixa inclinada só passava das pontas da escada e trancava
+	# quem passava rente ao pé ou ao topo dela)
 	if corrimao != 0:
-		var mc := ini + lat * (larg * 0.5 - 0.05) * corrimao + dir * comp * 0.5
-		col.append([Vector3(mc.x, y0 + dy * 0.5, mc.y) + y * 0.55, Vector3(0.08, 1.1, sqrt(comp * comp + dy * dy)), 0.0, Basis(x, y, u)])
+		var n_ped := maxi(4, int(ceil(comp / 0.8)))
+		for k in n_ped:
+			var tk := (k + 0.5) / n_ped
+			var mk := ini + lat * (larg * 0.5 - 0.05) * corrimao + dir * comp * tk
+			var tam_k := Vector3(comp / n_ped, 1.4, 0.08) if absf(dir.x) > 0.5 else Vector3(0.08, 1.4, comp / n_ped)
+			col.append([Vector3(mk.x, y0 + dy * tk + 0.4, mk.y), tam_k, 0.0, Basis.IDENTITY])
 
 # grade de proteção de a até b na altura y
 func _grade(a: Vector2, b: Vector2, y: float, cor := METAL_ESC) -> void:

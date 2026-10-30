@@ -1,7 +1,7 @@
 extends Node
 # SERVIDOR DEDICADO (0.50): o jogo rodando no PC (Windows) SEM tela, só cuidando do mundo. Os celulares entram
 # nele como numa partida normal ("Entrar" com o IP do PC). Abra com o servidor.bat (pasta servidor_windows/):
-#   DiasDeUmApocalipse_Servidor.exe --headless -- --servidor --nome="Servidor do PC"
+#   DiasDeUmApocalipse_Servidor.exe --headless -- --servidor --nome="Servidor do PC" [--mundo="Nome do mundo"]
 # O que ele faz:
 #   · monta a cidade e abre a partida na porta UDP 24560 (rede/rede.gd, servidor_dedicado = true): já começa
 #     aberta, quem entra vai direto para a cidade; anuncia no Wi-Fi e tenta abrir a porta no roteador (UPnP)
@@ -15,6 +15,7 @@ extends Node
 # Mexa AQUI para: nome padrão, FPS do servidor, troca de foco, resumo.
 
 const Salvamento := preload("res://menu/salvamento.gd")
+const MundosRede := preload("res://menu/mundos_rede.gd")
 const NOME_PADRAO := "Servidor do PC"
 const RtcCls := preload("res://rede/rtc.gd")
 const FPS := 60
@@ -65,7 +66,18 @@ func iniciar(m: Node) -> void:
 	if Rede.endereco_tunel != "":
 		_log("TÚNEL: os celulares vão entrar por  %s  (playit.gg, funciona no 4G)" % Rede.endereco_tunel)
 	await _entrar_na_conta(nome)
-	Rede.criar_partida(nome, Salvamento.semente_rede())      # 0.77: o servidor continua o mundo salvo
+	# 1.03: o servidor joga num MUNDO salvo (menu/mundos_rede.gd): --mundo="Nome" (sem isso, um com o nome do
+	# servidor); se não existe, cria. Tudo o que acontece nele fica salvo e volta quando o servidor abrir de novo.
+	var nome_mundo := MundosRede.limpar_nome(_arg("mundo", ""))
+	if nome_mundo == "":
+		nome_mundo = MundosRede.limpar_nome(nome)
+	var md := MundosRede.por_nome(nome_mundo)
+	if md.is_empty():
+		md = MundosRede.criar(nome_mundo)
+		_log("MUNDO NOVO: \"%s\"" % md["nome"])
+	else:
+		_log("MUNDO: \"%s\" (%s)" % [md["nome"], MundosRede.resumo(md)])
+	Rede.criar_partida(nome, int(md["semente"]), str(md["id"]), str(md["nome"]))
 	if not Rede.ligado:
 		_log("Não deu para abrir a partida. Feche outro jogo/servidor que esteja usando a porta %d e tente de novo." % Rede.PORTA)
 		return

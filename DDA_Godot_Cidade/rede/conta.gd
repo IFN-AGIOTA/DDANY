@@ -438,7 +438,7 @@ func atualizar_convites() -> void:
 				continue
 			var item := {"uid": host, "nome": str(c.get("nome", "?")), "codigos": c.get("codigos", []), "rtc": bool(c.get("rtc", false)), "turn": bool(c.get("turn", false)),
 				"n": int(c.get("n", 1)), "versao": str(c.get("versao", "")), "avatar": int(c.get("avatar", 0)),
-				"chamou": float(c.get("chamou", 0)), "comecou": bool(c.get("comecou", false))}
+				"chamou": float(c.get("chamou", 0)), "comecou": bool(c.get("comecou", false)), "mundo": str(c.get("mundo", ""))}
 			lista.append(item)
 			# CHAMADO novo (o host tocou em CHAMAR há pouco): vira aviso na tela (main.gd)
 			var ch: float = item["chamou"]
@@ -463,7 +463,7 @@ func atualizar_servidores() -> void:
 				continue
 			lista.append({"uid": host, "nome": str(c.get("nome", "Servidor")), "codigos": c.get("codigos", []),
 				"rtc": bool(c.get("rtc", false)), "turn": bool(c.get("turn", false)), "n": int(c.get("n", 0)), "versao": str(c.get("versao", "")),
-				"avatar": 0, "comecou": true, "servidor": true})
+				"avatar": 0, "comecou": true, "servidor": true, "mundo": str(c.get("mundo", ""))})
 	lista.sort_custom(func(a, b): return int(a["n"]) > int(b["n"]))
 	servidores = lista
 	servidores_mudaram.emit()
@@ -472,7 +472,8 @@ func publicar_servidor() -> void:
 	if not logado or not Rede.eh_host():
 		return
 	await _db(HTTPClient.METHOD_PUT, "servidores/" + uid, {"nome": nome_servidor, "codigos": Rede.codigos(), "n": Rede.jogadores.size(),
-		"versao": Config.VERSAO, "rtc": Rede.aceita_rtc(), "turn": Rede.aceita_turn(), "t": {".sv": "timestamp"}})
+		"versao": Config.VERSAO, "rtc": Rede.aceita_rtc(), "turn": Rede.aceita_turn(), "t": {".sv": "timestamp"},
+		"mundo": str(Rede.mundo.get("mundo_nome", ""))})
 	_publicado = true
 
 func retirar_servidor() -> void:
@@ -481,6 +482,7 @@ func retirar_servidor() -> void:
 
 func _convite() -> Dictionary:
 	return {"nome": nome, "avatar": avatar, "codigos": Rede.codigos(), "n": Rede.jogadores.size(), "versao": Config.VERSAO,
+		"mundo": str(Rede.mundo.get("mundo_nome", "")),   # 1.03: o nome do mundo da sala (aparece na lista dos amigos)
 		"rtc": Rede.aceita_rtc(), "turn": Rede.aceita_turn(), "comecou": Rede.partida_comecou, "t": {".sv": "timestamp"}}
 
 func publicar_partida() -> void:

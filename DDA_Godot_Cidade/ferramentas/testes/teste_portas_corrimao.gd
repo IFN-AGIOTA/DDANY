@@ -7,6 +7,8 @@ extends SceneTree
 #   CORRIMÃOS: andando de lado contra o corrimão no meio da escada, não cai:
 #     · escada de dentro dos prédios (mundo/interior.gd), lance A e lance B (o lado do vão entre os lances);
 #     · escadas dos locais especiais com corrimão (mundo/local.gd).
+#   1.03: e o corrimão não TRANCA ninguém: sobe do térreo ao 2º andar pela escada de dentro passando pelo patamar.
+#   1.04: sobe e desce ANDANDO (sem pular) todas as escadas dos locais especiais (o topo trancava em 6 delas).
 var falhas := 0
 func ok(c: bool, msg: String) -> void:
 	if c: print("  ok   ", msg)
@@ -139,6 +141,7 @@ func _r():
 	j.sobrevivencia.perna_quebrada = false          # (mancando ele nem chega na beirada em 2,5 s)
 	var testados := 0
 	var caiu := 0
+	var trancou := 0
 	for i in cid.predio_info.size():
 		if testados >= 3:
 			break
@@ -176,8 +179,29 @@ func _r():
 			if r[2] and float(r[0]) > 1.2:
 				caiu += 1
 				print("    caiu: prédio %d lance %s desceu %.1f m (foi %.1f m para o lado)" % [i, "AB"[lance], r[0], r[1]])
+		# 1.03: o caminho todo: sobe o lance A, atravessa o patamar e sobe o lance B (o corrimão não pode trancar)
+		var wa := (float(es["a"][0]) + float(es["a"][1])) * 0.5
+		var wb := (float(es["b"][0]) + float(es["b"][1])) * 0.5
+		var H := float(it.ALTURA_ANDAR)
+		var pontos := [[float(es["d0"]) - 0.4, wa], [float(es["d1"]) + 0.6, wa], [float(es["d1"]) + 0.6, wb], [float(es["d0"]) - 0.4, wb]]
+		var p0: Vector2 = it._xz(pontos[0][0], pontos[0][1])
+		j.teleportar(no.global_transform * Vector3(p0.x, 0.3, p0.y), 0.0)
+		await q(20)
+		var chegou := true
+		for k in range(1, pontos.size()):
+			var pk: Vector2 = it._xz(pontos[k][0], pontos[k][1])
+			var alvo: Vector3 = no.global_transform * Vector3(pk.x, 0.0, pk.y)
+			await _andar(alvo, 8.0)
+			if Vector2(j.global_position.x - alvo.x, j.global_position.z - alvo.z).length() > 0.8:
+				chegou = false
+				print("    trancou: prédio %d indo ao ponto %d da escada (parou a %.1f m, altura %.1f)" % [i, k, Vector2(j.global_position.x - alvo.x, j.global_position.z - alvo.z).length(), j.global_position.y - no.global_position.y])
+				break
+		var no_2o: bool = absf(j.global_position.y - no.global_position.y - 2.0 * H) < 0.6
+		if not chegou or not no_2o:
+			trancou += 1
 		m.interiores.fechar(i)
 		await q(3)
+	ok(trancou == 0, "subindo a escada de dentro do térreo ao 2º andar, o corrimão não tranca o patamar (%d trancados)" % trancou)
 	ok(testados >= 2 and caiu == 0, "escada de dentro: andando contra o corrimão no meio do lance não cai no vão (%d prédios, %d quedas)" % [testados, caiu])
 
 	# ---------- CORRIMÃO: locais especiais ----------
@@ -185,6 +209,8 @@ func _r():
 	var feitos := {}
 	var escadas := 0
 	var quedas := 0
+	var andadas := 0
+	var trancadas := 0
 	for li in L.LOCAIS.size():
 		var tipo: String = L.LOCAIS[li][0]
 		if feitos.has(tipo):
@@ -195,7 +221,7 @@ func _r():
 		for es in prep.escadas:
 			if es.size() > 6 and int(es[6]) != 0:
 				com.append(es)
-		if com.is_empty():
+		if prep.escadas.is_empty():
 			continue
 		var cl := Vector2(L.LOCAIS[li][1], L.LOCAIS[li][2])
 		m.mundo.forcar(cl)
@@ -206,6 +232,25 @@ func _r():
 		var no: Node3D = m.locais.abertos.get(li)
 		if no == null:
 			continue
+		# 1.04: sobe e desce ANDANDO cada escada do local (sem pular): do 1º degrau até depois do topo e de volta
+		for es in prep.escadas:
+			var ini2: Vector2 = es[0]
+			var dir2: Vector2 = es[1]
+			var pe: Vector2 = ini2 + dir2 * 0.3
+			var alto: Vector2 = ini2 + dir2 * (float(es[5]) + 1.2)
+			j.teleportar(no.global_transform * Vector3(pe.x, float(es[3]) + 0.4, pe.y), 0.0)
+			j.velocity = Vector3.ZERO
+			await q(20)
+			var a_alto: Vector3 = no.global_transform * Vector3(alto.x, float(es[3]) + float(es[4]), alto.y)
+			await _andar(a_alto, 16.0)
+			var subiu: bool = Vector2(j.global_position.x - a_alto.x, j.global_position.z - a_alto.z).length() < 0.8
+			var a_pe: Vector3 = no.global_transform * Vector3(pe.x, float(es[3]), pe.y)
+			await _andar(a_pe, 16.0)
+			var desceu: bool = Vector2(j.global_position.x - a_pe.x, j.global_position.z - a_pe.z).length() < 0.8
+			andadas += 1
+			if not subiu or not desceu:
+				trancadas += 1
+				print("    %s: escada de %s %s" % [tipo, str(ini2), "não chega no topo" if not subiu else "não desce"])
 		for es in com:
 			var ini: Vector2 = es[0]
 			var dir: Vector2 = es[1]
@@ -225,5 +270,6 @@ func _r():
 		m.locais.fechar(li)
 		await q(3)
 	ok(escadas >= 2 and quedas == 0, "escadas dos locais especiais: o corrimão segura (%d escadas, %d quedas)" % [escadas, quedas])
+	ok(andadas >= 15 and trancadas == 0, "sobe e desce andando todas as escadas dos locais especiais, sem pular (%d escadas, %d trancadas)" % [andadas, trancadas])
 	print("falhas: ", falhas)
 	quit()

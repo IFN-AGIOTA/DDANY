@@ -718,6 +718,8 @@ func _process(dt: float) -> void:
 
 func _animar(dt: float) -> void:
 	if estado == MORTO or gerente == null:
+		if _marca != null and _marca.visible:
+			_marca.visible = false             # 1.04: morreu: o "!"/"?" some (antes ficava em cima do corpo)
 		return
 	if classe == "mutado":
 		_mutado(dt)

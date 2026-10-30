@@ -891,6 +891,9 @@ func _physics_process(delta: float) -> void:
 # A câmera vai para os OLHOS do personagem (jogador/modelo_sobrevivente.gd pos_olhos) e a cabeça some
 # (jogador/cabeca_oculta.gd): você vê os próprios braços, mãos, arma e pernas, como no DayZ. O corpo sempre vira
 # para onde você olha. Dá para olhar mais para cima e para baixo. Mirando, o campo de visão fecha (zoom).
+const FP_FRENTE := 0.32               # 1.04: m à frente do peito olhando reto para baixo (1ª pessoa)
+const FP_BAIXO_DE := 0.35             # a partir de quanto olhando para baixo (rad) a câmera começa a ir para frente
+
 func _pit_min() -> float:
 	return -1.25 if _em_1p() else -0.35
 
@@ -955,6 +958,12 @@ func _camera_primeira_pessoa(delta: float, fov_alvo: float) -> void:
 		camera.near = _near_3p
 		return
 	var olhos: Vector3 = m.pos_olhos() if m != null and m.has_method("pos_olhos") else global_position + Vector3(0, 1.65, 0)
+	# 1.04 · OLHANDO PARA BAIXO: a câmera vai um pouco à frente do peito (até FP_FRENTE m olhando reto para baixo):
+	# o peito, o pescoço sem cabeça e a mochila ficam atrás dela e aparecem só os braços, a cintura e as pernas,
+	# sem o corpo "cortado". Mirando pela mira de ferro não mexe (o olho fica alinhado com a mira).
+	var baixo := smoothstep(FP_BAIXO_DE, _pit_max(), cam_pit)
+	if baixo > 0.0 and not _quer_mira_ferro():
+		olhos += Vector3(-sin(cam_yaw), 0.0, -cos(cam_yaw)) * FP_FRENTE * baixo
 	var k := smoothstep(0.0, 1.0, _fp)
 	_pivo.global_position = _pivo.global_position.lerp(olhos, k)
 	_braco.spring_length = lerpf(_braco.spring_length, 0.0, k)

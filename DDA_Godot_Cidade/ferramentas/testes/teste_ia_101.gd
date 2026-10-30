@@ -8,6 +8,7 @@ extends SceneTree
 #   · ANISOTROPIA: no PC fica a escolhida (no celular para em 2x).
 #   · SINAIS DE ACERTO: os sons "acerto" e "acerto_forte" existem.
 #   · ITEM NA MÃO mirando o arremesso.
+#   1.04: o "!" some quando o infectado morre · 1ª pessoa olhando para baixo: a câmera vai à frente do peito.
 var falhas := 0
 func ok(c: bool, msg: String) -> void:
 	if c: print("  ok   ", msg)
@@ -196,5 +197,35 @@ func _r():
 	j._mirar_ligado = false
 	await q(30)
 	ok(mod != null and (mod._item_mao == null or not is_instance_valid(mod._item_mao)), "soltou o MIRAR: sai da mão")
+
+	# ---- 7. (1.04) o "!" some quando o infectado morre ----
+	var pm: Vector3 = j.global_position + Vector3(4, 0, 0)
+	var vm = m.vagos._criar(Vector3(pm.x, m.mundo.altura(pm.x, pm.z), pm.z), Vector3.INF)
+	await q(3)
+	vm.perseguir()
+	await q(5)
+	var tinha: bool = vm._marca != null and vm._marca.visible and vm._marca.text == "!"
+	vm._morrer(false, Vector3.FORWARD)
+	await q(10)
+	ok(tinha and not vm._marca.visible, "o \"!\" em cima do infectado some quando ele morre (antes ficava no corpo)")
+	_limpar()
+
+	# ---- 8. (1.04) 1ª pessoa olhando para baixo: a câmera vai à frente do peito ----
+	root.get_node("Config").definir("cam", 1)
+	await q(40)
+	var frente_de := func() -> float:
+		var d: Vector3 = j.camera.global_position - j.global_position
+		return Vector2(d.x, d.z).dot(Vector2(-sin(j.cam_yaw), -cos(j.cam_yaw)))
+	j.cam_pit = 0.0
+	await q(20)
+	var reto: float = frente_de.call()
+	j.cam_pit = j._pit_max()
+	await q(30)
+	var baixo: float = frente_de.call()
+	ok(baixo - reto > 0.25, "1ª pessoa olhando reto para baixo: a câmera vai %.2f m à frente (peito e pescoço ficam atrás dela)" % (baixo - reto))
+	j.cam_pit = 0.0
+	root.get_node("Config").definir("cam", 0)
+	root.get_node("Config").salvar_pendente()
+	await q(10)
 	print("falhas: ", falhas)
 	quit()

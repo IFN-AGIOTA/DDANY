@@ -51,7 +51,8 @@ var endereco_tunel := ""                       # servidor do PC: endereço públ
 var servidor_dedicado := false                 # este aparelho é o SERVIDOR do PC (rede/servidor.gd): não é jogador
 var nome := "Sobrevivente"
 var jogadores := {}                            # id -> {"nome": String}  (inclui o próprio)
-var mundo := {}                                # o que o host mandou ao aceitar: {"semente": int, "clima": {...}, "comecou": bool}
+var mundo := {}                                # o que o host mandou ao aceitar: {"semente": int, "clima": {...}, "comecou": bool,
+                                               #   1.03: "mundo_id", "mundo_nome" (o mundo salvo da sala)}
 var partida_comecou := false                   # false = ainda na SALA (esperando o host começar)
 
 var _anuncio: PacketPeerUDP = null             # host: manda o anúncio
@@ -99,7 +100,8 @@ func nome_de(id: int) -> String:
 	return str(jogadores.get(id, {}).get("nome", "Jogador %d" % id))
 
 # ---------- criar / entrar / sair ----------
-func criar_partida(meu_nome: String, semente_loot: int) -> void:
+# 1.03: mundo_id/mundo_nome = o mundo salvo desta sala (menu/mundos_rede.gd): vai para quem entra em "mundo"
+func criar_partida(meu_nome: String, semente_loot: int, mundo_id := "", mundo_nome := "") -> void:
 	sair()
 	nome = _limpar_nome(meu_nome)
 	# 0.86 · LIGAÇÃO DIRETA: antes de abrir o ENet, descobre o endereço público da PORTA do jogo (STUN); o amigo
@@ -130,7 +132,8 @@ func criar_partida(meu_nome: String, semente_loot: int) -> void:
 	ligado = true
 	_host_nome = nome
 	jogadores = {} if servidor_dedicado else {1: {"nome": nome, "avatar": Conta.avatar, "uid": Conta.uid}}
-	mundo = {"semente": semente_loot, "comecou": servidor_dedicado, "pvp": str(Config.valor("pvp"))}   # 0.71: regra do PvP
+	mundo = {"semente": semente_loot, "comecou": servidor_dedicado, "pvp": str(Config.valor("pvp")),   # 0.71: regra do PvP
+		"mundo_id": mundo_id, "mundo_nome": mundo_nome}
 	partida_comecou = servidor_dedicado         # servidor: a partida já começa aberta (entra direto na cidade)
 	_anuncio = PacketPeerUDP.new()
 	_anuncio.set_broadcast_enabled(true)

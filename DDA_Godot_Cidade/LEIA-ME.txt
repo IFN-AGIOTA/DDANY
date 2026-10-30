@@ -40,6 +40,62 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.03 · MUNDOS DO MULTIJOGADOR (COMO NO MINECRAFT), ESCADAS SEM TRANCAR E 1ª PESSOA
+  MUNDOS SALVOS:
+  · Multijogador > CRIAR SALA agora abre "SEUS MUNDOS":
+      - MUNDO NOVO: dê o nome que quiser (o nome do servidor) e toque em "Criar e abrir sala": uma cidade nova, do zero;
+      - CONTINUAR UM MUNDO SALVO: a lista dos seus mundos (nome, dia, minutos jogados, quando jogou pela última vez,
+        o mais recente em cima). JOGAR abre a sala naquele mundo; APAGAR (toque duas vezes) apaga para sempre.
+  · Tudo o que é jogado num mundo fica salvo NELE: o que foi saqueado e pego, as portas, os carros, a base, a horda,
+    a hora do dia e o tempo, e o PERSONAGEM de cada um (o que carrega, vida/fome/sede..., abates) e ONDE ELE ESTAVA
+    (antes todo mundo nascia na base). Um mundo não mexe no outro: cada um tem a sua cidade e o seu personagem.
+  · Quem ENTRA na sala de um amigo: o personagem daquele mundo fica guardado no seu aparelho e volta (onde você
+    estava) toda vez que você entrar de novo no mesmo mundo. O nome do mundo aparece na sala e na lista de salas
+    ("Sala de Ana · mundo Cidade dos Mortos").
+  · Salva sozinho a cada 2 minutos, ao pausar, ao sair, ao morrer e agora também quando a conexão cai.
+  · O mundo salvo das versões antigas (um mundo só) vira o mundo "Mundo salvo" da lista, sem perder nada; o
+    personagem de quem só entrava na sala dos outros vai para o primeiro mundo de amigo em que ele entrar.
+  · SERVIDOR DO PC: joga num mundo com o nome dele (ou o de --mundo="Nome"); se não existe, cria. Tudo fica salvo e
+    volta quando o servidor abrir de novo (servidor_windows/LEIA-ME_SERVIDOR.txt).
+  CORRIMÃO TRANCANDO (foto do patamar da escada, 1.02): a colisão do corrimão era uma caixa inclinada como a escada,
+  e a ponta dela passava ~0,6 m do fim do lance na altura do peito: no patamar entre os dois lances ela trancava o
+  personagem. Agora é feita de pedaços retos em pé que acompanham a escada e terminam junto com ela (escadas de dentro
+  dos prédios e dos locais especiais). Testado: subir do térreo ao 2º andar passando pelo patamar (na 1.02 trancava
+  nos 3 prédios testados; agora em nenhum), e continua sem dar para cair.
+  TOPO DAS ESCADAS DOS LOCAIS (foto do quartel): no fim de 6 escadas (posto, supermercado, metrô x2, quartel e uma
+  do armazém) o personagem parava a ~40 cm do topo e só passava pulando (com a perna quebrada, não passava). O
+  patamar/laje de cima começava ~10 cm antes do fim da rampa e sobrava um degrauzinho de ~5 cm em cima da rampa
+  inclinada, que o personagem tomava por parede (isso já vinha de antes da 1.02). Agora a rampa chega na altura do
+  topo um pouco antes do fim e fica plana até passar da borda do patamar: todas as 24 escadas dos locais sobem e
+  descem andando.
+  1ª PESSOA OLHANDO PARA BAIXO: aparecia o tronco por dentro (pescoço sem cabeça, peito, mochila). Agora, conforme
+  você olha para baixo, a câmera vai um pouco para a frente do peito (até 32 cm olhando reto para baixo): aparecem
+  só os braços, a cintura e as pernas, sem corte. Mirando pela mira de ferro não muda.
+  INFECTADOS: o "!" (e o "?"/"hm?") em cima da cabeça ficava no ar depois que ele morria; agora some.
+  ARQUIVOS MEXIDOS (testado: teste_mundos_rede NOVO 17 conferências; rede_save (duas sessões, host e amigo) agora com
+  mundo com nome e a posição voltando; teste_portas_corrimao com o caminho da escada e as 24 escadas dos locais;
+  teste_ia_101 com o "!" e a 1ª pessoa; + a bateria toda e a rede):
+    menu/mundos_rede.gd ............ NOVO · os mundos (arquivos, lista, criar, apagar, nome, resumo, migrar o antigo)
+    menu/salvamento.gd ............. salvar_rede/carregar_rede no arquivo do MUNDO da sala; posição; salva o
+                                     personagem mesmo depois de a conexão cair (save_rede.json não é mais usado)
+    menu/tela_multijogador.gd ...... tela SEUS MUNDOS (mundo novo com nome, lista, jogar, apagar); nome do mundo na
+                                     sala e nos cartões de sala; tira o "Começar mundo novo"
+    rede/rede.gd ................... criar_partida leva o id e o nome do mundo para quem entra
+    rede/conta.gd .................. o nome do mundo vai no convite e na lista de servidores
+    rede/servidor.gd ............... servidor do PC num mundo com nome (--mundo=)
+    main.gd ........................ quem tem lugar salvo no mundo não nasce na base; salva quando a conexão cai
+    mundo/interior.gd .............. colisão do corrimão em pedaços retos (CORRIMAO_PEDACOS)
+    mundo/local.gd ................. colisão do corrimão em pedaços retos; rampa da escada plana no topo (RAMPA_ANTES,
+                                     RAMPA_DEPOIS)
+    jogador/jogador.gd ............. 1ª pessoa: câmera à frente do peito olhando para baixo (FP_FRENTE, FP_BAIXO_DE)
+    inimigos/vago.gd ............... o marcador em cima da cabeça some quando ele morre
+    menu/config.gd ................. VERSAO "1.03"
+    ferramentas/testes/ ............ teste_mundos_rede NOVO; teste_portas_corrimao (+ sobe e desce todas as escadas
+                                     dos locais), teste_ia_101 (+ "!" e 1ª pessoa), rede_save_host, rede_save_cliente
+                                     e rodar.sh mexidos
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..." + seção 10
+
 ATUALIZAÇÃO 1.02 · MENU SEM TRAVAR, PORTAS QUE NÃO PRENDEM E CORRIMÃOS DE VERDADE
   PORTAS (o personagem travava na porta e só saía pulando; com a perna quebrada, não saía):
   · Reproduzido na porta da rua da foto (5472, 387): com o personagem parado no vão, ABRIR a porta fazia a folha girar
@@ -2988,7 +3044,11 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   mãos, guarda dos punhos ............. jogador/ik_fuzil.gd (GUARDA_DIR/ESQ) + jogador/modelo_sobrevivente.gd
 - textos das NOVIDADES ................ vêm dos blocos ATUALIZAÇÃO deste LEIA-ME: rodar ferramentas/gerar_novidades.gd
                                         (gera menu/novidades_lista.gd)
-- salvar no multijogador .............. menu/salvamento.gd (salvar_rede/carregar_rede; arquivo user://save_rede.json)
+- salvar no multijogador .............. menu/salvamento.gd (salvar_rede/carregar_rede) · 1.03: MUNDOS (arquivos
+                                          user://mundos/<id>.json, lista, criar, apagar, migrar o save antigo):
+                                          menu/mundos_rede.gd · tela "Seus mundos": menu/tela_multijogador.gd
+                                          (_tela_mundos) · o id/nome do mundo vai para quem entra: rede/rede.gd
+                                          (criar_partida, mundo["mundo_id"/"mundo_nome"]) · servidor do PC: --mundo=
 - de quanto em quanto tempo os infectados
   dos prédios/locais voltam ............ mundo/interiores.gd e mundo/locais.gd (CICLO_INFECTADOS)
 - cidade abandonada (carros, entulho) . mundo/abandono.gd
@@ -3346,8 +3406,9 @@ MÚSICA (pasta audio/)
   multijogador, o "puxar para o chão" de um amigo é contado no aparelho dele pelas mordidas que chegam.
 - MULTIJOGADOR: infectados, itens e caixas iguais para todos (0.44); PvP, amigos no mapa, colisão entre
   jogadores e mensagens rápidas (0.71); prédios, infectados e física perto do amigo mesmo com o host longe
-  (0.74); salvar em rede: personagem de cada um e o mundo do host (0.77; a posição não volta: todos nascem na
-  base). Falta: chat escrito e abrir o jogo direto por um link (precisa de plugin Android). 0.86: pela
+  (0.74); salvar em rede: personagem de cada um e o mundo do host (0.77); 1.03: vários MUNDOS com nome (como no
+  Minecraft), o personagem é de cada mundo e volta onde estava. O personagem de cada amigo fica no aparelho DELE (não
+  no do host): entrar com outro aparelho no mesmo mundo começa outro personagem. Falta: chat escrito e abrir o jogo direto por um link (precisa de plugin Android). 0.86: pela
   internet tenta a LIGAÇÃO DIRETA e, se a rede não deixar (NAT simétrico, comum no 4G), vai pelo retransmissor
   (0.88: o da Cloudflare, 1000 GB grátis; a Metered, 500 MB/mês, fica de reserva; a senha da Cloudflare vale
   24 h: uma partida aberta por mais de 24 h seguidas perde o retransmissor e precisa ser reaberta); o amigo com internet só IPv6 ainda não entra

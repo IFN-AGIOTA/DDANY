@@ -419,10 +419,10 @@ func _ligar_rede() -> void:
 	loot_mundo.semente = int(Rede.mundo.get("semente", loot_mundo.semente))
 	loot_mundo.sorteia_cartoes = not Rede.eh_cliente()      # 0.83: em rede só o host sorteia os cartões dos bunkers
 	loot_mundo.verifica_perdidos = false
-	var voltou := Salvamento.carregar_rede(self)        # 0.77: personagem (e, no host, o mundo) da última partida em rede
+	var voltou := Salvamento.carregar_rede(self)        # 0.77: personagem (e, no host, o mundo) · 1.03: do MUNDO desta sala
 	if voltou != "" and hud != null:
 		hud.mostrar_aviso(voltou, 5.0)
-	if Rede.eh_cliente():
+	if Rede.eh_cliente() and not Salvamento.posicao_voltou:     # 1.03: com lugar salvo nesse mundo, volta para lá
 		var a := randf() * TAU
 		var p := SPAWN + Vector2(cos(a), sin(a)) * randf_range(2.0, 5.0)
 		jogador.teleportar(Vector3(p.x, mundo.altura(p.x, p.y) + 0.05, p.y), PI)
@@ -434,6 +434,8 @@ func _ligar_rede() -> void:
 func _rede_caiu(motivo: String) -> void:
 	if jogo == null:
 		return
+	if jogador != null and carregamento == null:
+		Salvamento.salvar_rede(self)        # 1.03: a conexão caiu: o personagem fica salvo no mundo dessa sala já
 	_continuar()
 	_abrir_menu()
 	if menu != null:

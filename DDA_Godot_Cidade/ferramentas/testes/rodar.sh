@@ -51,7 +51,8 @@ if [ "$alvo" = rede_save ]; then
 		grep -hE "HOST[12]:|SCRIPT ERROR" "$DADOS/host$fase.txt"
 		grep -hE "CLI[12]:|SCRIPT ERROR" "$DADOS/cli$fase.txt"
 	done
-	grep -q "fome 3[23].*tábuas 2 · porta true · pego true" "$DADOS/host2.txt" && grep -q "fome 4[34].*galão 1 · porta do host true · pego do host true" "$DADOS/cli2.txt" || falhou=1
+	grep -q "fome 3[23].*tábuas 2 · porta true · pego true" "$DADOS/host2.txt" && grep -q "fome 4[34].*galão 1 · porta do host true · pego do host true" "$DADOS/cli2.txt" \
+		&& grep -q "HOST2: posição volta true" "$DADOS/host2.txt" && grep -q "CLI2: posição volta true · mundo Teste A" "$DADOS/cli2.txt" || falhou=1
 elif [ "$alvo" = rede_trocas ]; then
 	XDG_DATA_HOME="$DADOS/h" timeout 300 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s res://ferramentas/testes/rede_trocas_host.gd > "$DADOS/host.txt" 2>&1 &
 	sleep 2
@@ -157,6 +158,7 @@ elif [ "$alvo" = todos ]; then
 	rodar teste_ia_101 1
 	rodar teste_menu_leve 1
 	rodar teste_portas_corrimao 1
+	rodar teste_mundos_rede 1
 	rodar_turn
 else
 	rodar "$alvo" 1

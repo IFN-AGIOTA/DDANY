@@ -43,6 +43,7 @@ const ALTURA_ANDAR := PE_DIREITO + LAJE   # 4,6 m de um piso ao outro
 const MAX_ANDARES_EXTRA := 2          # além do térreo (os mais altos ficam com a "casca" acima)
 const ESCADA_L := 1.45                # largura de cada lance da escada
 const ESCADA_C := 7.0                 # comprimento de cada lance (rampa com degraus)
+const CORRIMAO_PEDACOS := 10          # 1.03: pedaços retos da colisão do corrimão (não passa das pontas da escada)
 const PATAMAR := 1.4                  # 0.81: patamar no fundo do vão da escada (chegada do lance que sobe para o fundo)
 # 0.81: altura de cada móvel "de parede" (m): acima de ALTURA_PEITORIL ele precisa de parede cheia atrás (não tapa janela)
 const ALTURA_PEITORIL := 1.0
@@ -1015,7 +1016,14 @@ func _construir_escada(sobe: bool, buraco_embaixo: bool) -> void:
 		var mc := _xz((d0 + d1) * 0.5, w_corr)
 		var sobre := Vector3(mc.x, ALTURA_ANDAR * 0.5, mc.y)
 		resto.caixa(sobre + y * 1.0, Vector3(0.05, 0.05, comp), Color(0.25, 0.25, 0.27), base)
-		col.append([sobre + y * 0.55, Vector3(0.08, 1.1, comp), 0.0, base])
+		# 1.03: a colisão em PEDAÇOS RETOS em pé seguindo a subida (uma caixa inclinada só passava ~0,6 m da ponta
+		# da escada na altura do peito e trancava o patamar entre os lances)
+		for k in CORRIMAO_PEDACOS:
+			var tk := (k + 0.5) / CORRIMAO_PEDACOS
+			var dk := lerpf(d0, d1, tk)
+			var hk := (tk if sobe_para_frente else 1.0 - tk) * ALTURA_ANDAR
+			var pk := _xz(dk, w_corr)
+			col.append([Vector3(pk.x, hk + 0.4, pk.y), _tam_xz(ESCADA_C / CORRIMAO_PEDACOS, 0.08, 1.4), 0.0])
 	if buraco_embaixo:
 		# corrimão em volta do buraco do lance que chegou de baixo (não deixa cair)
 		var veio_a := (nivel - 1) % 2 == 0

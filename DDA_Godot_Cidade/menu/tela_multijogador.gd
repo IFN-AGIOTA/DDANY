@@ -1,6 +1,9 @@
 extends CanvasLayer
 # TELA MULTIJOGADOR (botão "Multijogador" do menu principal), do jeito dos jogos de celular com SALA:
 #   INÍCIO   -> dois botões grandes: CRIAR SALA e ENTRAR NUMA SALA (+ seu perfil e convites que chegaram)
+#   MUNDOS   -> 1.03 (como no Minecraft): CRIAR SALA pede o MUNDO: um NOVO (com o nome que você quiser) ou um dos
+#               seus mundos salvos (nome, dia, tempo jogado, quando jogou; APAGAR com dois toques). A sala abre com
+#               esse mundo e tudo o que for jogado nele fica salvo nele (menu/mundos_rede.gd, menu/salvamento.gd).
 #   SALA     -> 10 vagas com quem já entrou (ícone e nome). O HOST vê a lista de AMIGOS (online primeiro) com o
 #               botão CHAMAR em cada um: o amigo recebe um aviso na tela (menu/aviso_chamado.gd) e, se aceitar,
 #               aparece numa vaga. O host toca COMEÇAR e todo mundo vai para a cidade. Quem entrou espera na sala.
@@ -15,11 +18,15 @@ signal abrir_perfil
 signal pedir_login
 
 const Salvamento := preload("res://menu/salvamento.gd")
+const MundosRede := preload("res://menu/mundos_rede.gd")
 const UI := preload("res://menu/ui.gd")
 const AvatarCls := preload("res://menu/avatar.gd")
 const CHAMADO_DURA := 30.0                    # segundos que o botão fica em "Chamado"
 
-var modo := "inicio"                          # inicio · sala · entrar · conectando
+var modo := "inicio"                          # inicio · mundos · sala · entrar · conectando
+var _nome_mundo: LineEdit                     # 1.03: nome do mundo novo
+var _apagar_id := ""                          # 1.03: mundo esperando o 2º toque em APAGAR
+var _texto_mundo := ""                        # (o que foi digitado, se a tela for remontada)
 var _raiz: Control
 var _status: Label
 var _ip: LineEdit
@@ -77,6 +84,8 @@ func _montar() -> void:
 	var st := _status.text if _status != null else ""
 	var ip_antes := _ip.text if _ip != null and is_instance_valid(_ip) else str(Config.valor("ip_rede"))
 	var nome_antes := _nome.text if _nome != null and is_instance_valid(_nome) else _meu_nome_salvo()
+	_texto_mundo = _nome_mundo.text if _nome_mundo != null and is_instance_valid(_nome_mundo) else _texto_mundo
+	_nome_mundo = null
 	if _raiz != null:
 		_raiz.queue_free()
 	_ip = null
@@ -90,7 +99,7 @@ func _montar() -> void:
 	fundo.set_anchors_preset(Control.PRESET_FULL_RECT)
 	fundo.color = Color(0.06, 0.025, 0.01, 0.985)
 	_raiz.add_child(fundo)
-	var titulos := {"inicio": "MULTIJOGADOR", "sala": "SALA", "entrar": "ENTRAR NUMA SALA", "conectando": "ENTRANDO"}
+	var titulos := {"inicio": "MULTIJOGADOR", "mundos": "SEUS MUNDOS", "sala": "SALA", "entrar": "ENTRAR NUMA SALA", "conectando": "ENTRANDO"}
 	var tit := UI.titulo_degrade(titulos[modo], 8.0 * v, 0.1 * 8.0 * v)
 	tit.position = Vector2(6.0 * v, 3.0 * v)
 	_raiz.add_child(tit)
@@ -129,6 +138,7 @@ func _montar() -> void:
 	_raiz.add_child(_status)
 	match modo:
 		"inicio": _tela_inicio(area, v, nome_antes)
+		"mundos": _tela_mundos(area, v)
 		"sala": _tela_sala(area, v)
 		"entrar": _tela_entrar(area, v, ip_antes)
 		"conectando": _tela_conectando(area, v)
@@ -183,22 +193,12 @@ func _tela_inicio(area: Control, v: float, nome_antes: String) -> void:
 	var cc := _Cartao.new("+", "CRIAR SALA", "Você é o host. Chame seus amigos e comece quando quiser.", true)
 	cc.custom_minimum_size = Vector2(0, 30.0 * v)
 	cc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	cc.apertado.connect(_criar)
+	cc.apertado.connect(func():
+		_meu_nome()                           # guarda o nome digitado antes de trocar de tela
+		modo = "mundos"
+		_apagar_id = ""
+		_montar())
 	cartoes.add_child(cc)
-	# 0.77: o mundo da última sala está salvo: avisa e deixa começar um novo
-	var rm := Salvamento.resumo_mundo_rede()
-	if rm != "":
-		var hm := HBoxContainer.new()
-		hm.add_theme_constant_override("separation", int(2.0 * v))
-		var tm := UI.rotulo("Sua sala continua o mundo salvo (%s)." % rm, 2.6 * v, UI.AMBAR, 700)
-		tm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		hm.add_child(tm)
-		var bn := UI.BotaoMenu.new("Começar mundo novo", "", false, 2.6, 22.0)
-		bn.apertado.connect(func():
-			Salvamento.apagar_mundo_rede()
-			_montar())
-		hm.add_child(bn)
-		col.add_child(hm)
 	var n_salas := Conta.convites.size() + _achadas.size() + Conta.servidores.size()
 	var ce := _Cartao.new(">", "ENTRAR NUMA SALA", ("%d sala(s) aberta(s) para você" % n_salas) if n_salas > 0 else "Salas dos amigos, mesmo Wi-Fi ou código.", false)
 	ce.custom_minimum_size = Vector2(0, 30.0 * v)
@@ -207,6 +207,66 @@ func _tela_inicio(area: Control, v: float, nome_antes: String) -> void:
 		modo = "entrar"
 		_montar())
 	cartoes.add_child(ce)
+
+# ---------------------------------------------------------------- MUNDOS (1.03)
+func _tela_mundos(area: Control, v: float) -> void:
+	var col := VBoxContainer.new()
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", int(1.6 * v))
+	area.add_child(col)
+	_secao(col, "MUNDO NOVO", v)
+	var hn := HBoxContainer.new()
+	hn.add_theme_constant_override("separation", int(1.6 * v))
+	col.add_child(hn)
+	_nome_mundo = _campo(_texto_mundo, MundosRede.nome_sugerido(), v)
+	_nome_mundo.max_length = MundosRede.NOME_MAX
+	_nome_mundo.custom_minimum_size.x = 50.0 * v
+	_nome_mundo.text_submitted.connect(func(_t): _criar_mundo_novo())
+	hn.add_child(_nome_mundo)
+	var bc := UI.BotaoMenu.new("Criar e abrir sala", "cidade nova, tudo do zero", true, 3.0, 30.0)
+	bc.apertado.connect(_criar_mundo_novo)
+	hn.add_child(bc)
+	col.add_child(_texto("Dê um nome ao mundo (o nome do servidor). Tudo o que vocês fizerem nele fica salvo: o que foi saqueado, as portas, os carros, a base, a hora do dia e o personagem de cada um, onde ele estava.", v))
+	var mundos := MundosRede.lista()
+	if mundos.is_empty():
+		return
+	_secao(col, "CONTINUAR UM MUNDO SALVO", v)
+	for md in mundos:
+		col.add_child(_linha_mundo(md, v))
+
+func _linha_mundo(md: Dictionary, v: float) -> Control:
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", int(1.4 * v))
+	var c := VBoxContainer.new()
+	c.add_theme_constant_override("separation", 0)
+	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	c.add_child(UI.rotulo(str(md["nome"]), 3.4 * v, Color.WHITE, 900, 0.0, true))
+	c.add_child(_texto(MundosRede.resumo(md), v))
+	h.add_child(c)
+	var bj := UI.BotaoMenu.new("Jogar", "abrir a sala", true, 3.0, 18.0)
+	bj.apertado.connect(func(): _criar(md))
+	h.add_child(bj)
+	var confirma := _apagar_id == str(md["id"])
+	var ba := UI.BotaoMenu.new("Toque de novo" if confirma else "Apagar", "apaga para sempre" if confirma else "", false, 2.6, 18.0)
+	ba.apertado.connect(func():
+		if _apagar_id == str(md["id"]):
+			MundosRede.apagar(str(md["id"]))
+			_apagar_id = ""
+			_status.text = "Mundo \"%s\" apagado." % md["nome"]
+		else:
+			_apagar_id = str(md["id"])
+		_montar())
+	h.add_child(ba)
+	return h
+
+func _criar_mundo_novo() -> void:
+	if _esperando:
+		return
+	var n := MundosRede.limpar_nome(_nome_mundo.text if _nome_mundo != null and is_instance_valid(_nome_mundo) else "")
+	if n != "" and not MundosRede.por_nome(n).is_empty():
+		_status.text = "Você já tem um mundo chamado \"%s\". Escolha outro nome ou toque em JOGAR nele." % n
+		return
+	_criar(MundosRede.criar(n))
 
 # ---------------------------------------------------------------- SALA
 func _tela_sala(area: Control, v: float) -> void:
@@ -221,6 +281,8 @@ func _tela_sala(area: Control, v: float) -> void:
 	linhas.add_child(esq)
 	var host_nome := Rede.nome_de(1)
 	esq.add_child(UI.rotulo("Sala de %s · %d/%d jogadores" % [host_nome, Rede.jogadores.size(), Rede.MAX_JOGADORES], 3.6 * v, Color.WHITE, 900, 0.0, true))
+	if str(Rede.mundo.get("mundo_nome", "")) != "":
+		esq.add_child(UI.rotulo("Mundo: %s" % Rede.mundo["mundo_nome"], 2.8 * v, UI.AMBAR, 800))   # 1.03
 	# vagas
 	var g := GridContainer.new()
 	g.columns = 5                             # 10 vagas: 5 x 2
@@ -481,7 +543,10 @@ func _linha_sala(c: Dictionary, v: float) -> Control:
 	col.add_theme_constant_override("separation", 0)
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var servidor := bool(c.get("servidor", false))
-	col.add_child(UI.rotulo(str(c["nome"]) if servidor else "Sala de %s" % c["nome"], 3.0 * v, Color.WHITE, 800))
+	var titulo := str(c["nome"]) if servidor else "Sala de %s" % c["nome"]
+	if str(c.get("mundo", "")) != "" and str(c.get("mundo", "")) != str(c["nome"]):
+		titulo += " · mundo %s" % c["mundo"]          # 1.03
+	col.add_child(UI.rotulo(titulo, 3.0 * v, Color.WHITE, 800))
 	var agora := Time.get_unix_time_from_system() * 1000.0
 	var sub := "%d/%d jogadores" % [int(c["n"]), Rede.MAX_JOGADORES] + (" · já começou" if bool(c.get("comecou", false)) else " · na sala")
 	if servidor:
@@ -559,12 +624,13 @@ func _codigo_de_longe(cods: Array) -> String:
 				escolha = str(k[1])
 	return escolha
 
-func _criar() -> void:
-	if _esperando:
+# 1.03: abre a sala com o MUNDO escolhido (novo ou salvo): a semente dele e o id (o salvamento vai para ele)
+func _criar(md: Dictionary) -> void:
+	if _esperando or md.is_empty():
 		return
 	_esperando = true
-	_status.text = "Abrindo a sala…"
-	Rede.criar_partida(_meu_nome(), Salvamento.semente_rede())     # 0.77: continua o mundo salvo da última sala
+	_status.text = "Abrindo a sala no mundo \"%s\"…" % md["nome"]
+	Rede.criar_partida(_meu_nome(), int(md["semente"]), str(md["id"]), str(md["nome"]))
 
 func _entrar(ip: String) -> void:
 	if _esperando:
@@ -687,7 +753,7 @@ func _voltar() -> void:
 				_fechar_confirma = false
 				_status.text = ""
 				_montar()
-		"entrar":
+		"entrar", "mundos":
 			modo = "inicio"
 			_montar()
 		"conectando":
