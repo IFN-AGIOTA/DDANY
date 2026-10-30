@@ -278,11 +278,14 @@ func _r():
 	hd2.grupos.clear()
 	j.cam_yaw = 0.0                                  # olhando para -Z: os de +Z ficam fora da tela
 	await q(3)
-	for k in 14:
+	for k in 80:                                     # 14 de verdade (bem mais que o mínimo, senão não há o que recolher)
+		if m.vagos.vivos.size() >= 14:
+			break
 		var pt := rua + Vector3(randf_range(-30.0, 30.0), 0, randf_range(55.0, 90.0))
 		if m.vagos._livre(pt.x, pt.z):
 			var vv = m.vagos._criar(Vector3(pt.x, m.mundo.altura(pt.x, pt.z), pt.z), Vector3.INF, true)
-			vv.vagar()
+			if vv != null:
+				vv.vagar()
 	await q(10)
 	var reais0: int = m.vagos.vivos.size()
 	print("  custo dos infectados: %.2f ms por quadro (%d de verdade)" % [m.vagos.custo_ms, reais0])
