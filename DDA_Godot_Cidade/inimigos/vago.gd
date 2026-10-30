@@ -34,7 +34,9 @@ extends CharacterBody3D
 #     neblina atrapalham. Agachado, parado ou no capim você aparece menos. CHEIRO (lore): sente quem está a 3,5 m
 #     (9 m se estiver sangrando), até do outro lado da parede (pela metade).
 #   · MEMÓRIA: perdeu você de vista, vai até onde te viu e continua procurando para o lado em que você foi
-#     (nenhuma 3 s · curta 20 s · normal 60 s · longa 120 s); depois desiste.
+#     (nenhuma 3 s · curta 20 s · normal 60 s · longa 120 s); depois desiste. 1.01 · VASCULHAR (The Last of Us): antes
+#     de desistir de vez, ainda olha VASCULHA_PONTOS lugares perto dali (para o lado em que você foi), olhando menos
+#     tempo em cada um; o "?" fica em cima da cabeça enquanto ele procura.
 #   · MANADA: vê outro infectado caçando perto e vai atrás dele (inimigos/vagos.gd).
 #   · INVESTIDA: caçando, a 1,3-2,4 m dá um bote rápido; o golpe pode te AGARRAR (você fica lento um instante).
 #   · DERRUBADO: golpe forte (ou carro) o derruba; fica no chão uns segundos e LEVANTA (no chão leva mais dano;
@@ -175,6 +177,12 @@ var _olhando := false
 var _t_sentidos := 0.0
 var _t_sem_ver := 99.0
 var _ultimo_visto := Vector3.ZERO
+const VASCULHA_PONTOS := Vector2i(2, 3)  # 1.01: quantos lugares a mais ele olha depois de te perder (mín, máx)
+const VASCULHA_DIST := Vector2(6.0, 12.0)   # m de um lugar para o outro
+const VASCULHA_OLHA := Vector2(1.5, 3.0)    # s olhando em cada um (o primeiro, onde te viu, é o normal: 3-6 s)
+var _vasculhar := 0                     # lugares que ainda faltam olhar
+var _vasculha_dir := Vector3.ZERO       # para que lado você foi
+var _vasculhando := false               # já está nos lugares a mais (olha menos tempo em cada)
 var _suspeita := 0.0
 var _foco := Vector3.ZERO               # 0.65: para onde ele está olhando desconfiado
 var _t_desconfiar := 0.0
@@ -353,10 +361,14 @@ func ani_rede(tipo_ani: String, d: Dictionary) -> void:
 func _seguir_rede(dt: float) -> void:
 	t_sem_rede += dt
 	var p := global_position
+	# 1.01: entre um pacote e outro (10 por segundo) continua andando pela velocidade e pelo giro (até 0,15 s)
+	var alvo := _rede_pos
+	if _rede_vel > 0.2 and _rede_estado != MORTO:
+		alvo += Vector3(-sin(_rede_yaw), 0.0, -cos(_rede_yaw)) * _rede_vel * minf(t_sem_rede, 0.15)
 	if p.distance_squared_to(_rede_pos) > 64.0:
 		global_position = _rede_pos                     # muito longe (pulou): vai direto
 	else:
-		global_position = p.lerp(_rede_pos, minf(1.0, dt * 10.0))
+		global_position = p.lerp(alvo, minf(1.0, dt * 10.0))
 	rotation.y = lerp_angle(rotation.y, _rede_yaw, minf(1.0, dt * 10.0))
 	_vel_h = _rede_vel
 	var antes := estado
@@ -462,6 +474,8 @@ func investigar(pos: Vector3) -> void:
 	_destino = pos
 	_espera = 0.0
 	_olhando = false
+	_vasculhar = 0
+	_vasculhando = false
 
 func perseguir() -> void:
 	if estado == MORTO or estado == PERSEGUINDO or estado == ATACANDO:
@@ -1024,10 +1038,13 @@ func _decidir(dt: float, j: Node3D) -> void:
 				_vel_alvo = 0.0
 				_espera -= dt
 				if _espera <= 0.0:
-					vagar()
+					if _vasculhar > 0:
+						_proximo_vasculhar(p)          # 1.01: ainda não desistiu: vai olhar mais um lugar perto
+					else:
+						vagar()
 			elif _dist_xz(p, _destino) < 1.8:
 				_olhando = true                         # chegou: fica olhando em volta um pouco
-				_espera = randf_range(3.0, 6.0)
+				_espera = randf_range(VASCULHA_OLHA.x, VASCULHA_OLHA.y) if _vasculhando else randf_range(3.0, 6.0)
 				_vel_alvo = 0.0
 			else:
 				_vel_alvo = _vel_ir
@@ -1038,6 +1055,7 @@ func _decidir(dt: float, j: Node3D) -> void:
 			# 0.89 · MEMÓRIA (opção): depois desse tempo sem te ver, desiste (vai ver o último lugar e volta a vagar)
 			if _t_sem_ver > Regras.memoria():
 				investigar(_ultimo_visto)               # perdeu você de vista
+				_comecar_vasculhar()
 				if dist_jogador < ALCANCE_SOM:
 					_tocar("gemido%d" % (randi() % 4), randf_range(0.7, 0.8), -2.0)
 				return
@@ -1123,6 +1141,33 @@ func _retomar() -> void:
 			_espera = 0.0
 		_:
 			vagar()
+
+# 1.01 · VASCULHAR: perdeu você de vez; depois do lugar onde te viu, ainda olha alguns lugares perto
+func _comecar_vasculhar() -> void:
+	if estado != INVESTIGANDO:
+		return
+	_vasculhar = randi_range(VASCULHA_PONTOS.x, VASCULHA_PONTOS.y)
+	_vasculha_dir = _ultimo_visto - _penultimo if _penultimo != Vector3.INF else -global_basis.z
+	_vasculha_dir.y = 0.0
+	if _vasculha_dir.length_squared() < 0.01:
+		_vasculha_dir = -global_basis.z
+	_vasculha_dir = _vasculha_dir.normalized()
+
+func _proximo_vasculhar(p: Vector3) -> void:
+	_vasculhar -= 1
+	_vasculhando = true
+	var q := p
+	for tent in 6:
+		# para o lado em que você foi, abrindo o leque a cada tentativa (e às vezes para trás, se não tem por onde)
+		var abre := randf_range(-0.8, 0.8) + (0.0 if tent < 3 else randf_range(-PI, PI))
+		var c: Vector3 = p + _vasculha_dir.rotated(Vector3.UP, abre) * randf_range(VASCULHA_DIST.x, VASCULHA_DIST.y)
+		if gerente == null or gerente.mundo == null or not gerente.mundo.dentro_de_predio(c.x, c.z, 0.5, not _fisica):
+			q = c
+			break
+	_vasculha_dir = Vector3(q.x - p.x, 0.0, q.z - p.z).normalized() if _dist_xz(p, q) > 0.5 else _vasculha_dir
+	_destino = q
+	_olhando = false
+	_espera = 0.0
 
 # 0.89 · MEMÓRIA: chegou onde te viu pela última vez e ainda lembra de você: segue para o lado em que você foi
 func _procurar_adiante(p: Vector3) -> void:

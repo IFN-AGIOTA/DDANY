@@ -13,7 +13,16 @@ const ModelosArmas := preload("res://armas/modelos_armas.gd")
 const ItemCls := preload("res://inventario/item.gd")
 const AlvoCls := preload("res://rede/alvo_jogador.gd")
 const VeiculoCls := preload("res://mundo/veiculo.gd")
-const ATRASO := 0.12                           # segundos (2 pacotes a 15/s)
+const ATRASO := 0.12                           # segundos (2 pacotes a 15/s): o mínimo
+# 1.01 · ATRASO QUE SE ADAPTA (estudos/ESTUDO_AAA.md 5, Fiedler): mede o quanto os pacotes chegam fora do ritmo
+# ("jitter") e aumenta o atraso até ATRASO_MAX numa rede ruim (internet, TURN), para aguentar 2 pacotes perdidos
+# sem o boneco travar. Sem pacote novo, continua andando pela velocidade por até EXTRAPOLA s.
+const ATRASO_MAX := 0.3
+const INTERVALO := 1.0 / 15.0                  # rede/sessao_rede.gd ENVIOS_POR_SEG
+const EXTRAPOLA := 0.2
+var atraso := ATRASO
+var _jitter := 0.0
+var _ult_chegada := -1.0
 const FUZIS := ["mp5", "m4", "ak", "espingarda", "rifle_caca"]
 
 var id := 0
@@ -116,9 +125,7 @@ func receber_estado(d: Array) -> void:
 		global_position = pos
 		rotation.y = float(d[1])
 		_relogio = 0.0
-	_amostras.append([_relogio + ATRASO, pos, float(d[1])])
-	if _amostras.size() > 20:
-		_amostras.pop_front()
+	_nova_amostra(pos, float(d[1]))
 	velocity = d[2]
 	vel_horizontal = Vector2(velocity.x, velocity.z).length()
 	var b := int(d[3])
@@ -178,6 +185,19 @@ func _mostrar_arma(tipo: String) -> void:
 	for t in _armas_3d:
 		(_armas_3d[t] as Node3D).visible = t == tipo and not nadando
 
+# 1.01: agenda a amostra no relógio daqui (com o atraso que se adapta ao jitter da rede)
+func _nova_amostra(pos: Vector3, yaw: float) -> void:
+	if _ult_chegada >= 0.0:
+		_jitter = lerpf(_jitter, absf((_relogio - _ult_chegada) - INTERVALO), 0.1)
+		atraso = clampf(ATRASO + 3.0 * _jitter, ATRASO, ATRASO_MAX)
+	_ult_chegada = _relogio
+	var quando := _relogio + atraso
+	if not _amostras.is_empty():
+		quando = maxf(quando, float(_amostras[-1][0]) + 0.01)     # sempre em ordem (o atraso pode ter diminuído)
+	_amostras.append([quando, pos, yaw])
+	if _amostras.size() > 20:
+		_amostras.pop_front()
+
 # ---------- movimento suave ----------
 func _process(dt: float) -> void:
 	_relogio += dt
@@ -191,7 +211,10 @@ func _process(dt: float) -> void:
 		global_position = (a[1] as Vector3).lerp(b[1], k)
 		rotation.y = lerp_angle(float(a[2]), float(b[2]), k)
 	elif _amostras.size() == 1:
-		global_position = global_position.lerp(_amostras[0][1], minf(1.0, dt * 10.0))
+		# acabaram as amostras (pacote atrasado/perdido): segue pela velocidade um pouco em vez de parar seco
+		var alem := clampf(_relogio - float(_amostras[0][0]), 0.0, EXTRAPOLA)
+		var alvo: Vector3 = (_amostras[0][1] as Vector3) + Vector3(velocity.x, 0.0, velocity.z) * alem
+		global_position = global_position.lerp(alvo, minf(1.0, dt * 10.0))
 		rotation.y = lerp_angle(rotation.y, float(_amostras[0][2]), minf(1.0, dt * 10.0))
 	armas.since += dt
 	if _carro != null and is_instance_valid(_carro):

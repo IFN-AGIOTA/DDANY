@@ -95,8 +95,8 @@ Medido com os contadores da Godot (`Performance`) no computador de teste. Ele de
 - **Mipmaps em tudo que aparece em distâncias variadas** (custam +33% de memória, mas reduzem banda e melhoram o
   cache). *(Android: Textures)*
 - **Filtro bilinear** é o melhor equilíbrio; trilinear gasta "muito mais banda"; anisotrópico acima de **2x** é
-  "extremamente caro". O filtro de textura pode ser **até metade da energia da GPU**. *(Android)* ➜ Conferir a
-  opção de anisotropia nas Opções de gráficos: no celular, no máximo 2x.
+  "extremamente caro". O filtro de textura pode ser **até metade da energia da GPU**. *(Android)* ✅ 1.01: no celular
+  a anisotropia para em 2x (`menu/aplicar_opcoes.gd` `aniso_efetivo`), qualquer que seja a opção.
 - **No máximo ~5 texturas por material** no celular; trocar rugosidade/metal por constantes; juntar mapas de um
   canal numa textura só (AO no vermelho, rugosidade no verde, metal no azul; o detalhe mais importante no verde).
   *(Android: Materials/Textures)*
@@ -331,7 +331,8 @@ Fonte: Mark Botta (Naughty Dog), *Infected AI in The Last of Us* (*Game AI Pro 2
   máquina de estados tem o vagar de reserva.
 - **Procurar depois de perder o jogador:** vasculha esconderijos perto do último lugar visto, de um jeito frenético
   (escolhe a animação que revela mais "células não vistas" e evita repetir). Não é exaustivo: desiste e volta a
-  vagar. *(Botta)* ✅ Temos memória e investigação; ➜ dá para deixar o vasculhar mais vivo.
+  vagar. *(Botta)* ✅ Temos memória e investigação; ✅ 1.01: depois de te perder ele ainda olha 2-3 lugares perto,
+  para o lado em que você foi, olhando menos tempo em cada um (`inimigos/vago.gd` `_proximo_vasculhar`).
 - **Seguir:** quem não viu o jogador mas vê outro infectado correndo **vai atrás dele** (sem saber o motivo); o que
   viu chega primeiro. *(Botta)* ✅ Parecido com a nossa "manada 14 m".
 - **Dormir:** infectado parado com sentidos reduzidos, que se mexe se você passa rápido ou perto demais (aviso), e
@@ -363,7 +364,12 @@ Fonte: Mark Botta (Naughty Dog), *Infected AI in The Last of Us* (*Game AI Pro 2
 - **Campo de fluxo (flow field)** *(Fieldrunners 2, Game AI Pro cap. 24)*: em vez de cada um calcular seu caminho,
   um mapa de setas para o destino (Dijkstra a partir do alvo) que **todos usam**; custo constante não importa
   quantos; "milhares de unidades em celular". Bom quando muitos vão para o mesmo lugar (uma horda indo atrás do
-  jogador ou de um barulho). Junto com separação/alinhamento/coesão de bando. ➜ Candidato para hordas grandes.
+  jogador ou de um barulho). Junto com separação/alinhamento/coesão de bando. ✖ 1.01: feito e MEDIDO (grade de 4 m,
+  244 m em volta do destino, só prédios e água bloqueiam, cálculo espalhado em 1 ms por quadro) e tirado: com 24
+  infectados indo a um ponto no centro, 6 sementes, ficou igual a sem ele (presos 12 contra 13, chegaram 8 contra 9,
+  falta somada 3105 contra 3329 m). Quem empaca empaca em carro e barreira perto do destino, que o campo não vê; dar
+  a volta no quarteirão quase nunca é o problema. Volta a valer se um dia os infectados forem atrás de você de longe
+  por dentro da cidade (aí o caminho dá muitas voltas).
 - **Comparar distâncias ao quadrado** (sem raiz) e grade/quadtree para achar vizinhos. *(Fieldrunners)* ✅ Usamos
   grade (`CEL_PREDIO`, `_pred_hash`).
 - **Simplificar o modelo, não o algoritmo** *(Project Highrise, "1000 NPCs a 60 FPS")*: reduziram 15.000 células para
@@ -474,7 +480,7 @@ Fonte: *Game Programming Patterns* (Robert Nystrom) + boas práticas da Godot 4.
 | **Partição espacial** | Grade com células ≥ maior raio de busca; "quem está perto?" sem comparar todos com todos. | ✅ prédios, horda |
 | **Dirty flag** | Recalcular só quando o dado de origem muda (peso do inventário, estatísticas). | ✅ em vários lugares |
 | **Update method + escalonar** | Não pôr `_process` em cada coisa; um gerente com um laço; quem pensa caro, pensa a cada K quadros (`(i + quadro) % K == 0`). | ✅ infectados de longe |
-| **Fila de eventos** | Juntar pedidos repetidos no mesmo quadro (vários tiros do mesmo som → um som mais alto) e não travar quem pediu. | ➜ sons de tiro e barulho para a IA |
+| **Fila de eventos** | Juntar pedidos repetidos no mesmo quadro (vários tiros do mesmo som → um som mais alto) e não travar quem pediu. | ✅ 1.01: barulho para a IA (`vagos.gd` `_fila_barulho`) |
 | **Observer (sinais)** | Para avisos raros ("morreu", "pegou item"); **não** emitir sinal por entidade por quadro; desconectar ao sair. | ✅ |
 | **Estado** | `enum` + `match`, não texto; pilha para interrupções que voltam ao que era ("tropeçou → volta a caçar"). | ✅ |
 | **Autoload** | Só para sistemas que cuidam dos próprios dados (config, conta, rede, música); um autoload não deve mexer nos dados de outro. | ✅ |
@@ -503,8 +509,9 @@ Fontes: Glenn Fiedler (*Gaffer on Games*), Gabriel Gambetta, documentação da G
 - **Interpolação de estados:** os outros são desenhados um pouco no passado, entre dois estados recebidos.
   **Atraso ≈ 3× o intervalo entre envios + 1–2 quadros de folga**, para aguentar 2 pacotes perdidos seguidos. A 10
   envios/s: ~350 ms; a 30: ~150 ms; a 60: ~85 ms. *(Fiedler)* ✅ Temos interpolação com `ATRASO`
-  (`rede/jogador_remoto.gd`) e 15 envios/s (`rede/sessao_rede.gd`). ➜ Conferir se `ATRASO` ≈ 3 × (1/15) + folga
-  ≈ 230 ms.
+  (`rede/jogador_remoto.gd`) e 15 envios/s (`rede/sessao_rede.gd`). ✅ 1.01: o atraso se adapta: 120 ms numa rede
+  boa, sobe até 300 ms quando os pacotes chegam fora do ritmo (3 × o "jitter" medido); sem pacote novo, o boneco
+  continua pela velocidade por até 0,2 s (e os infectados do cliente por até 0,15 s) em vez de parar seco.
 - **Interpolação cúbica (Hermite) com velocidade** tira o "pulsar" da linear em taxas baixas. *(Fiedler)*
 - **Predição do próprio jogador + reconciliação:** o cliente aplica a própria entrada na hora, guarda as não
   confirmadas e, quando o servidor responde, volta ao estado dele e reaplica o resto. *(Gambetta)* ⚠ Nós mandamos a
@@ -532,9 +539,11 @@ mira assistida não estavam acessíveis; esses valores ficam para testar jogando
   atirar **antes** de fazer conteúdo; o momento a momento tem que ser bom sozinho. *(Swink)* ✅ O estande de tiro na
   base militar é isso.
 - **Lista de sinais por acerto/morte** (movimento, imagem, som, vibração), ordenada pelo que mais importa; fazer os 2–3
-  primeiros. "Polimento é um buraco sem fundo." *(Swink)*
-- **Alvos de toque de pelo menos 48 dp**, com a área de toque maior que o desenho do botão. *(Android)* ➜ Conferir
-  os botões pequenos (OMBRO, MIC, VOZES) no tamanho mínimo da HUD.
+  primeiros. "Polimento é um buraco sem fundo." *(Swink)* ✅ 1.01: imagem (o ✕, já existia), som (baque de acerto,
+  mais seco na cabeça/abate) e vibração mais forte no abate.
+- **Alvos de toque de pelo menos 48 dp**, com a área de toque maior que o desenho do botão. *(Android)* ✅ 1.01: a
+  área de toque tem no mínimo 48 dp pelo dpi da tela e, quando duas se encostam, vale a mais perto
+  (`jogador/controles.gd` `raio_toque`).
 - **Nada só por gesto:** atirar, recarregar e mirar sempre com botão. *(Android)* ✅
 - **Contraste:** texto ≥ 4,5:1 e ícones ≥ 3:1 contra o fundo; texto ≥ 12 sp. Cena de zumbi é poluída: pôr uma
   placa/contorno atrás. *(Android)*
@@ -567,6 +576,21 @@ Impacto e esforço estimados por mim; cada item cita a seção acima. **Todos os
 | 14 ✅ | `get_nodes_in_group` fora do `_process` | Pequeno ganho de CPU (1.8) | Baixo | `npc/hospitais.gd`, `jogador/sobrevivencia.gd` |
 | 15 ✅ | HLOD: feito nos móveis dos interiores (a medição mostrou que o peso estava lá, não nas fachadas) | Menos triângulos de longe (0, 1.3, 1.13) | Médio | `mundo/fachadas.gd`, `cidade.gd` |
 | 16 ✅ | Chunks com estado **preparado** (a cidade já fica toda na memória) + orçamento em **ms** + frente da câmera primeiro | Cruzar a borda do chunk sem engasgo (1.13) | Médio | `mundo/chunks.gd` |
+
+**Segunda leva (1.01)**: o que ainda estava com ➜ nas seções acima.
+
+| # | O quê | Resultado | Onde |
+|---|---|---|---|
+| 17 ✅ | **Vasculhar** depois de perder o jogador (2.2) | 2-3 lugares a mais perto, para o lado em que ele foi | `inimigos/vago.gd` |
+| 18 ✖ | **Campo de fluxo** para contornar quarteirões (2.4) | Medido sem ganho e tirado (ver 2.4) | — |
+| 19 ✅ | **Fila de barulhos** (4) | Barulhos juntos no mesmo quadro viram um | `inimigos/vagos.gd` |
+| 20 ✅ | **Atraso da rede que se adapta** + seguir pela velocidade sem pacote (5) | 120-300 ms pelo jitter medido | `rede/jogador_remoto.gd`, `inimigos/vago.gd` |
+| 21 ✅ | **Anisotropia ≤ 2x** no celular (1.4) | Qualquer que seja a opção | `menu/aplicar_opcoes.gd` |
+| 22 ✅ | **Área de toque ≥ 48 dp** (6) | Pelo dpi da tela; o mais perto ganha | `jogador/controles.gd` |
+| 23 ✅ | **Sinais de acerto** (6): som + vibração no abate | O ✕ já existia | `armas/armas.gd`, `armas/sons_armas.gd` |
+| 24 ✅ | Item de arremesso **na mão** ao mirar | Era a limitação da 1.00 | `armas/arremesso.gd`, `jogador/modelo_sobrevivente.gd` |
+| — | Conferidos sem mudança: transparências (capim/folhas já em recorte), sombras (só o sol) | | |
+| — | Ficam para depois: validar a POSIÇÃO no host (falsos positivos com carro/teleporte do jogo), compressão dos pacotes dos infectados (a banda não é problema hoje), predição + reconciliação | | |
 
 ---
 

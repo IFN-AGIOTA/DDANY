@@ -87,6 +87,10 @@ var _pend := false                    # um tiro pedido (toque) que ainda vai sai
 var _pend_t := 0.0                    # o pedido vale por este tempo, mesmo depois de soltar o dedo
 const BUFFER_TOQUE := 0.35            # toque rápido com a arma baixa: guarda o tiro até a arma subir
 var vibrar := true
+# 1.01 · SINAIS DE ACERTO (estudos/ESTUDO_AAA.md 6): além do ✕ (armas/hud_combate.gd), o tiro que pega toca um baque
+# (armas/sons_armas.gd "acerto"; "acerto_forte" na cabeça/abate) e o abate vibra mais forte que o tiro comum.
+const VOL_ACERTO := -7.0
+const VIBRA_ABATE := 45
 var acertos := 0
 var tiros := 0
 var golpe := 0.0                      # animação do golpe corpo a corpo (1 -> 0)
@@ -508,6 +512,7 @@ func _atirar(W: Dictionary) -> void:
 	if algum:
 		acertos += 1
 		acertou.emit(cabeca, matou)
+		sons.tocar("acerto_forte" if (cabeca or matou) else "acerto", VOL_ACERTO)
 	var silenciada: bool = item_arma.acessorios.has("cano")
 	if cn != null and not silenciada:
 		efeitos.clarao(cn, W["fl"])
@@ -515,7 +520,7 @@ func _atirar(W: Dictionary) -> void:
 	ky += randf_range(-1.0, 1.0) * float(W["ky"])
 	sons.tocar("tiro_silenciado" if silenciada else "tiro_" + atual)
 	_depois_do_tiro()
-	_vibrar(int(W["vibra"]))
+	_vibrar(maxi(int(W["vibra"]), VIBRA_ABATE) if (cabeca or matou) else int(W["vibra"]))
 	barulho.emit(jogador.global_position, float(W["ruido"]) * MULT_RUIDO_TIRO * (0.22 if silenciada else 1.0))
 	disparou.emit(atual)
 	# desgaste e EMPERRAR (0.65, DayZ; nomes do estado em inventario/itens.gd nome_estado): PERFEITA nunca
@@ -656,7 +661,7 @@ func _acertar_golpe(W: Dictionary) -> void:
 	acertos += 1
 	acertou.emit(bool(res.get("cabeca", false)), bool(res.get("morto", false)))
 	sons.tocar("impacto")
-	_vibrar(int(W["vibra"]))
+	_vibrar(maxi(int(W["vibra"]), VIBRA_ABATE) if bool(res.get("morto", false)) else int(W["vibra"]))
 	barulho.emit(jogador.global_position, float(W["ruido"]) * MULT_RUIDO_GOLPE)
 	if item_arma != null:
 		item_arma.estado = maxf(0.0, item_arma.estado - float(W.get("desgaste", 0.002)))

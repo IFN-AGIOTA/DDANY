@@ -42,6 +42,8 @@ func _ready() -> void:
 	sons["clique_300"] = _clique(300.0, 0.1)
 	sons["clique_900"] = _clique(900.0, 0.06)
 	sons["clique_520"] = _clique(520.0, 0.07)
+	sons["acerto"] = _acerto(150.0, 0.07, 0.6, 31)            # 1.01: tiro pegou (baque surdo, baixinho)
+	sons["acerto_forte"] = _acerto(230.0, 0.1, 0.9, 47)       # 1.01: tiro na cabeça ou abate (mais seco e mais alto)
 	for i in N_CANAIS:
 		var p := AudioStreamPlayer.new()
 		p.bus = "SFX" if AudioServer.get_bus_index("SFX") >= 0 else "Master"   # com eco de cidade
@@ -124,6 +126,24 @@ func _vulto() -> AudioStreamWAV:
 		lp += (rng.randf_range(-1.0, 1.0) - lp) * k
 		lp2 += (lp - lp2) * k
 		a[i] = (lp - lp2) * sin(t * PI) * 1.6
+	return _wav(a)
+
+# 1.01 · SOM DE ACERTO (estudos/ESTUDO_AAA.md 6, Swink: imagem + som + vibração no acerto): um baque curto, um tom
+# grave que cai rápido com um pouco de ruído abafado por cima. Toca na hora, sem esperar o som do impacto chegar.
+func _acerto(freq: float, dur: float, vol: float, semente: int) -> AudioStreamWAV:
+	var n := int(TAXA * (dur + 0.03))
+	var a := PackedFloat32Array()
+	a.resize(n)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = semente
+	var lp := 0.0
+	var fase := 0.0
+	for i in n:
+		var t := float(i) / TAXA
+		fase += _exp(freq, freq * 0.45, t, dur) / TAXA
+		lp += (rng.randf_range(-1.0, 1.0) - lp) * 0.18
+		var g := _exp(vol, 0.001, t, dur) if t < dur else 0.0
+		a[i] = (sin(TAU * fase) * 0.8 + lp * 0.9) * g
 	return _wav(a)
 
 func _clique(freq: float, vol: float) -> AudioStreamWAV:

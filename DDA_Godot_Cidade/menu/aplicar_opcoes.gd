@@ -150,6 +150,12 @@ func _efeitos_ultra(cid) -> void:
 		cid.sol.shadow_blur = 1.5
 		cid.sol.light_volumetric_fog_energy = 0.6
 
+# 1.01 (estudos/ESTUDO_AAA.md 1.4): no celular a filtragem anisotrópica para em 2x. Acima disso cada pixel do chão
+# lê a textura 3 ou 4 vezes, e a GPU de celular (que desenha em blocos) sente muito mais que a do PC.
+const ANISO_CELULAR := 2
+static func aniso_efetivo(aniso: int) -> int:
+	return mini(aniso, ANISO_CELULAR) if OS.has_feature("mobile") else aniso
+
 func _aplicar_jogador() -> void:
 	if main == null:
 		return
@@ -202,7 +208,7 @@ func _aplicar_resto(o: Dictionary, g: Dictionary, j) -> void:
 			cid.aplicar_detalhes(int(g["shd"]), int(g["detd"]), bool(g["wtr"]))     # janelas dos prédios · árvores/caixas d'água
 		# 0.84: as opções que estavam "em breve"
 		if cid.has_method("aplicar_texturas"):
-			cid.aplicar_texturas(int(g.get("tex", 3)), int(g.get("aniso", 1)))   # texturas e filtragem anisotrópica do chão
+			cid.aplicar_texturas(int(g.get("tex", 3)), aniso_efetivo(int(g.get("aniso", 1))))   # texturas e filtragem anisotrópica do chão
 		var ab = cid.get("abandono")
 		if ab != null:
 			ab.aplicar_modelos(int(g.get("models", 2)))                       # até onde os objetos da rua aparecem

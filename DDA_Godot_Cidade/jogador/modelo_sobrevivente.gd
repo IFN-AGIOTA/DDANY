@@ -124,6 +124,7 @@ var _ik: IkFuzil
 var _mira := 0.0
 var _item_mao: Node3D = null            # 0.61: item na mão durante comer/beber/remédio/curativo (segurar_item)
 var _t_item := 0.0
+var _id_item := ""                       # 1.01: qual item está na mão (manter_item não recria o mesmo)
 var _pecas := {}                       # chave ("cabeca", "mochila", "cinto", "ombro", "coldre") -> [id, nó]
 var _colete: MeshInstance3D
 var _colete_id := ""
@@ -637,9 +638,18 @@ func segurar_item(id: String, duracao: float) -> void:
 		suporte.add_child(n)
 		n.position = Vector3(0, -minf(ab.size.y * 0.5, 0.12), 0)
 		_item_mao = suporte
+	_id_item = id
 	_t_item = duracao
 	_ponto_arma.visible = false
 	_ponto_fuzil.visible = false
+
+# 1.01: deixa o item na mão enquanto alguém continua pedindo (mirando o arremesso: armas/arremesso.gd), renovando o
+# tempo em vez de criar o modelo de novo a cada quadro
+func manter_item(id: String, duracao: float) -> void:
+	if _item_mao != null and is_instance_valid(_item_mao) and _id_item == id:
+		_t_item = maxf(_t_item, duracao)
+		return
+	segurar_item(id, duracao)
 
 func _soltar_item() -> void:
 	if _item_mao != null and is_instance_valid(_item_mao):

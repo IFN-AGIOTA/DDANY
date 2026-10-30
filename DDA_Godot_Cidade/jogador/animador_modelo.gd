@@ -332,6 +332,11 @@ func _atualizar_postura(e: int, vel_h: float, mirando: bool, atirando: bool) -> 
 			nome = POSTURAS.get(_arma, "")
 	_postura.usar(nome, nome != "")
 
+# 1.01: item na mão sem animação (mirando o arremesso: armas/arremesso.gd chama todo quadro enquanto mira)
+func manter_item(id: String, duracao := 0.2) -> void:
+	if _modelo != null and _modelo.has_method("manter_item"):
+		_modelo.manter_item(id, duracao)
+
 # AÇÃO por cima do estado: recarregar, golpe, pegar, comer... (nome da animação, velocidade).
 # corpo_todo: parado usa o corpo todo; andando/correndo vira camada só na parte de cima.
 # 0.61: "comer:feijao" = a ação com o ITEM na mão (o modelo mostra o item na mão direita enquanto ela dura)

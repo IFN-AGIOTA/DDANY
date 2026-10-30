@@ -331,6 +331,7 @@ func _r():
 		longe_g["p"] = Vector2(j.global_position.x + 60.0, j.global_position.z)
 		longe_g["d"] = Vector2.INF
 	m.vagos.barulho(j.global_position, 150.0, true)
+	m.vagos._soltar_barulhos()          # 1.01: a fila solta no começo do próximo quadro; aqui, já (o grupo não vira real antes)
 	for g in hd.grupos:
 		if g["d"] != Vector2.INF and (g["d"] as Vector2).distance_to(Vector2(j.global_position.x, j.global_position.z)) < 15.0:
 			indo += 1

@@ -99,6 +99,12 @@ var _olhar_mouse := Vector2.ZERO
 var _correr_on := false
 var _moveu := false                # 0.64: andou desde que ligou a corrida "alternar" (parar desliga)
 var _dica: Label
+# 1.01 · ÁREA DE TOQUE MÍNIMA (estudos/ESTUDO_AAA.md 6: o Android pede 48 dp): o desenho do botão continua do mesmo
+# tamanho, mas o lugar onde o dedo pega tem no mínimo TOQUE_MIN_DP de diâmetro na tela de verdade. Os botões pequenos de
+# cima (MIC, VOZES, INV, CAM...) e o OMBRO ficavam com uns 36 dp num celular comum. Quando duas áreas se encostam, vale a
+# do botão mais perto do dedo.
+const TOQUE_MIN_DP := 48.0
+var _raio_min := 0.0               # raio mínimo de toque em pixels da tela do jogo (1280 x 720 esticado)
 
 func _ready() -> void:
 	layer = 10
@@ -161,7 +167,34 @@ func _ready() -> void:
 	_bt("SOBE", "SOBE", "br", Vector2(80, 330), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
 	_bt("DESCE", "DESCE", "br", Vector2(80, 210), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
 	_bt("VEL", "VEL", "br", Vector2(80, 90), 44, Color(0.6, 0.6, 0.6), "tocar", false, true)
-	get_viewport().size_changed.connect(func(): _visual.queue_redraw())
+	get_viewport().size_changed.connect(_tela_mudou)
+	_tela_mudou()
+
+func _tela_mudou() -> void:
+	_raio_min = raio_toque_min(DisplayServer.screen_get_dpi(), float(DisplayServer.window_get_size().y), get_viewport().get_visible_rect().size.y)
+	_visual.queue_redraw()
+
+# metade de TOQUE_MIN_DP (1 dp = dpi/160 pixels de verdade), passada para os pixels da tela do jogo
+static func raio_toque_min(dpi: float, altura_janela: float, altura_jogo: float) -> float:
+	if dpi <= 0.0 or altura_janela <= 0.0 or altura_jogo <= 0.0:
+		return 0.0
+	return TOQUE_MIN_DP * 0.5 * (dpi / 160.0) / (altura_janela / altura_jogo)
+
+func raio_toque(b: Dictionary) -> float:
+	return maxf(float(b["r"]) * 1.15, _raio_min)
+
+# o botão visível e livre mais perto do toque, dentro da área dele ({} = nenhum)
+func _botao_no_toque(p: Vector2) -> Dictionary:
+	var achou := {}
+	var md := INF
+	for b in botoes:
+		if not _visivel(b) or int(b["toque"]) != -1:
+			continue
+		var d := p.distance_to(_centro(b))
+		if d <= raio_toque(b) and d < md:
+			md = d
+			achou = b
+	return achou
 
 func _bt(id: String, txt: String, canto: String, off: Vector2, r: float, cor: Color, modo: String, olhar: bool, voo: bool) -> void:
 	botoes.append({"id": id, "txt": txt, "canto": canto, "off": off, "r": r, "off0": off, "r0": r, "cor": cor, "modo": modo, "olhar": olhar, "voo": voo, "toque": -1})
@@ -329,16 +362,16 @@ func _unhandled_input(e: InputEvent) -> void:
 	if e is InputEventScreenTouch:
 		var t: InputEventScreenTouch = e
 		if t.pressed:
-			for b in botoes:
-				if _visivel(b) and int(b["toque"]) == -1 and t.position.distance_to(_centro(b)) <= float(b["r"]) * 1.15:
-					b["toque"] = t.index
-					if b["id"] == "ARMA":
-						_toque_roda = t.index      # segurar e arrastar escolhe na roda de armas
-						roda_inicio.emit(t.position)
-					elif b["modo"] == "tocar":
-						_tocou(b["id"])
-					_visual.queue_redraw()
-					return
+			var b := _botao_no_toque(t.position)
+			if not b.is_empty():
+				b["toque"] = t.index
+				if b["id"] == "ARMA":
+					_toque_roda = t.index      # segurar e arrastar escolhe na roda de armas
+					roda_inicio.emit(t.position)
+				elif b["modo"] == "tocar":
+					_tocou(b["id"])
+				_visual.queue_redraw()
+				return
 			if t.position.x < vs.x * 0.5 and _toque_mover == -1:
 				_toque_mover = t.index
 				_origem = t.position

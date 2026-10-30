@@ -113,6 +113,10 @@ func _physics_process(dt: float) -> void:
 	_arco.visible = mostrar
 	_alvo.visible = mostrar and _alvo.visible
 	if mostrar:
+		# 1.01: mirando, o item já aparece na mão (antes só aparecia no movimento do braço, ao soltar)
+		var it = item_na_mao()
+		if it != null and jogador.get("animador") != null and jogador.animador.has_method("manter_item"):
+			jogador.animador.manter_item(it.id)
 		_t_arco -= dt
 		if _t_arco <= 0.0:
 			_t_arco = 0.05                     # 20 vezes por segundo basta

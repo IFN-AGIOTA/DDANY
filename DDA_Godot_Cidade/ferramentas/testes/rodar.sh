@@ -121,6 +121,7 @@ elif [ "$alvo" = todos ]; then
 	rodar teste_loot_volta 0
 	rodar teste_validar_rede 0
 	rodar teste_ritmo 0
+	rodar teste_rede_atraso 0
 	rodar teste_jogo 1
 	rodar teste_agua 1
 	rodar teste_portas 1
@@ -153,6 +154,7 @@ elif [ "$alvo" = todos ]; then
 	rodar teste_interior_fatias 1
 	rodar teste_mutados 1
 	rodar teste_chunks 1
+	rodar teste_ia_101 1
 	rodar_turn
 else
 	rodar "$alvo" 1

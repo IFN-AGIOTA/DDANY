@@ -224,10 +224,34 @@ func alvo_para(v: Node3D) -> Node3D:
 
 # barulho em qualquer lugar (tiros do jogador; outros sistemas podem chamar também: alarme de carro, etc.)
 # 0.89: a horda virtual (longe) também ouve; a opção Audição aumenta/diminui o círculo
+# 1.01 · FILA DE BARULHOS ("event queue", estudos/ESTUDO_AAA.md 4): os barulhos do mesmo quadro a menos de
+# JUNTA_BARULHO m um do outro viram UM só (o maior), e a IA ouve uma vez no começo do quadro seguinte. Rajada de
+# MP5, os 8 chumbos da espingarda, vários infectados batendo na mesma porta: antes, cada um fazia todo infectado
+# ouvir (com um raio contra as paredes cada); agora, um por lugar.
+const JUNTA_BARULHO := 3.0
+var _fila_barulho: Array = []           # [posição, raio, do_jogador]
+var barulhos_pedidos := 0               # (testes)
+var barulhos_feitos := 0
+
 func barulho(posicao: Vector3, raio: float, do_jogador := true) -> void:
-	barulho_real(posicao, raio, do_jogador)
-	if horda != null:
-		horda.barulho(posicao, raio)
+	barulhos_pedidos += 1
+	for b in _fila_barulho:
+		if (b[0] as Vector3).distance_squared_to(posicao) < JUNTA_BARULHO * JUNTA_BARULHO:
+			b[1] = maxf(float(b[1]), raio)
+			b[2] = bool(b[2]) or do_jogador
+			return
+	_fila_barulho.append([posicao, raio, do_jogador])
+
+func _soltar_barulhos() -> void:
+	if _fila_barulho.is_empty():
+		return
+	var f := _fila_barulho
+	_fila_barulho = []
+	for b in f:
+		barulhos_feitos += 1
+		barulho_real(b[0], b[1], b[2])
+		if horda != null:
+			horda.barulho(b[0], b[1])
 
 func barulho_real(posicao: Vector3, raio: float, do_jogador := true) -> void:
 	var r := raio * Regras.mult_audicao()
@@ -261,6 +285,7 @@ func _contar_golpe(quem) -> void:
 		_golpes.clear()
 
 func _process(dt: float) -> void:
+	_soltar_barulhos()
 	if jogador == null or not is_instance_valid(jogador) or mundo == null:
 		return
 	if espelho:

@@ -40,6 +40,47 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.01 · SEGUNDA LEVA DO ESTUDO (VASCULHAR, REDE MAIS LISA, TOQUE, ACERTO)
+  O que ainda estava marcado com ➜ no estudo (estudos/ESTUDO_AAA.md, agora com ✅):
+  · INFECTADOS:
+      - VASCULHAR (The Last of Us): quando te perde de vez, ele vai onde te viu, olha em volta e ainda vai olhar mais
+        2-3 lugares perto (6-12 m um do outro, para o lado em que você foi, 1,5-3 s em cada) antes de desistir e
+        voltar a vagar. O "?" fica na cabeça enquanto ele procura. Um barulho comum continua só "ir ver o que foi".
+      - FILA DE BARULHOS: os barulhos do mesmo quadro a menos de 3 m um do outro viram um só (o maior). A rajada da
+        MP5, os chumbos da espingarda ou vários infectados batendo na mesma porta não fazem mais todo infectado
+        "ouvir" várias vezes no mesmo quadro (cada vez com um raio contra as paredes). Eles ouvem no quadro seguinte.
+  · REDE: o amigo é desenhado 120 ms no passado (como antes) numa rede boa, mas se os pacotes começam a chegar fora do
+    ritmo (internet ruim, retransmissor) o atraso sobe sozinho até 300 ms. Assim ele aguenta pacotes perdidos sem
+    "travar e pular". Faltou pacote: o boneco do amigo e os infectados do cliente continuam andando pela velocidade
+    por um instante (0,2 s / 0,15 s), em vez de parar seco.
+  · CELULAR:
+      - a filtragem anisotrópica para em 2x (acima disso cada pixel do chão lê a textura 3-4 vezes; o guia do Android
+        chama de "extremamente caro"). No PC continua a escolhida;
+      - cada botão de toque pega o dedo numa área de pelo menos 48 dp (o tamanho que o Android pede), mesmo com o
+        desenho menor (MIC, VOZES, INV, CAM, CONSTRUIR, OMBRO...); tocando entre dois, vale o mais perto do dedo;
+      - conferido, sem mudança: o capim e as folhas já usam recorte (não transparência); a fumaça e a chuva são
+        poucos quadrados; só o sol faz sombra (as luzes dos locais nunca fizeram).
+  · ACERTO: além do ✕ na mira, o tiro que pega toca um baque curto (mais seco e mais alto na cabeça ou no abate), e o
+    abate vibra mais forte que o tiro comum (45 ms).
+  · ARREMESSO: mirando com o tijolo ou a garrafa, o item já aparece na mão (antes só aparecia no movimento de jogar).
+  ARQUIVOS MEXIDOS (testado: teste_ia_101 NOVO 23 conferências, teste_rede_atraso NOVO 4; + a bateria toda):
+    inimigos/vago.gd ............... vasculhar (_comecar_vasculhar, _proximo_vasculhar); os infectados do cliente
+                                     seguem pela velocidade sem pacote novo (_seguir_rede)
+    inimigos/vagos.gd .............. fila de barulhos (barulho junta, _soltar_barulhos solta no começo do quadro)
+    rede/jogador_remoto.gd ......... atraso que se adapta (_nova_amostra) e segue pela velocidade sem pacote
+    jogador/controles.gd ........... área de toque mínima de 48 dp; o botão mais perto ganha
+    menu/aplicar_opcoes.gd ......... anisotropia no máximo 2x no celular (aniso_efetivo)
+    armas/armas.gd ................. som do acerto e vibração do abate
+    armas/sons_armas.gd ............ sons "acerto" e "acerto_forte" (_acerto)
+    armas/arremesso.gd ............. mirando, o item aparece na mão
+    jogador/modelo_sobrevivente.gd . manter_item (mantém o item na mão sem recriar o modelo)
+    jogador/animador_modelo.gd ..... manter_item
+    menu/config.gd ................. VERSAO "1.01"
+    ferramentas/testes/ ............ teste_ia_101 e teste_rede_atraso NOVOS; rodar.sh e teste_infectados_pz
+                                     (solta a fila de barulhos antes de conferir a horda) mexidos
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + seções 3, 4, 7 (mapa) e 10
+
 ATUALIZAÇÃO 1.00 · O QUE OS JOGOS AAA FAZEM (DIRETOR, ARREMESSO, MUTADOS, DESEMPENHO)
   Tudo o que saiu do estudo de técnicas de jogos grandes (estudos/ESTUDO_AAA.md, os 16 itens do plano):
   · DIRETOR DE IA (como o do Left 4 Dead): o jogo mede o quanto você está sob pressão (mordidas, infectados
@@ -2549,8 +2590,11 @@ TOQUE (vários dedos ao mesmo tempo)
   · BALÃO (só no multijogador): mensagens rápidas.
   · MIC e VOZES (0.97, só no multijogador): mutar o seu microfone / mutar os outros jogadores (chat de voz).
   · SENTIDO (0.95, só para o mutado/controlado): FAREJAR (mutado) ou ESCUTAR (controlado) por 10 s, espera 20 s.
+  · 1.01: cada botão pega o dedo numa área de pelo menos 48 dp (o tamanho que o Android pede), mesmo se o desenho for
+    menor (MIC, VOZES, INV, CAM, OMBRO...); tocando entre dois botões, vale o mais perto do dedo.
 - ARREMESSO (1.00): com TIJOLO, GARRAFA DE VIDRO ou garrafa vazia NA MÃO, segurar ATIRAR (ou MIRAR) mostra o arco
-  e o anel onde cai; soltar o ATIRAR joga. PC: segurar e soltar o botão esquerdo do mouse.
+  e o anel onde cai (1.01: e o item aparece na mão); soltar o ATIRAR joga. PC: segurar e soltar o botão esquerdo do
+  mouse.
 - CARRO (0.76): PEGAR perto de um carro que funciona = ENTRAR; joystick frente/trás = acelerar/freio e ré, lados =
   virar; PULAR = freio de mão; PEGAR = SAIR. PC: W/S/A/D (setas), Espaço freio de mão, E sair.
 - Desde a 0.67 os botões mostram ÍCONES (balas = atirar, mira = mirar, mochila = INV, drone = VOO...); o botão
@@ -2586,6 +2630,8 @@ INFECTADOS (0.89, estilo Project Zomboid; inimigos/regras_infectados.gd)
   visão: cone 120°, 22 m de dia, 5 m no escuro, 26 m com a sua lanterna acesa · x0,55 ruim / x1,5 águia ·
   chuva até -35%, neblina até -40% · você agachado x0,55, parado x0,6, correndo x1,25, no capim agachado x0,5
   cheiro 3,5 m (sangrando 9 m) · memória 3 / 20 / 60 / 120 s · manada 14 m · investida a 1,3–2,4 m
+  1.01 · vasculhar: depois de te perder olha mais 2-3 lugares a 6-12 m um do outro (1,5-3 s em cada; onde te viu,
+  3-6 s) · barulhos a menos de 3 m no mesmo quadro viram um só (o maior)
   barulho dos passos: agachado 2,5 · devagar 3,5 · andando 7 · trote 14 · correndo 20 m (chuva -35%) · a horda
   segue barulho até 100 m · pancada na porta 18 m · audição x0,55 ruim / x1,4 exata
   ferida que passa pela roupa: arranhão 55% · laceração 30% · mordida 15% (pelas costas 35/30/35) · vírus: mordida
@@ -2630,6 +2676,11 @@ DORMINDO (1.00): grupos de 2-4 em 45% dos prédios infestados · acordam com voc
 ARREMESSO (1.00): força 15 (tijolo) · 17 (vidro) · 16 (metal) m/s, sai 0,28 acima de onde você olha, gravidade 12 ·
   barulho 22 (tijolo) · 32 (vidro) · 24 (metal) m · dano 24 · 12 · 8 · quica com 35% da velocidade e para abaixo de 2,2 m/s.
 AUDIÇÃO PELO ESTADO (1.00): vagando x0,85 · desconfiado/investigando x1,15.
+REDE SUAVE (1.01, rede/jogador_remoto.gd): 15 estados/s · o amigo é desenhado 120 ms no passado numa rede boa e até
+  300 ms numa ruim (0,12 s + 3 x o quanto os pacotes chegam fora do ritmo) · sem pacote novo, segue pela velocidade
+  por até 0,2 s (os infectados do cliente, 0,15 s).
+ACERTO (1.01): baque de acerto a -7 dB (mais seco e alto na cabeça/abate) · abate vibra 45 ms (o tiro comum, o da arma).
+CELULAR (1.01): anisotropia no máximo 2x (a opção pode estar maior) · botões pegam o dedo em pelo menos 48 dp.
 MUTADO (0.94, jogador/mutacao.gd): 1% ao morrer pelos infectados · levanta em 6 s · dano recebido x0,45 · sangramento
   x0,4 · trote/corrida x1,22 · pulo x1,4 · estamina correndo x0,5 · queda x1,35 · garras 30 de dano (1,65 m, 0,55 s) ·
   armas brancas x1,3 · sem arma de fogo · infectados ignoram · (controlado, 2ª parte: x1,1 · x1,2 · dano x0,7 · garras 20)
@@ -2783,7 +2834,8 @@ PERSONAGEM (pasta jogador/)
 - vida, sangue, fome, sede, frio ....... jogador/sobrevivencia.gd
 - aparência e animação do soldado ...... jogador/soldado.gd (poses das armas e do corpo a corpo)
 - modelo 3D próprio (.glb) e animações . jogador/animador_modelo.gd + modelos/LEIA-ME.txt
-- botões de toque, joystick, teclado ... jogador/controles.gd (posições e cores no _ready)
+- botões de toque, joystick, teclado ... jogador/controles.gd (posições e cores no _ready; 1.01: área de toque
+                                          mínima TOQUE_MIN_DP, raio_toque, _botao_no_toque)
 - ícones dos botões de toque ........... hud/icones/botoes.png (feito por ferramentas/gerar_icones_botoes.gd;
                                           a ordem é ICONES em jogador/controles.gd)
 - câmera livre (VOO) .................. jogador/camera_voo.gd
@@ -2796,6 +2848,9 @@ ARMAS (pasta armas/)
 - traçantes, clarão, marcas de bala ... armas/efeitos_tiro.gd
 - SONS (central: menu, partida, armas, inventário, corpo, mundo) ... audio/sons.gd + audio/sons/ (preparar_sons.py)
 - sons dos tiros e golpes ............. armas/sons_armas.gd (tiros) e armas/armas.gd (recarga, cápsula, seco, sacar)
+- SINAIS DE ACERTO (1.01: som do acerto,
+  vibração no abate) .................. armas/armas.gd (VOL_ACERTO, VIBRA_ABATE) · sons: armas/sons_armas.gd
+                                          (_acerto: "acerto", "acerto_forte") · o ✕ na tela: armas/hud_combate.gd
 - mira e painel de munição (HUD) ...... armas/hud_combate.gd
 
 INVENTÁRIO / ITENS (pasta inventario/)
@@ -2853,6 +2908,7 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - CHAT DE VOZ (alcance, sensibilidade
   do microfone, volume das vozes) ..... rede/voz.gd (ALCANCE, LIMIAR, VOLUME_DB) · botões: jogador/controles.gd
 - ARREMESSO (arco, força, quicar) ..... armas/arremesso.gd · ruído/dano de cada item: inventario/itens.gd ("arremesso")
+                                          · 1.01: item na mão mirando: jogador/modelo_sobrevivente.gd manter_item
 - pré-aquecer shaders no carregamento  menu/pre_aquecer.gd (o que entra na lista)
 - térreo com portas de aço (prédio sem
   entrada) ............................ mundo/materiais_cidade.gd (PREDIO) + mundo/cidade.gd (dado_predio)
@@ -2995,6 +3051,9 @@ INFECTADOS (pasta inimigos/; o nome "vagos" nos arquivos veio do HTML)
   helicóptero ......................... inimigos/horda.gd (0.89)
 - quantos de verdade, barulho, manada,
   puxar para o chão ................... inimigos/vagos.gd (MAX_ATIVOS_PADRAO, raio_passos, _separar, _contar_golpe)
+                                          · 1.01: FILA DE BARULHOS (JUNTA_BARULHO, _soltar_barulhos)
+- VASCULHAR depois de te perder (1.01) . inimigos/vago.gd (VASCULHA_PONTOS, VASCULHA_DIST, VASCULHA_OLHA,
+                                          _comecar_vasculhar, _proximo_vasculhar)
 - DIRETOR DE IA (ritmo, alívio, hordas
   atrás de você, mutados) ............. inimigos/diretor.gd (1.00) · opções Ritmo e Mutados (z_ritmo, z_mutados)
 - orçamento de tempo dos infectados .. inimigos/vagos.gd (ORCAMENTO_MS, MIN_REAIS, _orcamento, _aliviar)
@@ -3053,7 +3112,8 @@ MULTIJOGADOR (pasta rede/ · modo livre)
 - o que vai pela rede no jogo (estado
   15x/s, roupa, ações, tiros, clima) .. rede/sessao_rede.gd
 - o boneco do outro jogador (suavizado,
-  nome em cima, roupa, arma) .......... rede/jogador_remoto.gd
+  nome em cima, roupa, arma) .......... rede/jogador_remoto.gd (1.01: atraso que se adapta à rede ATRASO..ATRASO_MAX
+                                          e EXTRAPOLA; os infectados do cliente: inimigos/vago.gd _seguir_rede)
 - PvP: onde o tiro acerta o amigo ..... rede/alvo_jogador.gd (corpo/cabeça) · regra e eventos: rede/sessao_rede.gd
                                         (0.91: nunca no hospital, trégua: pvp_vale_em, _protegido)
   (mandar_pvp, pvp_vale_em) · dano: jogador/sobrevivencia.gd (levar_tiro_pvp) · opção: menu/opcoes.gd
@@ -3190,7 +3250,7 @@ MÚSICA (pasta audio/)
 - 1.00: as silhuetas da horda de longe só existem no jogo solo e no host (o cliente não tem a população). O mutado
   infectado ainda não escala paredes nem salta entre telhados (só corre e salta no chão). O arremesso de um amigo é
   simulado de novo em cada aparelho: longe de quem recebe (sem a física dos prédios de lá) ele pode bater num
-  lugar um pouco diferente. O tijolo/garrafa não aparece na mão enquanto você mira (só no movimento de jogar).
+  lugar um pouco diferente.
 - O jogador é um sobrevivente genérico (Universal Base Characters); o Dominic do livro (jaqueta de couro, cabelo branco) não tem modelo próprio (o 3D dele foi cancelado na 0.27).
 - A gangue VAGOS (Edy, V), Alyce, Nick, Mônica e Carlos ainda não aparecem no jogo (são do Ato 2 em diante).
 - Só abrem até o 3º andar; o telhado só nos prédios de até 3 andares (nos mais altos, o resto fica fechado).
