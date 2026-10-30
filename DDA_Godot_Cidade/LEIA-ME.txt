@@ -61,6 +61,10 @@ ATUALIZAÇÃO 1.04 · ESCADAS DE INCÊNDIO DE VERDADE (SUBIR NOS PRÉDIOS) E AGA
   AGACHADO: andando agachado mais rápido (direcional empurrado até o fim), o personagem trocava para uma animação de
   andar em PÉ (a câmera e o resto continuavam agachados): parecia que levantava. Agora continua a animação agachada,
   só mais depressa.
+  INFECTADOS SOMEM E VOLTAM À TOA (conserto): com o celular/PC pesado (orçamento dos infectados estourado), o jogo
+  transformava de volta em grupo 2 infectados da horda a cada segundo, mesmo já tendo chegado no limite: descia
+  abaixo do mínimo de 8 de verdade e aí criava outros de novo (trocava gente sem parar; e os da horda que vinham
+  atrás de você podiam sumir no caminho). Agora só tira os que passam do limite.
   ARQUIVOS MEXIDOS (testado: teste_escadas_incendio NOVO (sobe e desce 3 prédios de tipos diferentes, um de perna
   quebrada; 2 escadas em 100% dos prédios; torre escalonada; desenho), teste_ia_101 (+ agachado rápido); + a
   bateria toda):
@@ -75,6 +79,7 @@ ATUALIZAÇÃO 1.04 · ESCADAS DE INCÊNDIO DE VERDADE (SUBIR NOS PRÉDIOS) E AGA
     main.gd ........................ cria o nó das escadas de incêndio; passa os topos para a colisão
     menu/aplicar_opcoes.gd ......... (detalhes: sem a lista antiga das fachadas)
     jogador/animador_modelo.gd ..... agachado rápido continua com a animação agachada
+    inimigos/vagos.gd .............. orçamento: só recolhe os infectados que passam do limite (não desce do mínimo)
     menu/config.gd ................. VERSAO "1.04"
     ferramentas/testes/ ............ teste_escadas_incendio NOVO; teste_ia_101 e rodar.sh mexidos; teste_diretor e
                                      teste_portas_corrimao esperam em tempo de JOGO (quadros de física), não de
