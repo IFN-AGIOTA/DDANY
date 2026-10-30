@@ -352,7 +352,7 @@ func _orcamento(dt: float) -> void:
 	var teto := max_ativos if teto_custo < 0 else teto_custo
 	if custo_ms > orcamento_ms:
 		teto_custo = maxi(MIN_REAIS, mini(teto, vivos.size()) - 2)
-		_aliviar(2)
+		_aliviar(vivos.size() - teto_custo)      # 1.04: só o que passa do teto (antes tirava 2 sempre e descia abaixo de MIN_REAIS)
 	elif custo_ms < orcamento_ms * 0.75 and teto_custo >= 0:
 		teto_custo += 1
 		if teto_custo >= max_ativos:
