@@ -44,8 +44,8 @@ ATUALIZAÇÃO 1.05 · CAIXAS D'ÁGUA COM FÍSICA (E DE VOLTA AOS TELHADOS)
   · As caixas d'água de madeira dos telhados agora têm física: você esbarra nelas (base de ferro, tanque e tampa),
     não atravessa mais, e os tiros param nelas. A física só existe nos prédios a até 30 m de você (junto com a das
     escadas de incêndio): não pesa.
-  · CONSERTO: na 1.04 as caixas d'água tinham sumido da cidade (um erro na mudança dos prédios). Voltaram: cerca de
-    1 em cada 6 prédios fechados até 70 m de altura tem uma.
+  · CONSERTO: na 1.04 as caixas d'água tinham sumido da cidade (um erro na mudança dos prédios). Voltaram: 2.775
+    prédios (cerca de 1 em cada 6) têm uma.
   · Agora a caixa fica inteira dentro do telhado, a pelo menos 1,2 m da borda: não fica pendurada para fora nem
     fecha a chegada das escadas de incêndio. Prédios pequenos demais para ela ficam sem. Os prédios baixos abertos
     (telhado com mureta) continuam com a caixa d'água deles, que já tinha física.
