@@ -40,6 +40,24 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.05 · CAIXAS D'ÁGUA COM FÍSICA (E DE VOLTA AOS TELHADOS)
+  · As caixas d'água de madeira dos telhados agora têm física: você esbarra nelas (base de ferro, tanque e tampa),
+    não atravessa mais, e os tiros param nelas. A física só existe nos prédios a até 30 m de você (junto com a das
+    escadas de incêndio): não pesa.
+  · CONSERTO: na 1.04 as caixas d'água tinham sumido da cidade (um erro na mudança dos prédios). Voltaram: cerca de
+    1 em cada 6 prédios fechados até 70 m de altura tem uma.
+  · Agora a caixa fica inteira dentro do telhado, a pelo menos 1,2 m da borda: não fica pendurada para fora nem
+    fecha a chegada das escadas de incêndio. Prédios pequenos demais para ela ficam sem. Os prédios baixos abertos
+    (telhado com mureta) continuam com a caixa d'água deles, que já tinha física.
+  ARQUIVOS MEXIDOS (testado: teste_escadas_incendio + caixas d'água (estão nos telhados, ficam longe da borda, você
+  esbarra, o tiro para); compilar_tudo; + a bateria):
+    mundo/cidade.gd ................ caixas d'água de volta; inteiras no telhado (CAIXA_RAIO); caixas_dagua (por prédio)
+    mundo/escadas_incendio.gd ...... caixa_dagua_fisica: colisão da caixa d'água junto com a física das escadas
+    menu/config.gd ................. VERSAO "1.05"
+    ferramentas/testes/teste_escadas_incendio.gd ... conferências das caixas d'água
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..." + seção 10
+
 ATUALIZAÇÃO 1.04 · ESCADAS DE INCÊNDIO DE VERDADE (SUBIR NOS PRÉDIOS) E AGACHADO CERTO
   ESCADAS DE INCÊNDIO:
   · Antes eram só enfeite (sem física, em 30% dos prédios de 4 a 13 andares, começando no 1º andar). Agora TODO
@@ -3190,6 +3208,9 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
                                           que abre: mundo/interior.gd _telhado · altura do telhado dos prédios
                                           baixos: mundo/interior.gd altura_telhado
 - topo das torres escalonadas (física) mundo/colisao_mundo.gd (topos) · mundo/cidade.gd (predio_topos)
+- CAIXAS D'ÁGUA dos telhados ......... onde ficam e o desenho: mundo/cidade.gd (caixas_dagua, CAIXA_RAIO,
+                                          _malha_caixa_dagua) · física: mundo/escadas_incendio.gd
+                                          caixa_dagua_fisica (montada com a das escadas, a até 30 m)
 - oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd
 - chunks de 500 m (o que fica na cena, raio) ....... mundo/chunks.gd (+ Opções › Gráficos › Raio de chunks)
 - fios de poste e halos de luz (0.84) ............. mundo/luzes_rua.gd (onde ficam: mundo/abandono.gd _poste_luzes)
@@ -3422,8 +3443,8 @@ MÚSICA (pasta audio/)
 -----------------------------------------------------------------------------------------------------
 10. LIMITAÇÕES CONHECIDAS E PRÓXIMOS PASSOS
 -----------------------------------------------------------------------------------------------------
-- 1.04: nos telhados, as caixas d'água de madeira e o topo estreito das torres (quando o prédio está aberto) não têm
-  física (dá para atravessar); os infectados não sobem nas escadas de incêndio. Perto do telhado, o último patamar
+- 1.04: nos telhados, o topo estreito das torres (quando o prédio está aberto) não tem física (dá para atravessar;
+  as caixas d'água ganharam física na 1.05); os infectados não sobem nas escadas de incêndio. Perto do telhado, o último patamar
   pode ficar fora da altura das janelas (o lance que chega no telhado nunca é baixo demais nem íngreme demais).
 - 1.00: as silhuetas da horda de longe só existem no jogo solo e no host (o cliente não tem a população). O mutado
   infectado ainda não escala paredes nem salta entre telhados (só corre e salta no chão). O arremesso de um amigo é

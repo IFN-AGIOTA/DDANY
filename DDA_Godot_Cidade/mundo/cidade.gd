@@ -35,6 +35,7 @@ const Y_LAGO := 0.2
 const Y_PARQUE := 0.4
 const Y_CALCADA := 0.55
 const Y_RUA := 0.6
+const CAIXA_RAIO := 2.6                     # 1.05: raio da caixa d'água do telhado (até o canto da base de ferro), escala 1
 # 0.82: faixas pintadas 6 mm acima do asfalto (na mesma altura piscavam). Elas usam a MESMA camada do asfalto: a
 # camada é um empurrão de profundidade e, com mais empurrão, de longe as faixas passavam por cima dos pneus dos
 # carros e da base das coisas (pareciam flutuar). Os 6 mm já separam bem (rasante, viram metros de profundidade).
@@ -55,6 +56,7 @@ var is_built := false
 var dados_cidade = null
 var predios := PackedFloat32Array()         # x, z, tam_x, tam_z, altura de cada prédio (para a colisão)
 var predio_topos := {}                      # 1.04: índice -> [tam_x, tam_z, y do corpo, altura] do topo das torres escalonadas
+var caixas_dagua := {}                      # 1.05: índice do prédio -> Transform3D da caixa d'água do telhado (física: escadas_incendio.gd)
 var ambiente: Environment                   # céu/neblina (Opções › Gráficos mexe na neblina)
 var sol: DirectionalLight3D                 # Opções › Gráficos › Sombras
 var mat_predio: ShaderMaterial              # Opções › Gráficos › Detalhes dos shaders (janelas)
@@ -748,6 +750,8 @@ func _buildings() -> void:
 					predio_info.append(info)
 				continue
 			var h1 := h
+			var caixa_t := Transform3D()                 # 1.05: a caixa d'água deste telhado (escala 0 = não tem)
+			caixa_t.basis = Basis.from_scale(Vector3.ZERO)
 			if h > 60.0 and extra.randf() < 0.55:
 				# torre escalonada: corpo + topo mais estreito
 				h1 = h * extra.randf_range(0.6, 0.75)
@@ -756,22 +760,32 @@ func _buildings() -> void:
 				lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * k2, h2, sz * k2)), Vector3(bx, Y_RUA + h1 + h2 * 0.5, bz)), cor, Color(sx * k2, h2, sz * k2, dado_predio(tipo, sem))])
 				if fora == "":
 					predio_topos[predio_info.size()] = [sx * k2, sz * k2, h1, h2]   # 1.04: o topo tem colisão própria
+			elif h < 70.0 and extra.randf() < 0.18:
+				# caixa d'água de madeira no telhado (marca registrada de Nova York)
+				# (1.05: na 1.04 este "elif" ficou preso no "if fora" de baixo e as caixas sumiram; agora ela fica
+				# inteira dentro do telhado, a 1,2 m da borda, para não fechar a chegada das escadas de incêndio)
+				var s := extra.randf_range(0.8, 1.2)
+				var u := Vector2(extra.randf_range(-1.0, 1.0), extra.randf_range(-1.0, 1.0))
+				var folga := Vector2(sx * 0.5, sz * 0.5) - Vector2.ONE * (CAIXA_RAIO * s + 1.2)
+				if folga.x >= 0.0 and folga.y >= 0.0:
+					var off := Vector3(u.x * minf(folga.x, sx * 0.25), 0.0, u.y * minf(folga.y, sz * 0.25))
+					caixa_t = Transform3D(Basis.from_scale(Vector3.ONE * s), Vector3(bx, Y_RUA + h1, bz) + off)
 			if fora == "":
 				# guardado para a colisão (1.04: até o CORPO; antes ia até o alto da torre escalonada inteira e o
 				# telhado do corpo tinha uma parede invisível em volta do topo)
 				predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h1]))
-			elif h < 70.0 and extra.randf() < 0.18:
-				# caixa d'água de madeira no telhado (marca registrada de Nova York)
-				if not caixas.has(chave):
-					caixas[chave] = []
-				var off := Vector3(extra.randf_range(-0.25, 0.25) * sx, 0.0, extra.randf_range(-0.25, 0.25) * sz)
-				(caixas[chave] if fora == "" else []).append(Transform3D(Basis.from_scale(Vector3.ONE * extra.randf_range(0.8, 1.2)), Vector3(bx, Y_RUA + h1, bz) + off))
 			var t := Transform3D(Basis.from_scale(Vector3(sx, h1, sz)), Vector3(bx, Y_RUA + h1 * 0.5, bz))
 			info["h"] = h1
 			info["t"] = t
 			info["idx"] = lista_bloco.size()
 			info["entra"] = sorte.randf() < CHANCE_ENTRA
 			lista_bloco.append([t, cor, Color(sx, h1, sz, dado_predio(tipo, sem, not info["entra"]))])   # 1.00: térreo fechado = não entra
+			# a caixa d'água (os prédios baixos abertos já têm a deles no telhado do interior: mundo/interior.gd)
+			if fora == "" and caixa_t.basis.x.x > 0.0 and not (info["entra"] and EscadasIncendioCls.Interior.altura_telhado(info) > 0.0):
+				if not caixas.has(chave):
+					caixas[chave] = []
+				caixas[chave].append(caixa_t)
+				caixas_dagua[predio_info.size()] = caixa_t
 			if fora == "":
 				if info["entra"]:
 					n_entra += 1

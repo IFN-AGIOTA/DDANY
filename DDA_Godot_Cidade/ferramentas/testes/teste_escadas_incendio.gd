@@ -6,6 +6,7 @@ extends SceneTree
 #     um deles de PERNA QUEBRADA
 #   · o telhado do corpo das torres escalonadas tem chão (antes a caixa ia até o alto do topo estreito)
 #   · o desenho aparece perto da câmera (pedaços montados aos poucos)
+#   · 1.05: as CAIXAS D'ÁGUA voltaram aos telhados e têm física (você esbarra, fica em pé do lado, o tiro para nela)
 var falhas := 0
 func ok(c: bool, msg: String) -> void:
 	if c: print("  ok   ", msg)
@@ -159,6 +160,37 @@ func _r():
 		j.teleportar(canto, 0.0)
 		await q(60)
 		ok(absf(j.global_position.y - y_corpo) < 0.5 and j.is_on_floor(), "torre escalonada: dá para ficar no telhado do corpo, ao lado do topo (y %.1f, corpo %.1f)" % [j.global_position.y, y_corpo])
+	# ---- 1.05: caixas d'água dos telhados ----
+	print("  caixas d'água nos telhados: %d" % cid.caixas_dagua.size())
+	ok(cid.caixas_dagua.size() > 300, "as caixas d'água estão nos telhados (%d)" % cid.caixas_dagua.size())
+	var ci := -1
+	var cd := INF
+	for i in cid.caixas_dagua:
+		var d := Vector2(float(cid.predio_info[i]["x"]), float(cid.predio_info[i]["z"])).distance_to(Vector2(436, 1500))
+		if d < cd:
+			cd = d
+			ci = i
+	if ci >= 0:
+		var ct: Transform3D = cid.caixas_dagua[ci]
+		var s: float = ct.basis.x.length()
+		var o: Vector3 = ct.origin
+		var inf_c: Dictionary = cid.predio_info[ci]
+		var dentro := (o.x - float(inf_c["x"])) + 2.6 * s <= float(inf_c["sx"]) * 0.5 - 1.19 and (float(inf_c["x"]) - o.x) + 2.6 * s <= float(inf_c["sx"]) * 0.5 - 1.19
+		ok(dentro, "a caixa d'água fica inteira no telhado, longe da borda (chegada das escadas livre)")
+		var lado := o + Vector3(2.6 * s + 0.9, 0.3, 0.0)
+		m.mundo.forcar(Vector2(o.x, o.z))
+		j.teleportar(lado, 0.0)
+		j.velocity = Vector3.ZERO
+		await q(20)
+		m.cidade.escadas_incendio.montar_fisica_agora()
+		await q(40)
+		ok(absf(j.global_position.y - o.y) < 0.4 and j.is_on_floor(), "fica em pé no telhado ao lado da caixa d'água (y %.1f, telhado %.1f)" % [j.global_position.y, o.y])
+		await _andar(o, 4.0)
+		var dc := Vector2(j.global_position.x - o.x, j.global_position.z - o.z).length()
+		ok(dc > 1.8 * s and absf(j.global_position.y - o.y) < 0.4, "andando contra a caixa d'água você esbarra nela (parou a %.1f m do centro, base %.1f m)" % [dc, 1.8 * s])
+		var raio := PhysicsRayQueryParameters3D.create(o + Vector3(2.0 * s + 1.0, 4.0 * s, 0.0), o + Vector3(0.0, 4.0 * s, 0.0), 1)
+		var hit: Dictionary = j.get_world_3d().direct_space_state.intersect_ray(raio)
+		ok(not hit.is_empty() and (hit["collider"] as Node).name == "CaixaDagua", "o tiro para no tanque da caixa d'água (%s)" % (str((hit["collider"] as Node).name) if not hit.is_empty() else "nada"))
 	# ---- desenho ----
 	var esc = m.cidade.escadas_incendio
 	await q(120)

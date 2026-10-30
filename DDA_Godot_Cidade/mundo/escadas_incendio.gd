@@ -501,6 +501,8 @@ func _physics_process(_dt: float) -> void:
 			_corpos[i] = corpo
 			if not cx.is_empty():
 				_fila_fis.append([corpo, cx, 0])
+			if _cid.caixas_dagua.has(i):
+				caixa_dagua_fisica(corpo, _cid.caixas_dagua[i])
 	# monta as caixas aos poucos (uma torre de 50 andares tem ~2000)
 	var t0 := Time.get_ticks_usec()
 	while not _fila_fis.is_empty() and Time.get_ticks_usec() - t0 < ORCAMENTO_US:
@@ -515,6 +517,30 @@ func _physics_process(_dt: float) -> void:
 		f[2] = fim
 		if fim >= cx.size():
 			_fila_fis.pop_front()
+
+# 1.05 · CAIXA D'ÁGUA do telhado (a malha é a de mundo/cidade.gd _malha_caixa_dagua): base de ferro, tanque e
+# tampa. Camada 1 (mundo): para você e para os tiros (os infectados não chegam no telhado).
+static func caixa_dagua_fisica(pai: Node, t: Transform3D) -> StaticBody3D:
+	var c := StaticBody3D.new()
+	c.name = "CaixaDagua"
+	c.collision_layer = 1
+	c.collision_mask = 0
+	pai.add_child(c)
+	var s := t.basis.x.length()
+	var base := BoxShape3D.new()
+	base.size = Vector3(3.6, 2.0, 3.6) * s
+	var tanque := CylinderShape3D.new()
+	tanque.radius = 2.0 * s
+	tanque.height = 4.0 * s
+	var tampa := CylinderShape3D.new()
+	tampa.radius = 1.3 * s
+	tampa.height = 1.4 * s
+	for f in [[base, 1.0], [tanque, 4.0], [tampa, 6.7]]:
+		var cs := CollisionShape3D.new()
+		cs.shape = f[0]
+		cs.position = t.origin + Vector3(0.0, float(f[1]) * s, 0.0)
+		c.add_child(cs)
+	return c
 
 # (testes) monta já a física dos prédios perto de p
 func montar_fisica_agora() -> void:
