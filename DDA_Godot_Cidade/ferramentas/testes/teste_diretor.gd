@@ -217,8 +217,6 @@ func _r():
 	for v in D.membros:
 		if is_instance_valid(v) and (v.estado == V.INVESTIGANDO or v.esta_cacando()) and Vector2(v._destino.x - rua.x, v._destino.z - rua.z).length() < 12.0:
 			vindo += 1
-		elif is_instance_valid(v):
-			print("  FALHA-DIAG membro estado %d destino %s dist %.1f" % [v.estado, str(v._destino), Vector2(v._destino.x - rua.x, v._destino.z - rua.z).length()])
 	ok(D.membros.size() > 0 and vindo == D.membros.size(), "viraram infectados de verdade indo até você (%d de %d)" % [vindo, D.membros.size()])
 	D._parar_horda()
 	ok(not D.horda_ativa() and D.membros.is_empty(), "a horda para de te seguir depois de um tempo")
@@ -278,6 +276,7 @@ func _r():
 	ok(m.vagos.teto_custo >= m.vagos.MIN_REAIS and m.vagos.teto_custo < 22, "passou do orçamento: cabem menos de verdade (%d)" % m.vagos.teto_custo)
 	ok(m.vagos.vivos.size() < reais0 and hd2.total_virtuais() > 0, "os menos importantes (longe, fora da tela) voltaram a ser grupo (%d -> %d)" % [reais0, m.vagos.vivos.size()])
 	ok(m.vagos.vagas_reais() <= 0, "e não nasce mais ninguém enquanto isso")
+	ok(m.vagos.vivos.size() >= mini(m.vagos.MIN_REAIS, reais0), "e não desce abaixo do mínimo de verdade (%d, mínimo %d)" % [m.vagos.vivos.size(), m.vagos.MIN_REAIS])
 	var teto1: int = m.vagos.teto_custo
 	m.vagos.orcamento_ms = 1000.0                    # folga
 	await seg(3.5)
