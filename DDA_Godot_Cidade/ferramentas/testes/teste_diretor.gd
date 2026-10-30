@@ -228,7 +228,13 @@ func _r():
 		if k >= 7 and D.membros.size() > 0 and vindo == D.membros.size():
 			break
 	m.vagos.orcamento_ms = orc_h
-	ok(D.membros.size() > 0 and vindo == D.membros.size(), "viraram infectados de verdade indo até você (%d de %d)" % [vindo, D.membros.size()])
+	var nao_vem := ""
+	for v in D.membros:
+		if not is_instance_valid(v):
+			nao_vem += " [apagado]"
+		elif not ((v.estado == V.INVESTIGANDO or v.esta_cacando()) and Vector2(v._destino.x - rua.x, v._destino.z - rua.z).length() < 12.0):
+			nao_vem += " [estado %d, destino a %.0f m, ele a %.0f m]" % [v.estado, Vector2(v._destino.x - rua.x, v._destino.z - rua.z).length(), Vector2(v.global_position.x - rua.x, v.global_position.z - rua.z).length()]
+	ok(D.membros.size() > 0 and vindo == D.membros.size(), "viraram infectados de verdade indo até você (%d de %d)%s" % [vindo, D.membros.size(), nao_vem])
 	D._parar_horda()
 	ok(not D.horda_ativa() and D.membros.is_empty(), "a horda para de te seguir depois de um tempo")
 	m.vagos.max_ativos = 0
