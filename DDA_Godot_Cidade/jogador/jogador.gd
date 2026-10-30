@@ -429,6 +429,15 @@ func agarrar(t: float) -> void:
 		sobrevivencia.aviso.emit("AGARRADO!")
 	agarrado = maxf(agarrado, t)
 
+# 1.02: andando contra a folha de uma porta aberta pela metade, ela termina de abrir (mundo/porta.gd empurrar)
+func _empurrar_portas() -> void:
+	for i in get_slide_collision_count():
+		var c := get_slide_collision(i).get_collider() as Node
+		if c is AnimatableBody3D and c.get_parent() != null:
+			var pt := c.get_parent().get_parent()
+			if pt != null and pt.has_method("empurrar"):
+				pt.empurrar()
+
 # PASSOS: um a cada passada (mais longa correndo), mais baixo agachado, "chapinhando" com o chão molhado
 func _passos(delta: float) -> void:
 	_t_dor = maxf(0.0, _t_dor - delta)
@@ -861,6 +870,7 @@ func _physics_process(delta: float) -> void:
 	var vy_antes := velocity.y
 	var no_ar := not no_chao
 	move_and_slide()
+	_empurrar_portas()
 	if no_ar and is_on_floor() and sobrevivencia != null:
 		sobrevivencia.queda(vy_antes)    # dano de queda / perna quebrada
 		if vy_antes < -3.0:

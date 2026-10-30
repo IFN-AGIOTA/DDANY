@@ -220,7 +220,7 @@ func _enfeite_abertura(f: int, s0: float, s1: float, ab: Array) -> void:
 		var abre := 1.0
 		if r.randf() < 0.6:
 			estado = "aberta"
-			abre = r.randf_range(0.9, 1.5) / 1.5
+			abre = r.randf_range(0.85, 1.0)        # 1.02: era 0,6-1,0 (a 60% o vão ficava mais estreito que o corpo)
 		elif r.randf() < 0.5:
 			estado = "quebrada"
 			r.randf_range(-0.3, 0.3)
@@ -284,7 +284,7 @@ func _parede_int(a: Vector2, b: Vector2, vaos: Array) -> void:
 		var giro := atan2(nrm.x, nrm.y) + (PI if _rp.randf() < 0.5 else 0.0)
 		if x >= 0.25 and s1 - s0 > 1.0:
 			portas.append({"pos": Vector3(meio.x, 0.0, meio.y), "giro": giro, "larg": s1 - s0 - 0.04, "alt": 2.2,
-				"parede": DIV, "dupla": false, "estado": "aberta" if x < 0.65 else "fechada", "abertura": _rp.randf_range(0.55, 1.0)})
+				"parede": DIV, "dupla": false, "estado": "aberta" if x < 0.65 else "fechada", "abertura": _rp.randf_range(0.85, 1.0)})   # 1.02: era 0,55-1,0 (meio aberta trancava a passagem)
 		cur = s1
 	pedacos.append([cur, L, 0.0, PE_DIREITO])
 	for p in pedacos:
@@ -989,8 +989,10 @@ func _construir_escada(sobe: bool, buraco_embaixo: bool) -> void:
 			var topo_y := (i + 1) * hd
 			var p := _xz(d, w_meio)
 			resto.caixa(Vector3(p.x, topo_y * 0.5, p.y), _tam_xz(cd + 0.01, ESCADA_L - 0.06, topo_y), concreto * (0.95 if i % 2 == 0 else 1.0))
-		# corrimão do lado de dentro
-		var w_corr := float(faixa[0]) + 0.05
+		# corrimão do lado de dentro (1.02: sempre na borda ENTRE os dois lances, que é o lado aberto; no lance B ele
+		# ficava encostado na parede e o lado do vão não tinha nada)
+		var borda := float(e["a"][0])
+		var w_corr := borda + (0.05 if nivel % 2 == 0 else -0.05)
 		for i in range(0, n, 4):
 			var t := (i + 0.5) / n
 			var d := lerpf(d0, d1, t) if sobe_para_frente else lerpf(d1, d0, t)
@@ -1009,6 +1011,11 @@ func _construir_escada(sobe: bool, buraco_embaixo: bool) -> void:
 		var meio := _xz((d0 + d1) * 0.5, w_meio)
 		var comp := sqrt(ESCADA_C * ESCADA_C + ALTURA_ANDAR * ALTURA_ANDAR)
 		col.append([Vector3(meio.x, ALTURA_ANDAR * 0.5, meio.y) - y * 0.15, Vector3(ESCADA_L, 0.3, comp + 0.4), 0.0, base])
+		# 1.02: barra de cima do corrimão e a "parede" fina dele (segura: antes dava para cair no vão da escada)
+		var mc := _xz((d0 + d1) * 0.5, w_corr)
+		var sobre := Vector3(mc.x, ALTURA_ANDAR * 0.5, mc.y)
+		resto.caixa(sobre + y * 1.0, Vector3(0.05, 0.05, comp), Color(0.25, 0.25, 0.27), base)
+		col.append([sobre + y * 0.55, Vector3(0.08, 1.1, comp), 0.0, base])
 	if buraco_embaixo:
 		# corrimão em volta do buraco do lance que chegou de baixo (não deixa cair)
 		var veio_a := (nivel - 1) % 2 == 0

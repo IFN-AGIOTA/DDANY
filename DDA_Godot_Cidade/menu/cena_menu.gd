@@ -86,6 +86,9 @@ func _ambiente() -> void:
 	sol.light_energy = 1.9
 	sol.shadow_enabled = true
 	sol.directional_shadow_max_distance = 25.0
+	# 1.02: uma cascata só (a sombra que importa é a do soldado, a poucos metros): antes eram 4, e os objetos que
+	# fazem sombra eram desenhados 4 vezes por quadro só para ela
+	sol.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 	add_child(sol)
 	sol.look_at_from_position(Vector3(-260, 131, -1480).normalized() * 50.0, Vector3.ZERO)
 	var contorno := DirectionalLight3D.new()       # luz quente do lado esquerdo do soldado

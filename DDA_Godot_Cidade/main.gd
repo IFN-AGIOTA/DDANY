@@ -503,6 +503,7 @@ func _abrir_opcoes() -> void:
 		pausa.visible = false
 
 func _fechar_opcoes() -> void:
+	Config.salvar_pendente()                  # 1.02: o deslizante grava depois; ao fechar, grava já
 	if opcoes != null:
 		opcoes.queue_free()
 		opcoes = null

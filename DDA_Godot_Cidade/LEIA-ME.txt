@@ -40,6 +40,54 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.02 · MENU SEM TRAVAR, PORTAS QUE NÃO PRENDEM E CORRIMÃOS DE VERDADE
+  PORTAS (o personagem travava na porta e só saía pulando; com a perna quebrada, não saía):
+  · Reproduzido na porta da rua da foto (5472, 387): com o personagem parado no vão, ABRIR a porta fazia a folha girar
+    por dentro dele e prendê-lo entre ela, a parede e o batente (3 de 8 posições presas). Agora a folha não bate em
+    ninguém enquanto gira e, parada, só volta a ser sólida quando ninguém está dentro dela: sai andando, até mancando.
+  · Andando contra uma porta aberta só um pouco, ela termina de abrir (antes travava no vão estreito).
+  · As portas que já nascem abertas abrem pelo menos 85% (antes podiam nascer com 55-60%: o vão ficava mais estreito
+    que o corpo; nos prédios testados, 236 de 364 portas abertas eram assim). Os móveis não mudam de lugar.
+  CORRIMÃOS (dava para cair da escada por baixo do corrimão e quebrar a perna):
+  · Escadas de fora dos locais especiais (posto, supermercado, armazém, metrô, quartel...): o corrimão agora segura
+    (antes era só desenho: andando contra ele, caía em 9 de 20 escadas testadas; agora em nenhuma).
+  · Escada de dentro dos prédios: o corrimão do lance que sobe do 1º andar ficava do lado da parede, e o lado aberto
+    não tinha nada; agora os dois lances têm o corrimão na borda entre eles, com a barra de cima e colisão.
+  MENU — medido com testes (o menu de verdade aberto, cada passo do volume cronometrado) e consertado:
+  · VOLUME TRAVANDO: com o jogo rodando, cada passo do deslizante de volume (ou qualquer outra opção, até ligar o
+    contador de FPS) reaplicava TODAS as opções, e uma delas refazia o alcance dos 26 mil objetos da rua procurando
+    cada um numa lista enorme: ~0,6 s por passo. Arrastar o volume de 100 a 0 travava o jogo uns 12 s ("Restaurar
+    tudo" travava ~0,5 min). Agora:
+      - o volume (geral, música, efeitos, som ligado) só mexe no som: 0,03 ms por passo;
+      - as partes pesadas (objetos da rua, detalhes, texturas, fios e halos) só são refeitas quando o valor delas muda;
+      - quando mudam de verdade (APLICAR nos Gráficos), refazer os objetos da rua leva ~30 ms (era ~550).
+  · O arquivo de opções não é mais gravado no disco a cada passo do deslizante: grava meio segundo depois do último
+    passo, e na hora ao fechar as Opções, sair do jogo ou trocar de app no celular.
+  · ABRIR AS OPÇÕES: só a aba aberta é montada (as outras na primeira vez que você toca nelas): abre em ~15 ms
+    (era ~130) e com bem menos peças na tela.
+  · Com as Opções abertas, a cidade (ou a cena do menu) atrás não é mais desenhada: o fundo das Opções já cobria
+    quase tudo. O quadro com as Opções abertas ficou ~6x mais leve no computador de teste (122 -> 19 ms com o jogo
+    rodando). Ao fechar, volta tudo.
+  · MENU PRINCIPAL: a sombra do sol na cena do soldado usa uma faixa só (eram 4, para uma cena de poucos metros):
+    ~20% mais leve no computador de teste, mesma imagem.
+  ARQUIVOS MEXIDOS (testado: teste_menu_leve NOVO 19 conferências, teste_portas_corrimao NOVO 8 (o mesmo teste no
+  código antigo acusa 5 falhas); + a bateria toda):
+    mundo/porta.gd ................. a folha não prende (PRENDE, _solida, _alguem_na_folha); empurrar
+    jogador/jogador.gd ............. _empurrar_portas (andar contra a porta meio aberta)
+    mundo/interior.gd .............. portas que nascem abertas abrem 85-100%; corrimão da escada na borda entre os
+                                     lances, com barra e colisão
+    mundo/local.gd ................. colisão do corrimão das escadas; a lista escadas guarda o lado do corrimão
+    menu/aplicar_opcoes.gd ......... som com caminho próprio (SO_SOM, _aplicar_som); partes pesadas só quando mudam
+                                     (_mudou)
+    mundo/abandono.gd .............. aplicar_modelos sem procurar na lista (dicionário)
+    menu/config.gd ................. grava depois (salvar_depois, salvar_pendente, SALVAR_EM); VERSAO "1.02"
+    main.gd ........................ fechar as Opções grava o que faltava
+    menu/opcoes.gd ................. abas montadas na 1ª vez (_pagina); sem 3D atrás (_esconder_3d)
+    menu/cena_menu.gd .............. sombra do sol com uma faixa só
+    ferramentas/testes/ ............ teste_menu_leve e teste_portas_corrimao NOVOS; rodar.sh mexido
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + seção 4 (portas) + mapa "QUERO MEXER EM..."
+
 ATUALIZAÇÃO 1.01 · SEGUNDA LEVA DO ESTUDO (VASCULHAR, REDE MAIS LISA, TOQUE, ACERTO)
   O que ainda estava marcado com ➜ no estudo (estudos/ESTUDO_AAA.md, agora com ✅):
   · INFECTADOS:
@@ -2658,6 +2706,7 @@ VEÍCULOS (0.76): tanque 30 L · ~1,6 L/km + 0,03 L/min ligado · até ~86 km/h 
   m/s · motor ouvido a ~38 m · ~4% dos sedãs/táxis/vans inteiros funcionam
 PORTAS (0.73): porta 100 de vida, cada tábua mais 140 (até 3) · golpe de infectado na porta = mordida x2,2
   (8–14 x 2,2) · abrir/fechar: barulho de 7 m · martelar tábua 10,5 m · porta quebrando 14 m · usar até 1,9 m
+  · 1.02: as que nascem abertas abrem 85–100% (eram 55–100% as de dentro e 60–100% as da rua)
 VOID (0.99.3, jogador/jogador.gd): depois de teleporte espera o chão até 4 s (chão até 1,6 m embaixo) · ponto seguro a
   cada 0,5 s em pé · resgate abaixo de y -70 m (o fundo do bunker mais fundo fica a ~-38 m)
 DIRETOR DE IA (1.00, inimigos/diretor.gd): intensidade 0-1 (mordida = dano/100 x2,5 · infectado morrendo a até 15 m
@@ -2818,8 +2867,10 @@ MENUS E OPÇÕES (pasta menu/)
   baixados e licenças) ................ menu/creditos.gd (lista RECURSOS)
 - cena 3D do menu (pôr do sol,
   skyline, soldado no terraço) ........ menu/cena_menu.gd
-- tela de Opções (6 abas) ............. menu/opcoes.gd
-- valores padrão e predefinições ...... menu/config.gd (autoload "Config"; salva em user://opcoes.cfg)
+- tela de Opções (8 abas) ............. menu/opcoes.gd (1.02: cada aba é montada na 1ª vez que abre: _pagina;
+                                          com as Opções na tela o 3D não é desenhado: _esconder_3d)
+- valores padrão e predefinições ...... menu/config.gd (autoload "Config"; salva em user://opcoes.cfg; 1.02: grava
+                                          SALVAR_EM s depois do último passo: salvar_depois, salvar_pendente)
 - o que cada opção faz no jogo ........ menu/aplicar_opcoes.gd
 - brilho/contraste/saturação/vinheta .. menu/filtro_tela.gd
 - menu de pausa ....................... menu/pausa.gd
@@ -2958,7 +3009,8 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - LOCAIS ESPECIAIS (zonas de PvP; hospitais: zona neutra): onde ficam, casca de longe,
   monta/desmonta, infectados, aviso ...... mundo/locais.gd (lista LOCAIS: ferramentas/escolher_locais.gd)
 - posto, hospital, supermercado e armazém
-  por dentro e por fora (planta, móveis) . mundo/local.gd (loot: tabelas em mundo/loot_mundo.gd)
+  por dentro e por fora (planta, móveis) . mundo/local.gd (loot: tabelas em mundo/loot_mundo.gd · 1.02: colisão
+                                          do corrimão das escadas em _escada)
 - DELEGACIA, ESCOLA, ESTAÇÃO DO METRÔ e
   QUARTEL por dentro e por fora (0.78) .. mundo/local_novos.gd (usa as peças do mundo/local.gd)
 - letreiros e pichações dos locais ...... mundo/local.gd (_texto) e mundo/local_novos.gd
@@ -2973,7 +3025,8 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - converter jogo salvo antigo (números
   dos prédios mudaram) ................. menu/salvamento.gd (MAPA_PREDIOS) e mundo/cidade.gd (remapa_v2/v3)
 - prédios por dentro (cômodos, portas,
-  escadas, andares de cima, telhado) . mundo/interior.gd
+  escadas, andares de cima, telhado) . mundo/interior.gd (1.02: corrimão da escada com barra e colisão na
+                                          borda entre os lances: _construir_escada)
 - onde vai cada móvel nos prédios
   (preenchimento: parede atrás, longe de
   portas/janelas, altura dos móveis) .. mundo/interior.gd (_muros, _vaos, ALTO, _parede_atras, _livre)
@@ -2996,6 +3049,10 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - PORTA (abrir/fechar, tábuas, vida,
   quebrar, estado guardado) ........... mundo/porta.gd (onde ficam: mundo/interior.gd · infectados batendo:
                                         inimigos/vago.gd _porta_no_caminho · BARRICAR: inventario/inventario.gd)
+                                        · 1.02: a folha não prende ninguém (PRENDE, _alguem_na_folha) e termina
+                                        de abrir quando você anda contra ela (empurrar; chamado por
+                                        jogador/jogador.gd _empurrar_portas) · quanto as que nascem abertas abrem:
+                                        mundo/interior.gd ("abertura")
 - JANELA do térreo (vidro, quebrar,
   pular, tábuas) ...................... mundo/janela.gd (0.90; onde ficam: mundo/interior.gd · pular: jogador/
                                         jogador.gd passar_janela · infectados: inimigos/vago.gd _porta_no_caminho)
@@ -3023,7 +3080,9 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - chunks de 500 m (o que fica na cena, raio) ....... mundo/chunks.gd (+ Opções › Gráficos › Raio de chunks)
 - fios de poste e halos de luz (0.84) ............. mundo/luzes_rua.gd (onde ficam: mundo/abandono.gd _poste_luzes)
 - o que cada opção de Gráficos faz ................ menu/aplicar_opcoes.gd (textos: menu/opcoes.gd · predefinições:
-                                                    menu/config.gd GFX_PRESETS)
+                                                    menu/config.gd GFX_PRESETS) · 1.02: o som tem caminho próprio
+                                                    (SO_SOM, _aplicar_som) e as partes pesadas só rodam quando o
+                                                    valor delas muda (_mudou)
 - roda de armas (botão ARMA, tecla Q) .............. hud/roda_armas.gd (+ jogador/controles.gd)
 - TESTES AUTOMÁTICOS (rodar antes de publicar) ..... ferramentas/testes/rodar.sh (instruções no topo de cada teste)
 - colisão em volta dos amigos (host) ............. mundo/colisao_mundo.gd (criar_extra) + rede/sessao_rede.gd

@@ -5,7 +5,7 @@ extends Node
 
 signal mudou(chave: String)          # "gfx" quando os gráficos foram aplicados; "hud" quando a HUD foi editada
 
-const VERSAO := "1.01"
+const VERSAO := "1.02"
 const ARQUIVO := "user://opcoes.cfg"
 
 const PADRAO := {
@@ -72,6 +72,7 @@ func _ready() -> void:
 	o = PADRAO.duplicate()
 	g = gfx_padrao()
 	carregar()
+	set_process(false)
 
 func gfx_padrao() -> Dictionary:
 	var d: Dictionary = GFX_PRESETS["auto"].duplicate()
@@ -85,8 +86,33 @@ func definir(k: String, v) -> void:
 	if o.get(k) == v:
 		return
 	o[k] = v
-	salvar()
+	salvar_depois()
 	mudou.emit(k)
+
+# 1.02 · GRAVAR DEPOIS: arrastar um deslizante (volume, sensibilidade...) gravava o arquivo no disco a cada passo. Agora
+# grava SALVAR_EM s depois do último passo (ou já, ao fechar as Opções, sair do jogo ou o celular trocar de app).
+const SALVAR_EM := 0.5
+var _t_salvar := -1.0
+func salvar_depois() -> void:
+	_t_salvar = SALVAR_EM
+	set_process(true)
+
+func salvar_pendente() -> void:
+	if _t_salvar >= 0.0:
+		salvar()
+
+func _process(dt: float) -> void:
+	if _t_salvar < 0.0:
+		set_process(false)
+		return
+	_t_salvar -= dt
+	if _t_salvar < 0.0:
+		salvar()
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_APPLICATION_PAUSED \
+			or what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_EXIT_TREE:
+		salvar_pendente()
 
 func aplicar_graficos(novo: Dictionary) -> void:
 	g = novo.duplicate()
@@ -142,3 +168,4 @@ func salvar() -> void:
 		cf.set_value("graficos", k, g[k])
 	cf.set_value("hud", "posicoes", hud_pos)
 	cf.save(ARQUIVO)
+	_t_salvar = -1.0

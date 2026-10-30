@@ -316,7 +316,7 @@ func _janelas(L: float, passo: float, larg: float, yb: float, yc: float, portas:
 
 # escada reta: pé em "ini", sobe na direção "dir" (eixo X ou Z) por "comp" metros até subir "dy"
 func _escada(ini: Vector2, dir: Vector2, larg: float, y0: float, dy: float, comp: float, cor: Color, corrimao := 0) -> void:
-	escadas.append([ini, dir, larg, y0, dy, comp])
+	escadas.append([ini, dir, larg, y0, dy, comp, corrimao])   # 1.02: + lado do corrimão (0 = sem)
 	var n := int(ceil(dy / 0.19))
 	var lat := Vector2(-dir.y, dir.x)
 	for i in n:
@@ -348,6 +348,11 @@ func _escada(ini: Vector2, dir: Vector2, larg: float, y0: float, dy: float, comp
 		y = -y
 	var meio2 := ini + dir * comp * 0.5
 	col.append([Vector3(meio2.x, y0 + dy * 0.5, meio2.y) - y * 0.15, Vector3(larg, 0.3, sqrt(comp * comp + dy * dy) + 0.3), 0.0, Basis(x, y, u)])
+	# 1.02: o CORRIMÃO segura (antes era só desenho: dava para cair da escada por baixo dele e quebrar a perna).
+	# Uma "parede" fina inclinada como a escada, da rampa até a altura do corrimão.
+	if corrimao != 0:
+		var mc := ini + lat * (larg * 0.5 - 0.05) * corrimao + dir * comp * 0.5
+		col.append([Vector3(mc.x, y0 + dy * 0.5, mc.y) + y * 0.55, Vector3(0.08, 1.1, sqrt(comp * comp + dy * dy)), 0.0, Basis(x, y, u)])
 
 # grade de proteção de a até b na altura y
 func _grade(a: Vector2, b: Vector2, y: float, cor := METAL_ESC) -> void:

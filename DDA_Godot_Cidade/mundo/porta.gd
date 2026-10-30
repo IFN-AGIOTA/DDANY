@@ -136,12 +136,42 @@ func _girar() -> void:
 	for k in _dobradicas.size():
 		_dobradicas[k].rotation.y = a if k == 0 else PI - a
 
+# 1.02 · A FOLHA NÃO PRENDE NINGUÉM: girando, ela não bate em ninguém; parada, só volta a ser sólida quando nenhum
+# jogador/infectado está dentro dela. Antes, abrir (ou fechar) com o personagem no vão fazia a folha passar por dentro
+# dele e prendê-lo entre ela, a parede e o batente: só saía pulando, e com a perna quebrada não saía.
+const PRENDE := 2 | 4                 # camadas de quem a folha poderia prender (jogador · infectados)
+
 func _physics_process(dt: float) -> void:
 	var alvo := abertura if aberta else 0.0
-	_k = move_toward(_k, alvo, dt / TEMPO)
-	_girar()
-	if _k == alvo:
-		set_physics_process(false)
+	if _k != alvo:
+		_solida(false)
+		_k = move_toward(_k, alvo, dt / TEMPO)
+		_girar()
+		return
+	if _alguem_na_folha():
+		_solida(false)                    # parada, mas tem alguém dentro dela: espera ele sair
+		return
+	_solida(true)
+	set_physics_process(false)
+
+func _solida(sim: bool) -> void:
+	for c in _corpos:
+		c.collision_layer = 1 if (sim and not quebrada) else 0
+
+func _alguem_na_folha() -> bool:
+	if quebrada or not is_inside_tree():
+		return false
+	var espaco := get_world_3d().direct_space_state
+	for c in _corpos:
+		for cs in c.get_children():
+			if cs is CollisionShape3D:
+				var q := PhysicsShapeQueryParameters3D.new()
+				q.shape = (cs as CollisionShape3D).shape
+				q.transform = (cs as CollisionShape3D).global_transform
+				q.collision_mask = PRENDE
+				if not espaco.intersect_shape(q, 1).is_empty():
+					return true
+	return false
 
 # ---------- o que o jogador pode fazer aqui (texto do botão PEGAR) ----------
 func acao(inv) -> String:
@@ -183,6 +213,13 @@ func alternar() -> void:
 		return
 	definir_aberta(not aberta, true)
 	_avisar_mudou()
+
+# 1.02 · EMPURRAR: quem anda contra uma porta ABERTA pela metade termina de abrir (antes a folha meio aberta deixava
+# um vão mais estreito que o corpo e só passava pulando; com a perna quebrada, não passava). Fechada não abre sozinha.
+func empurrar() -> void:
+	if aberta and not quebrada and tabuas <= 0 and abertura < 1.0:
+		abertura = 1.0
+		set_physics_process(true)
 
 func definir_aberta(sim: bool, com_som := false) -> void:
 	aberta = sim

@@ -84,8 +84,12 @@ func _fios_e_halos() -> void:
 const FATOR_MODELOS := [0.55, 0.75, 1.0, 1.3]
 func aplicar_modelos(nivel: int) -> void:
 	var f: float = FATOR_MODELOS[clampi(nivel, 0, 3)]
+	# 1.02: fios e halos num dicionário (antes "n in nos_fios" procurava na lista inteira para cada objeto: ~0,55 s)
+	var fora := {}
+	for n in nos_fios + nos_halos:
+		fora[n] = true
 	for n in nos:
-		if not is_instance_valid(n) or n in nos_fios or n in nos_halos:
+		if not is_instance_valid(n) or fora.has(n):
 			continue
 		if not n.has_meta("alc"):
 			n.set_meta("alc", Vector2(n.visibility_range_begin, n.visibility_range_end))

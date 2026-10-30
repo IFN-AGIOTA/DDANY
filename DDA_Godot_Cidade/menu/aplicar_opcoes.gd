@@ -51,7 +51,14 @@ func _ready() -> void:
 const SO_JOGADOR := ["mira_ferro", "cam", "pos", "dist", "fov", "sens", "inv", "msens", "msens_mira", "minv", "gsens", "gyro_inv",
 	"gyro_zero", "ctrl", "vib"]
 
+# 1.02 · SOM: mexer no volume só mexe no som. Antes cada passo do deslizante reaplicava TUDO (com o jogo rodando,
+# ~0,6 s por passo: arrastar o volume travava o jogo por vários segundos).
+const SO_SOM := ["som", "vol", "mus", "mvol", "svol"]
+
 func aplicar(chave := "") -> void:
+	if chave in SO_SOM:
+		_aplicar_som()
+		return
 	if chave in SO_JOGADOR:
 		_aplicar_jogador()
 		return
@@ -64,19 +71,7 @@ func aplicar(chave := "") -> void:
 	var o: Dictionary = Config.o
 	var g: Dictionary = Config.g
 	# som e tela (valem no menu também)
-	var bus := AudioServer.get_bus_index("Master")
-	AudioServer.set_bus_mute(bus, not bool(o["som"]))
-	AudioServer.set_bus_volume_db(bus, linear_to_db(maxf(0.0001, float(o["vol"]) / 100.0)))
-	var bm := AudioServer.get_bus_index("Musica")          # música procedural (audio/musica_procedural.gd)
-	if bm != -1:
-		AudioServer.set_bus_mute(bm, not bool(o.get("mus", true)))
-		AudioServer.set_bus_volume_db(bm, linear_to_db(maxf(0.0001, float(o.get("mvol", 70)) / 100.0)))
-	var bs := AudioServer.get_bus_index("SFX")             # efeitos (criado em audio/musica_procedural.gd)
-	if bs != -1:
-		AudioServer.set_bus_volume_db(bs, linear_to_db(maxf(0.0001, float(o.get("svol", 100)) / 100.0)))
-	var bu := AudioServer.get_bus_index("UI")              # sons do menu (audio/sons.gd): mesmo volume dos efeitos
-	if bu != -1:
-		AudioServer.set_bus_volume_db(bu, linear_to_db(maxf(0.0001, float(o.get("svol", 100)) / 100.0)))
+	_aplicar_som()
 	DisplayServer.screen_set_keep_on(bool(o["awake"]))
 	Engine.max_fps = int(g["cap"]) if int(g["cap"]) > 0 else ((RITMO_ESTAVEL if ritmo_estavel else 60) if OS.has_feature("mobile") else 0)   # celular: no máximo 60 (esquenta menos)
 	var vp := get_viewport()
@@ -97,6 +92,32 @@ func aplicar(chave := "") -> void:
 		if sf != null:
 			sf.visible = int(g["shad"]) >= 1
 	_aplicar_resto(o, g, j)
+
+func _aplicar_som() -> void:
+	var o: Dictionary = Config.o
+	var bus := AudioServer.get_bus_index("Master")
+	AudioServer.set_bus_mute(bus, not bool(o["som"]))
+	AudioServer.set_bus_volume_db(bus, linear_to_db(maxf(0.0001, float(o["vol"]) / 100.0)))
+	var bm := AudioServer.get_bus_index("Musica")          # música procedural (audio/musica_procedural.gd)
+	if bm != -1:
+		AudioServer.set_bus_mute(bm, not bool(o.get("mus", true)))
+		AudioServer.set_bus_volume_db(bm, linear_to_db(maxf(0.0001, float(o.get("mvol", 70)) / 100.0)))
+	var bs := AudioServer.get_bus_index("SFX")             # efeitos (criado em audio/musica_procedural.gd)
+	if bs != -1:
+		AudioServer.set_bus_volume_db(bs, linear_to_db(maxf(0.0001, float(o.get("svol", 100)) / 100.0)))
+	var bu := AudioServer.get_bus_index("UI")              # sons do menu (audio/sons.gd): mesmo volume dos efeitos
+	if bu != -1:
+		AudioServer.set_bus_volume_db(bu, linear_to_db(maxf(0.0001, float(o.get("svol", 100)) / 100.0)))
+
+# 1.02 · só refaz o que mudou: guarda com que valores cada parte pesada foi aplicada da última vez (a chave inclui
+# QUAL cidade e quantos objetos ela tem, então um jogo novo ou objetos novos aplicam de novo). Trocar o tamanho da HUD,
+# o contador de FPS ou "Restaurar tudo" não refaz mais os modelos da rua inteira.
+var _ultimos := {}
+func _mudou(nome: String, valores: Array) -> bool:
+	if _ultimos.get(nome) == valores:
+		return false
+	_ultimos[nome] = valores
+	return true
 
 # 0.92 · MODO DE DESENHO (só no PC exportado): ULTRA = o renderizador completo da Godot (Forward+, Vulkan), escrito
 # no override.cfg ao lado do .exe (a Godot lê ao abrir; se a placa não tiver Vulkan ela volta sozinha para o leve).
@@ -204,15 +225,19 @@ func _aplicar_resto(o: Dictionary, g: Dictionary, j) -> void:
 	if cid != null and is_instance_valid(cid):
 		if cid.sol != null:
 			cid.sol.shadow_enabled = int(g["shad"]) >= 2
-		if cid.has_method("aplicar_detalhes"):
+		var qual: Array = [cid.get_instance_id(), cid.detalhes.size(), cid.detalhes_fachada.size(), cid.detalhes_veg.size(), cid.mats_chao.size()]
+		if cid.has_method("aplicar_detalhes") and _mudou("detalhes", qual + [int(g["shd"]), int(g["detd"]), bool(g["wtr"])]):
 			cid.aplicar_detalhes(int(g["shd"]), int(g["detd"]), bool(g["wtr"]))     # janelas dos prédios · árvores/caixas d'água
 		# 0.84: as opções que estavam "em breve"
-		if cid.has_method("aplicar_texturas"):
+		if cid.has_method("aplicar_texturas") and _mudou("texturas", qual + [int(g.get("tex", 3)), aniso_efetivo(int(g.get("aniso", 1)))]):
 			cid.aplicar_texturas(int(g.get("tex", 3)), aniso_efetivo(int(g.get("aniso", 1))))   # texturas e filtragem anisotrópica do chão
 		var ab = cid.get("abandono")
 		if ab != null:
-			ab.aplicar_modelos(int(g.get("models", 2)))                       # até onde os objetos da rua aparecem
-			ab.aplicar_luzes(bool(g.get("wire", true)), bool(g.get("halo", true)))   # fios de poste · halos de luz
+			var qual_ab: Array = [ab.get_instance_id(), ab.nos.size(), ab.nos_fios.size()]
+			if _mudou("modelos", qual_ab + [int(g.get("models", 2))]):
+				ab.aplicar_modelos(int(g.get("models", 2)))                       # até onde os objetos da rua aparecem
+			if _mudou("luzes", qual_ab + [bool(g.get("wire", true)), bool(g.get("halo", true))]):
+				ab.aplicar_luzes(bool(g.get("wire", true)), bool(g.get("halo", true)))   # fios de poste · halos de luz
 		_efeitos_ultra(cid)
 		if cid.ambiente != null:
 			# raio de chunks menor que a distância de visão: mais neblina, para a borda do mundo carregado não aparecer

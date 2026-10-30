@@ -32,6 +32,8 @@ var _sec_gsens: Control
 var _linha_gyro: Control
 var _confirmar_t := 0.0
 var _bt_restaurar: Control
+var _area: Control              # 1.02: onde as páginas entram (cada uma é montada na primeira vez que a aba abre)
+var _v := 1.0
 
 func _ready() -> void:
 	layer = 30
@@ -39,6 +41,16 @@ func _ready() -> void:
 	_pend = Config.g.duplicate()
 	get_viewport().size_changed.connect(_montar)
 	_montar()
+	visibility_changed.connect(_esconder_3d)
+	_esconder_3d()
+
+# 1.02: o fundo das Opções cobre 94-97% da tela, mas o mundo 3D (a cidade no jogo, a cena do menu) continuava sendo
+# desenhado inteiro atrás. Com as Opções na tela, o 3D não é desenhado (volta ao fechar ou ao editar a HUD).
+func _esconder_3d() -> void:
+	get_viewport().disable_3d = visible
+
+func _exit_tree() -> void:
+	get_viewport().disable_3d = false
 
 const SHADER_FUNDO := """
 shader_type canvas_item;
@@ -54,6 +66,12 @@ func _montar() -> void:
 		_raiz.queue_free()
 	_paginas.clear()
 	_gfx_widgets.clear()
+	_rotulo_preset = null
+	_bt_aplicar = null
+	_nota_gfx = null
+	_sec_gsens = null
+	_linha_gyro = null
+	_bt_restaurar = null
 	var v := UI.vh(self)
 	var vs := get_viewport().get_visible_rect().size
 	_raiz = Control.new()
@@ -98,21 +116,13 @@ func _montar() -> void:
 	area.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	area.mouse_filter = Control.MOUSE_FILTER_PASS
 	painel.add_child(area)
-	for i in ABAS.size():
-		var p: Control
-		match i:
-			0: p = _pagina_controles(v)
-			1: p = _pagina_teclado(v)
-			2: p = _pagina_camera(v)
-			3: p = _pagina_hud(v)
-			4: p = _pagina_graficos(v)
-			5: p = _pagina_video(v)
-			6: p = _pagina_infectados(v)
-			_: p = _pagina_ajuda(v)
-		p.set_anchors_preset(Control.PRESET_FULL_RECT)
-		p.visible = i == aba
-		area.add_child(p)
-		_paginas.append(p)
+	# 1.02: só a aba aberta é montada agora; as outras na primeira vez que forem abertas (antes as 8 de uma vez:
+	# ~900 nós e o dobro do tempo para abrir as Opções)
+	_area = area
+	_v = v
+	_paginas.resize(ABAS.size())
+	_paginas.fill(null)
+	_pagina(aba).visible = true
 	_msg = UI.rotulo("", 2.5 * v, UI.AMBAR, 700)
 	_msg.custom_minimum_size.y = 3.2 * v
 	painel.add_child(_msg)
@@ -123,8 +133,31 @@ func _trocar_aba(i: int) -> void:
 	if _abas != null and _abas.atual != i:
 		_abas.atual = i
 		_abas.queue_redraw()
+	_pagina(i)
 	for k in _paginas.size():
-		_paginas[k].visible = k == i
+		if _paginas[k] != null:
+			_paginas[k].visible = k == i
+	_atualizar_gyro()
+
+# a página da aba i (monta na primeira vez)
+func _pagina(i: int) -> Control:
+	if _paginas[i] != null:
+		return _paginas[i]
+	var p: Control
+	match i:
+		0: p = _pagina_controles(_v)
+		1: p = _pagina_teclado(_v)
+		2: p = _pagina_camera(_v)
+		3: p = _pagina_hud(_v)
+		4: p = _pagina_graficos(_v)
+		5: p = _pagina_video(_v)
+		6: p = _pagina_infectados(_v)
+		_: p = _pagina_ajuda(_v)
+	p.set_anchors_preset(Control.PRESET_FULL_RECT)
+	p.visible = false
+	_area.add_child(p)
+	_paginas[i] = p
+	return p
 
 func mensagem(t: String) -> void:
 	if _msg != null:
