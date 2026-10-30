@@ -82,7 +82,9 @@ ATUALIZAÇÃO 1.04 · ESCADAS DE INCÊNDIO DE VERDADE (SUBIR NOS PRÉDIOS) E AGA
     inimigos/vagos.gd .............. orçamento: só recolhe os infectados que passam do limite (não desce do mínimo)
     menu/config.gd ................. VERSAO "1.04"
     ferramentas/testes/ ............ teste_escadas_incendio NOVO; teste_ia_101 e rodar.sh mexidos; teste_diretor (+ não
-                                     desce do mínimo) e teste_portas_corrimao esperam em tempo de JOGO (quadros de física), não de
+                                     desce do mínimo; horda a 80 m sem disputar vaga com a população; orçamento
+                                     testado com 14 de verdade; a falha da horda diz o estado de quem não vem) e
+                                     teste_portas_corrimao esperam em tempo de JOGO (quadros de física), não de
                                      relógio (com a CPU ocupada falhavam sem motivo)
     menu/novidades_lista.gd ........ refeita
     LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..." + seção 8
