@@ -8,7 +8,8 @@ extends SceneTree
 #   · ANISOTROPIA: no PC fica a escolhida (no celular para em 2x).
 #   · SINAIS DE ACERTO: os sons "acerto" e "acerto_forte" existem.
 #   · ITEM NA MÃO mirando o arremesso.
-#   1.04: o "!" some quando o infectado morre · 1ª pessoa olhando para baixo: a câmera vai à frente do peito.
+#   1.04: o "!" some quando o infectado morre · agachado rápido continua agachado · 1ª pessoa olhando para baixo: a
+#   câmera vai à frente do peito.
 var falhas := 0
 func ok(c: bool, msg: String) -> void:
 	if c: print("  ok   ", msg)
@@ -209,6 +210,21 @@ func _r():
 	await q(10)
 	ok(tinha and not vm._marca.visible, "o \"!\" em cima do infectado some quando ele morre (antes ficava no corpo)")
 	_limpar()
+
+	# ---- 7b. (1.04) andando agachado rápido continua com a animação agachada (antes trocava por uma de pé) ----
+	if not j.agachado:
+		j.alternar_agachar()
+	await q(10)
+	var anims := {}
+	for k in 40:
+		j.controles.mover = Vector2(0, 1.0)
+		await q(2)
+		if j.vel_horizontal > 1.4:
+			anims[j.animador._ap.current_animation] = true
+	j.controles.mover = Vector2.ZERO
+	ok(anims.keys() == ["andar_agachado"], "andando agachado rápido a animação continua agachada (%s)" % str(anims.keys()))
+	j.alternar_agachar()
+	await q(10)
 
 	# ---- 8. (1.04) 1ª pessoa olhando para baixo: a câmera vai à frente do peito ----
 	root.get_node("Config").definir("cam", 1)

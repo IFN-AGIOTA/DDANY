@@ -16,7 +16,7 @@ extends Node
 #   · morte com 3 variações.
 #   · 0.59 · CAMINHADAS por velocidade (captura de movimento real da CMU, ferramentas/retarget_cmu.gd):
 #     devagar (andar_lento) · normal (andar_normal) · apressada (andar_rapido) · trote · corrida; agachado devagar =
-#     andar_agachado, agachado rápido = andar_espreita; perna quebrada = mancar. Cada uma com a velocidade de
+#     andar_agachado (1.04: rápido também, mais depressa); perna quebrada = mancar. Cada uma com a velocidade de
 #     referência em REF (a animação acompanha o chão sem "patinar").
 #   · 0.59 · POSTURA DA ARMA (jogador/camada_postura.gd): com pistola, faca/facão/pé de cabra ou taco/machado/
 #     cano/lança na mão, os braços seguram a arma do jeito dela por cima de qualquer caminhada (POSTURAS).
@@ -256,8 +256,8 @@ func atualizar_estado(dt: float, vel_h: float, no_chao: bool, vel_v: float, mira
 			nome = _andar_por_velocidade(vel_h) if _andar_por_velocidade(vel_h) != "" else nome
 			escala = _escala(nome, vel_h)
 		Estado.ANDAR_AGACHADO:
-			if vel_h > 1.4 and _tem("andar_espreita"):
-				nome = "andar_espreita"
+			# 1.04: agachado rápido continua com a animação AGACHADA (mais depressa). A "andar_espreita" é uma caminhada
+			# de pé: com ela o personagem "levantava" andando agachado (a câmera e o resto continuavam agachados)
 			escala = _escala(nome, vel_h)
 		Estado.CORRER:
 			if vel_h < 5.0 and _andar_por_velocidade(vel_h) != "":

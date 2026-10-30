@@ -15,7 +15,7 @@ extends Node3D
 
 const Mat := preload("res://mundo/materiais_cidade.gd")
 const AbandonoCls := preload("res://mundo/abandono.gd")
-const FachadasCls := preload("res://mundo/fachadas.gd")
+const EscadasIncendioCls := preload("res://mundo/escadas_incendio.gd")   # 1.04 (substitui o mundo/fachadas.gd)
 const OclusaoCls := preload("res://mundo/oclusao.gd")
 const LocaisCls := preload("res://mundo/locais.gd")
 const Cenario := preload("res://mundo/cenario.gd")
@@ -54,6 +54,7 @@ var built: Array[Node] = []
 var is_built := false
 var dados_cidade = null
 var predios := PackedFloat32Array()         # x, z, tam_x, tam_z, altura de cada prédio (para a colisão)
+var predio_topos := {}                      # 1.04: índice -> [tam_x, tam_z, y do corpo, altura] do topo das torres escalonadas
 var ambiente: Environment                   # céu/neblina (Opções › Gráficos mexe na neblina)
 var sol: DirectionalLight3D                 # Opções › Gráficos › Sombras
 var mat_predio: ShaderMaterial              # Opções › Gráficos › Detalhes dos shaders (janelas)
@@ -61,7 +62,8 @@ var mats_agua: Array[ShaderMaterial] = []   # Opções › Gráficos › Água
 var mats_chao: Array[ShaderMaterial] = []   # terra, parque, calçada, asfalto (sombra dos prédios no chão: mundo/mato.gd)
 var detalhes: Array[GeometryInstance3D] = []   # árvores e caixas d'água (Opções › Distância dos detalhes)
 var detalhes_abandono: Array[GeometryInstance3D] = []   # carros, lixo, entulho
-var detalhes_fachada: Array[GeometryInstance3D] = []    # escadas de incêndio e ar-condicionado (mundo/fachadas.gd)
+var escadas_incendio: Node3D = null        # 1.04: mundo/escadas_incendio.gd (o desenho é dele, por pedaços perto da câmera)
+var _nivel_distancia := 2
 var detalhes_veg: Array[GeometryInstance3D] = []        # 0.69: árvores/plantas baixadas de perto (meta "alcance" = no nível 2)
 var oclusao                                 # mundo/oclusao.gd (caixas oclusoras dos prédios)
 
@@ -100,7 +102,7 @@ func etapas() -> Array:
 		["Ruas e avenidas", 16.0, func(): await _roads(dados_cidade)],
 		["Levantando os prédios", 11.0, _buildings],
 		["Quarteirões e calçadas", 5.0, _lotes],
-		["Escadas de incêndio e fachadas", 5.0, _fachadas],
+		["Escadas de incêndio", 0.5, _fachadas],
 	]
 	var ab := AbandonoCls.new()              # só vira o "abandono" da cidade quando estas etapas rodam
 	r.append(["Espalhando o abandono", 0.5, func(): _abandono_comecar(ab)])
@@ -134,7 +136,6 @@ func limpar() -> void:
 	detalhes.clear()
 	detalhes_abandono.clear()
 	detalhes_veg.clear()
-	detalhes_fachada.clear()
 	oclusao = null
 	is_built = false
 
@@ -166,9 +167,9 @@ func aplicar_detalhes(nivel_shaders: int, nivel_distancia: int, agua_completa :=
 	for d in detalhes:
 		if is_instance_valid(d):
 			d.visibility_range_end = alcance
-	for d in detalhes_fachada:
-		if is_instance_valid(d):
-			d.visibility_range_end = FachadasCls.ALCANCES[clampi(nivel_distancia, 0, 3)]
+	_nivel_distancia = nivel_distancia
+	if escadas_incendio != null and is_instance_valid(escadas_incendio):
+		escadas_incendio.aplicar_alcance(EscadasIncendioCls.ALCANCES[clampi(nivel_distancia, 0, 3)])
 	var fator: float = [0.6, 0.8, 1.0, 1.3][clampi(nivel_distancia, 0, 3)]
 	for d in detalhes_veg:
 		if is_instance_valid(d):
@@ -746,8 +747,6 @@ func _buildings() -> void:
 					predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h]))
 					predio_info.append(info)
 				continue
-			if fora == "":
-				predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h]))   # guardado para a colisão
 			var h1 := h
 			if h > 60.0 and extra.randf() < 0.55:
 				# torre escalonada: corpo + topo mais estreito
@@ -755,6 +754,12 @@ func _buildings() -> void:
 				var k2 := extra.randf_range(0.55, 0.75)
 				var h2 := h - h1 + extra.randf_range(4.0, 16.0)
 				lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * k2, h2, sz * k2)), Vector3(bx, Y_RUA + h1 + h2 * 0.5, bz)), cor, Color(sx * k2, h2, sz * k2, dado_predio(tipo, sem))])
+				if fora == "":
+					predio_topos[predio_info.size()] = [sx * k2, sz * k2, h1, h2]   # 1.04: o topo tem colisão própria
+			if fora == "":
+				# guardado para a colisão (1.04: até o CORPO; antes ia até o alto da torre escalonada inteira e o
+				# telhado do corpo tinha uma parede invisível em volta do topo)
+				predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h1]))
 			elif h < 70.0 and extra.randf() < 0.18:
 				# caixa d'água de madeira no telhado (marca registrada de Nova York)
 				if not caixas.has(chave):
@@ -1128,11 +1133,10 @@ func _oclusao() -> void:
 		_adopt(oi)
 
 # ---------- cidade abandonada (carros, barreiras, lixo, entulho) ----------
-# escadas de incêndio e aparelhos de ar-condicionado nas fachadas
+# escadas de incêndio e aparelhos de ar-condicionado nas fachadas (1.04: só os dados aqui; o desenho e a física são
+# montados aos poucos perto do jogador por mundo/escadas_incendio.gd, que main.gd cria)
 func _fachadas() -> void:
-	for mi in await FachadasCls.new().montar(self, Y_RUA):
-		_adopt(mi)
-		detalhes_fachada.append(mi)
+	EscadasIncendioCls.preparar(self)
 
 func _abandono_comecar(ab) -> void:
 	var dens := 1.0

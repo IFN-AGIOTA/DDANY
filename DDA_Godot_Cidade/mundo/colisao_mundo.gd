@@ -90,7 +90,7 @@ func criar_extra(quem: Node3D) -> Node3D:
 	c.name = "ColisaoAmigo"
 	c.alvo = quem
 	for campo in ["_t_pts", "_t_box", "_l_pts", "_l_box", "_p_pts", "_p_box", "_p_hash", "_r_hash", "_pred", "_pred_hash",
-			"_lote", "_lote_w", "_lote_h", "_lote_cel", "_lote_origem", "_lote_rampa", "_locais"]:
+			"_lote", "_lote_w", "_lote_h", "_lote_cel", "_lote_origem", "_lote_rampa", "_locais", "topos"]:
 		c.set(campo, get(campo))
 	c.abertos = abertos                   # o MESMO dicionário (prédios abertos não viram caixa em nenhuma cópia)
 	c.locais_abertos = locais_abertos
@@ -122,6 +122,13 @@ func refazer_predios() -> void:
 		if is_instance_valid(e):
 			e._ult_pred = Vector2(1.0e9, 1.0e9)
 
+# 1.04: topo estreito das torres escalonadas (índice do prédio -> [tam_x, tam_z, y do corpo, altura]): uma caixa a
+# mais por cima do corpo (a caixa do prédio vai só até o telhado do corpo, onde dá para andar)
+var topos := {}
+const POOL_TOPO := 8
+var _pool_topo: Array[StaticBody3D] = []
+var _pool_topo_forma: Array[BoxShape3D] = []
+
 func _ready() -> void:
 	process_physics_priority = -10     # roda antes do jogador
 	var chao := StaticBody3D.new()
@@ -148,6 +155,19 @@ func _ready() -> void:
 		add_child(sb)
 		_pool.append(sb)
 		_pool_forma.append(bs)
+	for i in POOL_TOPO:
+		var sb := StaticBody3D.new()
+		sb.name = "Topo%d" % i
+		sb.collision_layer = 1
+		sb.collision_mask = 0
+		var cs := CollisionShape3D.new()
+		var bs := BoxShape3D.new()
+		cs.shape = bs
+		sb.add_child(cs)
+		sb.position = Vector3(0.0, -10000.0, 0.0)
+		add_child(sb)
+		_pool_topo.append(sb)
+		_pool_topo_forma.append(bs)
 
 # dados = conteúdo de data/city.json · predios = x, z, tam_x, tam_z, altura (5 floats por prédio)
 # pode ser chamada de novo (troca a lista inteira de obstáculos)
@@ -531,6 +551,16 @@ func _atualizar_predios(p: Vector2, forcado: bool) -> void:
 	for k in range(n, _pool_uso):
 		_pool[k].position = Vector3(0.0, -10000.0, 0.0)
 	_pool_uso = n
+	var nt := 0
+	for k in n:
+		var idx := int(cand[k][1])
+		if topos.has(idx) and nt < POOL_TOPO:
+			var tp: Array = topos[idx]
+			_pool_topo[nt].position = Vector3(_pred[idx * 5], BASE_PREDIO + float(tp[2]) + float(tp[3]) * 0.5, _pred[idx * 5 + 1])
+			_pool_topo_forma[nt].size = Vector3(float(tp[0]), float(tp[3]), float(tp[1]))
+			nt += 1
+	for k in range(nt, POOL_TOPO):
+		_pool_topo[k].position = Vector3(0.0, -10000.0, 0.0)
 
 # RAIO pelos dados da cidade (prédios e chão de qualquer distância, sem física). Usado pelos tiros:
 # a colisão de física só existe perto do jogador, mas a M4 alcança 260 m.

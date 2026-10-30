@@ -225,7 +225,7 @@ func _aplicar_resto(o: Dictionary, g: Dictionary, j) -> void:
 	if cid != null and is_instance_valid(cid):
 		if cid.sol != null:
 			cid.sol.shadow_enabled = int(g["shad"]) >= 2
-		var qual: Array = [cid.get_instance_id(), cid.detalhes.size(), cid.detalhes_fachada.size(), cid.detalhes_veg.size(), cid.mats_chao.size()]
+		var qual: Array = [cid.get_instance_id(), cid.detalhes.size(), cid.escadas_incendio, cid.detalhes_veg.size(), cid.mats_chao.size()]
 		if cid.has_method("aplicar_detalhes") and _mudou("detalhes", qual + [int(g["shd"]), int(g["detd"]), bool(g["wtr"])]):
 			cid.aplicar_detalhes(int(g["shd"]), int(g["detd"]), bool(g["wtr"]))     # janelas dos prédios · árvores/caixas d'água
 		# 0.84: as opções que estavam "em breve"

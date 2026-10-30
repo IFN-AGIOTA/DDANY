@@ -17,9 +17,12 @@ func q(n):
 	for i in n:
 		await physics_frame
 		await process_frame
+# 1.04: segundos de JOGO (quadros de física), não de relógio: com a CPU ocupada o jogo anda menos por segundo e as
+# esperas ficavam curtas (a horda não chegava a tempo)
 func seg(s: float):
-	var t0 := Time.get_ticks_msec()
-	while Time.get_ticks_msec() - t0 < int(s * 1000.0):
+	var quadros := 0
+	while quadros < int(s * 60.0):
+		quadros += 1
 		await physics_frame
 
 var m
@@ -214,6 +217,8 @@ func _r():
 	for v in D.membros:
 		if is_instance_valid(v) and (v.estado == V.INVESTIGANDO or v.esta_cacando()) and Vector2(v._destino.x - rua.x, v._destino.z - rua.z).length() < 12.0:
 			vindo += 1
+		elif is_instance_valid(v):
+			print("  FALHA-DIAG membro estado %d destino %s dist %.1f" % [v.estado, str(v._destino), Vector2(v._destino.x - rua.x, v._destino.z - rua.z).length()])
 	ok(D.membros.size() > 0 and vindo == D.membros.size(), "viraram infectados de verdade indo até você (%d de %d)" % [vindo, D.membros.size()])
 	D._parar_horda()
 	ok(not D.horda_ativa() and D.membros.is_empty(), "a horda para de te seguir depois de um tempo")

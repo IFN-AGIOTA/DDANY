@@ -13,6 +13,7 @@ const ServidorCls := preload("res://rede/servidor.gd")
 const RodaArmasCls := preload("res://hud/roda_armas.gd")
 const CidadeCls := preload("res://mundo/cidade.gd")
 const ColisaoMundoCls := preload("res://mundo/colisao_mundo.gd")
+const EscadasIncendioCls := preload("res://mundo/escadas_incendio.gd")
 const ChunksCls := preload("res://mundo/chunks.gd")
 const EstandeCls := preload("res://mundo/estande_tiro.gd")
 const LootCls := preload("res://mundo/loot.gd")
@@ -604,6 +605,7 @@ func _criar_jogo() -> void:
 	mundo.name = "ColisaoMundo"
 	jogo.add_child(mundo)
 	mundo.configurar(cidade.dados_cidade, cidade.predios)
+	mundo.topos = cidade.predio_topos             # 1.04: topo das torres escalonadas
 	mundo.configurar_lotes(cidade.lote, cidade.W, cidade.H, cidade.CELL, cidade.WORLD, cidade.RAMPA_LOTE)   # chão dos quarteirões
 	mundo.configurar_locais(LocaisCls.volumes_mundo(cidade.Y_CALCADA))   # 0.74: tiro de longe para nos locais especiais
 	await _respiro()
@@ -619,6 +621,14 @@ func _criar_jogo() -> void:
 	jogador.mundo = mundo
 	jogo.add_child(jogador)
 	jogador.ligar_controles(controles)
+	# 1.04: escadas de incêndio de verdade (desenho por pedaços perto da câmera e física perto do jogador)
+	var esc := EscadasIncendioCls.new()
+	esc.name = "EscadasIncendio"
+	esc.com_desenho = not ServidorCls.pedido()
+	jogo.add_child(esc)
+	esc.ligar(cidade, jogador)
+	cidade.escadas_incendio = esc
+	esc.aplicar_alcance(EscadasIncendioCls.ALCANCES[clampi(int(Config.g.get("detd", 2)), 0, 3)])
 	await _etapa("hud")
 	hud = HudCls.new()
 	hud.name = "HudCombate"

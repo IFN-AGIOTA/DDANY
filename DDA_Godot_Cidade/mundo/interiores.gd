@@ -13,6 +13,7 @@ extends Node
 # Mexa AQUI para: distâncias, quantos prédios abertos de uma vez, de quanto em quanto tempo os infectados voltam.
 
 const InteriorCls := preload("res://mundo/interior.gd")
+const EscadasIncendioCls := preload("res://mundo/escadas_incendio.gd")
 const CaixaMundoCls := preload("res://inventario/caixa_mundo.gd")
 
 const RAIO_ABRIR := 42.0
@@ -148,6 +149,9 @@ func abrir(i: int, ja := false) -> void:
 	if abertos.has(i) or _tarefa >= 0 or (_montando >= 0 and not ja):
 		return
 	var inf: Dictionary = cidade.predio_info[i]
+	# 1.04: as escadas de incêndio do prédio (a mureta do telhado abre onde elas chegam): calculadas aqui, na thread
+	# principal (a montagem pode rodar numa thread e só lê)
+	inf["escadas"] = EscadasIncendioCls.planos(i)
 	if usar_thread and not ja:
 		_tarefa_i = i
 		_tarefa = WorkerThreadPool.add_task(func(): _tarefa_res = InteriorCls.preparar(inf, i, cidade), false, "interior")

@@ -124,6 +124,19 @@ static func montar(inf: Dictionary, i: int, cidade, lm) -> Node3D:
 	var m = preparar(inf, i, cidade)
 	return m.criar(lm)
 
+# 1.04: altura do telhado (em cima do piso do lote) dos prédios baixos que, abertos, têm telhado de verdade com mureta
+# (-1 = não tem: aberto, o prédio tem a "casca" até a altura dele). Mesma regra de preparar(). Usada pelas escadas de
+# incêndio (mundo/escadas_incendio.gd) para chegar no telhado certo.
+static func altura_telhado(inf: Dictionary) -> float:
+	var h: float = inf["h"]
+	var niveis := maxi(1, int(floor((h + 0.8) / ALTURA_ANDAR)))
+	if niveis > MAX_ANDARES_EXTRA + 1:
+		return -1.0
+	var prof_min := minf(float(inf["sx"]), float(inf["sz"]))
+	if prof_min < ESCADA_C + PATAMAR + 4.5 or maxf(float(inf["sx"]), float(inf["sz"])) < 11.0:
+		return -1.0
+	return niveis * ALTURA_ANDAR
+
 # 1ª parte (pode rodar numa thread: só cálculo, sem nós nem física): paredes, cômodos, móveis
 static func preparar(inf: Dictionary, i: int, cidade) -> RefCounted:
 	var cls = load("res://mundo/interior.gd")
@@ -1080,10 +1093,35 @@ func _telhado(y: float, k: int) -> void:
 		var n := _n(f)
 		var o := _meia(f)
 		var comp := _comp(f)
-		var pc: Vector2 = n * (o - 0.12)
-		var tam := Vector3(0.24, 1.0, comp) if f < 2 else Vector3(comp, 1.0, 0.24)
-		paredes.caixa(Vector3(pc.x, y + 0.5, pc.y), tam, mureta)
-		col.append([Vector3(pc.x, y + 0.5, pc.y), tam + Vector3(0, 0.3, 0), 0.0])
+		var t := _t(f)
+		# 1.04: a mureta abre onde uma escada de incêndio chega (mundo/escadas_incendio.gd; os planos vêm em info)
+		var vaos: Array = []
+		for pl in info.get("escadas", []):
+			var nn: Vector3 = pl["n"]
+			if Vector2(nn.x, nn.z).dot(n) > 0.9:
+				var oo: Vector3 = pl["o"]
+				var u := Vector2(oo.x - float(info["x"]), oo.z - float(info["z"])).dot(t)
+				vaos.append([u - float(pl["meia"]), u + float(pl["meia"])])
+		var pedacos: Array = [[-comp * 0.5, comp * 0.5]]
+		for va in vaos:
+			var novos: Array = []
+			for pd in pedacos:
+				if va[1] <= pd[0] or va[0] >= pd[1]:
+					novos.append(pd)
+					continue
+				if va[0] > pd[0]:
+					novos.append([pd[0], va[0]])
+				if va[1] < pd[1]:
+					novos.append([va[1], pd[1]])
+			pedacos = novos
+		for pd in pedacos:
+			var lw: float = pd[1] - pd[0]
+			if lw < 0.05:
+				continue
+			var pc: Vector2 = n * (o - 0.12) + t * ((pd[0] + pd[1]) * 0.5)
+			var tam := Vector3(0.24, 1.0, lw) if f < 2 else Vector3(lw, 1.0, 0.24)
+			paredes.caixa(Vector3(pc.x, y + 0.5, pc.y), tam, mureta)
+			col.append([Vector3(pc.x, y + 0.5, pc.y), tam + Vector3(0, 0.3, 0), 0.0])
 	# caixa d'água e um varal de antenas para dar vida
 	var cx := Vector2(-hx * 0.4, -hz * 0.4)
 	paredes.cilindro(Vector3(cx.x, y + 1.0, cx.y), 0.9, 2.0, 10, Color(0.45, 0.35, 0.25))

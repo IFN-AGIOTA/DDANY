@@ -40,6 +40,48 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.04 · ESCADAS DE INCÊNDIO DE VERDADE (SUBIR NOS PRÉDIOS) E AGACHADO CERTO
+  ESCADAS DE INCÊNDIO:
+  · Antes eram só enfeite (sem física, em 30% dos prédios de 4 a 13 andares, começando no 1º andar). Agora TODO
+    prédio (menos as ruínas) tem 2 escadas de incêndio de verdade — os 16.872 prédios do mapa — que vão da CALÇADA
+    até o TELHADO: dá para subir andando, sem pular, até de perna quebrada (mais devagar), e descer de volta.
+  · Cada uma tem um patamar com grade em cada andar e os lances em zigue-zague, alternando entre a faixa de fora e a
+    de dentro do patamar (um lance nunca fica em cima da cabeça de quem sobe o outro). O 1º lance sai da calçada.
+    O último chega numa plataforma na altura do telhado, colada nele: dali você anda para o telhado.
+  · TELHADO COM FÍSICA: dá para andar em cima de todos. Nos prédios baixos abertos (telhado com mureta), a mureta
+    abre onde a escada chega. Nas torres escalonadas, o telhado do corpo agora tem chão (antes a colisão era uma
+    caixa só até o alto do topo estreito: em volta do topo havia uma parede invisível).
+  · As escadas ficam em lados livres do prédio (sem outro prédio colado); se só sobra um lado livre e largo, as duas
+    ficam nele. Tudo sai dos dados do prédio: no multijogador todos veem as mesmas escadas, sem mandar nada.
+  · O desenho é montado aos poucos perto da câmera (detalhado de perto, simples de longe, até a Distância dos
+    detalhes) e a física só nos prédios a até 30 m de você: a cidade não ficou mais pesada para carregar.
+  · Os aparelhos de ar-condicionado das janelas continuam (agora vêm do mesmo lugar, longe das escadas).
+  · Os INFECTADOS não sobem nas escadas e passam pelos lances da calçada sem esbarrar (a física delas é só do
+    jogador): subir numa escada de incêndio é um jeito de fugir de uma horda. Os tiros passam pela grade.
+  AGACHADO: andando agachado mais rápido (direcional empurrado até o fim), o personagem trocava para uma animação de
+  andar em PÉ (a câmera e o resto continuavam agachados): parecia que levantava. Agora continua a animação agachada,
+  só mais depressa.
+  ARQUIVOS MEXIDOS (testado: teste_escadas_incendio NOVO (sobe e desce 3 prédios de tipos diferentes, um de perna
+  quebrada; 2 escadas em 100% dos prédios; torre escalonada; desenho), teste_ia_101 (+ agachado rápido); + a
+  bateria toda):
+    mundo/escadas_incendio.gd ...... NOVO · as escadas de incêndio (onde ficam, física, desenho por pedaços) e o
+                                     ar-condicionado das fachadas
+    mundo/fachadas.gd .............. APAGADO (substituído pelo mundo/escadas_incendio.gd)
+    mundo/cidade.gd ................ etapa "Escadas de incêndio" só prepara os dados; alcance das escadas pelas opções;
+                                     colisão das torres escalonadas até o corpo + topo separado (predio_topos)
+    mundo/colisao_mundo.gd ......... caixa do topo das torres escalonadas (topos)
+    mundo/interior.gd .............. altura_telhado (prédios baixos); a mureta do telhado abre onde a escada chega
+    mundo/interiores.gd ............ passa as escadas do prédio para a montagem do interior
+    main.gd ........................ cria o nó das escadas de incêndio; passa os topos para a colisão
+    menu/aplicar_opcoes.gd ......... (detalhes: sem a lista antiga das fachadas)
+    jogador/animador_modelo.gd ..... agachado rápido continua com a animação agachada
+    menu/config.gd ................. VERSAO "1.04"
+    ferramentas/testes/ ............ teste_escadas_incendio NOVO; teste_ia_101 e rodar.sh mexidos; teste_diretor e
+                                     teste_portas_corrimao esperam em tempo de JOGO (quadros de física), não de
+                                     relógio (com a CPU ocupada falhavam sem motivo)
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..." + seção 8
+
 ATUALIZAÇÃO 1.03 · MUNDOS DO MULTIJOGADOR (COMO NO MINECRAFT), ESCADAS SEM TRANCAR E 1ª PESSOA
   MUNDOS SALVOS:
   · Multijogador > CRIAR SALA agora abre "SEUS MUNDOS":
@@ -3134,8 +3176,13 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - mato, capim alto, arbustos e a
   sombra dos prédios no chão .......... mundo/mato.gd
 - colunas de fumaça no horizonte ...... mundo/fumaca.gd
-- escadas de incêndio e ar-condicionado
-  nas fachadas ........................ mundo/fachadas.gd
+- ESCADAS DE INCÊNDIO (1.04: de verdade,
+  2 por prédio, até o telhado) e
+  ar-condicionado nas fachadas ........ mundo/escadas_incendio.gd (planos: onde ficam e os níveis; caixas: a física;
+                                          desenho por pedaços de CEL m; P, W, A, L = tamanhos) · mureta do telhado
+                                          que abre: mundo/interior.gd _telhado · altura do telhado dos prédios
+                                          baixos: mundo/interior.gd altura_telhado
+- topo das torres escalonadas (física) mundo/colisao_mundo.gd (topos) · mundo/cidade.gd (predio_topos)
 - oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd
 - chunks de 500 m (o que fica na cena, raio) ....... mundo/chunks.gd (+ Opções › Gráficos › Raio de chunks)
 - fios de poste e halos de luz (0.84) ............. mundo/luzes_rua.gd (onde ficam: mundo/abandono.gd _poste_luzes)
@@ -3319,9 +3366,11 @@ MÚSICA (pasta audio/)
     "vento" (clima) e "pos_jogador" (mato).
   · Detalhes finos do chão (rachaduras, folhas, buracos) só aparecem perto da câmera e somem com
     Opções › Gráficos › Detalhes dos shaders = baixo.
-- Fachadas 0.14: mundo/fachadas.gd monta, junto com a cidade, MultiMesh por pedaço de 400 x 400 m
-  (~84 mil peças no mapa todo), visíveis até 150/220/300/400 m (Distância dos detalhes). As peças seguem a
-  grade de janelas do shader PREDIO (andares de 3,3 m a partir de 4,6 m, colunas de 2,7 m).
+- Escadas de incêndio (1.04, mundo/escadas_incendio.gd; antes 0.14 mundo/fachadas.gd, só enfeite): o desenho é
+  montado aos poucos em pedaços de 125 x 125 m perto da câmera (um pedaço por quadro, o mais perto primeiro;
+  detalhado até 70 m em sub-pedaços de 62,5 m, simplificado até 150/220/300/400 m pela Distância dos detalhes; longe, o pedaço é
+  desmontado). A física só existe nos prédios a até 30 m do jogador (até 1,5 ms por quadro montando). As peças
+  seguem a grade de janelas do shader PREDIO (andares de 3,3 m a partir de 4,6 m, colunas de 2,7 m).
   · No shader PREDIO, tamanho/tipo/semente do prédio são varyings "flat": interpolados, o sorteio por
     janela (hash) variava de pixel para pixel e as janelas/vitrines ficavam com pontinhos/listras.
   · Valor global de shader "noite" (clima) acende as janelas dos sobreviventes.
@@ -3366,6 +3415,9 @@ MÚSICA (pasta audio/)
 -----------------------------------------------------------------------------------------------------
 10. LIMITAÇÕES CONHECIDAS E PRÓXIMOS PASSOS
 -----------------------------------------------------------------------------------------------------
+- 1.04: nos telhados, as caixas d'água de madeira e o topo estreito das torres (quando o prédio está aberto) não têm
+  física (dá para atravessar); os infectados não sobem nas escadas de incêndio. Perto do telhado, o último patamar
+  pode ficar fora da altura das janelas (o lance que chega no telhado nunca é baixo demais nem íngreme demais).
 - 1.00: as silhuetas da horda de longe só existem no jogo solo e no host (o cliente não tem a população). O mutado
   infectado ainda não escala paredes nem salta entre telhados (só corre e salta no chão). O arremesso de um amigo é
   simulado de novo em cada aparelho: longe de quem recebe (sem a física dos prédios de lá) ele pode bater num

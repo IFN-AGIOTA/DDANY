@@ -29,8 +29,9 @@ var j
 # anda na direção de "para" por até "tempo" s; devolve quanto andou
 func _andar(para: Vector3, tempo: float) -> float:
 	var de: Vector3 = j.global_position
-	var t0 := Time.get_ticks_msec()
-	while Time.get_ticks_msec() - t0 < int(tempo * 1000.0):
+	var quadros := 0                      # 1.04: em quadros de física (tempo do jogo), não de relógio: não falha com a CPU ocupada
+	while quadros < int(tempo * 60.0):
+		quadros += 1
 		j.cam_yaw = atan2(-(para - j.global_position).x, -(para - j.global_position).z)
 		j.controles.mover = Vector2(0, 0.6)
 		await physics_frame
@@ -46,9 +47,10 @@ func _de_lado(em: Vector3, lado: Vector3, tempo: float) -> Array:
 	await q(20)
 	var y0: float = j.global_position.y
 	var p0: Vector3 = j.global_position
-	var t0 := Time.get_ticks_msec()
+	var quadros := 0
 	var y_min := y0
-	while Time.get_ticks_msec() - t0 < int(tempo * 1000.0):
+	while quadros < int(tempo * 60.0):
+		quadros += 1
 		var alvo: Vector3 = j.global_position + lado * 5.0
 		j.cam_yaw = atan2(-(alvo - j.global_position).x, -(alvo - j.global_position).z)
 		j.controles.mover = Vector2(0, 0.6)
