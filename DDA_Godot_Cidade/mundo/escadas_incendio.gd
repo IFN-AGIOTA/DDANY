@@ -218,6 +218,13 @@ static func caixas(pl: Dictionary) -> Array:
 		var meio := Vector3(-s * A, y0, zc) + dir_r * (l_r * 0.5) - up_r * 0.15 - dir_r * 0.075
 		add.call(meio.x, meio.y, meio.z, Vector3(l_r + 0.15, 0.3, W), rot)
 		add.call(s * (A - 0.15 + 0.25), y0 + sobe - 0.1, zc, Vector3(0.5, 0.2, W))
+		if k == 0:
+			# 1.06: o 1º lance continua a rampa PARA BAIXO, entrando no chão. Na beira do lote (a fachada no limite da
+			# quadra) o chão desce até a terra e o pé da escada ficava ~35 cm acima dele: um degrau que trancava quem
+			# chegava andando. Onde o chão é a calçada a rampa fica enterrada.
+			var ext := 2.0
+			var pe_e := Vector3(-s * A, y0, zc) - dir_r * (ext * 0.5) - up_r * 0.15
+			add.call(pe_e.x, pe_e.y, pe_e.z, Vector3(ext, 0.3, W), rot)
 		for lado in [-1.0, 1.0]:
 			var zg: float = zc + float(lado) * (W * 0.5 + 0.03)
 			for p in 5:
