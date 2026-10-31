@@ -41,6 +41,18 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.09.2 · COMPRAR SEM ESPAÇO NA MOCHILA
+  · CONSERTO: na loja da Mônica, se o item não cabia na mochila/roupas, ela não vendia ("Não cabe na sua mochila") e
+    não dava para comprar. Agora a compra acontece do mesmo jeito: com espaço, o item vai para o inventário; sem
+    espaço, ele CAI NO CHÃO aos seus pés (aviso "SEM ESPAÇO NA MOCHILA: FICOU NO CHÃO"). As trocas do Lucas já
+    faziam assim.
+  ARQUIVOS MEXIDOS (testado: teste_hospital, que agora enche a mochila e confere a compra indo para o chão):
+    npc/tela_loja.gd ............... compra sem espaço: paga e o item cai no chão
+    ferramentas/testes/teste_hospital.gd ... compra com a mochila cheia (paga, marca comprado, item no chão)
+    menu/config.gd ................. VERSAO "1.09.2"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco
+
 ATUALIZAÇÃO 1.09.1 · OS SOBREVIVENTES DO HOSPITAL OLHAM PARA VOCÊ
   · CONSERTO: nos hospitais virados para outro lado (3 dos 4), a Mônica, o Lucas, o Jhon e os outros ficavam DE
     COSTAS (ou de lado) quando você chegava perto. Agora todos viram de frente para você, em qualquer hospital.
@@ -1000,7 +1012,7 @@ ATUALIZAÇÃO 0.91 · DINHEIRO, HOSPITAIS NEUTROS, LOJA DA MÔNICA E TROCAS PELO
     - o estoque é DIFERENTE PARA CADA JOGADOR e em cada hospital, e se renova a cada DIA do jogo (48 min); o que você
       comprou some do seu estoque até o dia seguinte (vai no jogo salvo);
     - ela COMPRA os seus itens por 40% do valor (menos se estiver gasto); dinheiro e cartões dos bunkers não;
-    - confere tudo: sem dinheiro suficiente ("Isso custa US$ X e você só tem US$ Y"), item que não cabe na mochila.
+    - confere tudo: sem dinheiro suficiente ("Isso custa US$ X e você só tem US$ Y"); 1.09.2: item que não cabe na mochila cai no chão (antes ela não vendia).
   · TROCAS ENTRE JOGADORES PELO LUCAS (multijogador; abas PARA VOCÊ, VENDER e SUAS OFERTAS):
     - VENDER: escolha PARA QUEM (lista de nomes: quem está na partida e quem já passou por ela), marque os ITENS
       (até 12, com o valor de loja ao lado), ajuste o PREÇO (-100 -10 +10 +100 +1000) e ENTREGUE AO LUCAS: os itens

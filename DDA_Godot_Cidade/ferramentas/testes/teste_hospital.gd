@@ -86,10 +86,6 @@ func _r():
 		if H.cabe(ti):
 			k = kk
 			break
-	var grande := -1
-	for kk in est.size():
-		if not H.cabe(Item.novo(str(est[kk]["id"]), int(est[kk]["q"]))):
-			grande = kk
 	var preco := int(est[k]["preco"])
 	t._compra(k)
 	await q(2)
@@ -103,10 +99,35 @@ func _r():
 		"comprou %s por US$ %d (sobrou %d)" % [est[k]["id"], preco, H.dinheiro()])
 	t._compra(k)
 	ok(H.dinheiro() == 5000 - preco, "não compra o mesmo item duas vezes no mesmo dia")
-	if grande >= 0:
-		t._compra(grande)
-		ok(not H.comprado(hi, grande) and H.dinheiro() == 5000 - preco and t._aviso.text.contains("Não cabe"),
-			"item que não cabe na mochila: ela não vende (%s)" % est[grande]["id"])
+	# 1.09.2: SEM ESPAÇO na mochila ela vende do mesmo jeito e o item cai no chão, aos pés do jogador
+	var k2 := -1
+	for kk in est.size():
+		if kk != k and not H.comprado(hi, kk) and int(est[kk]["preco"]) <= H.dinheiro():
+			k2 = kk
+			break
+	ok(k2 >= 0, "tem outro item para comprar")
+	if k2 >= 0:
+		var tijolos := 0
+		while tijolos < 200 and j.inventario._guardar_auto(Item.novo("tijolo", 3)):
+			tijolos += 3
+		var id2 := str(est[k2]["id"])
+		ok(not H.cabe(Item.novo(id2, int(est[k2]["q"]))), "a mochila está cheia (%d tijolos)" % tijolos)
+		var na_mochila: int = j.inventario.contar(id2)
+		var no_chao_antes := 0
+		for n in root.get_tree().get_nodes_in_group("itens_chao"):
+			if n.get("item") != null and n.item.id == id2:
+				no_chao_antes += 1
+		var din0: int = H.dinheiro()
+		t._compra(k2)
+		await q(3)
+		var no_chao := 0
+		for n in root.get_tree().get_nodes_in_group("itens_chao"):
+			if n.get("item") != null and n.item.id == id2 and (n as Node3D).global_position.distance_to(j.global_position) < 2.0:
+				no_chao += 1
+		ok(H.comprado(hi, k2) and H.dinheiro() == din0 - int(est[k2]["preco"]) and j.inventario.contar(id2) == na_mochila
+			and no_chao > no_chao_antes and t._aviso.text.contains("CHÃO"),
+			"sem espaço: comprou %s e ele CAIU NO CHÃO aos seus pés (%s)" % [id2, t._aviso.text])
+		j.inventario.consumir("tijolo", tijolos)
 	# vender
 	var it = Item.novo("faca", 1)
 	j.inventario._guardar_auto(it)

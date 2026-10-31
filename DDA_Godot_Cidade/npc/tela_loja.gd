@@ -1,7 +1,8 @@
 extends "res://npc/tela_npc.gd"
 # LOJA DA MÔNICA (0.91) · abas COMPRAR (o estoque dela neste hospital, só seu: npc/loja.gd) e VENDER (os itens das
-# suas roupas e mochila; ela paga npc/precos.gd VENDA). Confere tudo antes: se você tem o dinheiro, se o item cabe
-# (comprar), se o item pode ser vendido (cheio de coisas dentro, dinheiro e cartões dos bunkers não).
+# suas roupas e mochila; ela paga npc/precos.gd VENDA). Confere tudo antes: se você tem o dinheiro e se o item pode
+# ser vendido (cheio de coisas dentro, dinheiro e cartões dos bunkers não). 1.09.2: comprar sem espaço na mochila
+# compra do mesmo jeito e o item CAI NO CHÃO, aos seus pés (antes ela não vendia).
 
 const Loja := preload("res://npc/loja.gd")
 const Itens := preload("res://inventario/itens.gd")
@@ -48,18 +49,22 @@ func _compra(k: int) -> void:
 		return
 	var it = ItemCls.novo(str(e["id"]), int(e["q"]))
 	it.estado = float(e["e"])
-	if not gerente.cabe(it):
-		avisar("MÔNICA: \"Não cabe na sua mochila. Abre espaço primeiro.\"", true)
-		return
 	if not gerente.tirar_dinheiro(preco):
 		avisar("FALTA DINHEIRO", true)
 		return
-	gerente.jogador.inventario._guardar_auto(it)
-	gerente.jogador.inventario._depois()
+	# cabe: vai para a mochila/roupas · não cabe: cai no chão, aos seus pés
+	var inv = gerente.jogador.inventario
+	var no_chao: bool = not inv._guardar_auto(it)
+	if no_chao:
+		inv._soltar_no_chao(it)
+	inv._depois()
 	gerente.marcar_comprado(hospital, k)
 	npc.modelo.gesto("npc_sim")
 	refazer()
-	avisar("COMPROU %s POR %s" % [it.nome(), Precos.texto(preco)])
+	if no_chao:
+		avisar("COMPROU %s POR %s · SEM ESPAÇO NA MOCHILA: FICOU NO CHÃO" % [it.nome(), Precos.texto(preco)])
+	else:
+		avisar("COMPROU %s POR %s" % [it.nome(), Precos.texto(preco)])
 
 func _vender() -> void:
 	texto("A Mônica paga 40% do valor (menos se estiver gasto). Dinheiro e cartões dos bunkers ela não compra; mochila e roupa só vazias.")
