@@ -506,7 +506,7 @@ func _torre_sino(ret: Rect2, y0: float, y_sino: float) -> void:
 	sinos.append(ps + Vector3(0, 1.0, 0))
 	_caixa_militar(Vector3(cx.x + 0.9, y_sino, cx.y - 1.2), PI, "igreja_torre")    # alguém vigiava daqui
 	resto.caixa(Vector3(cx.x - 1.6, y_sino + 0.25, cx.y + 1.4), Vector3(0.8, 0.5, 0.5), Color(0.25, 0.3, 0.22))
-	_ponto(Vector3(cx.x - 1.8, y_sino, cx.y - 1.9), "torre")
+	_ponto(Vector3(cx.x - 2.6, y_sino, cx.y - 2.3), "torre")              # longe do sino (PEGAR pegaria o item em vez de tocar)
 	# agulha (oito lados) com a cruz
 	var ya := y_sino + hc + 0.4
 	fora.cilindro(Vector3(cx.x, ya + 0.6, cx.y), ret.size.x * 0.5 - 0.2, 1.2, 8, PEDRA)
