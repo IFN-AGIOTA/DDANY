@@ -454,15 +454,27 @@ func _torre_sino(ret: Rect2, y0: float, y_sino: float) -> void:
 		y += dy
 		var cn: Vector2 = cantos[(k + 1) % 4]
 		_bx(piso, Vector3(cn.x, y - 0.1, cn.y), Vector3(L, 0.2, L), Color(0.5, 0.45, 0.4))
-	# chão do campanário (com o vão em cima do último lance) e o vão por onde se chega
-	var ult: Array = lados[(n_lances - 1) % 4]
-	var ini: Vector2 = ult[0]
-	var dirl: Vector2 = ult[1]
-	var fim := ini + dirl * float(ult[2])
-	var lat := Vector2(-dirl.y, dirl.x) * L * 0.5
-	var b0 := Vector2(minf(minf(ini.x, fim.x), minf(ini.x + lat.x, ini.x - lat.x)), minf(minf(ini.y, fim.y), minf(ini.y + lat.y, ini.y - lat.y)))
-	var b1 := Vector2(maxf(maxf(ini.x, fim.x), maxf(ini.x + lat.x, ini.x - lat.x)), maxf(maxf(ini.y, fim.y), maxf(ini.y + lat.y, ini.y - lat.y)))
-	_laje(ret.grow(-0.05), y_sino - 0.3, 0.3, [Rect2(b0, b1 - b0).grow(0.05)], Color(0.5, 0.45, 0.4))
+	# chão do campanário: vão em cima dos 2 últimos lances e do patamar entre eles (senão a cabeça bate na laje:
+	# ali o piso fica só ~2 m abaixo); grade na borda do vão (do lado do sino); chega-se pelo canto do último patamar
+	var vaos: Array = []
+	for k in [n_lances - 2, n_lances - 1]:
+		var ld: Array = lados[k % 4]
+		var ini: Vector2 = ld[0]
+		var dirl: Vector2 = ld[1]
+		var fim: Vector2 = ini + dirl * (float(ld[2]) + (L if k == n_lances - 2 else 0.0))
+		var lat := Vector2(-dirl.y, dirl.x) * L * 0.5
+		var b0 := Vector2(minf(minf(ini.x, fim.x), minf(ini.x + lat.x, ini.x - lat.x)), minf(minf(ini.y, fim.y), minf(ini.y + lat.y, ini.y - lat.y)))
+		var b1 := Vector2(maxf(maxf(ini.x, fim.x), maxf(ini.x + lat.x, ini.x - lat.x)), maxf(maxf(ini.y, fim.y), maxf(ini.y + lat.y, ini.y - lat.y)))
+		vaos.append(Rect2(b0, b1 - b0).grow(0.05))
+		# grade na borda de dentro (virada para o núcleo/sino)
+		var dentro_v: Vector2 = (nucleo.get_center() - (ini + fim) * 0.5)
+		var lado_n := Vector2(-dirl.y, dirl.x)
+		if lado_n.dot(dentro_v) < 0.0:
+			lado_n = -lado_n
+		var ga: Vector2 = ini + lado_n * L * 0.5
+		var gb2: Vector2 = ini + dirl * float(ld[2]) + lado_n * L * 0.5
+		_grade(ga, gb2, y_sino)
+	_laje(ret.grow(-0.05), y_sino - 0.3, 0.3, vaos, Color(0.5, 0.45, 0.4))
 	# CAMPANÁRIO: pilares nos cantos, arcos abertos com parapeito, cornija; o SINO pendurado na viga
 	var hc := 6.0
 	for cn in [a0, a1, a2, a3]:
@@ -492,7 +504,7 @@ func _torre_sino(ret: Rect2, y0: float, y_sino: float) -> void:
 	resto.cilindro(ps + Vector3(0, hc - 2.9, 0), 0.85, 0.7, 12, Color(0.55, 0.42, 0.2), Basis.IDENTITY, 0.45)
 	resto.cilindro(ps + Vector3(0, hc - 3.3, 0), 0.08, 0.5, 5, METAL_ESC)
 	sinos.append(ps + Vector3(0, 1.0, 0))
-	_caixa_militar(Vector3(cx.x + 1.6, y_sino, cx.y - 1.7), PI, "igreja_torre")    # alguém vigiava daqui
+	_caixa_militar(Vector3(cx.x + 0.9, y_sino, cx.y - 1.2), PI, "igreja_torre")    # alguém vigiava daqui
 	resto.caixa(Vector3(cx.x - 1.6, y_sino + 0.25, cx.y + 1.4), Vector3(0.8, 0.5, 0.5), Color(0.25, 0.3, 0.22))
 	_ponto(Vector3(cx.x - 1.8, y_sino, cx.y - 1.9), "torre")
 	# agulha (oito lados) com a cruz
@@ -535,7 +547,7 @@ func _prefeitura() -> void:
 		fora.caixa(Vector3(s * 42.0, 0.12, -6.0), Vector3(8.0, 0.24, 36.0), Color(0.3, 0.42, 0.22))
 	# ---- EMBASAMENTO e ESCADARIAS ----
 	_bx(fora, Vector3(0, P * 0.5, -9.0), Vector3(69.0, P, 35.0), GRANITO)
-	_bx(fora, Vector3(0, P * 0.5, 11.25), Vector3(25.0, P, 6.5), GRANITO)
+	_bx(fora, Vector3(0, P * 0.5, 11.0), Vector3(25.0, P, 6.0), GRANITO)
 	_escada(Vector2(0, 18.3), Vector2(0, -1), 22.0, 0.0, P, 4.3, GRANITO * 1.15)
 	for s in [-1.0, 1.0]:
 		_balaustrada(Vector2(s * 11.3, 18.4), Vector2(s * 11.3, 14.0), 0.0, P)

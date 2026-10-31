@@ -2880,6 +2880,11 @@ BASE (0.90): parede 3 tábuas / 350 de vida · parede com porta 4 / 350 · barri
 LOCAIS ESPECIAIS (0.78): 42 = 12 postos, 4 hospitais, 6 supermercados, 6 armazéns, 4 delegacias, 4 escolas,
   4 estações do metrô (plataformas a 7,1 m; trilhos a 6 m) e 2 quartéis (torres de vigia a 6 m) · 6 em cada 10
   com gerador · só 15% dos móveis vazios
+IGREJA E PREFEITURA (1.06): 4 igrejas (uma por ilha) e 1 prefeitura (no centro, a 129 m dos arranha-céus) ·
+  igreja: embasamento de 2,4 m, nave de 13 m, cúpula até ~28 m, torre com o campanário a 22,4 m (14 m de escada em
+  caracol a partir do coro, a 8,4 m) e a cruz a ~41 m · SINO: barulho de 400 m (de dia os infectados ouvem 40%),
+  8 s entre um toque e outro · prefeitura: embasamento de 1,5 m, 2 andares de 5 m, terraço a 11,5 m, cúpula até
+  ~29 m · a prefeitura é ÁREA MILITAR (posto do Exército na frente: o cartão do bunker pode aparecer lá)
 BUNKERS (0.83): 4 (um por ilha) · 5 níveis de 3,9 m (NÍVEL 1 a 22 m e NÍVEL 5 a ~38 m abaixo da rua) · escuro
   total · 3% dos móveis vazios · até 14 itens no chão · CARTÃO: 12% por área militar (6 áreas: 2 quartéis + 4
   postos militares dos hospitais) a cada ciclo do loot (10 h de jogo), um só de cada bunker · usar a porta até 1,7 m
@@ -2938,6 +2943,12 @@ LOOT (mundo/loot_mundo.gd; tabelas no topo, com raridade e quantidades)
   munição 5.56/7.62, colete, capacete, miras, silenciador, mochila de combate), "quartel_alojamento" (roupas,
   mochila, lanterna, munição) e as caixas "militar"/"militar_med". Chão: "chao_policia", "chao_escola",
   "chao_metro", "chao_quartel".
+- IGREJA E PREFEITURA (1.06): igreja "igreja_doacoes" (comida enlatada, água, roupas, cobertas), "igreja_abrigo"
+  (o que os refugiados deixaram: água, remédios, lanterna, mochila, às vezes pistola), "igreja_sacristia" (dinheiro do
+  dízimo, isqueiro, remédio), "igreja_torre" (rifle de caça e munição .308, às vezes luneta: alguém vigiava de lá);
+  prefeitura "prefeitura_cofre" (até US$ 400, pistola), "prefeitura_gabinete", "prefeitura_crise" (rádios, pilhas,
+  lanternas, máscara, colete), "escritorio" e as caixas "militar"/"militar_med" do posto do Exército. Chão:
+  "chao_igreja", "chao_prefeitura".
 - BUNKERS (0.83): "bunker_arsenal" (M4, AK, MP5, pistola, espingarda, rifle, pentes, muita munição, miras,
   silenciador, kit de armas), "bunker_militar" (colete, capacete, mochila de combate, máscara, kit médico,
   munição, rádio, pilhas, lanternas, comida), "bunker_med", "bunker_comida", "bunker_deposito", "bunker_alojamento",
@@ -3140,6 +3151,12 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
                                           do corrimão das escadas em _escada)
 - DELEGACIA, ESCOLA, ESTAÇÃO DO METRÔ e
   QUARTEL por dentro e por fora (0.78) .. mundo/local_novos.gd (usa as peças do mundo/local.gd)
+- IGREJA e PREFEITURA por dentro e por
+  fora (1.06) ......................... mundo/local_igreja.gd (peças: frontão, telhado, coluna, cúpula, vitral,
+                                          balaustrada, torre do sino com escada em caracol) · onde ficam: mundo/locais.gd
+                                          (ferramentas/escolher_locais.gd NOVOS=2) · casca de longe com cúpula/torre/
+                                          telhados: mundo/locais.gd casca e montar_casca
+- SINO DA IGREJA (tocar, barulho) ...... mundo/sino.gd (som: audio/sons/mundo/sino.ogg, feito por síntese)
 - letreiros e pichações dos locais ...... mundo/local.gd (_texto) e mundo/local_novos.gd
 - trocar de ombro (câmera) .............. jogador/jogador.gd (trocar_ombro) · botão em jogador/controles.gd
 - quando o infectado usa física de
