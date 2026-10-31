@@ -47,3 +47,7 @@ mundo/grilos ............ "Crickets Ambient Noise - loopable" — Wolfgang_ — 
 Montados por código (ferramentas/preparar_sons.py, sem arquivo de terceiros além dos citados): partida/entrada e
 partida/morte (pancada grave + cauda de tiro ao contrário + coração), inventario/beber_*, jogador/respiracao_0,
 impactos/bala_agua_*. partida/objetivo_*: "Interface Sounds" (Kenney) mais grave.
+
+---- 1.06 ----
+mundo/sino.ogg .......... feito pelo próprio projeto (síntese: parciais de sino de igreja decaindo + eco; numpy e ffmpeg),
+                          sem gravação de terceiros

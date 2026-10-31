@@ -627,6 +627,7 @@ var abandono                                # mundo/abandono.gd (carros, obstác
 var locais_casca: Array = []                # 0.68: casca de longe de cada local especial (mundo/locais.gd), mesma ordem de LOCAIS
 var remapa_v2 := PackedInt32Array()         # número do prédio na 0.43..0.67 -> agora (-1 = saiu para dar lugar a um local especial)
 var remapa_v3 := PackedInt32Array()         # 0.78: número do prédio na 0.68..0.77 -> agora (-1 = saiu para os locais novos)
+var remapa_v4 := PackedInt32Array()         # 1.06: número do prédio na 0.78..1.05 -> agora (-1 = saiu para a igreja/prefeitura)
 
 func _sortear_uso(r: RandomNumberGenerator, h: float) -> String:
 	if h > 70.0:
@@ -662,6 +663,8 @@ func _buildings() -> void:
 	pos_removidos = PackedVector2Array()
 	remapa_v2 = PackedInt32Array()
 	remapa_v3 = PackedInt32Array()
+	remapa_v4 = PackedInt32Array()
+	var n_105: int = LocaisCls.N_LOCAIS_105
 	var rets_locais: Array[Rect2] = []
 	for i in LocaisCls.LOCAIS.size():
 		rets_locais.append(LocaisCls.retangulo(i, 3.0))
@@ -698,16 +701,28 @@ func _buildings() -> void:
 				var planta := Rect2(bx - sx * 0.5, bz - sz * 0.5, sx, sz)
 				var no_antigo := false                  # num local da 0.68 (já saía antes)
 				var no_novo := false                    # 0.78: num local novo (delegacia, escola, metrô, quartel)
+				var no_106 := false                     # 1.06: na igreja/prefeitura (e nos locais de depois)
 				for il in rets_locais.size():
 					if rets_locais[il].intersects(planta):
 						if il < n_068:
 							no_antigo = true
 						else:
 							no_novo = true
+						if il >= n_105:
+							no_106 = true
 				var no_local := no_antigo or no_novo
 				remapa_v2.append(-1 if no_local else predio_info.size())
 				if not no_antigo:
 					remapa_v3.append(-1 if no_novo else predio_info.size())
+				# 1.06: na 0.78..1.05 só os locais até N_LOCAIS_105 tiravam prédios
+				var no_ate_105 := false
+				if no_local:
+					for il in mini(n_105, rets_locais.size()):
+						if rets_locais[il].intersects(planta):
+							no_ate_105 = true
+							break
+				if not no_ate_105:
+					remapa_v4.append(-1 if no_106 else predio_info.size())
 				if no_local:
 					fora = "local"
 			remapa_predios.append(-1 if fora != "" else predio_info.size())

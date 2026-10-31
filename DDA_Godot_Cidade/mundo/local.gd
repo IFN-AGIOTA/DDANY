@@ -61,9 +61,12 @@ var escadas: Array = []                # 0.81: [pé (Vector2), direção, largur
 var _malha: ArrayMesh = null
 
 const NOVOS := ["delegacia", "escola", "metro", "quartel"]
+const NEOCLASSICOS := ["igreja", "prefeitura"]           # 1.06: mundo/local_igreja.gd
 
 static func preparar(t: String, i: int, gi: int, c: Vector2) -> RefCounted:
 	var arq := "res://mundo/local_bunker.gd" if t == "bunker" else ("res://mundo/local_novos.gd" if t in NOVOS else "res://mundo/local.gd")
+	if t in NEOCLASSICOS:
+		arq = "res://mundo/local_igreja.gd"
 	var m = load(arq).new()
 	m.tipo = t
 	m.idx = i
@@ -80,7 +83,9 @@ static func preparar(t: String, i: int, gi: int, c: Vector2) -> RefCounted:
 		"metro": m._metro()
 		"quartel": m._quartel()
 		"bunker": m._bunker()             # 0.83: mundo/local_bunker.gd
-	if t in NOVOS or t == "bunker":
+		"igreja": m._igreja()             # 1.06: mundo/local_igreja.gd
+		"prefeitura": m._prefeitura()
+	if t in NOVOS or t == "bunker" or t in NEOCLASSICOS:
 		m._livrar_pontos()
 	m._criar_malha()
 	return m
@@ -214,6 +219,15 @@ func criar(lm, y: float) -> Node3D:
 			pb.destino_local = e[2]
 			pb.olhar_local = e[3]
 			raiz.add_child(pb)
+	# 1.06: o sino da igreja (mundo/sino.gd): PEGAR perto = tocar
+	var sn = get("sinos")
+	if sn != null:
+		var SinoCls = load("res://mundo/sino.gd")
+		for k in sn.size():
+			var s = SinoCls.new()
+			s.name = "Sino_%d" % k
+			s.position = sn[k]
+			raiz.add_child(s)
 	return raiz
 
 # ---------- peças ----------

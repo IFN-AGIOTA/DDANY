@@ -16,6 +16,7 @@ const Visual := preload("res://inventario/visual.gd")
 const Boneco3D := preload("res://inventario/boneco_3d.gd")
 const PortaCls := preload("res://mundo/porta.gd")
 const PortaBunkerCls := preload("res://mundo/porta_bunker.gd")
+const SinoCls := preload("res://mundo/sino.gd")
 
 const AMBAR := Color(1.0, 0.71, 0.0)
 const SLOTS_ESQ := ["cabeca", "rosto", "camisa", "colete", "cinto"]   # 0.65: ROSTO (máscara de gás)
@@ -173,6 +174,10 @@ func _process(dt: float) -> void:
 				var pb = PortaBunkerCls.perto(inv.jogador.global_position)        # 0.83: bunker
 				if pb != null:
 					acao_porta = pb.acao(inv)
+			if perto == null and acao_porta == "" and inv.jogador != null:
+				var sn = SinoCls.perto(inv.jogador.global_position)              # 1.06: sino da igreja
+				if sn != null:
+					acao_porta = sn.acao(inv)
 			if perto == null and acao_porta == "" and inv.jogador != null:
 				var pt = PortaCls.perto(inv.jogador.global_position)
 				if pt != null:

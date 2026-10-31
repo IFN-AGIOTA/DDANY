@@ -22,6 +22,10 @@ const QUANTOS_NOVOS := {"delegacia": 4, "escola": 4, "metro": 4, "quartel": 2}
 const PERTO_SPAWN_NOVOS := {"delegacia": 1, "escola": 1, "metro": 1, "quartel": 2}
 const QUARTEL_DIST_SPAWN := 160.0             # o quartel não fica em cima do ponto de partida / estande de tiro
 const QUARTEL_DIST_MIN := 300.0               # quartel x outros locais (a base é menor que a cidade)
+# 1.06: com NOVOS=2, a IGREJA (uma por ilha com ruas) e a PREFEITURA (a mais perto do centro, mundo/cidade.gd DOWNTOWN).
+# As linhas impressas vão no FIM da lista LOCAIS (depois dos bunkers).
+const ILHAS := [0, 1, 3, 4]                   # índices em data/city.json "lands" (terra com ruas), como os bunkers
+const DIST_MIN_V2 := 450.0
 
 var C
 
@@ -47,6 +51,9 @@ func _initialize() -> void:
 		z += 24.0
 	var escolhidos := []
 	var ordem := []
+	if OS.get_environment("NOVOS") == "2":
+		_novos_106(data, cands, rng)
+		return
 	var novos := OS.get_environment("NOVOS") == "1"
 	var quantos: Dictionary = QUANTOS_NOVOS if novos else QUANTOS
 	var perto: Dictionary = PERTO_SPAWN_NOVOS if novos else PERTO_SPAWN
@@ -86,6 +93,55 @@ func _initialize() -> void:
 		print("\t[\"%s\", %.1f, %.1f, %d],     # %d m da base" % [e[0], e[1], e[2], e[3], int(Vector2(e[1], e[2]).distance_to(SPAWN))])
 	if not novos:
 		print("]")
+	quit()
+
+# 1.06: prefeitura (centro) e uma igreja por ilha
+func _novos_106(data, cands: Array, rng: RandomNumberGenerator) -> void:
+	var escolhidos: Array = []
+	for e in Locais.LOCAIS:
+		escolhidos.append((e as Array).duplicate())
+	var ja := escolhidos.size()
+	var ordem: Array = [["prefeitura", -1]]
+	for il in ILHAS:
+		ordem.append(["igreja", il])
+	for o in ordem:
+		var tipo: String = o[0]
+		var lista: Array = []
+		if int(o[1]) < 0:
+			lista = cands.duplicate()
+			lista.sort_custom(func(a, b): return a.distance_squared_to(C.DOWNTOWN) < b.distance_squared_to(C.DOWNTOWN))
+		else:
+			var poli: PackedVector2Array = C._pts(data["lands"][int(o[1])][1])
+			for p in cands:
+				if Geometry2D.is_point_in_polygon(p, poli):
+					lista.append(p)
+			# o mais perto do meio da ilha primeiro (longe da costa), com um pouco de sorte
+			var meio := Vector2.ZERO
+			for q in poli:
+				meio += q
+			meio /= poli.size()
+			_embaralhar(lista, rng)
+			lista.sort_custom(func(a, b): return a.distance_to(meio) * rng.randf_range(0.7, 1.3) < b.distance_to(meio) * rng.randf_range(0.7, 1.3))
+		var achou := false
+		for p in lista:
+			var longe := true
+			for e in escolhidos:
+				if p.distance_to(Vector2(e[1], e[2])) < DIST_MIN_V2:
+					longe = false
+					break
+			if not longe:
+				continue
+			var giro := _giro_valido(tipo, p)
+			if giro < 0:
+				continue
+			escolhidos.append([tipo, snappedf(p.x, 0.5), snappedf(p.y, 0.5), giro])
+			achou = true
+			break
+		if not achou:
+			print("NÃO ACHEI lugar para ", tipo, " ", o[1])
+	print("\t# 1.06 (ferramentas/escolher_locais.gd NOVOS=2): PREFEITURA (centro) e IGREJAS (uma por ilha)")
+	for e in escolhidos.slice(ja):
+		print("\t[\"%s\", %.1f, %.1f, %d],     # %d m do centro" % [e[0], e[1], e[2], e[3], int(Vector2(e[1], e[2]).distance_to(C.DOWNTOWN))])
 	quit()
 
 func _embaralhar(a: Array, r: RandomNumberGenerator) -> void:

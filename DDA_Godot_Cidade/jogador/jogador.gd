@@ -55,6 +55,7 @@ const InventarioCls := preload("res://inventario/inventario.gd")
 const SobrevivenciaCls := preload("res://jogador/sobrevivencia.gd")
 const PortaCls := preload("res://mundo/porta.gd")
 const PortaBunkerCls := preload("res://mundo/porta_bunker.gd")
+const SinoCls := preload("res://mundo/sino.gd")         # 1.06: sino da igreja
 const Mutacao := preload("res://jogador/mutacao.gd")
 const MiraFerro := preload("res://armas/mira_ferro.gd")
 const VistaLunetaCls := preload("res://armas/vista_luneta.gd")
@@ -340,6 +341,13 @@ func _pegar_do_chao() -> void:
 		var mb: String = pb.usar(inventario, self)
 		if mb != "":
 			inventario.aviso.emit(mb)
+		return
+	# 1.06: sino da igreja (mundo/sino.gd)
+	var sn = SinoCls.perto(global_position)
+	if sn != null:
+		var ms: String = sn.usar(inventario, self)
+		if ms != "":
+			inventario.aviso.emit(ms)
 		return
 	# 0.73: sem item perto: a porta (abrir, fechar, tirar tábua) · 0.90: e a janela
 	var pt = PortaCls.perto(global_position)

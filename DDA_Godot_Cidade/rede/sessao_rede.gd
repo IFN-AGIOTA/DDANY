@@ -49,6 +49,7 @@ const MensagensCls := preload("res://hud/mensagens.gd")
 const VozCls := preload("res://rede/voz.gd")             # 0.97: chat de voz por proximidade
 const PortaCls := preload("res://mundo/porta.gd")
 const Hospitais := preload("res://npc/hospitais.gd")
+const SinoCls := preload("res://mundo/sino.gd")           # 1.06: sino da igreja
 const INFECTADOS_POR_SEG := 10.0
 const RAIO_INFECTADOS := 170.0                # host manda a cada amigo os infectados até essa distância dele
 const ENVIOS_POR_SEG := 15.0
@@ -309,6 +310,9 @@ func _evento(id: int, tipo: String, d: Dictionary) -> void:
 			_grade_recebida(d)
 		"porta":
 			_porta_recebida(str(d.get("i", "")), d.get("e", []))
+		"sino":                                          # 1.06: alguém tocou o sino: todos ouvem; quem tem os infectados faz o barulho
+			var ps: Array = d.get("p", [0, 0, 0])
+			SinoCls.badalar(Vector3(float(ps[0]), float(ps[1]), float(ps[2])), Rede.eh_host())
 		"veiculo":
 			if main.get("veiculos") != null:
 				if str(d.get("k", "")) == "entrou":
@@ -394,6 +398,7 @@ func _ligar_mundo() -> void:
 		if main.get("locais") != null:
 			main.locais.centros_extra = perto_amigos
 	ItemMundo.ao_soltar = _item_solto_aqui
+	SinoCls.ao_tocar = func(p: Vector3) -> void: Rede.enviar_evento("sino", {"p": [p.x, p.y, p.z]})
 	ItemMundo.ao_pegar = _item_pego_aqui
 	var lm = main.loot_mundo
 	if lm != null:

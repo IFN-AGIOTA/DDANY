@@ -82,7 +82,9 @@ static func salvar(main, morto := false) -> bool:
 # ("mapa_predios" = 2) é convertido com cidade.remapa_v2.
 # A 0.78 tirou os prédios dos terrenos dos locais NOVOS (delegacias, escolas, metrôs): save da 0.68..0.77
 # ("mapa_predios" = 3) é convertido com cidade.remapa_v3 (também o do multijogador, que não tinha o número).
-const MAPA_PREDIOS := 4
+# A 1.06 tirou os prédios dos terrenos da IGREJA e da PREFEITURA: save da 0.78..1.05 ("mapa_predios" = 4) é
+# convertido com cidade.remapa_v4.
+const MAPA_PREDIOS := 5
 
 # id de algo de um prédio ("p12", "p12_3", "p12:3") com o número trocado pelo novo ("" = o prédio sumiu);
 # ids que não são de prédio (carros "c..", locais "L..") voltam iguais
@@ -115,8 +117,10 @@ static func _remapa_de(main, versao_mapa: int) -> PackedInt32Array:
 		return main.cidade.remapa_predios
 	if versao_mapa < 3:
 		return main.cidade.remapa_v2
-	if versao_mapa < MAPA_PREDIOS:
+	if versao_mapa < 4:
 		return main.cidade.remapa_v3
+	if versao_mapa < MAPA_PREDIOS:
+		return main.cidade.remapa_v4
 	return PackedInt32Array()
 
 # itens largados pelo jogador (filhos do nó Jogo; os dos prédios ficam no loot_mundo)
