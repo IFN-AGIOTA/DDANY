@@ -628,6 +628,7 @@ var locais_casca: Array = []                # 0.68: casca de longe de cada local
 var remapa_v2 := PackedInt32Array()         # número do prédio na 0.43..0.67 -> agora (-1 = saiu para dar lugar a um local especial)
 var remapa_v3 := PackedInt32Array()         # 0.78: número do prédio na 0.68..0.77 -> agora (-1 = saiu para os locais novos)
 var remapa_v4 := PackedInt32Array()         # 1.06: número do prédio na 0.78..1.05 -> agora (-1 = saiu para a igreja/prefeitura)
+var remapa_v5 := PackedInt32Array()         # 1.07: número do prédio na 1.06 -> agora (-1 = saiu para um porto)
 
 func _sortear_uso(r: RandomNumberGenerator, h: float) -> String:
 	if h > 70.0:
@@ -664,7 +665,9 @@ func _buildings() -> void:
 	remapa_v2 = PackedInt32Array()
 	remapa_v3 = PackedInt32Array()
 	remapa_v4 = PackedInt32Array()
+	remapa_v5 = PackedInt32Array()
 	var n_105: int = LocaisCls.N_LOCAIS_105
+	var n_106: int = LocaisCls.N_LOCAIS_106
 	var rets_locais: Array[Rect2] = []
 	for i in LocaisCls.LOCAIS.size():
 		rets_locais.append(LocaisCls.retangulo(i, 3.0))
@@ -723,6 +726,18 @@ func _buildings() -> void:
 							break
 				if not no_ate_105:
 					remapa_v4.append(-1 if no_106 else predio_info.size())
+				# 1.07: na 1.06 só os locais até N_LOCAIS_106 tiravam prédios
+				var no_ate_106 := false
+				var no_107 := false
+				if no_local:
+					for il in rets_locais.size():
+						if rets_locais[il].intersects(planta):
+							if il < n_106:
+								no_ate_106 = true
+							else:
+								no_107 = true
+				if not no_ate_106:
+					remapa_v5.append(-1 if no_107 else predio_info.size())
 				if no_local:
 					fora = "local"
 			remapa_predios.append(-1 if fora != "" else predio_info.size())

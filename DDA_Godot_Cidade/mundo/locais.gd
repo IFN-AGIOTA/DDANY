@@ -99,10 +99,18 @@ const LOCAIS := [
 	["igreja", -2604.5, 1514.0, 3],
 	["igreja", 3623.0, 1640.0, 3],
 	["igreja", 603.5, -1608.5, 1],
+	# 1.07 (ferramentas/escolher_portos.gd): PORTOS (na costa: o cais e o navio ficam atrás do terreno, em cima do mar)
+	# e HANGARES DE CARGA. Montados em mundo/local_porto.gd.
+	["porto", -400.0, -1200.0, 3],
+	["porto", -1800.0, 4440.0, 1],
+	["hangar", 3575.0, -585.5, 1],
+	["hangar", -6704.0, 1540.0, 1],
+	["hangar", 1821.5, 3215.5, 0],
 ]
 # 1.06: os locais até aqui (índice < N_LOCAIS_105) já existiam na 1.05; os prédios que saíram para os de depois
 # entram na conversão do save (mundo/cidade.gd remapa_v4)
 const N_LOCAIS_105 := 46
+const N_LOCAIS_106 := 51                 # 1.07: até aqui existiam na 1.06 (os portos tiram prédios: mundo/cidade.gd remapa_v5)
 
 # 0.83: ÁREAS MILITARES onde o CARTÃO DE ACESSO de um bunker pode aparecer (CHANCE_CARTAO a cada ciclo do loot, numa
 # das caixas militares): os quartéis e o posto militar na frente de cada hospital. Só existe 1 cartão de cada bunker
