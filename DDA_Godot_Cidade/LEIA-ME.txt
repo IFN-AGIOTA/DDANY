@@ -40,6 +40,51 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.07 · PORTOS COM NAVIO E HANGARES DE CARGA (2ª PARTE DAS ESTRUTURAS NOVAS)
+  (A 1.06 — igrejas e prefeitura — não chegou a sair sozinha: as duas saem juntas nesta atualização. O bloco dela
+  está logo abaixo.)
+  PORTOS DE CONTÊINERES (2, na costa), como nas fotos de referência:
+  · Portaria com cancela, guarita e a placa "PORTO DE NOVA YORK · TERMINAL DE CONTÊINERES", cerca, ADMINISTRAÇÃO do
+    porto (2 andares, alfândega), um galpão de carga com porta-paletes e o estacionamento.
+  · PÁTIO DE CONTÊINERES: blocos de pilhas coloridas de 1 a 4 (até 10 m) com corredores para atravessar escondido;
+    em cada bloco, contêineres ABERTOS no chão com loot (um deles é o contêiner LACRADO da polícia: armas e dinheiro).
+    Torres de luz, carretas porta-contêiner e a empilhadeira de contêiner.
+  · O CAIS em cima do mar, com os trilhos, defensas e cabeços, e 3 GUINDASTES AZUIS (portêineres): a escada em
+    zigue-zague ao lado da perna sobe até a PASSARELA DO PÓRTICO, a 28 m — o lugar mais alto do porto, com a caixa
+    de ferramentas do operador. A lança passa por cima do navio, com um contêiner pendurado.
+  · O NAVIO porta-contêineres (140 m) atracado: a ESCADA DE ACESSO sobe do cais até o CONVÉS (9 m), com corrimão dos
+    dois lados; no convés, pilhas de contêineres e carga aberta; o CASARIO de 5 andares tem a escada por fora até a
+    PONTE DE COMANDO (24 m): console, leme, a mesa de cartas e o armário do comandante. Chaminé, radar e a baleeira
+    laranja. Nome no casco ("NOVA AURORA" / "ATLANTIC STAR").
+  · A história: a EVACUAÇÃO PELO MAR — a fila de embarque com as grades, as malas largadas no cais e a placa
+    "EMBARQUE SUSPENSO". O navio nunca saiu.
+  HANGARES DE CARGA (3, em terreno vazio):
+  · Galpão de aço com telhado DENTE DE SERRA e 8 DOCAS numeradas (portas de enrolar abertas, pela metade e fechadas),
+    plataforma das docas com escada nas pontas, carretas encostadas e cavalos mecânicos no pátio.
+  · BOMBA DE DIESEL com cobertura: PEGAR com um galão vazio = encher (como nos postos). Balança de caminhões, lava-jato
+    de caminhão, portaria ("TRANSPORTADORA ATLÂNTICO").
+  · Dentro: porta-paletes, empilhadeiras, paletes, a última carga de comida que não saiu ("ÚLTIMA CARGA: ALIMENTOS ·
+    DESTINO: ABRIGOS DA DEFESA CIVIL"); o MEZANINO do escritório (escada) com o COFRE da transportadora e, embaixo, a
+    sala dos motoristas (armários: às vezes espingarda).
+  · Portos e hangares são ZONAS DE PvP (aviso ao entrar, loot próprio, infectados que voltam) e aparecem no mapa
+    ("PT" e "HG"). De longe aparecem os guindastes, o navio e o galpão.
+  · SAVE: os 14 prédios comuns que ficavam nos terrenos dos portos saíram; o jogo salvo de antes é convertido sozinho.
+  ARQUIVOS MEXIDOS (testado: teste_locais_107 NOVO (os 5 locais montam; o navio fica no mar; do portão até o convés,
+  a ponte de comando e o alto do guindaste, e no hangar até o mezanino, tudo andando); + a bateria):
+    mundo/local_porto.gd ........... NOVO · o porto (cais, guindastes, contêineres, navio) e o hangar de carga
+    ferramentas/escolher_portos.gd . NOVO · escolhe onde ficam (porto: costa com mar atrás; hangar: terreno todo em terra)
+    ferramentas/testes/teste_locais_107.gd ... NOVO
+    mundo/locais.gd ................ os 5 locais novos na lista; tamanhos, nomes, cores, siglas e a casca de longe
+    mundo/local.gd ................. porto/hangar montados pelo mundo/local_porto.gd
+    mundo/cidade.gd ................ remapa_v5 (prédios que saíram para os portos)
+    menu/salvamento.gd ............. mapa dos prédios versão 6
+    mundo/loot_mundo.gd ............ tabelas "porto_*", "carga_*", chão "chao_porto"/"chao_hangar"
+    ferramentas/testes/ ............ teste_escadas_incendio: mais tempo por lance para quem manca e mostra no que bate
+                                     se travar; rodar.sh: testes com tela até 25 min (+ teste_locais_107)
+    menu/config.gd ................. VERSAO "1.07"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + seções 4, 5, mapa "QUERO MEXER EM..." e 10
+
 ATUALIZAÇÃO 1.06 · IGREJAS E A PREFEITURA DE NOVA YORK (1ª PARTE DAS ESTRUTURAS NOVAS)
   Plano das estruturas novas, em 3 partes: 1.06 igrejas e prefeitura · 1.07 portos com navio e hangares de carga ·
   1.08 guaritas nos campos, comboios do Exército (tanques, jipes, caminhões) e soldados infectados.
@@ -3532,6 +3577,10 @@ MÚSICA (pasta audio/)
 -----------------------------------------------------------------------------------------------------
 10. LIMITAÇÕES CONHECIDAS E PRÓXIMOS PASSOS
 -----------------------------------------------------------------------------------------------------
+- 1.06/1.07: igrejas, prefeitura, portos e hangares não têm portas de abrir (os vãos ficam abertos); o guindaste e o
+  navio não se mexem; a cúpula da igreja e a da prefeitura são só por fora (dentro, o forro é reto com o céu pintado);
+  quem cai entre o navio e o cais vai para a água (sai nadando pela ponta do cais). Na escada de incêndio, DE PERNA
+  QUEBRADA, o teste às vezes (raramente) não termina a subida de um prédio de 9 andares; andando normal, nunca.
 - 1.04: nos telhados, o topo estreito das torres (quando o prédio está aberto) não tem física (dá para atravessar;
   as caixas d'água ganharam física na 1.05); os infectados não sobem nas escadas de incêndio. Perto do telhado, o último patamar
   pode ficar fora da altura das janelas (o lance que chega no telhado nunca é baixo demais nem íngreme demais).

@@ -412,7 +412,8 @@ parques temáticos), entrevista de Shaver (80.lv).
   Um marco precisa ser **útil e relevante**; prédio decorativo no horizonte não orienta ninguém. *(LDB, Disney)*
   ✅ 1.06: as 4 igrejas (torre de ~41 m com a cruz, cúpula verde) e a prefeitura (cúpula com relógios e bandeira) são
   marcos vistos de longe (a casca de longe tem a torre, a cúpula e os telhados) e são úteis: loot próprio, o
-  campanário para vigiar e o sino que puxa a horda.
+  campanário para vigiar e o sino que puxa a horda. ✅ 1.07: os guindastes azuis dos 2 portos (lança a 31 m) e o
+  navio são marcos da costa, com a passarela do guindaste e a ponte de comando como mirantes.
 - **"Onde estou?" em 15 segundos:** se o jogador não responde isso nos primeiros 15 s, já está perdido. *(Carson)*
 - **Luz:** iluminar mais forte as saídas e portas importantes que os espaços secundários; portas bem iluminadas
   ajudam a ler o caminho. Um feixe de luz num objeto vale mais que uma sala cheia de detalhe. *(LDB, Carson)*
