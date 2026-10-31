@@ -70,6 +70,9 @@ ATUALIZAÇÃO 1.06 · IGREJAS E A PREFEITURA DE NOVA YORK (1ª PARTE DAS ESTRUTU
   · As igrejas e a prefeitura são ZONAS DE PvP como os outros locais especiais (aviso ao entrar, loot próprio,
     infectados que voltam) e aparecem no mapa ("I" e "PF"). De longe, a cúpula, a torre e os telhados aparecem.
   · SAVE: os 7 prédios comuns que estavam nos terrenos novos saíram; o jogo salvo de antes é convertido sozinho.
+  ESCADAS DE INCÊNDIO (conserto): quando o pé da escada caía na beira do quarteirão (onde o chão desce da calçada para a
+  terra), o 1º degrau ficava ~35 cm acima do chão e trancava quem chegava andando (só pulando). Agora a rampa do 1º
+  lance continua para baixo, entrando no chão.
   ARQUIVOS MEXIDOS (testado: teste_locais_106 NOVO (os 5 locais montam; da rua até o sino e da praça até o terraço
   andando, sem pular; o sino chama um infectado; conversão do save); compilar_tudo; + a bateria):
     mundo/local_igreja.gd .......... NOVO · a igreja e a prefeitura por dentro e por fora (e as peças neoclássicas)
@@ -85,6 +88,9 @@ ATUALIZAÇÃO 1.06 · IGREJAS E A PREFEITURA DE NOVA YORK (1ª PARTE DAS ESTRUTU
     jogador/jogador.gd ............. PEGAR perto do sino = tocar
     inventario/tela_inventario.gd .. o botão PEGAR mostra "TOCAR SINO"
     rede/sessao_rede.gd ............ evento "sino" (todos ouvem; o host faz o barulho)
+    mundo/escadas_incendio.gd ...... a rampa do 1º lance entra no chão (pé na beira do quarteirão)
+    ferramentas/testes/ ............ teste_bunkers e teste_portas_corrimao usam a conversão do número dos prédios
+                                     (remapa_v4); teste_interior_fatias: limite de nós para a nova amostra de prédios
     audio/sons/LICENCA.txt ......... o som do sino
     ferramentas/escolher_locais.gd . NOVOS=2 (prefeitura no centro, uma igreja por ilha)
     ferramentas/testes/rodar.sh .... + teste_locais_106
