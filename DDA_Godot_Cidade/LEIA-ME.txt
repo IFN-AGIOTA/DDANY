@@ -80,7 +80,9 @@ ATUALIZAÇÃO 1.07 · PORTOS COM NAVIO E HANGARES DE CARGA (2ª PARTE DAS ESTRUT
     menu/salvamento.gd ............. mapa dos prédios versão 6
     mundo/loot_mundo.gd ............ tabelas "porto_*", "carga_*", chão "chao_porto"/"chao_hangar"
     ferramentas/testes/ ............ teste_escadas_incendio: mais tempo por lance para quem manca e mostra no que bate
-                                     se travar; rodar.sh: testes com tela até 25 min (+ teste_locais_107)
+                                     se travar; rodar.sh: testes com tela até 25 min (+ teste_locais_107);
+                                     teste_portas_corrimao: acha a porta pelo número do prédio depois dos portos e anda
+                                     só 2 escadas de cada formato igual por local (os guindastes passavam dos 25 min)
     menu/config.gd ................. VERSAO "1.07"
     menu/novidades_lista.gd ........ refeita
     LEIA-ME.txt .................... este bloco + seções 4, 5, mapa "QUERO MEXER EM..." e 10
