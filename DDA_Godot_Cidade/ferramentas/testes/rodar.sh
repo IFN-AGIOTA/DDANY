@@ -117,7 +117,8 @@ elif [ "$alvo" = rede ]; then
 	wait
 	grep -E "HOST:|SCRIPT ERROR" "$DADOS/host.txt"
 	grep -E "CLI:|SCRIPT ERROR" "$DADOS/cli.txt"
-	grep -q "com física: [1-9]" "$DADOS/host.txt" && grep -q "cópias de infectados perto: [1-9]" "$DADOS/cli.txt" && grep -q "chat do amigo chegou: true" "$DADOS/host.txt" || falhou=1
+	grep -q "com física: [1-9]" "$DADOS/host.txt" && grep -q "cópias de infectados perto: [1-9]" "$DADOS/cli.txt" && grep -q "chat do amigo chegou: true" "$DADOS/host.txt" \
+		&& grep -q "aparência do amigo: f true" "$DADOS/host.txt" && grep -q "aparência do host: m · a minha: f" "$DADOS/cli.txt" || falhou=1
 elif [ "$alvo" = todos ]; then
 	rodar compilar_tudo 0
 	rodar teste_loot_volta 0
@@ -165,6 +166,7 @@ elif [ "$alvo" = todos ]; then
 	rodar teste_locais_107 1
 	rodar teste_locais_108 1
 	rodar teste_chat 1
+	rodar teste_personagem 1
 	rodar_turn
 else
 	rodar "$alvo" 1

@@ -9,6 +9,7 @@ func _r():
 	var m = current_scene
 	if m.tela_login != null: m.tela_login._sair()
 	await create_timer(8.0).timeout
+	root.get_node("Config").definir("aparencia", {"sexo": "f", "cabelo": "Hair_Buns", "cor": 3, "pele": 1})   # 1.10
 	root.get_node("Rede").entrar("127.0.0.1", "Cli")
 	var t := 0.0
 	while not root.get_node("Rede").partida_comecou and t < 60.0:
@@ -40,6 +41,9 @@ func _r():
 		var v = m.vagos.por_id[k]
 		if is_instance_valid(v) and v.global_position.distance_to(j.global_position) < 40.0: n += 1
 	print("CLI: cópias de infectados perto: ", n)
+	# 1.10: o host (homem padrão) aparece como homem aqui; e eu, mulher
+	var rh = m.sessao_rede.remotos.get(1)
+	print("CLI: aparência do host: ", rh.modelo.sexo() if rh != null else "?", " · a minha: ", j.get_node("Modelo/Sobrevivente").sexo() if j.get_node_or_null("Modelo/Sobrevivente") != null else "?")
 	# 1.09: chat de texto para o host
 	m.chat.abrir()
 	m.chat._campo.text = "ola host chat 109"

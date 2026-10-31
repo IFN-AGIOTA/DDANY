@@ -23,7 +23,7 @@ const EQUIPE := [
 const RECURSOS := [
 	["Cartão de acesso dos bunkers (modelo 3D; textura repintada)", "codeinfernogames (Code Inferno Games) · \"3D Keycard\"",
 		"CC0 1.0 (domínio público)", "opengameart.org/content/3d-keycard"],
-	["Personagem do jogador (corpo, pele, olhos, sobrancelhas, cabelos e barba)", "Quaternius · \"Universal Base Characters\"",
+	["Personagem do jogador: homem e mulher (1.10), pele, olhos, sobrancelhas, todos os cabelos e a barba", "Quaternius · \"Universal Base Characters\"",
 		"CC0 1.0 (domínio público)", "quaternius.itch.io/universal-base-characters"],
 	["Modelos 3D (manequins) dos infectados e dos sobreviventes do hospital (0.91) e animações", "Quaternius · \"Universal Animation Library\" 1 e 2",
 		"CC0 1.0 (domínio público)", "quaternius.com · opengameart.org/content/universal-animation-library-2"],

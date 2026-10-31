@@ -41,6 +41,53 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.10 · PERSONAGEM MASCULINO OU FEMININO (ESCOLHA NO PERFIL)
+  · O personagem agora é o pack "Universal Base Characters" do Quaternius COMPLETO (o nº 9 da lista de packs): além do
+    HOMEM de antes, a MULHER do mesmo pack e TODOS os cabelos dele.
+  · CORPO ORIGINAL DO PACK: as roupas desenhadas por cima do corpo (camisa, calça, botas e colete como "cascas") foram
+    DESLIGADAS, porque cortavam o corpo. O personagem fica como no pack (com a roupa de baixo preta da textura). As
+    roupas continuam no inventário e funcionando (frio, bolsos), só não aparecem no corpo por enquanto. Chapéu, boné,
+    gorro, capacete, mochila, pochete e as armas continuam aparecendo (são modelos 3D à parte).
+  · PERFIL › SEU PERSONAGEM (em cima, com ou sem conta): escolha MASCULINO ou FEMININO, o tom da PELE (5: clara,
+    morena clara, morena, parda, negra), o CABELO (raspado, repartido, curtinho, coque, comprido ou careca), a BARBA
+    (só no homem) e a COR DO CABELO (castanho escuro, preto, castanho, loiro, ruivo, grisalho). Cada toque já vale.
+  · Ao lado aparece o SEU PERSONAGEM DO MODO LIVRE em 3D, girando devagar (arraste para girar), com o que ele está
+    usando no jogo salvo: chapéu/capacete, mochila, pochete, arma nas costas e no coldre e a arma da mão. Sem jogo
+    salvo: o equipamento com que o jogo começa. A troca aparece na hora nele e no personagem do menu principal.
+  · No jogo vale para tudo: o seu corpo, o boneco da tela do INVENTÁRIO e, no MULTIJOGADOR, a cópia que os amigos veem
+    (a aparência vai junto quando você entra na partida). Capacete, mochila e armas servem nos dois corpos; chapéu,
+    boné, gorro e capacete escondem o cabelo (a barba fica). A mulher usa as mesmas animações.
+  · Padrão (quem não escolher nada): o homem de sempre (pele morena, raspado, com barba).
+  · Multijogador: versão 1.10 com 1.10 (o "olá" da rede mudou: PROTOCOLO 4).
+  ARQUIVOS MEXIDOS (testado: teste_personagem NOVO (Perfil, troca de corpo, Config, jogo, capacete, inventário, menu);
+  rodar.sh rede confere a aparência do amigo nos dois lados; + a bateria):
+    menu/painel_personagem.gd ...... NOVO · o painel SEU PERSONAGEM do Perfil (escolhas + boneco 3D do jogo salvo)
+    jogador/sobrevivente/corpo_f.scn ... NOVO · o corpo da MULHER (pele, olhos, sobrancelhas, os 6 cabelos)
+    jogador/sobrevivente/animacoes_f.res ... NOVO · as mesmas animações, convertidas para o esqueleto dela
+    jogador/sobrevivente/corpo.scn ... o homem com os 6 cabelos do pack (antes 3)
+    jogador/sobrevivente/texturas/T_Superhero_Female_Dark_BaseColor.png, T_Superhero_Female_Normal.png,
+      T_Superhero_Female_Roughness.png, T_Hair_2_BaseColor.png, T_Hair_2_Normal.png (+ .import) ... NOVOS
+    jogador/sobrevivente/License_Standard.txt ... NOVO · a licença CC0 do pack
+    jogador/sobrevivente/LICENCA.txt ... a mulher e todos os cabelos
+    ferramentas/preparar_personagem_f.gd ... NOVO · faz corpo_f.scn, animacoes_f.res e põe os cabelos no homem
+    jogador/modelo_sobrevivente.gd .. ROUPA_NO_CORPO = false (sem as cascas de roupa/colete: corpo original);
+                                     APARÊNCIA: aparencia (sexo, pele, cabelo, barba, cor), normalizar,
+                                     definir_aparencia, PELES, CABELOS_ORDEM/NOMES, CORES_CABELO, o corpo de cada
+                                     sexo (e as cascas de roupa/colete de cada um); tom da pele no shader
+    jogador/jogador.gd ............. usar_sobrevivente usa a aparência do Config
+    inventario/boneco_3d.gd ........ aparência (do Config ou dada), trocar_aparencia, giro sozinho; sem arrastar
+                                     itens quando o "inventário" é só de mostrar
+    menu/tela_perfil.gd ............ seção SEU PERSONAGEM em cima (o painel continua vivo quando a lista remonta)
+    menu/cena_menu.gd .............. o personagem do menu usa a aparência e troca quando ela muda
+    menu/config.gd ................. "aparencia" nas opções; VERSAO "1.10"
+    menu/creditos.gd ............... Universal Base Characters: homem e mulher, todos os cabelos
+    rede/rede.gd ................... a aparência vai no "olá" (jogadores[id]["vis"], aparencia_de); PROTOCOLO 4
+    rede/jogador_remoto.gd ......... a cópia do amigo com a aparência dele
+    ferramentas/testes/teste_personagem.gd ... NOVO · rodar.sh: + teste_personagem
+    ferramentas/testes/rede_amigo_host.gd, rede_amigo_cliente.gd, rodar.sh ... conferem a aparência na rede
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..." + seção 10
+
 ATUALIZAÇÃO 1.09.2 · COMPRAR SEM ESPAÇO NA MOCHILA
   · CONSERTO: na loja da Mônica, se o item não cabia na mochila/roupas, ela não vendia ("Não cabe na sua mochila") e
     não dava para comprar. Agora a compra acontece do mesmo jeito: com espaço, o item vai para o inventário; sem
@@ -3573,13 +3620,20 @@ INFECTADOS (pasta inimigos/; o nome "vagos" nos arquivos veio do HTML)
 - converter/adicionar modelos do pacote ferramentas/preparar_infectados.gd (instruções no topo)
 
 SOBREVIVENTE (jogador no modo livre)
-- corpo, roupa aparecendo no corpo,
+- corpo, roupa no corpo (desligada),
   mochila 3D e onde a arma fica ....... jogador/modelo_sobrevivente.gd (tabelas CAMISAS, CALCAS,
                                         COLETES, CABECA no topo: item novo = cor nova ali)
 - fuzil nas duas mãos (posição do fuzil
   baixo/mirando e das mãos, IK) ....... jogador/ik_fuzil.gd
-- malha e animações ................... jogador/sobrevivente/corpo.scn, animacoes.res e texturas/
+- malha e animações ................... jogador/sobrevivente/corpo.scn, animacoes.res e texturas/ (homem) ·
+                                        corpo_f.scn, animacoes_f.res (mulher, 1.10)
 - converter de novo ................... ferramentas/preparar_jogador.gd -> retarget_kaykit.gd -> preparar_personagem.gd
+                                        -> preparar_personagem_f.gd (mulher, cabelos e animações dela)
+- homem/mulher, tons de pele, cabelos,
+  barba e cores do cabelo (1.10) ....... jogador/modelo_sobrevivente.gd (PELES, CABELOS_ORDEM, CABELOS_NOMES,
+                                        CORES_CABELO, APARENCIA_PADRAO, normalizar) · guardada em Config "aparencia"
+- tela de escolher o personagem (Perfil
+  › SEU PERSONAGEM, boneco do jogo salvo) menu/painel_personagem.gd (dentro de menu/tela_perfil.gd)
 - equipamentos 3D no corpo (onde cada
   um encaixa: ENCAIXE) e peças feitas
   por código (gorro, lanterna, pochete) equipamentos/modelos_equip.gd
@@ -3590,7 +3644,8 @@ SOBREVIVENTE (jogador no modo livre)
 - converter equipamentos low poly ..... ferramentas/preparar_equipamentos.gd
 - personagem novo (corpo, cabelos e
   animações no esqueleto dele) ........ ferramentas/preparar_personagem.gd (instruções no topo)
-- roupas no corpo (cascas) ............ jogador/modelo_sobrevivente.gd (ROUPAS, TIPO_CAMISA, CABELOS)
+- roupas no corpo (cascas; DESLIGADAS
+  na 1.10) ............................. jogador/modelo_sobrevivente.gd (ROUPA_NO_CORPO, ROUPAS, TIPO_CAMISA)
 - ação só na parte de cima do corpo ... jogador/camada_acao.gd
 - animações novas (KayKit -> jogo) .. ferramentas/retarget_kaykit.gd (tabelas CONVERTER e DIRETAS)
 - animações de captura real (CMU) .... ferramentas/retarget_cmu.gd (tabela CLIPES; .bvh de github.com/una-dinosauria/cmu-mocap)
@@ -3640,6 +3695,7 @@ MULTIJOGADOR (pasta rede/ · modo livre)
   com vagas e CHAMAR, entrar) ......... menu/tela_multijogador.gd
 - perfil (ícone, código, recordes,
   amigos, pedidos) .................... menu/tela_perfil.gd
+- aparência do amigo (homem/mulher) ... rede/rede.gd (_ola, aparencia_de) -> rede/jogador_remoto.gd
 - ícones de perfil (cores/símbolos) ... menu/avatar.gd (tabela ICONES)
 - aviso "Fulano te chamou" ............ menu/aviso_chamado.gd (quando aparece: main.gd, _chamado)
 - pedidos de amizade, status online,
@@ -3767,7 +3823,12 @@ MÚSICA (pasta audio/)
   infectado ainda não escala paredes nem salta entre telhados (só corre e salta no chão). O arremesso de um amigo é
   simulado de novo em cada aparelho: longe de quem recebe (sem a física dos prédios de lá) ele pode bater num
   lugar um pouco diferente.
-- O jogador é um sobrevivente genérico (Universal Base Characters); o Dominic do livro (jaqueta de couro, cabelo branco) não tem modelo próprio (o 3D dele foi cancelado na 0.27).
+- O jogador é um sobrevivente genérico (Universal Base Characters: homem ou mulher, 1.10); o Dominic do livro (jaqueta de couro, cabelo branco) não tem modelo próprio (o 3D dele foi cancelado na 0.27).
+- 1.10: as ROUPAS não aparecem no corpo (camisa, calça, botas e colete): a casca antiga cortava o corpo e foi
+  desligada (ROUPA_NO_CORPO em jogador/modelo_sobrevivente.gd). Falta fazer roupas de verdade (modelos 3D presos ao
+  esqueleto). A mulher usa as mesmas animações do homem (convertidas para o esqueleto dela): o jeito de andar é o mesmo. A
+  aparência é uma só por aparelho (vale no solo e em todos os mundos) e só muda pelo Perfil (no menu); no
+  multijogador os amigos recebem a aparência quando você entra na partida.
 - A gangue VAGOS (Edy, V), Alyce, Nick, Mônica e Carlos ainda não aparecem no jogo (são do Ato 2 em diante).
 - Só abrem até o 3º andar; o telhado só nos prédios de até 3 andares (nos mais altos, o resto fica fechado).
 - História: apagada na 0.63, vai ser refeita do zero (menu mostra "Em breve").
@@ -3784,7 +3845,7 @@ MÚSICA (pasta audio/)
 - Bunkers (0.83): ainda sem infectados lá dentro; a descida é pelo elevador (a tela escurece: não dá para descer
   andando, o chão do mapa é uma peça só); em rede, um cartão perdido (por exemplo, com um amigo que saiu) não volta
   a aparecer.
-- Sobrevivente: rosto liso de manequim.
+- Sobrevivente: o rosto não tem expressões (a boca não mexe ao falar no chat de voz).
 - Infectados: os rostos são simples (manequim, olhos pintados).
 - Infectados no estilo Project Zomboid (0.89), o que ainda falta de lá: cercas altas que caem com o peso; o
   helicóptero é só som (como lá); os infectados não batem nos carros. Janelas (0.90): só as do térreo dos

@@ -3,6 +3,8 @@ extends CanvasLayer
 # conta (Google/convidado), RECORDES (melhor tempo vivo, mais abates), PEDIDOS DE AMIZADE (aceitar/recusar),
 # AMIGOS (online/jogando/visto há…, recorde, remover) e ADICIONAR AMIGO pelo código.
 # Dados: rede/conta.gd (Firebase). Sem conta: mostra o botão para entrar (main.gd abre a tela de login).
+# 1.10 · SEU PERSONAGEM (em cima, com ou sem conta): homem/mulher, pele, cabelo, barba e cor, com o personagem do modo
+# livre em 3D (menu/painel_personagem.gd). O painel não é refeito quando a lista de amigos atualiza (só muda de lugar).
 # Mexa AQUI para: layout e textos do perfil.
 
 signal fechar
@@ -10,6 +12,7 @@ signal pedir_login
 
 const UI := preload("res://menu/ui.gd")
 const AvatarCls := preload("res://menu/avatar.gd")
+const PainelPersonagemCls := preload("res://menu/painel_personagem.gd")
 
 var _raiz: Control
 var _status: Label
@@ -18,6 +21,8 @@ var _nome: LineEdit
 var _escolhendo := false
 var _remover := ""                            # uid do amigo aguardando o 2º toque em "Remover"
 var _t := 0.0
+var painel_personagem: Control = null          # 1.10: menu/painel_personagem.gd (fica vivo entre os _montar)
+var _v_painel := 0.0
 
 func _ready() -> void:
 	layer = 32
@@ -51,9 +56,18 @@ func _montar() -> void:
 	var st := _status.text if _status != null else ""
 	var cod_antes := _cod.text if _cod != null and is_instance_valid(_cod) else ""     # não perde o que estava digitando
 	var nome_antes := _nome.text if _nome != null and is_instance_valid(_nome) else Conta.nome
+	if painel_personagem != null and painel_personagem.get_parent() != null:
+		painel_personagem.get_parent().remove_child(painel_personagem)
 	if _raiz != null:
 		_raiz.queue_free()
 	var v := UI.vh(self)
+	if painel_personagem != null and absf(_v_painel - v) > 0.01:      # a tela mudou de tamanho: refaz o painel
+		painel_personagem.queue_free()
+		painel_personagem = null
+	if painel_personagem == null:
+		painel_personagem = PainelPersonagemCls.new()
+		painel_personagem.name = "PainelPersonagem"
+		_v_painel = v
 	_raiz = Control.new()
 	_raiz.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_raiz.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -80,10 +94,17 @@ func _montar() -> void:
 	rolar.offset_bottom = -3.0 * v
 	rolar.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_raiz.add_child(rolar)
+	var tudo := VBoxContainer.new()
+	tudo.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	tudo.add_theme_constant_override("separation", int(1.2 * v))
+	rolar.add_child(tudo)
+	_secao(tudo, "SEU PERSONAGEM", v)
+	tudo.add_child(painel_personagem)
 	if not Conta.logado:
 		var c := VBoxContainer.new()
 		c.add_theme_constant_override("separation", int(1.6 * v))
-		rolar.add_child(c)
+		_secao(tudo, "CONTA", v)
+		tudo.add_child(c)
 		c.add_child(_texto("Você ainda não entrou numa conta. Com a conta você tem um CÓDIGO DE AMIGO, salva seus recordes e pode chamar os amigos para jogar.", v, 3.0))
 		var b := UI.BotaoMenu.new("Entrar na conta", "Google ou convidado", true, 3.8, 34.0)
 		b.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -95,7 +116,7 @@ func _montar() -> void:
 	var linhas := HBoxContainer.new()
 	linhas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	linhas.add_theme_constant_override("separation", int(6.0 * v))
-	rolar.add_child(linhas)
+	tudo.add_child(linhas)
 	# ---- esquerda: eu
 	var esq := VBoxContainer.new()
 	esq.size_flags_horizontal = Control.SIZE_EXPAND_FILL

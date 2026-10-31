@@ -70,6 +70,7 @@ func _ready() -> void:
 	add_child(_slot)
 	modelo = SobreviventeCls.new()
 	modelo.name = "Sobrevivente"
+	modelo.aparencia = Rede.aparencia_de(id)      # 1.10: homem/mulher, pele e cabelo do amigo (veio no "olá")
 	modelo.rotation_degrees.y = 180.0          # como no jogador (modelos olham para +Z)
 	_slot.add_child(modelo)
 	animador = AnimadorCls.new()

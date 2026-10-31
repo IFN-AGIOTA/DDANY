@@ -6,6 +6,8 @@ extends SubViewportContainer
 #   ARRASTAR o dedo/mouse em cima dele = girar o personagem.
 #   SOLTAR um item em cima dele = vestir no lugar certo (ou pôr na mão, se for arma/ferramenta).
 # Só existe com a tela do inventário aberta (não gasta nada no jogo).
+# 1.10: também mostra o personagem na tela de escolha (menu/tela_personagem.gd): lá o "inventário" é só a roupa do
+# jogo salvo (sem arrastar itens) e trocar_aparencia() troca homem/mulher, pele e cabelo na hora.
 # Mexa AQUI para: câmera, luz e ângulo inicial do personagem.
 
 const Sob := preload("res://jogador/modelo_sobrevivente.gd")
@@ -20,6 +22,8 @@ var _arma: Node3D
 var _arma_chave := ""
 var _angulo := 0.45                    # um pouco de lado (3/4), mostra a mochila e a arma nas costas
 var _arrastando := false
+var aparencia = null                   # 1.10: null = a do Config (a do jogador)
+var giro_sozinho := 0.0                # 1.10: gira devagar sozinho (rad/s) enquanto ninguém arrasta
 
 func _init(inventario) -> void:
 	inv = inventario
@@ -56,14 +60,37 @@ func _ready() -> void:
 	_vp.add_child(_cam)
 	_giro = Node3D.new()
 	_vp.add_child(_giro)
-	_sob = Sob.new()
-	_sob.name = "Sobrevivente"
-	_giro.add_child(_sob)
+	_criar_sob()
 	_giro.rotation.y = _angulo
 	resized.connect(_enquadrar)
 	inv.mudou.connect(_atualizar)
 	_enquadrar()
 	_atualizar()
+
+func _criar_sob() -> void:
+	_sob = Sob.new()
+	_sob.name = "Sobrevivente"
+	_sob.aparencia = aparencia if aparencia != null else Config.valor("aparencia")
+	_giro.add_child(_sob)
+
+# 1.10: outra aparência (homem/mulher precisa de outro corpo; o resto troca no mesmo)
+func trocar_aparencia(ap: Dictionary) -> void:
+	aparencia = ap
+	if _sob == null or not is_instance_valid(_sob):
+		return
+	if _sob.definir_aparencia(ap):
+		return
+	_giro.remove_child(_sob)
+	_sob.queue_free()
+	_arma = null
+	_arma_chave = ""
+	_criar_sob()
+	_atualizar()
+
+func _process(dt: float) -> void:
+	if giro_sozinho != 0.0 and not _arrastando and _giro != null:
+		_angulo += giro_sozinho * dt
+		_giro.rotation.y = _angulo
 
 # o corpo inteiro cabe na altura do quadro (e na largura, se o quadro for estreito)
 func _enquadrar() -> void:
@@ -116,7 +143,7 @@ func _gui_input(e: InputEvent) -> void:
 
 # soltar um item em cima do personagem = vestir/segurar
 func _can_drop_data(_p: Vector2, d: Variant) -> bool:
-	if typeof(d) != TYPE_DICTIONARY or not d.has("item") or d.has("atalho"):
+	if typeof(d) != TYPE_DICTIONARY or not d.has("item") or d.has("atalho") or not inv.has_method("equipar"):
 		return false
 	return _lugar(d["item"]) != ""
 

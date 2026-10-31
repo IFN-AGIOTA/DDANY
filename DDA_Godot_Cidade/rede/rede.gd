@@ -43,7 +43,7 @@ signal voz_recebida(id: int, d: PackedByteArray)                # 0.97: pedaço 
 const PORTA := 24560                           # partida (UDP, ENet)
 const PORTA_ANUNCIO := 24561                   # anúncio "tem partida aqui" na rede local (UDP broadcast)
 const MAX_JOGADORES := 10                      # no máximo 10 na sala (host + 9)
-const PROTOCOLO := 3                           # aumente quando mudar o formato das mensagens (3: mundo sincronizado)
+const PROTOCOLO := 4                           # aumente quando mudar o formato das mensagens (3: mundo sincronizado · 4: aparência no "olá")
 const ANUNCIO_A_CADA := 1.0                    # segundos
 
 var ligado := false                            # tem partida aberta/conectada (e aceita)
@@ -131,7 +131,7 @@ func criar_partida(meu_nome: String, semente_loot: int, mundo_id := "", mundo_no
 		multiplayer.multiplayer_peer = p
 	ligado = true
 	_host_nome = nome
-	jogadores = {} if servidor_dedicado else {1: {"nome": nome, "avatar": Conta.avatar, "uid": Conta.uid}}
+	jogadores = {} if servidor_dedicado else {1: {"nome": nome, "avatar": Conta.avatar, "uid": Conta.uid, "vis": _minha_aparencia()}}
 	mundo = {"semente": semente_loot, "comecou": servidor_dedicado, "pvp": str(Config.valor("pvp")),   # 0.71: regra do PvP
 		"mundo_id": mundo_id, "mundo_nome": mundo_nome}
 	partida_comecou = servidor_dedicado         # servidor: a partida já começa aberta (entra direto na cidade)
@@ -553,7 +553,7 @@ func _conectou_no_host() -> void:
 	if _ola_peer == multiplayer.multiplayer_peer:
 		return
 	_ola_peer = multiplayer.multiplayer_peer
-	_ola.rpc_id(1, nome, PROTOCOLO, Config.VERSAO, Conta.avatar, Conta.uid)
+	_ola.rpc_id(1, nome, PROTOCOLO, Config.VERSAO, Conta.avatar, Conta.uid, _minha_aparencia())
 
 # ---------- sala ----------
 # host: a sala vira partida (todos vão para a cidade)
@@ -580,8 +580,17 @@ func expulsar(id: int) -> void:
 func avatar_de(id: int) -> int:
 	return int(jogadores.get(id, {}).get("avatar", 0))
 
+# 1.10 · APARÊNCIA (homem/mulher, pele, cabelo): vai no "olá" e fica em jogadores[id]["vis"]
+func aparencia_de(id: int) -> Dictionary:
+	var a = jogadores.get(id, {}).get("vis", {})
+	return a if a is Dictionary else {}
+
+func _minha_aparencia() -> Dictionary:
+	var a = Config.valor("aparencia")
+	return (a as Dictionary).duplicate() if a is Dictionary else {}
+
 @rpc("any_peer", "call_remote", "reliable")
-func _ola(n: String, protocolo: int, versao: String, av := 0, conta_uid := "") -> void:
+func _ola(n: String, protocolo: int, versao: String, av := 0, conta_uid := "", vis := {}) -> void:
 	if not multiplayer.is_server():
 		return
 	var id := multiplayer.get_remote_sender_id()
@@ -594,12 +603,13 @@ func _ola(n: String, protocolo: int, versao: String, av := 0, conta_uid := "") -
 		_derrubar_depois(id)
 		return
 	var nm := _limpar_nome(n)
-	jogadores[id] = {"nome": nm, "avatar": av, "uid": conta_uid}
+	var ap: Dictionary = _so_aparencia(vis)
+	jogadores[id] = {"nome": nm, "avatar": av, "uid": conta_uid, "vis": ap}
 	var cl = _clima_atual()
 	if cl != null:
 		mundo["clima"] = cl
 	_aceito.rpc_id(id, jogadores, mundo)
-	_entrou.rpc(id, nm, av, conta_uid)         # avisa todo mundo (inclusive quem entrou)
+	_entrou.rpc(id, nm, av, conta_uid, ap)     # avisa todo mundo (inclusive quem entrou)
 	jogador_entrou.emit(id, nm)
 
 @rpc("authority", "call_remote", "reliable")
@@ -615,11 +625,20 @@ func _recusado(motivo: String) -> void:
 	_falhar(motivo)
 
 @rpc("authority", "call_remote", "reliable")
-func _entrou(id: int, nm: String, av := 0, conta_uid := "") -> void:
+func _entrou(id: int, nm: String, av := 0, conta_uid := "", vis := {}) -> void:
 	if id == meu_id():
 		return
-	jogadores[id] = {"nome": nm, "avatar": av, "uid": conta_uid}
+	jogadores[id] = {"nome": nm, "avatar": av, "uid": conta_uid, "vis": _so_aparencia(vis)}
 	jogador_entrou.emit(id, nm)
+
+# só as chaves da aparência, com valores simples (o modelo confere o resto: modelo_sobrevivente.normalizar)
+static func _so_aparencia(v) -> Dictionary:
+	var r := {}
+	if v is Dictionary:
+		for k in ["sexo", "pele", "cabelo", "barba", "cor"]:
+			if v.has(k) and typeof(v[k]) in [TYPE_STRING, TYPE_INT, TYPE_FLOAT, TYPE_BOOL]:
+				r[k] = v[k]
+	return r
 
 func _peer_conectou(_id: int) -> void:
 	pass                                       # só vale depois do _ola

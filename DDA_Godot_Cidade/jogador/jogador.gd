@@ -393,6 +393,7 @@ func trocar_modelo(no: Node3D, importado := true) -> void:
 func usar_sobrevivente() -> void:
 	var m = load("res://jogador/modelo_sobrevivente.gd").new()
 	m.name = "Sobrevivente"
+	m.aparencia = Config.valor("aparencia")     # 1.10: homem/mulher, pele e cabelo escolhidos no Perfil
 	trocar_modelo(m, true)
 	animador.nomes_exatos = m.NOMES_ANIM
 	animador.atualizar_mapa()

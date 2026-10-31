@@ -1,7 +1,10 @@
-Personagem do jogador (corpo.scn + texturas/): Quaternius, "Universal Base Characters" [Standard]
-  (homem "Superhero", pele, olhos, sobrancelhas, cabelos "Simple Parted"/"Buzzed" e barba)
+Personagem do jogador (corpo.scn, corpo_f.scn + texturas/): Quaternius, "Universal Base Characters" [Standard]
+  (homem "Superhero" e, 1.10, a mulher "Superhero_Female"; pele, olhos, sobrancelhas e TODOS os cabelos do pack:
+  "Simple Parted", "Buzzed", "Buzzed Female", "Buns", "Long" e a barba "Beard")
   https://quaternius.itch.io/universal-base-characters
-Licença: CC0 1.0 (domínio público). Montado por ferramentas/preparar_personagem.gd (texturas reduzidas para 1024).
+Licença: CC0 1.0 (domínio público; a licença do pack está ao lado, em License_Standard.txt).
+Montado por ferramentas/preparar_personagem.gd (homem) e ferramentas/preparar_personagem_f.gd (mulher, os cabelos
+novos e animacoes_f.res = as mesmas animações convertidas para o esqueleto dela). Texturas reduzidas para 1024.
 
 Animações base: Quaternius (https://quaternius.com)
   - "Universal Animation Library 2" e "Universal Animation Library" (versão Unreal)

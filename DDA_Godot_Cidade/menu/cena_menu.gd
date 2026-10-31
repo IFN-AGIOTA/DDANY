@@ -322,6 +322,9 @@ func _poeira_no_ar() -> void:
 func _soldado() -> void:
 	soldado = SobreviventeCls.new()
 	soldado.name = "SobreviventeMenu"
+	soldado.aparencia = Config.valor("aparencia")   # 1.10: o personagem escolhido no Perfil (homem/mulher)
+	if not Config.mudou.is_connected(_config_mudou):
+		Config.mudou.connect(_config_mudou)
 	add_child(soldado)
 	soldado.rotation.y = PI + 0.32                  # o manequim olha para +Z; a cidade fica em -Z
 	var equip := {"slots": {}}
@@ -330,6 +333,21 @@ func _soldado() -> void:
 	soldado.vestir(_Equip.new(equip["slots"]))
 	var m4 := ModelosArmas.construir("m4")
 	soldado.segurar_arma("m4", m4)
+
+# 1.10: trocou o personagem no Perfil: o do menu troca junto
+func _config_mudou(k: String) -> void:
+	if k != "aparencia" or soldado == null or not is_instance_valid(soldado):
+		return
+	if soldado.definir_aparencia(Config.valor("aparencia")):
+		return
+	var t: Transform3D = soldado.transform
+	soldado.queue_free()
+	_soldado()
+	soldado.transform = t
+
+func _exit_tree() -> void:
+	if Config.mudou.is_connected(_config_mudou):
+		Config.mudou.disconnect(_config_mudou)
 
 # o vestir() do sobrevivente só lê "slots" do inventário
 class _Equip extends RefCounted:

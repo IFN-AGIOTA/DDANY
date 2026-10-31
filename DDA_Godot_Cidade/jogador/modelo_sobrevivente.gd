@@ -7,6 +7,8 @@ extends Node3D
 # atirar, morrer, agachado, andar agachado (+ soco, golpe, rolar, pegar... para usar depois).
 # O jogador/animador_modelo.gd escolhe a animação pelo estado (nomes exatos em NOMES_ANIM).
 #
+# (1.10: a ROUPA NO CORPO está DESLIGADA, ver ROUPA_NO_CORPO: o corpo fica o original do pack; o texto abaixo é de
+# como ela funciona quando ligada. Chapéu, mochila, pochete e armas aparecem do mesmo jeito.)
 # ROUPA DE VERDADE: cada vértice do corpo sabe a que PARTE pertence (rosto, pescoço, tronco, braço, antebraço, mão,
 # quadril, coxa, canela, pé). Cada roupa é uma "casca" feita dessas partes, um pouco por fora do corpo (acompanha a
 # animação), com a cor do item; a pele que fica embaixo é escondida (não atravessa a roupa).
@@ -19,10 +21,16 @@ extends Node3D
 #   arma do OMBRO (fuzil, espingarda...) aparece pendurada nas costas e a do COLDRE na cintura, quando
 #   não estão na mão
 # Sem nada: regata clara, short escuro e botas. Para um item novo aparecer, coloque a cor dele nas tabelas.
-# Chapéu/capacete/gorro escondem o cabelo. CABELOS = penteado e barba que o personagem usa.
+# Chapéu/capacete/gorro escondem o cabelo (a barba fica). O penteado e a barba vêm da aparência (1.10).
 # A arma da mão fica presa ao osso da MÃO DIREITA (acompanha as animações).
 # MUTADO (0.94, definir_mutacao): pele escura e acinzentada com VEIOS VERMELHOS que pulsam, olhos amarelados e o
 # corpo CURVADO (jogador/camada_mutado.gd). Vale para o jogador e para a cópia dos amigos (rede/jogador_remoto.gd).
+# 1.10 · HOMEM OU MULHER (aparencia, escolhida no PERFIL: menu/tela_personagem.gd; guardada em Config "aparencia"):
+# o corpo de MULHER é do mesmo pack (preparado por ferramentas/preparar_personagem_f.gd: corpo_f.scn + animacoes_f.res,
+# mesmo esqueleto e as mesmas partes do corpo, então a roupa, o colete e as peças funcionam igual). Também escolhe o
+# TOM DA PELE (PELES), o CABELO (os 5 penteados do pack ou careca), a BARBA (só homem) e a COR DO CABELO.
+# Quem cria o modelo põe a aparência ANTES de add_child (m.aparencia = {...}); vazio = o homem de sempre.
+# Na rede a aparência vai junto no "olá" (rede/rede.gd), e a cópia do amigo (rede/jogador_remoto.gd) fica igual.
 # Mexa AQUI para: cores da pele/cabelo/roupas, tabelas de roupas e onde a arma fica.
 
 const Malhas := preload("res://mundo/malhas.gd")
@@ -46,8 +54,25 @@ const ROUPAS := {"regata": [[TRONCO], 0.006], "camiseta": [[TRONCO, BRACO], 0.00
 	"jaqueta": [[TRONCO, BRACO, ANTEBRACO], 0.022], "short": [[QUADRIL, COXA], 0.011], "calca": [[QUADRIL, COXA, CANELA], 0.013],
 	"botas": [[PE, CANELA], 0.011]}
 const TIPO_CAMISA := {"camiseta": "camiseta", "moletom": "manga_longa", "jaqueta": "jaqueta", "capa_chuva": "jaqueta"}
-const CABELOS := ["Hair_Buzzed", "Hair_Beard"]
-const PENTEADOS := ["Hair_SimpleParted", "Hair_Buzzed", "Hair_Beard"]
+# 1.10: ROUPA NO CORPO DESLIGADA (pedido): o personagem fica com o corpo ORIGINAL do pack (com a roupa de baixo da
+# textura), sem as "cascas" de camisa/calça/botas/colete (cortavam o corpo). Chapéu/capacete/gorro, mochila, pochete e
+# as armas continuam (são modelos 3D à parte). true = volta o sistema de roupas antigo (o código continua aqui).
+const ROUPA_NO_CORPO := false
+const PENTEADOS := ["Hair_SimpleParted", "Hair_Buzzed", "Hair_Beard", "Hair_Buns", "Hair_BuzzedFemale", "Hair_Long"]
+# 1.10 · APARÊNCIA
+const SEXOS := {"m": ["corpo.scn", "animacoes.res"], "f": ["corpo_f.scn", "animacoes_f.res"]}
+const CABELOS_ORDEM := ["Hair_Buzzed", "Hair_SimpleParted", "Hair_BuzzedFemale", "Hair_Buns", "Hair_Long", ""]
+const CABELOS_NOMES := {"Hair_Buzzed": "Raspado", "Hair_SimpleParted": "Repartido", "Hair_BuzzedFemale": "Curtinho",
+	"Hair_Buns": "Coque", "Hair_Long": "Comprido", "": "Careca"}
+# tom da pele: multiplica a textura (que é morena)
+const PELES := [["Clara", Color(1.26, 1.38, 1.52)], ["Morena clara", Color(1.14, 1.22, 1.30)], ["Morena", Color(1, 1, 1)],
+	["Parda", Color(0.78, 0.74, 0.72)], ["Negra", Color(0.52, 0.48, 0.47)]]
+# cor do cabelo, da barba e das sobrancelhas (multiplica a textura cinza)
+const CORES_CABELO := [["Castanho escuro", Color(0.32, 0.22, 0.15)], ["Preto", Color(0.10, 0.09, 0.085)],
+	["Castanho", Color(0.55, 0.37, 0.22)], ["Loiro", Color(1.15, 0.92, 0.55)], ["Ruivo", Color(0.85, 0.36, 0.15)],
+	["Grisalho", Color(0.86, 0.85, 0.83)]]
+const APARENCIA_PADRAO := {"sexo": "m", "pele": 2, "cabelo": "Hair_Buzzed", "barba": true, "cor": 0}
+const APARENCIA_PADRAO_F := {"sexo": "f", "pele": 2, "cabelo": "Hair_Long", "barba": false, "cor": 0}
 
 const PELE := Color(0.72, 0.55, 0.43)
 const CABELO_COR := Color(0.32, 0.22, 0.15)            # multiplica a textura cinza do cabelo (castanho escuro)
@@ -68,6 +93,7 @@ uniform sampler2D pele : source_color, filter_linear_mipmap;
 uniform sampler2D normal_pele : hint_normal, filter_linear_mipmap;
 uniform sampler2D rugosidade : hint_default_white, filter_linear_mipmap;
 uniform float esconde[12];
+uniform vec3 tom = vec3(1.0);       // 1.10: tom da pele (multiplica a textura)
 uniform float mutado = 0.0;         // 0.94: 0 = humano · 1 = mutado completo
 uniform vec3 cor_veio : source_color = vec3(0.55, 0.03, 0.03);
 varying flat float regiao;          // flat: cada triângulo pega UMA parte (sem faixas misturadas na divisa)
@@ -82,7 +108,7 @@ float ruido(vec2 p) {
 void fragment() {
 	int r = clamp(int(regiao * 15.0 + 0.5), 0, 11);
 	if (esconde[r] > 0.5) { discard; }
-	vec3 c = texture(pele, UV).rgb;
+	vec3 c = clamp(texture(pele, UV).rgb * tom, 0.0, 1.0);
 	ROUGHNESS = texture(rugosidade, UV).r;
 	if (mutado > 0.001) {
 		// pele escura e sem vida + VEIOS (linhas finas onde o ruído passa pelo meio) que pulsam devagar
@@ -100,9 +126,13 @@ void fragment() {
 }
 """
 
-static var _cena: PackedScene = null
-static var _anims: AnimationLibrary = null
+static var _cenas := {}                 # sexo -> PackedScene
+static var _anims := {}                 # sexo -> AnimationLibrary
 static var _shader: Shader = null
+
+var aparencia := {}                     # 1.10: {"sexo", "pele", "cabelo", "barba", "cor"} (ponha antes de add_child)
+var _ap := {}                           # a aparência já conferida (normalizar)
+var _cobre_cabeca := false
 
 var corpo: Node3D
 var esqueleto: Skeleton3D
@@ -133,13 +163,29 @@ var _roupas := {}                      # tipo -> MeshInstance3D (casca da roupa)
 static var _malhas_roupa := {}
 static var _mats_roupa := {}
 
+# 1.10: confere uma aparência que veio do Config ou da rede (valores fora da lista voltam ao padrão)
+static func normalizar(ap) -> Dictionary:
+	var d: Dictionary = ap if ap is Dictionary else {}
+	var sexo := str(d.get("sexo", "m"))
+	if not SEXOS.has(sexo):
+		sexo = "m"
+	var base: Dictionary = APARENCIA_PADRAO if sexo == "m" else APARENCIA_PADRAO_F
+	var cab := str(d.get("cabelo", base["cabelo"]))
+	if not CABELOS_NOMES.has(cab):
+		cab = base["cabelo"]
+	return {"sexo": sexo, "pele": clampi(int(d.get("pele", base["pele"])), 0, PELES.size() - 1), "cabelo": cab,
+		"barba": sexo == "m" and bool(d.get("barba", base["barba"])), "cor": clampi(int(d.get("cor", 0)), 0, CORES_CABELO.size() - 1)}
+
 func _ready() -> void:
-	if _cena == null:
-		_cena = load(PASTA + "corpo.scn")
-		_anims = load(PASTA + "animacoes.res")
+	_ap = normalizar(aparencia)
+	var sexo: String = _ap["sexo"]
+	if not _cenas.has(sexo):
+		_cenas[sexo] = load(PASTA + SEXOS[sexo][0])
+		_anims[sexo] = load(PASTA + SEXOS[sexo][1])
+	if _shader == null:
 		_shader = Shader.new()
 		_shader.code = SHADER
-	corpo = _cena.instantiate()
+	corpo = _cenas[sexo].instantiate()
 	add_child(corpo)
 	esqueleto = corpo.find_child("Skeleton3D", true, false)
 	_mat = ShaderMaterial.new()
@@ -154,18 +200,15 @@ func _ready() -> void:
 	for c in PENTEADOS + ["Eyebrows"]:
 		var h := esqueleto.get_node_or_null(c) as MeshInstance3D
 		if h != null:
-			var mh: StandardMaterial3D = (h.mesh.surface_get_material(0) as StandardMaterial3D).duplicate()
-			mh.albedo_color = CABELO_COR
-			h.material_override = mh
-			if c != "Eyebrows":
-				h.visible = c in CABELOS
+			h.material_override = (h.mesh.surface_get_material(0) as StandardMaterial3D).duplicate()
+	_aplicar_aparencia()
 	for mi in corpo.find_children("*", "MeshInstance3D", true, false):
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	anim = AnimationPlayer.new()
 	anim.name = "AnimationPlayer"
 	corpo.add_child(anim)
 	anim.root_node = NodePath("..")
-	anim.add_animation_library("", _anims)
+	anim.add_animation_library("", _anims[sexo])
 	anim.play("parado")
 	_criar_ponto_arma()
 	_criar_ponto_fuzil()
@@ -174,6 +217,24 @@ func _ready() -> void:
 # ---------- roupa ----------
 func vestir(inventario) -> void:
 	var slots: Dictionary = inventario.slots if inventario != null else {}
+	if ROUPA_NO_CORPO:
+		_vestir_roupas(slots)
+	# chapéu, capacete e gorro escondem o cabelo (a barba fica)
+	var cab = slots.get("cabeca")
+	_cobre_cabeca = cab != null and cab.id in ["capacete", "gorro", "bone"]
+	_mostrar_cabelo()
+	# peças 3D
+	_peca("cabeca", slots.get("cabeca"))
+	_peca("mochila", slots.get("mochila"))
+	_peca("cinto", slots.get("cinto"))
+	var na_mao = slots.get("maos")
+	var ombro = slots.get("ombro")
+	var coldre = slots.get("coldre")
+	_arma_no_corpo("ombro", ombro if ombro != null and ombro != na_mao and ombro.eh_arma() else null, slots.get("mochila") != null)
+	_arma_no_corpo("coldre", coldre if coldre != null and coldre != na_mao and coldre.eh_arma() else null, false)
+
+# (desligado na 1.10: ROUPA_NO_CORPO) camisa, calça e botas como cascas do corpo + o colete
+func _vestir_roupas(slots: Dictionary) -> void:
 	var usar := {}                                            # tipo de roupa -> cor
 	var it = slots.get("camisa")
 	if it != null and CAMISAS.has(it.id):
@@ -202,24 +263,42 @@ func vestir(inventario) -> void:
 					esconde[reg] = 1.0
 	esconde[CANELA] = 1.0 if usar.has("calca") else 0.0   # com short a canela aparece (a bota cobre só embaixo)
 	_mat.set_shader_parameter("esconde", PackedFloat32Array(esconde))
-	# chapéu, capacete e gorro escondem o cabelo (a barba fica)
-	var cab = slots.get("cabeca")
-	var cobre: bool = cab != null and cab.id in ["capacete", "gorro", "bone"]
+	var colete = slots.get("colete")
+	_vestir_colete(colete.id if colete != null and COLETES.has(colete.id) else "")
+
+# ---------- 1.10 · aparência ----------
+func cor_cabelo() -> Color:
+	return CORES_CABELO[int(_ap.get("cor", 0))][1]
+
+func _aplicar_aparencia() -> void:
+	_mat.set_shader_parameter("tom", PELES[int(_ap["pele"])][1])
+	for c in PENTEADOS + ["Eyebrows"]:
+		var h := esqueleto.get_node_or_null(c) as MeshInstance3D
+		if h != null and h.material_override is StandardMaterial3D:
+			(h.material_override as StandardMaterial3D).albedo_color = cor_cabelo()
+	_mostrar_cabelo()
+
+func _mostrar_cabelo() -> void:
 	for c in PENTEADOS:
 		var h := esqueleto.get_node_or_null(c) as Node3D
 		if h != null:
-			h.visible = c in CABELOS and (c == "Hair_Beard" or not cobre)
-	# peças 3D
-	_peca("cabeca", slots.get("cabeca"))
-	_peca("mochila", slots.get("mochila"))
-	_peca("cinto", slots.get("cinto"))
-	var colete = slots.get("colete")
-	_vestir_colete(colete.id if colete != null and COLETES.has(colete.id) else "")
-	var na_mao = slots.get("maos")
-	var ombro = slots.get("ombro")
-	var coldre = slots.get("coldre")
-	_arma_no_corpo("ombro", ombro if ombro != null and ombro != na_mao and ombro.eh_arma() else null, slots.get("mochila") != null)
-	_arma_no_corpo("coldre", coldre if coldre != null and coldre != na_mao and coldre.eh_arma() else null, false)
+			if c == "Hair_Beard":
+				h.visible = bool(_ap.get("barba", false))
+			else:
+				h.visible = c == _ap.get("cabelo", "") and not _cobre_cabeca
+
+# troca pele/cabelo/barba/cor na hora. Trocar o SEXO não dá (é outro corpo): devolve false e quem chamou cria outro
+func definir_aparencia(ap) -> bool:
+	var n := normalizar(ap)
+	if n["sexo"] != _ap.get("sexo", "m"):
+		return false
+	_ap = n
+	aparencia = n
+	_aplicar_aparencia()
+	return true
+
+func sexo() -> String:
+	return str(_ap.get("sexo", "m"))
 
 func _mat_roupa(c: Color) -> StandardMaterial3D:
 	var k := c.to_html()
@@ -234,11 +313,12 @@ func _mat_roupa(c: Color) -> StandardMaterial3D:
 
 # casca de uma roupa: as faces das partes do corpo, empurradas um pouco para fora, presas aos mesmos ossos
 func _criar_roupa(tipo: String) -> MeshInstance3D:
-	if not _malhas_roupa.has(tipo):
-		_malhas_roupa[tipo] = _malha_roupa(tipo)
+	var k := sexo() + tipo                                   # 1.10: cada corpo tem a sua casca
+	if not _malhas_roupa.has(k):
+		_malhas_roupa[k] = _malha_roupa(tipo)
 	var mi := MeshInstance3D.new()
 	mi.name = "Roupa_" + tipo
-	mi.mesh = _malhas_roupa[tipo]
+	mi.mesh = _malhas_roupa[k]
 	mi.skin = _corpo_mi.skin
 	esqueleto.add_child(mi)
 	mi.skeleton = NodePath("..")
@@ -365,12 +445,13 @@ func _vestir_colete(id: String) -> void:
 		_colete = null
 	if id == "":
 		return
-	if not _cascas.has(id):
-		_cascas[id] = _fazer_casca(id)
+	var k := sexo() + id
+	if not _cascas.has(k):
+		_cascas[k] = _fazer_casca(id)
 	var corpo_mi: MeshInstance3D = _corpo_mi
 	_colete = MeshInstance3D.new()
 	_colete.name = "Colete"
-	_colete.mesh = _cascas[id]
+	_colete.mesh = _cascas[k]
 	_colete.skin = corpo_mi.skin
 	esqueleto.add_child(_colete)
 	_colete.skeleton = NodePath("..")
@@ -605,7 +686,7 @@ func definir_mutacao(nivel: int) -> void:
 	for c in PENTEADOS + ["Eyebrows"]:
 		var h := esqueleto.get_node_or_null(c) as MeshInstance3D
 		if h != null and h.material_override is StandardMaterial3D:
-			(h.material_override as StandardMaterial3D).albedo_color = CABELO_COR.lerp(Color(0.08, 0.075, 0.07), f)
+			(h.material_override as StandardMaterial3D).albedo_color = cor_cabelo().lerp(Color(0.08, 0.075, 0.07), f)
 
 # ---------- 1ª PESSOA (0.65) ----------
 # esconde a cabeça (jogador/cabeca_oculta.gd); o resto do corpo continua visível

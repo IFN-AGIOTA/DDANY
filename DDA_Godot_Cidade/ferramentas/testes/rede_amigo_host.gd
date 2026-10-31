@@ -23,6 +23,13 @@ func _r():
 			if r0.visible and r0.global_position.distance_to(m.jogador.global_position) > 200.0: break
 	var r = m.sessao_rede.remotos.values()[0]
 	print("HOST: amigo em ", r.global_position.snapped(Vector3.ONE), " a ", int(r.global_position.distance_to(m.jogador.global_position)), " m")
+	# 1.10: a aparência do amigo (mulher de coque loiro) veio no "olá" e a cópia dele aqui está igual
+	var cab_ok := false
+	for c in r.modelo.PENTEADOS:
+		var h = r.modelo.esqueleto.get_node_or_null(c)
+		if h != null and h.visible and c == "Hair_Buns":
+			cab_ok = true
+	print("HOST: aparência do amigo: ", r.modelo.sexo(), " ", cab_ok)
 	await create_timer(6.0).timeout
 	var pr := Vector2(r.global_position.x, r.global_position.z)
 	var perto := 0

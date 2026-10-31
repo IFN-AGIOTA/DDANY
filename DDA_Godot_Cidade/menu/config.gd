@@ -5,7 +5,7 @@ extends Node
 
 signal mudou(chave: String)          # "gfx" quando os gráficos foram aplicados; "hud" quando a HUD foi editada
 
-const VERSAO := "1.09.2"
+const VERSAO := "1.10"
 const ARQUIVO := "user://opcoes.cfg"
 
 const PADRAO := {
@@ -44,6 +44,7 @@ const PADRAO := {
 	"rec_tempo": 0.0, "rec_abates": 0,    # recordes (tela de morte)
 	"voz_mic": true, "voz_ouvir": true,   # 0.97: chat de voz: seu microfone ligado · ouvir os outros (rede/voz.gd)
 	"nome_rede": "", "ip_rede": "",       # multijogador: seu nome e o último IP digitado (menu/tela_multijogador.gd)
+	"aparencia": {},                      # 1.10: homem/mulher, pele, cabelo, barba e cor (menu/tela_personagem.gd; {} = o homem de sempre)
 }
 
 # shd/tex/models/detd/fx: 0..3 · shad: 0..2 · den: 0..2 · fog: 0 densa, 1 normal, 2 limpa · dist/res: 0..3
