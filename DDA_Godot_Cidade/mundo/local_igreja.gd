@@ -691,7 +691,7 @@ func _prefeitura() -> void:
 	_pontos_em(Rect2(-33, -25, 20, 16), P, 3, "escritorio")
 	# PLENÁRIO (leste, fundo): mesa da presidência, 3 fileiras em degraus, galeria do público
 	_bx(resto, Vector3(23.0, P + 0.4, -24.0), Vector3(12.0, 0.8, 3.0), MADEIRA * 0.8)
-	_escada(Vector2(23.0, -21.6), Vector2(0, -1), 3.0, P, 0.8, 0.9, MADEIRA * 0.8)
+	_escada(Vector2(23.0, -20.9), Vector2(0, -1), 3.0, P, 0.8, 1.6, MADEIRA * 0.8)
 	_bx(resto, Vector3(23.0, P + 1.3, -24.4), Vector3(9.0, 1.0, 0.9), MADEIRA)
 	resto.caixa(Vector3(23.0, P + 3.6, -25.85), Vector3(3.0, 2.6, 0.06), AZUL_NY)
 	_texto(Vector3(23.0, P + 3.6, -25.8), 0.0, "CONSELHO MUNICIPAL", Color(0.95, 0.85, 0.5), 30)
