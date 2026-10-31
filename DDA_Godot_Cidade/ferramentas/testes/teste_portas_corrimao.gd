@@ -90,9 +90,19 @@ func _r():
 	await q(120)
 	var p = null
 	for x in root.get_tree().get_nodes_in_group("portas"):
-		if str(x.get("id")) == "p%d:0" % m.cidade.remapa_v5[m.cidade.remapa_v4[9195]]:     # 1.07: número de antes da igreja/prefeitura e dos portos
+		if str(x.get("id")) == "p%d:0" % m.cidade.remapa_v4[9195]:     # 1.06: número de antes da igreja/prefeitura (o remapa já dá o de hoje)
 			p = x
-	ok(p != null, "achou a porta da rua onde o jogador travou")
+	# 1.07: o estado de cada porta é sorteado pelo número do prédio; com os prédios que saíram para os portos, esta pode
+	# nascer QUEBRADA (sem folha): aí vale a porta da rua inteira mais perto
+	if p == null or p.quebrada:
+		var md := 80.0
+		p = null
+		for x in root.get_tree().get_nodes_in_group("portas"):
+			var dd: float = Vector2(x.global_position.x - c.x, x.global_position.z - c.y).length()
+			if x.get("dupla") == true and x.get("quebrada") == false and int(x.get("tabuas")) == 0 and dd < md:   # (no grupo também tem janelas)
+				md = dd
+				p = x
+	ok(p != null, "achou a porta da rua onde o jogador travou (ou a inteira mais perto: %s)" % (str(p.id) if p != null else "-"))
 	if p != null:
 		var b: Basis = p.global_basis
 		var meio: Vector3 = p.global_position
