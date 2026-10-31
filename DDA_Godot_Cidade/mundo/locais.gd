@@ -103,9 +103,9 @@ const LOCAIS := [
 	# e HANGARES DE CARGA. Montados em mundo/local_porto.gd.
 	["porto", -400.0, -1200.0, 3],
 	["porto", -1800.0, 4440.0, 1],
-	["hangar", 3575.0, -585.5, 1],
-	["hangar", -6704.0, 1540.0, 1],
-	["hangar", 1821.5, 3215.5, 0],
+	["hangar", -902.0, 3465.0, 1],
+	["hangar", 2025.0, 1575.0, 1],
+	["hangar", -4261.0, -2895.5, 2],
 ]
 # 1.06: os locais até aqui (índice < N_LOCAIS_105) já existiam na 1.05; os prédios que saíram para os de depois
 # entram na conversão do save (mundo/cidade.gd remapa_v4)

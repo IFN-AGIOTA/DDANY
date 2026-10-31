@@ -148,16 +148,16 @@ func _mar(q: Vector2) -> bool:
 			return false
 	return true
 
-func _sem_parque(p: Vector2, t: Vector2) -> bool:
+func _sem_parque(p: Vector2, t: Vector2, exigir_terra := false) -> bool:
 	var x := p.x - t.x * 0.5
 	while x <= p.x + t.x * 0.5:
 		var z := p.y - t.y * 0.5
 		while z <= p.y + t.y * 0.5:
 			var cc := int((x + C.WORLD.x) / C.CELL)
 			var rr := int((z + C.WORLD.y) / C.CELL)
-			# (1.07: também TERRA em todo o terreno: um hangar saiu com metade em cima de uma enseada — os 9 pontos de
-			# _predio_ruim não pegavam a água no meio do lado)
-			if cc < 0 or rr < 0 or cc >= C.W or rr >= C.H or C.park[rr * C.W + cc] == 1 or C.land[rr * C.W + cc] == 0:
+			# (1.07: o HANGAR exige TERRA em todo o terreno: um saiu com metade em cima de uma enseada — os 9 pontos de
+			# _predio_ruim não pegavam a água no meio do lado. O porto não: a beira do cais cai em célula de água.)
+			if cc < 0 or rr < 0 or cc >= C.W or rr >= C.H or C.park[rr * C.W + cc] == 1 or (exigir_terra and C.land[rr * C.W + cc] == 0):
 				return false
 			z += 10.0
 		x += 10.0
@@ -187,7 +187,7 @@ func _porto_ok(p: Vector2, giro: int) -> bool:
 func _giro_rua(p: Vector2, tam: Vector2) -> int:
 	for giro in 4:
 		var t := tam if giro % 2 == 0 else Vector2(tam.y, tam.x)
-		if C._predio_ruim(p.x, p.y, t.x + 4.0, t.y + 4.0) != "" or not _sem_parque(p, t):
+		if C._predio_ruim(p.x, p.y, t.x + 4.0, t.y + 4.0) != "" or not _sem_parque(p, t, true):
 			continue
 		if _rua_na_frente(p, t, giro):
 			return giro
