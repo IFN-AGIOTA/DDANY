@@ -27,14 +27,17 @@ const Mat := preload("res://mundo/materiais_cidade.gd")
 
 const TAMANHO := {"posto": Vector2(46, 36), "hospital": Vector2(72, 54), "supermercado": Vector2(66, 56), "armazem": Vector2(66, 50),
 	"delegacia": Vector2(56, 44), "escola": Vector2(70, 54), "metro": Vector2(64, 28), "quartel": Vector2(64, 50),
-	"bunker": Vector2(28, 22), "igreja": Vector2(48, 66), "prefeitura": Vector2(96, 76)}
+	"bunker": Vector2(28, 22), "igreja": Vector2(48, 66), "prefeitura": Vector2(96, 76),
+	"porto": Vector2(160, 90), "hangar": Vector2(90, 70)}
 const NOMES := {"posto": "POSTO DE GASOLINA", "hospital": "HOSPITAL", "supermercado": "SUPERMERCADO", "armazem": "ARMAZÉM",
 	"delegacia": "DELEGACIA", "escola": "ESCOLA", "metro": "ESTAÇÃO DO METRÔ", "quartel": "QUARTEL DA GUARDA NACIONAL",
-	"bunker": "BUNKER", "igreja": "IGREJA", "prefeitura": "PREFEITURA DE NOVA YORK"}
+	"bunker": "BUNKER", "igreja": "IGREJA", "prefeitura": "PREFEITURA DE NOVA YORK",
+	"porto": "PORTO DE CONTÊINERES", "hangar": "HANGAR DE CARGA"}
 const CORES_MAPA := {"posto": Color(0.95, 0.45, 0.15), "hospital": Color(0.9, 0.2, 0.2), "supermercado": Color(0.3, 0.75, 0.35), "armazem": Color(0.35, 0.6, 0.95),
 	"delegacia": Color(0.25, 0.4, 0.95), "escola": Color(0.95, 0.8, 0.2), "metro": Color(0.7, 0.45, 0.9), "quartel": Color(0.5, 0.65, 0.3),
-	"bunker": Color(0.85, 0.85, 0.8), "igreja": Color(0.92, 0.88, 0.72), "prefeitura": Color(0.95, 0.75, 0.45)}
-const SIGLAS := {"igreja": "I", "prefeitura": "PF", "posto": "P", "hospital": "H", "supermercado": "S", "armazem": "A", "delegacia": "D", "escola": "E", "metro": "M", "quartel": "Q", "bunker": "B"}
+	"bunker": Color(0.85, 0.85, 0.8), "igreja": Color(0.92, 0.88, 0.72), "prefeitura": Color(0.95, 0.75, 0.45),
+	"porto": Color(0.3, 0.55, 0.85), "hangar": Color(0.85, 0.5, 0.2)}
+const SIGLAS := {"igreja": "I", "prefeitura": "PF", "porto": "PT", "hangar": "HG", "posto": "P", "hospital": "H", "supermercado": "S", "armazem": "A", "delegacia": "D", "escola": "E", "metro": "M", "quartel": "Q", "bunker": "B"}
 # 0.78: os 28 primeiros são os da 0.68 (a ordem não pode mudar: o loot salvo é "L<índice>_..."); os novos vêm depois
 const N_LOCAIS_068 := 28
 
@@ -195,6 +198,38 @@ static func casca(tipo: String) -> Array:
 			for x in [-10.5, -7.5, -4.5, -1.5, 1.5, 4.5, 7.5, 10.5]:
 				pf.append([Vector3(x, 6.0, 12.8), Vector3(1.2, 9.0, 1.2), pp, "cil"])
 			return pf
+		# 1.07 (mundo/local_porto.gd): o navio e os guindastes ficam atrás do terreno (z < -45), em cima do mar
+		"porto":
+			var az := Color(0.13, 0.32, 0.68)
+			var pt := [[Vector3(-63, 4, 29), Vector3(22, 8, 18), Color(0.82, 0.8, 0.74)],
+				[Vector3(60, 4.5, 28), Vector3(32, 9, 24), Color(0.62, 0.66, 0.7)],
+				[Vector3(60, 10.1, 28), Vector3(32.6, 2.2, 24.6), Color(0.53, 0.56, 0.6), "prisma_x"],
+				[Vector3(0, -1.6, -46), Vector3(160, 3.2, 14), Color(0.6, 0.59, 0.56)],
+				[Vector3(-4, 0.5, -66), Vector3(132, 17, 24), Color(0.1, 0.13, 0.26)],
+				[Vector3(2.4, 14.1, -66.5), Vector3(100.3, 9.6, 20.6), Color(0.55, 0.3, 0.25)],
+				[Vector3(-57, 16.5, -66), Vector3(14, 15, 18), Color(0.92, 0.92, 0.9)],
+				[Vector3(-57, 25.65, -66), Vector3(14.8, 3.3, 18.8), Color(0.92, 0.92, 0.9)],
+				[Vector3(-67, 20, -66), Vector3(4.6, 22, 6), Color(0.65, 0.13, 0.11)]]
+			for zb in [3.0, -9.2, -21.4]:
+				for s in [-1.0, 1.0]:
+					pt.append([Vector3(s * 42.5, 3.4, zb + 4.1), Vector3(63, 6.8, 8.2), Color(0.5, 0.35, 0.3) if s < 0 else Color(0.3, 0.4, 0.5)])
+			for xg in [5.0, 35.0, 62.0]:
+				for x in [xg - 8.0, xg + 8.0]:
+					for z in [-33.0, -50.5]:
+						pt.append([Vector3(x, 14, z), Vector3(1.4, 28, 1.4), az])
+					pt.append([Vector3(x, 27.25, -41.75), Vector3(1.5, 1.5, 17.5), az])
+				pt.append([Vector3(xg, 31.5, -53.5), Vector3(5.4, 1.6, 77), az])
+				pt.append([Vector3(xg, 34.1, -24), Vector3(7, 3.6, 9), Color(0.9, 0.9, 0.88)])
+				pt.append([Vector3(xg, 39.4, -41), Vector3(4.4, 14, 1.0), az])
+			return pt
+		"hangar":
+			return [[Vector3(0, 0.6, -14), Vector3(64, 1.2, 34), Color(0.42, 0.41, 0.39)],
+				[Vector3(0, 6.2, -14), Vector3(64.3, 10, 34.3), Color(0.68, 0.7, 0.72)],
+				[Vector3(0, 12.5, -14), Vector3(64, 2.6, 34), Color(0.56, 0.58, 0.6)],
+				[Vector3(-38, 5.0, 14), Vector3(8, 0.4, 6), Color(0.75, 0.3, 0.08)],
+				[Vector3(-28, 2.05, 9.2), Vector3(2.55, 3.5, 12), Color(0.85, 0.85, 0.83)],
+				[Vector3(-12, 2.05, 9.2), Vector3(2.55, 3.5, 12), Color(0.85, 0.85, 0.83)],
+				[Vector3(12, 2.05, 9.2), Vector3(2.55, 3.5, 12), Color(0.85, 0.85, 0.83)]]
 		"posto":
 			return [[Vector3(-6, 2.6, -11), Vector3(30.3, 5.2, 12.3), Color(0.76, 0.74, 0.68)],
 				[Vector3(2, 5.65, 6.5), Vector3(24, 0.9, 13), Color(0.72, 0.12, 0.1)],

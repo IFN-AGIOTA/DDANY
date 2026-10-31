@@ -62,11 +62,14 @@ var _malha: ArrayMesh = null
 
 const NOVOS := ["delegacia", "escola", "metro", "quartel"]
 const NEOCLASSICOS := ["igreja", "prefeitura"]           # 1.06: mundo/local_igreja.gd
+const PORTUARIOS := ["porto", "hangar"]                   # 1.07: mundo/local_porto.gd
 
 static func preparar(t: String, i: int, gi: int, c: Vector2) -> RefCounted:
 	var arq := "res://mundo/local_bunker.gd" if t == "bunker" else ("res://mundo/local_novos.gd" if t in NOVOS else "res://mundo/local.gd")
 	if t in NEOCLASSICOS:
 		arq = "res://mundo/local_igreja.gd"
+	if t in PORTUARIOS:
+		arq = "res://mundo/local_porto.gd"
 	var m = load(arq).new()
 	m.tipo = t
 	m.idx = i
@@ -85,7 +88,9 @@ static func preparar(t: String, i: int, gi: int, c: Vector2) -> RefCounted:
 		"bunker": m._bunker()             # 0.83: mundo/local_bunker.gd
 		"igreja": m._igreja()             # 1.06: mundo/local_igreja.gd
 		"prefeitura": m._prefeitura()
-	if t in NOVOS or t == "bunker" or t in NEOCLASSICOS:
+		"porto": m._porto()               # 1.07: mundo/local_porto.gd
+		"hangar": m._hangar()
+	if t in NOVOS or t == "bunker" or t in NEOCLASSICOS or t in PORTUARIOS:
 		m._livrar_pontos()
 	m._criar_malha()
 	return m
