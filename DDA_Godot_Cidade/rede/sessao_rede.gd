@@ -98,6 +98,8 @@ func ligar(m: Node) -> void:
 	if main.controles != null:
 		main.controles.ocultos["MSG"] = false
 		main.controles.mensagem_pedida.connect(_mensagens.abrir)
+	if main.get("chat") != null and is_instance_valid(main.chat):
+		main.chat.enviou.connect(_mandar_chat)                 # 1.09: chat de texto para todos
 	# 0.97: chat de voz por proximidade
 	voz = VozCls.new()
 	voz.name = "Voz"
@@ -125,6 +127,8 @@ func _exit_tree() -> void:
 			[Rede.infectados_recebidos, _infectados]]:
 		if (s[0] as Signal).is_connected(s[1]):
 			(s[0] as Signal).disconnect(s[1])
+	if main != null and main.get("chat") != null and is_instance_valid(main.chat) and main.chat.enviou.is_connected(_mandar_chat):
+		main.chat.enviou.disconnect(_mandar_chat)
 	if main != null and main.controles != null and is_instance_valid(main.controles):
 		main.controles.ocultos["MSG"] = true
 		main.controles.ocultos["MIC"] = true
@@ -288,6 +292,9 @@ func _evento(id: int, tipo: String, d: Dictionary) -> void:
 			_pvp_recebido(id, d)
 		"msg":
 			_mostrar_mensagem(id, int(d.get("i", 0)))
+		"chat":                                        # 1.09: chat de texto (hud/chat.gd)
+			if main.get("chat") != null and is_instance_valid(main.chat):
+				main.chat.mostrar(Rede.nome_de(id), str(d.get("t", "")).left(140))
 		"abate":
 			_abate(id, d)
 		"mordida":
@@ -684,6 +691,9 @@ func _mandar_mensagem(i: int) -> void:
 	_t_msg = agora
 	Rede.enviar_evento("msg", {"i": i})
 	_mostrar_mensagem(Rede.meu_id(), i)
+
+func _mandar_chat(t: String) -> void:
+	Rede.enviar_evento("chat", {"t": t.left(140)})
 
 func _mostrar_mensagem(de: int, i: int) -> void:
 	if main.hud != null:

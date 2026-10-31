@@ -37,6 +37,7 @@ const ACOES := [
 	["camera", "1ª / 3ª pessoa", "k:%d" % KEY_F, "Interação"],
 	["ombro", "Trocar de ombro (câmera)", "m:%d" % MOUSE_BUTTON_MIDDLE, "Combate"],
 	["mensagem", "Mensagens rápidas (multijogador)", "k:%d" % KEY_T, "Interação"],
+	["chat", "Chat de texto", "k:%d" % KEY_ENTER, "Interação"],            # 1.09
 	["mutar_mic", "Chat de voz: mutar o seu microfone", "k:%d" % KEY_J, "Interação"],
 	["mutar_vozes", "Chat de voz: mutar os outros jogadores", "k:%d" % KEY_K, "Interação"],
 	["construir", "Construir (base)", "k:%d" % KEY_B, "Interação"],

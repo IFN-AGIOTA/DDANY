@@ -36,6 +36,7 @@ signal pegar_pedido
 signal pausa_pedida
 signal selecionou(id: String)      # modo de edição da HUD: botão tocado
 signal mensagem_pedida             # 0.71: mensagens rápidas do multijogador (botão MSG, tecla T)
+signal chat_pedido                 # 1.09: chat de texto (botão CHAT, tecla Enter): hud/chat.gd
 signal empurrar_pedido             # 0.90: empurrão / pisão (botão EMPURRAR, tecla G)
 signal mic_pedido                  # 0.97: chat de voz: mutar/desmutar o SEU microfone (botão MIC, tecla J · rede/voz.gd)
 signal vozes_pedido                # 0.97: chat de voz: mutar/desmutar os OUTROS jogadores (botão VOZES, tecla K)
@@ -152,6 +153,7 @@ func _ready() -> void:
 	_bt("CONSTRUIR", "CONSTRUIR", "tr", Vector2(436, 46), 30, Color(0.85, 0.62, 0.35), "tocar", false, false)
 	_bt("MIC", "MIC", "tr", Vector2(512, 46), 30, Color(0.45, 0.85, 1.0), "tocar", false, false)
 	_bt("VOZES", "VOZES", "tr", Vector2(588, 46), 30, Color(0.85, 0.7, 1.0), "tocar", false, false)
+	_bt("CHAT", "CHAT", "tr", Vector2(56, 122), 30, Color(0.55, 0.85, 1.0), "tocar", false, false)   # 1.09: chat de texto
 	_bt("EMPURRAR", "EMPURRAR", "br", Vector2(585, 360), 40, Color(0.92, 0.55, 0.25), "tocar", false, false)
 	_bt("SENTIDO", "SENTIDO", "br", Vector2(605, 235), 38, Color(0.88, 0.16, 0.14), "tocar", false, false)
 	_bt("GIRAR", "GIRAR", "br", Vector2(355, 335), 46, Color(0.75, 0.85, 1.0), "tocar", false, false)
@@ -548,6 +550,7 @@ func _acao(acao: String, apertou: bool) -> void:
 		"mensagem":
 			if not ocultos.get("MSG", true):
 				mensagem_pedida.emit()
+		"chat": chat_pedido.emit()
 		_:
 			if acao.begins_with("atalho_") and not modo_voo:
 				atalho_pedido.emit(int(acao.substr(7)) - 1)
@@ -638,6 +641,7 @@ func _tocou(id: String) -> void:
 		"CAM": camera_pedida.emit()
 		"OMBRO": ombro_pedido.emit()
 		"MSG": mensagem_pedida.emit()
+		"CHAT": chat_pedido.emit()
 		"EMPURRAR": empurrar_pedido.emit()
 		"SENTIDO": sentido_pedido.emit()
 		"MIC": mic_pedido.emit()

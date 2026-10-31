@@ -25,6 +25,7 @@ const VeiculosCls := preload("res://mundo/veiculos.gd")
 const MatoCls := preload("res://mundo/mato.gd")
 const FumacaCls := preload("res://mundo/fumaca.gd")
 const HudStatusCls := preload("res://hud/hud_status.gd")
+const ChatCls := preload("res://hud/chat.gd")                # 1.09: chat de texto (e o modo desenvolvedor: dev/)
 const MapaCls := preload("res://hud/mapa.gd")
 const ClimaCls := preload("res://mundo/clima.gd")
 const Salvamento := preload("res://menu/salvamento.gd")
@@ -103,6 +104,7 @@ var hospitais: Node = null                  # 0.91: npc/hospitais.gd (zona neutr
 var sentidos: Node = null                   # 0.95: jogador/sentidos.gd (farejar/escutar e o estalo do mutado)
 var eventos: Node = null                    # mundo/eventos.gd (0.65: helicóptero caído, comboio, zona contaminada)
 var hud_status: CanvasLayer                 # hud/hud_status.gd (vida, sangue, fome, sede, temperatura)
+var chat: CanvasLayer                       # 1.09: hud/chat.gd (chat de texto, solo e rede)
 var tela_morte: CanvasLayer
 var mapa: CanvasLayer                       # hud/mapa.gd (minimapa, mapa grande e bússola)
 var clima: Node                             # mundo/clima.gd (dia/noite, chuva, temperatura, lanterna)
@@ -638,6 +640,11 @@ func _criar_jogo() -> void:
 	hud_status.name = "HudStatus"
 	jogo.add_child(hud_status)
 	hud_status.ligar(jogador)
+	chat = ChatCls.new()
+	chat.name = "Chat"
+	jogo.add_child(chat)
+	chat.ligar(self)
+	controles.chat_pedido.connect(chat.abrir)
 	await _etapa("mapa")
 	mapa = MapaCls.new()
 	mapa.name = "Mapa"
@@ -929,6 +936,7 @@ func _fechar_jogo() -> void:
 	tela_inventario = null
 	voo = null
 	hud_status = null
+	chat = null
 	mapa = null
 	clima = null
 	vagos = null

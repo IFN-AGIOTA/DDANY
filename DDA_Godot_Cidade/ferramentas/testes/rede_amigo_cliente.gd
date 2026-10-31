@@ -40,5 +40,9 @@ func _r():
 		var v = m.vagos.por_id[k]
 		if is_instance_valid(v) and v.global_position.distance_to(j.global_position) < 40.0: n += 1
 	print("CLI: cópias de infectados perto: ", n)
+	# 1.09: chat de texto para o host
+	m.chat.abrir()
+	m.chat._campo.text = "ola host chat 109"
+	m.chat._enviar()
 	await create_timer(6.0).timeout
 	quit()

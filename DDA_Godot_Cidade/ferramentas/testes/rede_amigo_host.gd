@@ -42,5 +42,15 @@ func _r():
 			vivos_perto += 1
 			if v._fisica: fis += 1
 	print("HOST: infectados perto do amigo: ", vivos_perto, " · com física: ", fis)
-	await create_timer(15.0).timeout
+	# 1.09: a mensagem do chat que o amigo manda chega aqui (com o nome dele)
+	var chegou := false
+	for k in 40:
+		await create_timer(0.25).timeout
+		for l in m.chat._linhas:
+			if String(l[0]).contains("ola host chat 109"):
+				chegou = true
+		if chegou:
+			break
+	print("HOST: chat do amigo chegou: ", chegou)
+	await create_timer(5.0).timeout
 	quit()

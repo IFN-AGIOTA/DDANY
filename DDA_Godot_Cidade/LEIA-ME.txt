@@ -16,6 +16,7 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
   8. Como funciona por dentro (para quem for mexer no código)
   9. Como mandar atualizações
  10. Limitações conhecidas e próximos passos
+ 11. MODO DESENVOLVEDOR (bloco de desenvolvimento: REMOVER NA VERSÃO FINAL)
 
 -----------------------------------------------------------------------------------------------------
 1. COMO ABRIR, JOGAR E GERAR O APK
@@ -40,6 +41,30 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.09 · CHAT DE TEXTO (SOLO E MULTIJOGADOR)
+  · CHAT DE TEXTO: ENTER (PC) ou o botão CHAT (toque, no canto de cima à direita, embaixo do VOO; dá para mover no
+    editor da HUD) abre o campo embaixo, à esquerda. Escreva e aperte ENVIAR (ou Enter). Esc ou X fecha.
+  · No MULTIJOGADOR a mensagem vai para todos da partida ("NOME: mensagem", com um som); no SOLO fica só na sua tela.
+  · As mensagens aparecem em cima do campo e somem sozinhas depois de 12 s; com o chat aberto aparece o histórico
+    (até 14 linhas) num fundo escuro. Seta para cima repete o que você mandou. Até 140 letras por mensagem.
+  · Enquanto você escreve, o personagem fica parado (as teclas não andam nem atiram).
+  · As MENSAGENS RÁPIDAS (botão BALÃO / tecla T, só no multijogador) continuam iguais.
+  ARQUIVOS MEXIDOS (testado: teste_chat NOVO (abre, manda, fecha, o personagem para; o modo desenvolvedor: senha,
+  lista dos comandos com filtro e opções, e os comandos de verdade); rede (a mensagem chega no outro jogo);
+  + compilar_tudo, teste_jogo, teste_editor_hud, teste_validar_rede):
+    hud/chat.gd .................... NOVO · o chat (campo, histórico, lista de comandos do modo desenvolvedor)
+    dev/modo_dev.gd ................ NOVO · BLOCO DE DESENVOLVIMENTO (modo desenvolvedor: senha e comandos) — ver
+                                     a seção 11; REMOVER NA VERSÃO FINAL (apagar a pasta dev/)
+    ferramentas/testes/teste_chat.gd ... NOVO · rodar.sh: + teste_chat; "rede" também confere o chat
+    ferramentas/testes/rede_amigo_cliente.gd, rede_amigo_host.gd ... o amigo manda uma mensagem e o host recebe
+    main.gd ........................ cria o chat no jogo (solo e rede)
+    jogador/controles.gd ........... botão CHAT e o sinal chat_pedido
+    jogador/teclas.gd .............. tecla "Chat de texto" (Enter; trocável em Opções › Teclado e mouse)
+    rede/sessao_rede.gd ............ evento "chat" (manda e mostra a mensagem dos outros)
+    menu/config.gd ................. VERSAO "1.09"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + seções 3, mapa "QUERO MEXER EM..." e a seção 11 NOVA
+
 ATUALIZAÇÃO 1.08.1 · CARTÃO DO BUNKER MAIS FÁCIL
   · A chance de o CARTÃO DE ACESSO de um bunker aparecer numa área militar (quartéis, postos do Exército dos
     hospitais e da prefeitura, guaritas) subiu de 12% para 20% a cada ciclo do loot. Continua existindo só um cartão
@@ -2959,6 +2984,7 @@ TOQUE (vários dedos ao mesmo tempo)
   na frente vira PISÃO) · CONSTRUIR (0.90: menu da base; com a peça na mão: GIRAR, OK, CANCELAR) · INV · II (pausa) · CAM (1ª/3ª pessoa) · VOO (câmera livre: SOBE / DESCE / VEL)
   · OMBRO (0.79): troca a câmera de ombro (direito <-> esquerdo).
   · BALÃO (só no multijogador): mensagens rápidas.
+  · CHAT (1.09, solo e multijogador): abre o chat de texto (campo embaixo à esquerda, ENVIAR, X fecha).
   · MIC e VOZES (0.97, só no multijogador): mutar o seu microfone / mutar os outros jogadores (chat de voz).
   · SENTIDO (0.95, só para o mutado/controlado): FAREJAR (mutado) ou ESCUTAR (controlado) por 10 s, espera 20 s.
   · 1.01: cada botão pega o dedo numa área de pelo menos 48 dp (o tamanho que o Android pede), mesmo se o desenho for
@@ -2975,7 +3001,8 @@ PC (todas as teclas trocáveis em Opções › Teclado e mouse)
   mouse direito mirar · R recarregar · X ou rodinha trocar arma · Q roda do inventário rápido · 1..8 atalhos ·
   E pegar / abrir e fechar porta / falar com o NPC do hospital · Tab inventário · M mapa · Esc/P pausa · F 1ª/3ª pessoa · botão do meio do mouse
   trocar de ombro · V câmera livre (E sobe, Q desce) ·
-  T mensagens rápidas (multijogador; 1..8 escolhe) · F11 tela cheia · G empurrar/pisar · B construir (com a
+  T mensagens rápidas (multijogador; 1..8 escolhe) · Enter chat de texto (1.09; Enter manda, Esc fecha, seta para
+  cima repete, Tab completa o comando no modo desenvolvedor) · F11 tela cheia · G empurrar/pisar · B construir (com a
   peça na mão: R gira, E ou clique constrói, botão direito cancela) · H sentido do mutado (farejar / escutar) ·
   J muta o seu microfone · K muta as vozes dos outros (chat de voz, 0.97).
 
@@ -3394,6 +3421,11 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - SOLDADOS INFECTADOS (1.08) ............ perto dos comboios: inimigos/soldados.gd · nos locais: mundo/locais.gd
                                           COM_SOLDADOS · aparência: inimigos/modelo_infectado.gd SOLDADOS (os modelos:
                                           ferramentas/preparar_soldados.gd) · vida e loot: inimigos/vago.gd SOLDADO_*
+- CHAT DE TEXTO (1.09: campo, histórico,
+  tempo na tela, limite de letras) ..... hud/chat.gd · rede: rede/sessao_rede.gd (evento "chat") · botão CHAT:
+                                          jogador/controles.gd · tecla: jogador/teclas.gd ("chat")
+- MODO DESENVOLVEDOR (senha, comandos,
+  kits) — REMOVER NA VERSÃO FINAL ....... dev/modo_dev.gd (ver a seção 11)
 - letreiros e pichações dos locais ...... mundo/local.gd (_texto) e mundo/local_novos.gd
 - trocar de ombro (câmera) .............. jogador/jogador.gd (trocar_ombro) · botão em jogador/controles.gd
 - quando o infectado usa física de
@@ -3835,3 +3867,53 @@ Como funciona por dentro (rede/conta.gd, tudo por HTTP, sem plugin):
     45 s) vira o aviso. respostas/{host}/{amigo} = {r: aceitou/recusou}; o host lê a cada 3 s na sala.
     Rede: protocolo 2 (o _ola leva ícone e uid da conta); Rede.partida_comecou / comecar_partida() / expulsar().
  variável DDA_FIREBASE_CFG aponta para outra configuração (servidor falso local).
+
+-----------------------------------------------------------------------------------------------------
+11. MODO DESENVOLVEDOR (BLOCO DE DESENVOLVIMENTO · REMOVER NA VERSÃO FINAL)
+-----------------------------------------------------------------------------------------------------
+O QUE É: comandos para quem está fazendo o jogo testar rápido (dar itens, teleportar, mudar a hora, criar
+infectados...). Fica num arquivo separado, dev/modo_dev.gd, e o chat (hud/chat.gd) só usa se ele existir.
+COMO TIRAR NA VERSÃO FINAL: apague a pasta dev/ inteira (e, se quiser, o teste ferramentas/testes/teste_chat.gd, que
+testa os comandos). Nada mais muda: o chat continua funcionando e "INFINITYDEV" vira uma mensagem comum.
+LIGAR: no chat, escreva  INFINITYDEV  e envie. Aparece "MODO DESENVOLVEDOR LIGADO" (só na sua tela: a senha não vai
+para ninguém). Fica ligado neste aparelho (arquivo user://dev.cfg) até  /devoff.
+USAR: com o modo ligado, escreva  /  no chat: aparece a LISTA DE TODOS OS COMANDOS (como no Minecraft). Continue
+escrevendo para filtrar ("/ti" -> /tp); depois do nome do comando, a lista mostra as opções da parte seguinte (itens
+no /dar, tipos de local no /tp, tipos de infectado no /spawn...). Toque/clique numa linha para preencher; Tab
+completa a primeira; Enter (ou ENVIAR) executa. Os comandos e as respostas não vão para a rede. No multijogador,
+os marcados "só host" (mexem no mundo) só funcionam para quem criou a sala; no solo, todos.
+COMANDOS:
+  /ajuda [comando] ................... lista os comandos (ou explica um)
+  /dar <item> [quantidade] ........... põe um item no inventário (sem lugar: no chão) · ex.: /dar m4 · /dar mun_556 60
+  /itens [filtro] .................... lista os ids dos itens (filtra pelo nome ou id) · ex.: /itens pente
+  /kit <armas|medico|comida|militar|ferramentas> ... um conjunto pronto (armas: M4, pentes, 5.56, pistola, mira 4x...)
+  /municao ........................... enche a arma da mão e dá 60 balas e 2 pentes dela
+  /dinheiro <valor> .................. dá dólares
+  /cartao <1-4> ...................... dá o cartão de acesso de um bunker
+  /curar ............................. vida, sangue, fome, sede, temperatura, infecção, doenças, perna e sangramentos
+  /deus .............................. imortal liga/desliga
+  /perna ............................. quebra/conserta a perna (para testar o mancar)
+  /tp <x> <z> ........................ teleporta para um ponto do mapa (a altura do chão é achada sozinha)
+  /tp <tipo de local> [nº] ........... teleporta para a frente de um local (igreja, porto, hangar, guarita, bunker,
+                                       hospital, quartel...) · ex.: /tp porto 2
+  /tp comboio [nº] · /comboio [nº] ... vai até um comboio do Exército (sem nº: o mais perto)
+  /locais [tipo] ..................... lista os locais com o número de cada e a distância até você
+  /pos ............................... mostra onde você está (x, y, z e o local)
+  /voo ............................... câmera livre (voar) liga/desliga
+  /fps ............................... FPS e posição no canto da tela liga/desliga
+  /gasolina .......................... enche o tanque do veículo que você está dirigindo
+  /salvar ............................ salva o jogo agora
+  /hora <0-24> · /dia · /noite ....... muda a hora (só host)
+  /congelar .......................... para/solta a passagem do tempo (só host)
+  /clima <limpo|nublado|chuva|tempestade> ... muda o tempo na hora (só host)
+  /tempo <0.1-4> ..................... velocidade do jogo (1 = normal; só no solo)
+  /infectados <on|off> ............... liga/desliga os infectados novos (só host)
+  /matar [raio] ...................... mata os infectados perto (padrão 50 m) (só host)
+  /spawn [quantos] [lento|rapido|corredor|rastejante|mutado|soldado] ... cria infectados na sua frente (só host)
+  /horda ............................. o Diretor de IA solta uma horda em você agora (só host)
+  /diretor ........................... mostra o estado do Diretor de IA (fase, intensidade, próxima horda)
+  /limpar ............................ limpa o chat
+  /devoff ............................ desliga o modo desenvolvedor
+ACRESCENTAR UM COMANDO: em dev/modo_dev.gd, uma linha na lista COMANDOS ([nome, como usar, o que faz, só host]) e
+uma função  func _c_<nome>(a: Array)  (a = as partes escritas depois do nome); as opções da lista ficam em _opcoes.
+
