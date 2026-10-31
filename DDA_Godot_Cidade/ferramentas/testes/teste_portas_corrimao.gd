@@ -9,6 +9,9 @@ extends SceneTree
 #     · escadas dos locais especiais com corrimão (mundo/local.gd).
 #   1.03: e o corrimão não TRANCA ninguém: sobe do térreo ao 2º andar pela escada de dentro passando pelo patamar.
 #   1.04: sobe e desce ANDANDO (sem pular) todas as escadas dos locais especiais (o topo trancava em 6 delas).
+#   1.07: escadas iguais (mesma direção, largura, subida, comprimento e corrimão) no mesmo local só são andadas 2 vezes
+#   (os 3 guindastes do porto têm 8 lances iguais cada: o teste passava dos 25 min); as rotas inteiras dos locais
+#   novos são andadas nos testes deles (teste_locais_106/107/108).
 var falhas := 0
 func ok(c: bool, msg: String) -> void:
 	if c: print("  ok   ", msg)
@@ -60,6 +63,12 @@ func _de_lado(em: Vector3, lado: Vector3, tempo: float) -> Array:
 	var d: Vector3 = j.global_position - p0
 	return [y0 - y_min, d.dot(lado), absf(y0 - em.y) < 0.7]       # [desceu, foi para o lado, começou em cima do degrau]
 
+# 1.07: a mesma escada (direção, largura, subida, comprimento, corrimão) já foi testada 2 vezes neste local?
+func _repetida(iguais: Dictionary, es: Array) -> bool:
+	var chave := "%s|%.2f|%.2f|%.2f|%d" % [str((es[1] as Vector2).snapped(Vector2.ONE * 0.01)), float(es[2]), float(es[4]), float(es[5]), int(es[6]) if es.size() > 6 else 0]
+	iguais[chave] = int(iguais.get(chave, 0)) + 1
+	return int(iguais[chave]) > 2
+
 func _r():
 	await q(20)
 	m = current_scene
@@ -81,7 +90,7 @@ func _r():
 	await q(120)
 	var p = null
 	for x in root.get_tree().get_nodes_in_group("portas"):
-		if str(x.get("id")) == "p%d:0" % m.cidade.remapa_v4[9195]:     # 1.06: número de antes da igreja/prefeitura
+		if str(x.get("id")) == "p%d:0" % m.cidade.remapa_v5[m.cidade.remapa_v4[9195]]:     # 1.07: número de antes da igreja/prefeitura e dos portos
 			p = x
 	ok(p != null, "achou a porta da rua onde o jogador travou")
 	if p != null:
@@ -235,7 +244,10 @@ func _r():
 		if no == null:
 			continue
 		# 1.04: sobe e desce ANDANDO cada escada do local (sem pular): do 1º degrau até depois do topo e de volta
+		var iguais := {}
 		for es in prep.escadas:
+			if _repetida(iguais, es):
+				continue
 			var ini2: Vector2 = es[0]
 			var dir2: Vector2 = es[1]
 			var pe: Vector2 = ini2 + dir2 * 0.3
@@ -253,7 +265,10 @@ func _r():
 			if not subiu or not desceu:
 				trancadas += 1
 				print("    %s: escada de %s %s" % [tipo, str(ini2), "não chega no topo" if not subiu else "não desce"])
+		iguais.clear()
 		for es in com:
+			if _repetida(iguais, es):
+				continue
 			var ini: Vector2 = es[0]
 			var dir: Vector2 = es[1]
 			var lat := Vector2(-dir.y, dir.x) * float(es[6])
