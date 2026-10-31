@@ -155,7 +155,9 @@ func _sem_parque(p: Vector2, t: Vector2) -> bool:
 		while z <= p.y + t.y * 0.5:
 			var cc := int((x + C.WORLD.x) / C.CELL)
 			var rr := int((z + C.WORLD.y) / C.CELL)
-			if cc < 0 or rr < 0 or cc >= C.W or rr >= C.H or C.park[rr * C.W + cc] == 1:
+			# (1.07: também TERRA em todo o terreno: um hangar saiu com metade em cima de uma enseada — os 9 pontos de
+			# _predio_ruim não pegavam a água no meio do lado)
+			if cc < 0 or rr < 0 or cc >= C.W or rr >= C.H or C.park[rr * C.W + cc] == 1 or C.land[rr * C.W + cc] == 0:
 				return false
 			z += 10.0
 		x += 10.0

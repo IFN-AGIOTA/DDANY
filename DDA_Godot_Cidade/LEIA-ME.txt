@@ -2938,6 +2938,10 @@ BASE (0.90): parede 3 tábuas / 350 de vida · parede com porta 4 / 350 · barri
 LOCAIS ESPECIAIS (0.78): 42 = 12 postos, 4 hospitais, 6 supermercados, 6 armazéns, 4 delegacias, 4 escolas,
   4 estações do metrô (plataformas a 7,1 m; trilhos a 6 m) e 2 quartéis (torres de vigia a 6 m) · 6 em cada 10
   com gerador · só 15% dos móveis vazios
+PORTOS E HANGARES (1.07): 2 portos (na costa) e 3 hangares de carga · porto: terreno de 160 x 90 + cais de 14 m e o
+  navio atrás (140 m, convés a 9 m, ponte de comando a 24 m); 3 guindastes com a passarela do pórtico a 28 m (8 lances
+  de 3,5 m) e a lança até 31 m em cima do navio; pilhas de contêineres de até 4 (10,4 m) · hangar: galpão de 64 x 34
+  com o piso das docas a 1,2 m (8 docas), telhado dente de serra a 11,2-13,8 m, mezanino a 4,8 m
 IGREJA E PREFEITURA (1.06): 4 igrejas (uma por ilha) e 1 prefeitura (no centro, a 129 m dos arranha-céus) ·
   igreja: embasamento de 2,4 m, nave de 13 m, cúpula até ~28 m, torre com o campanário a 22,4 m (14 m de escada em
   caracol a partir do coro, a 8,4 m) e a cruz a ~41 m · SINO: barulho de 400 m (de dia os infectados ouvem 40%),
@@ -3001,6 +3005,12 @@ LOOT (mundo/loot_mundo.gd; tabelas no topo, com raridade e quantidades)
   munição 5.56/7.62, colete, capacete, miras, silenciador, mochila de combate), "quartel_alojamento" (roupas,
   mochila, lanterna, munição) e as caixas "militar"/"militar_med". Chão: "chao_policia", "chao_escola",
   "chao_metro", "chao_quartel".
+- PORTOS E HANGARES (1.07): porto "porto_conteiner" (roupas, eletrônicos, ferramentas, comida em caixa),
+  "porto_apreendido" (o contêiner lacrado da polícia: pistolas, espingarda, AK, dinheiro), "porto_bagagem" (as malas
+  largadas na fila de embarque), "porto_navio" (mesa de cartas e armário do comandante: rádio, kit médico, às vezes
+  pistola), "porto_guindaste", "porto_escritorio", "porto_carga"; hangar "carga_paletes" (a última carga de comida:
+  latas, água, sucos), "carga_escritorio", "carga_cofre" (até US$ 400, pistola), "carga_motoristas" (armários dos
+  caminhoneiros: às vezes espingarda). Chão: "chao_porto", "chao_hangar".
 - IGREJA E PREFEITURA (1.06): igreja "igreja_doacoes" (comida enlatada, água, roupas, cobertas), "igreja_abrigo"
   (o que os refugiados deixaram: água, remédios, lanterna, mochila, às vezes pistola), "igreja_sacristia" (dinheiro do
   dízimo, isqueiro, remédio), "igreja_torre" (rifle de caça e munição .308, às vezes luneta: alguém vigiava de lá);
@@ -3215,6 +3225,10 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
                                           (ferramentas/escolher_locais.gd NOVOS=2) · casca de longe com cúpula/torre/
                                           telhados: mundo/locais.gd casca e montar_casca
 - SINO DA IGREJA (tocar, barulho) ...... mundo/sino.gd (som: audio/sons/mundo/sino.ogg, feito por síntese)
+- PORTO (cais, guindastes, contêineres,
+  NAVIO) e HANGAR DE CARGA (1.07) ...... mundo/local_porto.gd (peças: escada em zigue-zague das torres, contêiner de
+                                          12 m, carreta porta-contêiner, cavalo mecânico, reach stacker, guindaste,
+                                          navio) · onde ficam: ferramentas/escolher_portos.gd (costa com mar atrás)
 - letreiros e pichações dos locais ...... mundo/local.gd (_texto) e mundo/local_novos.gd
 - trocar de ombro (câmera) .............. jogador/jogador.gd (trocar_ombro) · botão em jogador/controles.gd
 - quando o infectado usa física de
