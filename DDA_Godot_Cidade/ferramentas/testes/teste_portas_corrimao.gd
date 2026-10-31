@@ -81,7 +81,7 @@ func _r():
 	await q(120)
 	var p = null
 	for x in root.get_tree().get_nodes_in_group("portas"):
-		if str(x.get("id")) == "p9195:0":
+		if str(x.get("id")) == "p%d:0" % m.cidade.remapa_v4[9195]:     # 1.06: número de antes da igreja/prefeitura
 			p = x
 	ok(p != null, "achou a porta da rua onde o jogador travou")
 	if p != null:

@@ -65,7 +65,12 @@ func _r():
 			if Geometry2D.is_point_in_polygon(p, poli):
 				ilhas[il] = true
 	ok(ilhas.size() == 4, "1. um bunker em cada ilha (%s)" % str(ilhas.keys()))
-	ok(m.cidade.predio_info.size() == PREDIOS_ANTES, "1. nenhum prédio saiu (%d)" % m.cidade.predio_info.size())
+	# 1.06: a igreja/prefeitura tiraram alguns (remapa_v4); os bunkers continuam sem tirar nenhum
+	var sairam_106 := 0
+	for v in m.cidade.remapa_v4:
+		if v < 0:
+			sairam_106 += 1
+	ok(m.cidade.predio_info.size() + sairam_106 == PREDIOS_ANTES, "1. nenhum prédio saiu para os bunkers (%d + %d da 1.06)" % [m.cidade.predio_info.size(), sairam_106])
 	# ---- 2 ----
 	var faltando: Array = []
 	for t in LM.TABELAS:
