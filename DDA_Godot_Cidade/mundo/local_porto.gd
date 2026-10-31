@@ -26,7 +26,8 @@ const NOMES_NAVIO := ["NOVA AURORA", "ATLANTIC STAR"]
 # em cada nível uma galeria com o vão em cima do lance que chega (a cabeça não bate); grade por fora.
 # o = canto do começo (no chão do 1º nível); ao longo de +X (eixo_x) ou +Z; "lado" (+1/-1) = para que lado fica a
 # 2ª faixa. A faixa 0 sobe para +eixo e a 1 volta.
-func _escada_zigue(o: Vector3, eixo_x: bool, lado: float, niveis: int, sobe: float, cor: Color, cor_piso: Color, sem_grade_fim := false) -> void:
+# encostado = o lado de fora da 2ª faixa fica colado numa parede (sem grade: a porta pode ficar ali)
+func _escada_zigue(o: Vector3, eixo_x: bool, lado: float, niveis: int, sobe: float, cor: Color, cor_piso: Color, sem_grade_fim := false, encostado := false) -> void:
 	var F := 1.15
 	var PT := 1.2
 	var C := sobe / 0.6
@@ -52,7 +53,8 @@ func _escada_zigue(o: Vector3, eixo_x: bool, lado: float, niveis: int, sobe: flo
 		_laje(ret, y - 0.15, 0.15, [vao], cor_piso, true)
 		# grade: as 2 bordas compridas por fora, as pontas e a borda do vão (entre as faixas)
 		_grade(o2, o2 + ax * comp, y, METAL_ESC)
-		_grade(o2 + tr * 2.0 * F, o2 + tr * 2.0 * F + ax * comp, y, METAL_ESC)
+		if not encostado:
+			_grade(o2 + tr * 2.0 * F, o2 + tr * 2.0 * F + ax * comp, y, METAL_ESC)
 		_grade(o2, o2 + tr * 2.0 * F, y, METAL_ESC)
 		if not (sem_grade_fim and j == niveis):
 			_grade(o2 + ax * comp, o2 + ax * comp + tr * 2.0 * F, y, METAL_ESC)
@@ -104,6 +106,8 @@ func _porto() -> void:
 		resto.cilindro(Vector3(-75 + k * 10.0, -0.9, -53.25), 0.45, 2.2, 10, Color(0.08, 0.08, 0.09), Basis(Vector3.FORWARD, PI * 0.5))
 	for k in 12:                                                                                         # cabeços de amarração
 		var xb := -66.0 + k * 12.0
+		if xb > -32.0 and xb < -12.0:
+			continue                                                                                     # (a escada do navio)
 		resto.cilindro(Vector3(xb, 0.4, -52.3), 0.35, 0.8, 10, Color(0.12, 0.12, 0.13))
 		resto.cilindro(Vector3(xb, 0.85, -52.3), 0.5, 0.12, 10, Color(0.12, 0.12, 0.13))
 		_col(Vector3(xb, 0.45, -52.3), Vector3(0.8, 0.9, 0.8))
@@ -142,9 +146,7 @@ func _porto() -> void:
 						col.append([Vector3(xc, h * 1.3, zc), Vector3(12.1, h * 2.6, 2.42), 0.0, Basis.IDENTITY])
 				# um contêiner aberto no chão virado para o corredor, com loot
 				if baia % 2 == 0:
-					var zl: float = zb - 2.0 if zb > -20.0 else zb + 10.4
-					if absf(zl - 13.0) > 1.0:
-						_conteiner(Vector2(xc, zl), PI * 0.5 * lado, CORES_CONTEINER[(baia + int(zb)) % CORES_CONTEINER.size()], "porto_conteiner" if baia != 4 else "porto_apreendido", 0.0, true)
+					_conteiner(Vector2(xc, zb - 2.0), PI * 0.5 * lado, CORES_CONTEINER[posmod(baia + int(zb), CORES_CONTEINER.size())], "porto_conteiner" if baia != 4 else "porto_apreendido", 0.0, true)
 	_pontos_em(Rect2(-74, -1, 148, 3), 0.0, 5, "patio")
 	_pontos_em(Rect2(-74, -13, 148, 3), 0.0, 4, "patio")
 	# torres de luz, carretas porta-contêiner, empilhadeira de contêiner
@@ -406,10 +408,11 @@ func _navio(nome: String) -> void:
 		_col(Vector3(58.0, yd + 0.6, z), Vector3(1.4, 1.2, 1.6))
 	fora.cilindro(Vector3(64.0, yd + 6.0, zm), 0.25, 12.0, 6, Color(0.85, 0.85, 0.82))
 	# amarras: do convés até os cabeços do cais
-	for xa in [-54.0, -30.0, 30.0, 54.0]:
+	for xa in [-54.0, -42.0, 30.0, 54.0]:
 		_viga(Vector3(xa + (2.0 if xa > 0 else -2.0), yd + 0.6, zc + 0.1), Vector3(xa, 0.85, -52.3), 0.08, Color(0.75, 0.65, 0.45))
 	# ESCADA DE ACESSO do cais (y 0) até o convés (y 9): ao longo de +X em z = -51,9, plataforma e a ponte até o convés
-	_escada(Vector2(-30.0, -51.9), Vector2(1, 0), 1.4, 0.0, yd, 15.0, METAL, 1)
+	_escada(Vector2(-30.0, -51.9), Vector2(1, 0), 1.4, 0.0, yd, 15.0, METAL, -1)                     # corrimão do lado do mar
+	_balaustrada(Vector2(-30.0, -51.12), Vector2(-15.0, -51.12), 0.0, yd, 1.0)                          # e do lado do cais
 	_bx(fora, Vector3(-14.0, yd - 0.15, -52.1), Vector3(2.2, 0.3, 2.2), METAL_ESC)
 	_bx(fora, Vector3(-15.0, yd - 0.1, -53.5), Vector3(2.6, 0.2, 1.7), METAL_ESC)
 	_grade(Vector2(-13.0, -51.0), Vector2(-13.0, -53.2), yd)
@@ -428,7 +431,7 @@ func _navio(nome: String) -> void:
 		for k in 6:
 			resto.caixa(Vector3(cas.end.x + 0.02, yj, -73.0 + k * 3.0), Vector3(0.04, 0.8, 1.0), Color(0.12, 0.15, 0.2))
 	# a escada por fora do casario, do lado do cais (zigue-zague de 5 lances de 3 m): galerias de z -57 a -54,7
-	_escada_zigue(Vector3(-63.6, yd, -54.7), true, -1.0, 5, 3.0, METAL, METAL_ESC)
+	_escada_zigue(Vector3(-63.6, yd, -54.7), true, -1.0, 5, 3.0, METAL, METAL_ESC, true, true)
 	# ponte de comando
 	var vp := [[1.2, 3.4, 0.9, 2.4, "janela"], [4.4, 6.6, 0.9, 2.4, "janela"], [7.6, 9.8, 0.9, 2.4, "janela"], [10.8, 13.0, 0.9, 2.4, "janela"]]
 	var porta := [[2.2, 3.3, 0.0, 2.2]]

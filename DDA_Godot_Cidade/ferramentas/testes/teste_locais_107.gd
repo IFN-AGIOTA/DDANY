@@ -164,7 +164,8 @@ func _r():
 	if hn != null:
 		var D := 1.2
 		var ym := D + 3.6
-		var hp := [Vector3(-33.9, 0, 8.0), Vector3(-33.9, D, 4.0), Vector3(4.0, D, 4.0), Vector3(4.0, D, -2.0), Vector3(-17.0, D, -12.6),
+		var hp := [Vector3(-33.9, 0, 8.0), Vector3(-33.9, D, 4.0), Vector3(4.0, D, 4.0), Vector3(4.0, D, -2.0), Vector3(4.0, D, -8.0),
+			Vector3(-17.0, D, -8.0), Vector3(-17.0, D, -12.6),
 			Vector3(-17.0, ym, -20.6), Vector3(-20.0, ym, -24.0)]
 		var parou := await _caminho(hn, hp, "hangar")
 		var yl := _y_local(hn)
