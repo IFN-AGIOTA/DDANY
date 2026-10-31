@@ -92,7 +92,8 @@ func _r():
 	for i in portos + hangares:
 		var e: Array = L.LOCAIS[i]
 		var prep = LocalCls.preparar(String(e[0]), i, int(e[3]), Vector2(e[1], e[2]))
-		ok(prep.cont.size() >= 12 and prep.infectados.size() >= 8 and prep.escadas.size() >= 4 and prep.col.size() > 100,
+		var min_esc := 4 if e[0] == "porto" else 3                          # hangar: 2 da plataforma das docas + a do mezanino
+		ok(prep.cont.size() >= 12 and prep.infectados.size() >= 8 and prep.escadas.size() >= min_esc and prep.col.size() > 100,
 			"%s %d monta (%d caixas de loot, %d infectados, %d escadas, %d colisões)" % [e[0], i, prep.cont.size(), prep.infectados.size(), prep.escadas.size(), prep.col.size()])
 	# o navio em cima do mar: o meio do casco (z -66 local) não é terra
 	for i in portos:
