@@ -158,7 +158,7 @@ func _porto() -> void:
 		_col(Vector3(p.x, 3.0, p.y), Vector3(0.8, 6.0, 0.8))
 	_carreta_conteiner(Vector2(-2.0, -18.0), 0.0, CORES_CONTEINER[1])
 	_carreta_conteiner(Vector2(2.0, 8.0), PI, CORES_CONTEINER[0])
-	_carreta_conteiner(Vector2(-30.0, -38.0), PI * 0.5, CORES_CONTEINER[3])
+	_carreta_conteiner(Vector2(-35.0, -37.5), PI * 0.5, CORES_CONTEINER[3])        # (x -41..-25: o caminho em x = -20 fica livre)
 	_reach_stacker(Vector2(30.0, -37.0), -PI * 0.5)
 	# ---- GUINDASTES (portêineres) no cais ----
 	for xg in [5.0, 35.0, 62.0]:
