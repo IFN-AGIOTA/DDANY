@@ -2,7 +2,7 @@ extends SceneTree
 # 1.08 · SOLDADOS INFECTADOS: faz inimigos/infectados/soldado_0..2.scn a partir de 3 infectados homens que já existem
 # (homem_*.scn, feitos por ferramentas/preparar_infectados.gd a partir do manequim do Quaternius, CC0): a camisa e a calça
 # viram FARDA CAMUFLADA (manchas pela posição de cada vértice), o sapato vira COTURNO e ganham o CAPACETE (o mesmo do
-# jogador, equipamentos/modelos/capacete.res, preso no osso da cabeça). A cabeça e as mãos ficam como estavam. A parte do
+# jogador, equipamentos/modelos/capacete.res, juntado à malha do corpo e preso ao osso da cabeça). A cabeça e as mãos ficam como estavam. A parte do
 # corpo vem do osso mais forte de cada vértice (igual a ferramentas/preparar_infectados.gd), e a sujeira, os rasgos e o
 # SANGUE são refeitos com as mesmas sementes de lá (homem_K usou K), então ficam nos mesmos lugares.
 # Rodar, dentro da pasta DDA_Godot_Cidade:  godot --headless -s ferramentas/preparar_soldados.gd
@@ -60,34 +60,82 @@ func _initialize() -> void:
 			c[i] = nova
 			trocados += 1
 		arr[Mesh.ARRAY_COLOR] = c
+		# o capacete DENTRO da malha do corpo, preso só ao osso da cabeça (peso 1): uma chamada de desenho por soldado,
+		# igual aos outros infectados (como peça separada eram 2 a mais por soldado, com a sombra)
+		_juntar_capacete(arr, mi.skin, sk)
 		var nm := ArrayMesh.new()
 		var flags := am.surface_get_format(0) & (Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS)
 		nm.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, flags)
 		nm.surface_set_material(0, am.surface_get_material(0))
 		mi.mesh = nm
-		# o capacete no osso da cabeça
-		var ba := BoneAttachment3D.new()
-		ba.name = "Capacete"
-		ba.bone_name = CAPACETE[0]
-		sk.add_child(ba)
-		ba.owner = raiz
-		var hm := MeshInstance3D.new()
-		hm.name = "Malha"
-		hm.mesh = load("res://equipamentos/modelos/capacete.res")
-		var ang: Vector3 = CAPACETE[2]
-		hm.transform = Transform3D(Basis.from_euler(ang * PI / 180.0).scaled(Vector3.ONE * float(CAPACETE[3])), CAPACETE[1])
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Color(0.3, 0.33, 0.22)
-		mat.roughness = 0.8
-		hm.material_override = mat
-		ba.add_child(hm)
-		hm.owner = raiz
 		var pc := PackedScene.new()
 		pc.pack(raiz)
 		var saida := PASTA + "soldado_%d.scn" % k
 		var err := ResourceSaver.save(pc, saida)
 		print("SOLDADO %s <- %s · %d vértices de roupa trocados · salvo %s" % [saida, BASES[k], trocados, error_string(err)])
 	quit()
+
+const CAPACETE_COR := Color(0.3, 0.33, 0.22)
+
+static func _juntar_capacete(arr: Array, skin: Skin, sk: Skeleton3D) -> void:
+	var osso := sk.find_bone(CAPACETE[0])
+	# índice do osso na malha = índice do "bind" na pele (o mesmo osso)
+	var bind := -1
+	var pose := Transform3D.IDENTITY
+	for b in skin.get_bind_count():
+		if skin.get_bind_bone(b) == osso or skin.get_bind_name(b) == CAPACETE[0]:
+			bind = b
+			pose = skin.get_bind_pose(b)
+			break
+	if bind < 0:
+		bind = osso
+		pose = sk.get_bone_global_rest(osso).affine_inverse()
+	var ang: Vector3 = CAPACETE[2]
+	var t_osso := Transform3D(Basis.from_euler(ang * PI / 180.0).scaled(Vector3.ONE * float(CAPACETE[3])), CAPACETE[1])
+	var t := pose.affine_inverse() * t_osso          # do capacete (no osso) para o espaço da malha
+	var cap: Mesh = load("res://equipamentos/modelos/capacete.res")
+	var V: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var N: PackedVector3Array = arr[Mesh.ARRAY_NORMAL]
+	var C: PackedColorArray = arr[Mesh.ARRAY_COLOR]
+	var B: PackedInt32Array = arr[Mesh.ARRAY_BONES]
+	var W: PackedFloat32Array = arr[Mesh.ARRAY_WEIGHTS]
+	var I: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+	var nb := B.size() / V.size()
+	var tem_uv: bool = arr[Mesh.ARRAY_TEX_UV] != null
+	var UV: PackedVector2Array = arr[Mesh.ARRAY_TEX_UV] if tem_uv else PackedVector2Array()
+	for s in cap.get_surface_count():
+		var a: Array = cap.surface_get_arrays(s)
+		var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+		var ns: PackedVector3Array = a[Mesh.ARRAY_NORMAL]
+		var base := V.size()
+		for i in vs.size():
+			V.append(t * vs[i])
+			N.append((t.basis * ns[i]).normalized() if i < ns.size() else Vector3.UP)
+			var cor := CAPACETE_COR * (0.9 + 0.2 * fposmod(vs[i].x * 37.0 + vs[i].z * 11.0, 1.0))
+			cor.a = 1.0
+			C.append(cor)
+			for j in nb:
+				B.append(bind if j == 0 else 0)
+				W.append(1.0 if j == 0 else 0.0)
+			if tem_uv:
+				UV.append(Vector2.ZERO)
+		var idx = a[Mesh.ARRAY_INDEX]
+		if idx == null:
+			for i in vs.size():
+				I.append(base + i)
+		else:
+			for i in idx:
+				I.append(base + int(i))
+	arr[Mesh.ARRAY_VERTEX] = V
+	arr[Mesh.ARRAY_NORMAL] = N
+	arr[Mesh.ARRAY_COLOR] = C
+	arr[Mesh.ARRAY_BONES] = B
+	arr[Mesh.ARRAY_WEIGHTS] = W
+	arr[Mesh.ARRAY_INDEX] = I
+	if tem_uv:
+		arr[Mesh.ARRAY_TEX_UV] = UV
+	for k in [Mesh.ARRAY_TANGENT, Mesh.ARRAY_TEX_UV2]:
+		arr[k] = null
 
 # igual a ferramentas/preparar_infectados.gd
 static func _regiao(osso: String) -> String:

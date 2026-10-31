@@ -18,7 +18,7 @@ extends Node3D
 #   cinza de barro rachada e veios escuros pulsando, desenhados na posição de descanso de cada vértice: não
 #   "escorrem" com a animação), alonga os antebraços, entorta a cabeça e deixa os braços sempre meio à frente.
 # 1.08 · SOLDADO INFECTADO: farda camuflada, coturno e capacete (inimigos/infectados/soldado_*.scn, feitos por
-#   ferramentas/preparar_soldados.gd a partir de 3 homens). Sai quando a SEMENTE é de soldado (>= SOLDADO_BASE:
+#   ferramentas/preparar_soldados.gd a partir de 3 homens; o capacete faz parte da malha: 1 chamada de desenho). Sai quando a SEMENTE é de soldado (>= SOLDADO_BASE:
 #   semente_soldado()), então a rede não precisa mandar mais nada (a semente já vai no pacote do infectado).
 # Mexa AQUI para: quais tipos aparecem e quanto (TIPOS), altura e velocidade das animações.
 
@@ -171,8 +171,7 @@ func montar(semente: int) -> void:
 	add_child(corpo)
 	esqueleto = corpo.find_child("Skeleton3D", true, false)
 	for mi in corpo.find_children("*", "MeshInstance3D", true, false):
-		if mi.material_override == null:                       # 1.08: o capacete do soldado já tem o dele
-			mi.material_override = _mat
+		mi.material_override = _mat
 		mi.visibility_range_end = 140.0
 	for nome in ["Head", "upperarm_l", "upperarm_r"]:
 		_osso[nome] = esqueleto.find_bone(nome)

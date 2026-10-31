@@ -85,7 +85,8 @@ ATUALIZAÇÃO 1.08 · GUARITAS NOS CAMPOS, COMBOIOS DO EXÉRCITO E SOLDADOS INFE
     inimigos/soldados.gd ........... NOVO · os soldados que nascem perto dos comboios
     inimigos/infectados/soldado_0.scn, soldado_1.scn, soldado_2.scn ... NOVOS · os 3 soldados (farda e capacete)
     ferramentas/preparar_soldados.gd ... NOVO · faz os soldado_*.scn a partir de 3 infectados (farda pela parte do
-                                     corpo, o mesmo sangue de antes, capacete no osso da cabeça)
+                                     corpo, o mesmo sangue de antes, capacete juntado à malha e preso ao osso da
+                                     cabeça: 1 chamada de desenho por soldado, igual aos outros infectados)
     ferramentas/escolher_guaritas.gd ... NOVO · escolhe onde ficam as guaritas (meio dos maiores parques)
     ferramentas/testes/teste_locais_108.gd ... NOVO · rodar.sh: + teste_locais_108
     mundo/cidade.gd ................ nenhuma árvore de parque dentro do terreno de um local
@@ -97,7 +98,7 @@ ATUALIZAÇÃO 1.08 · GUARITAS NOS CAMPOS, COMBOIOS DO EXÉRCITO E SOLDADOS INFE
     mundo/veiculo.gd ............... humvee e caminhão do Exército dirigíveis (rodas, peso, força do motor), NOMES
     mundo/veiculos.gd .............. 25% dos militares funcionam; entra de mais longe no caminhão; nome no painel
     mundo/loot_mundo.gd ............ tabelas "guarita_torre", "guarita_acampamento", "comboio", chão "chao_guarita"
-    inimigos/modelo_infectado.gd ... SOLDADOS (semente de soldado), o capacete com o material dele
+    inimigos/modelo_infectado.gd ... SOLDADOS (semente de soldado)
     inimigos/vago.gd ............... soldado: mais vida e loot de munição
     inimigos/vagos.gd .............. _criar com a semente (soldado); chama inimigos/soldados.gd
     jogador/controles.gd ........... item "AVISOS" no editor da HUD (medido do meio de baixo da tela; faixa de exemplo)
