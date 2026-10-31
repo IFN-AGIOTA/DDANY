@@ -40,6 +40,7 @@ const SACO := Color(0.55, 0.5, 0.38)
 
 var tipo := ""
 var idx := 0
+var num_tipo := -1                     # 1.08: quantos locais do mesmo tipo vêm antes deste (calculado fora da thread)
 var giro := 0
 var centro := Vector2.ZERO             # no mundo
 var r := RandomNumberGenerator.new()
@@ -64,7 +65,8 @@ const NOVOS := ["delegacia", "escola", "metro", "quartel"]
 const NEOCLASSICOS := ["igreja", "prefeitura"]           # 1.06: mundo/local_igreja.gd
 const PORTUARIOS := ["porto", "hangar"]                   # 1.07: mundo/local_porto.gd
 
-static func preparar(t: String, i: int, gi: int, c: Vector2) -> RefCounted:
+# o script que monta cada tipo de local
+static func arquivo(t: String) -> String:
 	var arq := "res://mundo/local_bunker.gd" if t == "bunker" else ("res://mundo/local_novos.gd" if t in NOVOS else "res://mundo/local.gd")
 	if t in NEOCLASSICOS:
 		arq = "res://mundo/local_igreja.gd"
@@ -72,9 +74,16 @@ static func preparar(t: String, i: int, gi: int, c: Vector2) -> RefCounted:
 		arq = "res://mundo/local_porto.gd"
 	if t == "guarita":
 		arq = "res://mundo/local_guarita.gd"          # 1.08
-	var m = load(arq).new()
+	return arq
+
+# 1.08: roda numa THREAD (mundo/locais.gd abrir): quem chama já carregou o script (arquivo(t)) na thread principal e
+# manda o número do local (num); aqui dentro nada carrega script (carregar script numa thread às vezes pegava o
+# mundo/locais.gd pela metade, com as tabelas vazias, e derrubava o jogo)
+static func preparar(t: String, i: int, gi: int, c: Vector2, num := -1) -> RefCounted:
+	var m = load(arquivo(t)).new()
 	m.tipo = t
 	m.idx = i
+	m.num_tipo = num
 	m.giro = gi
 	m.centro = c
 	m.r.seed = i * 9173 + 77

@@ -32,7 +32,7 @@ static func y_nivel(k: int) -> float:
 	return Y0 - k * ANDAR_B
 
 func _bunker() -> void:
-	numero = load("res://mundo/locais.gd").numero_bunker(idx)
+	numero = num_tipo + 1 if num_tipo >= 0 else load("res://mundo/locais.gd").numero_bunker(idx)   # 1.08: pronto, fora da thread
 	r.seed = 830                       # a mesma estrutura em todos
 	# tudo numa malha só (uma draw call)
 	fora = resto

@@ -388,6 +388,8 @@ func _igreja() -> void:
 
 # conta quantos locais do mesmo tipo vêm antes deste (nome de cada igreja)
 func _numero_do_tipo() -> int:
+	if num_tipo >= 0:
+		return num_tipo                    # 1.08: veio pronto (mundo/locais.gd numero_do_tipo, fora da thread)
 	var Locais = load("res://mundo/locais.gd")
 	var n := 0
 	for k in mini(idx, Locais.LOCAIS.size()):

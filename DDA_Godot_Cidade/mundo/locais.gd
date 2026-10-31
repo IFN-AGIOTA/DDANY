@@ -510,16 +510,28 @@ func abrir(i: int, ja := false) -> void:
 	if abertos.has(i) or _tarefa >= 0:
 		return
 	var e: Array = LOCAIS[i]
+	# 1.08: o script do construtor é carregado AQUI (thread principal) e o número do local vai pronto: na thread nada
+	# carrega script (às vezes pegava o mundo/locais.gd pela metade e o jogo caía)
+	load(LocalCls.arquivo(String(e[0])))
+	var num := numero_do_tipo(i)
 	if usar_thread and not ja:
 		_tarefa_i = i
 		# 0.91: os valores vão prontos no bind (a função anônima que lia "e" na thread recebeu, uma vez, um número
 		# no lugar do tipo do local)
-		_tarefa = WorkerThreadPool.add_task(_preparar_na_thread.bind(String(e[0]), i, int(e[3]), Vector2(e[1], e[2])), false, "local")
+		_tarefa = WorkerThreadPool.add_task(_preparar_na_thread.bind(String(e[0]), i, int(e[3]), Vector2(e[1], e[2]), num), false, "local")
 		return
-	_terminar(i, LocalCls.preparar(String(e[0]), i, int(e[3]), Vector2(e[1], e[2])))
+	_terminar(i, LocalCls.preparar(String(e[0]), i, int(e[3]), Vector2(e[1], e[2]), num))
 
-func _preparar_na_thread(t: String, i: int, gi: int, c: Vector2) -> void:
-	_tarefa_res = LocalCls.preparar(t, i, gi, c)
+func _preparar_na_thread(t: String, i: int, gi: int, c: Vector2, num: int) -> void:
+	_tarefa_res = LocalCls.preparar(t, i, gi, c, num)
+
+# 1.08: quantos locais do mesmo tipo vêm antes do i (0 = o primeiro)
+static func numero_do_tipo(i: int) -> int:
+	var n := 0
+	for k in mini(i, LOCAIS.size()):
+		if LOCAIS[k][0] == LOCAIS[i][0]:
+			n += 1
+	return n
 
 # abre já, sem thread (nascer/carregar o jogo dentro de um local)
 func abrir_agora(p: Vector2) -> void:

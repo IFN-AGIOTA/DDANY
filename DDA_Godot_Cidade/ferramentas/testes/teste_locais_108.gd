@@ -194,7 +194,8 @@ func _r():
 				await physics_frame
 				vmax = maxf(vmax, veic.velocidade_kmh())
 			m.controles.mover = Vector2.ZERO
-			ok(veic.tipo == "humvee" and veic.global_position.distance_to(p1) > 8.0 and vmax > 15.0, "o HUMVEE anda (%.1f m em 4 s, até %.0f km/h)" % [veic.global_position.distance_to(p1), vmax])
+			# (na coluna do comboio ele pode bater no veículo da frente: vale a velocidade que pegou)
+			ok(veic.tipo == "humvee" and veic.global_position.distance_to(p1) > 4.0 and vmax > 15.0, "o HUMVEE anda (%.1f m em 4 s, até %.0f km/h)" % [veic.global_position.distance_to(p1), vmax])
 			vm.sair()
 			await q(10)
 		else:
