@@ -41,6 +41,16 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.09.1 · OS SOBREVIVENTES DO HOSPITAL OLHAM PARA VOCÊ
+  · CONSERTO: nos hospitais virados para outro lado (3 dos 4), a Mônica, o Lucas, o Jhon e os outros ficavam DE
+    COSTAS (ou de lado) quando você chegava perto. Agora todos viram de frente para você, em qualquer hospital.
+  ARQUIVOS MEXIDOS (testado: teste_hospital com a verificação nova; sem o conserto ela falha nos 3 hospitais girados):
+    npc/npc_hospital.gd ............ olhar_para gira o NPC no mundo (antes girava em relação ao hospital)
+    ferramentas/testes/teste_hospital.gd ... em cada um dos 4 hospitais, os NPCs perto ficam de frente para o jogador
+    menu/config.gd ................. VERSAO "1.09.1"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco
+
 ATUALIZAÇÃO 1.09 · CHAT DE TEXTO (SOLO E MULTIJOGADOR)
   · CHAT DE TEXTO: ENTER (PC) ou o botão CHAT (toque, no canto de cima à direita, embaixo do VOO; dá para mover no
     editor da HUD) abre o campo embaixo, à esquerda. Escreva e aperte ENVIAR (ou Enter). Esc ou X fecha.

@@ -254,5 +254,31 @@ func _r():
 	H.comprados = {}
 	H.carregar_personagem(d["hospitais"])
 	ok(H.comprado(hi, k), "carregou o que já comprou hoje")
+	# ---------- 1.09.1: em TODO hospital (inclusive os virados para outro lado) os NPCs olham para o jogador ----------
+	for hh in H.hospitais():
+		var giro: int = int(Locais.LOCAIS[hh][3])
+		var ph: Vector2 = Locais.local_para_mundo(hh, Vector2(0, -6.0))
+		m.mundo.forcar(ph)
+		m.locais.abrir_agora(ph)
+		await q(5)
+		j.teleportar(Vector3(ph.x, m.cidade.Y_CALCADA + 0.3, ph.y), 0.0)
+		await q(10)
+		var piores := []
+		for n in root.get_tree().get_nodes_in_group("npcs_hospital"):
+			var npc: Node3D = n
+			if npc.global_position.distance_to(j.global_position) > 5.5:
+				continue
+			# fica perto dele uns segundos, de um lado
+			var lado: Vector3 = npc.global_position + Vector3(2.0, 0.0, 1.0)
+			j.teleportar(Vector3(lado.x, j.global_position.y, lado.z), 0.0)
+			await q(150)
+			var para: Vector3 = j.global_position - npc.global_position
+			para.y = 0.0
+			var frente: Vector3 = -npc.global_basis.z
+			frente.y = 0.0
+			var ang := rad_to_deg(frente.angle_to(para))
+			if ang > 25.0:
+				piores.append("%s %d°" % [npc.quem, int(ang)])
+		ok(piores.is_empty(), "hospital %d (girado %d): os NPCs perto viram de FRENTE para o jogador %s" % [hh, giro * 90, str(piores)])
 	print("falhas: ", falhas)
 	quit()

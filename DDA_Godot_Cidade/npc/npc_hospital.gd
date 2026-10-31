@@ -84,4 +84,6 @@ func olhar_para(p: Vector3, dt: float) -> void:
 	if d.length() < 0.1:
 		return
 	var alvo := atan2(-d.x, -d.z)
-	rotation.y = lerp_angle(rotation.y, alvo, minf(1.0, dt * 3.0))
+	# 1.09.1: a direção é do MUNDO: gira o NPC no mundo (antes girava em relação ao hospital, e nos hospitais virados
+	# para outro lado eles ficavam de costas ou de lado para o jogador)
+	global_rotation.y = lerp_angle(global_rotation.y, alvo, minf(1.0, dt * 3.0))
