@@ -66,8 +66,19 @@ func _r():
 	m._editar_hud()
 	await q(15)
 	await _conferir(m, "jogo")
+	# 1.08: os AVISOS são um item do editor (mover e redimensionar), embaixo no meio por padrão, e não são botão
+	var ce = m.get_node("EditorHud").controles
+	var av: Dictionary = ce._botao("AVISOS")
+	var vs: Vector2 = ce.get_viewport().get_visible_rect().size
+	ok(not av.is_empty() and ce._visivel(av), "AVISOS aparece no editor da HUD")
+	ok(absf(ce._centro(av).x - vs.x * 0.5) < 1.0 and ce._centro(av).y > vs.y * 0.8, "AVISOS: por padrão embaixo, no meio da tela (%s)" % str(ce._centro(av)))
+	ce.layout["AVISOS"] = [-200.0, 300.0, 45.0]
+	ce.aplicar_layout(ce.layout, ce.escala, 1.0)
+	ok(absf(ce._centro(av).x - (vs.x * 0.5 + 200.0 * ce.escala)) < 1.0 and absf(ce.tamanho_do("AVISOS") - 1.5) < 0.01, "AVISOS: muda de lugar e de tamanho")
 	m.get_node("EditorHud")._concluir()
 	await q(5)
+	ok(not m.controles._visivel(m.controles._botao("AVISOS")) and m.controles._botao_no_toque(m.controles._centro(m.controles._botao("AVISOS"))).get("id", "") != "AVISOS", "fora do editor os AVISOS não são botão")
+	ok(m.controles._botao("AVISOS")["r"] > 40.0, "o tamanho dos AVISOS ficou salvo")
 	ok(m.controles.layer == camada0 and not m.controles.editando, "concluir volta a camada dos botões (%d) e sai da edição" % m.controles.layer)
 	m._fechar_opcoes()
 	m._continuar()

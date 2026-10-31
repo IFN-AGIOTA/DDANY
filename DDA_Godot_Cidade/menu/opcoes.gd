@@ -410,9 +410,12 @@ func _pagina_hud(v: float) -> Control:
 	_secao(g, "Posição e tamanho dos botões", col)
 	_secao(g, "Minimapa", _seg("map", [[true, "Visível"], [false, "Oculto"]],
 		{true: "Minimapa no canto de cima (toque nele para abrir o mapa grande).", false: "Sem minimapa: só a bússola. O mapa grande abre com M."}))
-	_secao(g, "Avisos no meio da tela", _seg("avisos", [[false, "Desligados"], [true, "Ligados"]],
+	_secao(g, "Avisos na tela", _seg("avisos", [[false, "Desligados"], [true, "Ligados"]],
 		{false: "Sem os textos no meio da tela (MICROFONE LIGADO, SANGRANDO, AGARRADO...).",
-		true: "Mostra os avisos no meio da tela (microfone, ferimentos, itens, zonas...)."}))
+		true: "Mostra os avisos embaixo, no meio da tela (microfone, ferimentos, itens, zonas...). Mude o lugar e o tamanho em Personalizar HUD (item AVISOS)."}))
+	_secao(g, "Fundo dos avisos", _seg("avisos_fundo", [[false, "Sem fundo"], [true, "Com fundo"]],
+		{false: "Só o texto, com uma sombra leve (mais discreto).",
+		true: "Uma faixa escura atrás de cada aviso: lê melhor com o céu ou o chão claro."}))
 	_secao(g, "Ícone da munição", _seg("icone_mun", [[false, "Oculto"], [true, "Visível"]],
 		{false: "Sem o ícone do pente embaixo, no meio da tela.",
 		true: "Ícone do pente embaixo: muda de cor conforme a munição acaba e pisca vazio."}))

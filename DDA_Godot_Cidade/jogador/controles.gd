@@ -164,6 +164,11 @@ func _ready() -> void:
 	ocultos["MIC"] = true                 # 0.97: chat de voz, só no multijogador (rede/voz.gd mostra)
 	ocultos["VOZES"] = true
 	ocultos["SENTIDO"] = true             # 0.95: só para o mutado/controlado (jogador/sentidos.gd mostra)
+	# 1.08 · AVISOS (os textos que explicam o jogo: "MICROFONE LIGADO", falas dos NPCs, itens, zonas): não é botão, é o
+	# lugar e o tamanho dos avisos (armas/hud_combate.gd). Só aparece no editor da HUD, para mover e redimensionar.
+	# "bc" = medido do meio de baixo da tela (fica no meio em qualquer largura de tela).
+	_bt("AVISOS", "AVISOS", "bc", Vector2(0, 92), 30, Color(1, 1, 1), "tocar", false, false)
+	ocultos["AVISOS"] = true
 	_bt("SOBE", "SOBE", "br", Vector2(80, 330), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
 	_bt("DESCE", "DESCE", "br", Vector2(80, 210), 50, Color(0.6, 0.6, 0.6), "segurar", false, true)
 	_bt("VEL", "VEL", "br", Vector2(80, 90), 44, Color(0.6, 0.6, 0.6), "tocar", false, true)
@@ -274,6 +279,10 @@ func _editar(e: InputEvent) -> void:
 				if b["voo"] or NO_LUGAR_DE.has(b["id"]):
 					continue
 				var d: float = e.position.distance_to(_centro(b))
+				if b["id"] == "AVISOS":                  # 1.08: a faixa dos avisos pega em qualquer ponto dela
+					var dc: Vector2 = (e.position - _centro(b)).abs()
+					if dc.x < float(b["r"]) * 6.0 and dc.y < float(b["r"]) * 0.9:
+						d = minf(d, float(b["r"]))
 				if d <= float(b["r"]) * 1.2 and d < md:
 					md = d
 					melhor = i
@@ -289,16 +298,32 @@ func _editar(e: InputEvent) -> void:
 		var b: Dictionary = botoes[_arraste]
 		var c: Vector2 = (e.position + _arraste_dif).clamp(Vector2(b["r"], b["r"]), vs - Vector2(b["r"], b["r"]))
 		var off := Vector2(vs.x - c.x, c.y if b["canto"] == "tr" else vs.y - c.y)
+		if b["canto"] == "bc":
+			off = Vector2(vs.x * 0.5 - c.x, vs.y - c.y)           # 1.08: AVISOS, medido do meio de baixo
 		layout[b["id"]] = [off.x / escala, off.y / escala, float(b["r"]) / escala]
 		b["off"] = off
 		_seguir_iguais()
 		_visual.queue_redraw()
+
+# 1.08: no editor da HUD, os AVISOS aparecem como uma faixa com um aviso de exemplo, do tamanho de verdade
+func _desenhar_avisos_edicao(b: Dictionary) -> void:
+	var c := _centro(b)
+	var tam := int(float(b["r"]) * 0.62)
+	var txt := "AVISOS · ARRASTE E AJUSTE O TAMANHO"
+	var w := _fonte.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam).x
+	var ret := Rect2(c.x - w * 0.5 - tam * 0.6, c.y - tam * 0.95, w + tam * 1.2, tam * 1.5)
+	_visual.draw_rect(ret, Color(0, 0, 0, 0.45))
+	var sel: bool = b["id"] == selecionado
+	_visual.draw_rect(ret.grow(4.0), Color(1.0, 0.71, 0.0) if sel else Color(1, 1, 1, 0.75), false, 4.0 if sel else 2.0)
+	_visual.draw_string(_fonte, Vector2(c.x - w * 0.5, c.y + tam * 0.3), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, Color(1, 1, 1, 0.95))
 
 func _centro(b: Dictionary) -> Vector2:
 	var vs := get_viewport().get_visible_rect().size
 	var off: Vector2 = b["off"]
 	if b["canto"] == "tr":
 		return Vector2(vs.x - off.x, off.y)
+	if b["canto"] == "bc":
+		return Vector2(vs.x * 0.5 - off.x, vs.y - off.y)
 	return Vector2(vs.x - off.x, vs.y - off.y)
 
 func _visivel(b: Dictionary) -> bool:
@@ -652,6 +677,9 @@ func _desenhar() -> void:
 	var textos_b := []
 	for b in botoes:
 		if not _visivel(b):
+			continue
+		if b["id"] == "AVISOS":
+			_desenhar_avisos_edicao(b)                   # 1.08: uma faixa de aviso de exemplo, não um círculo
 			continue
 		var c := _centro(b)
 		var r: float = b["r"]

@@ -69,6 +69,14 @@ ATUALIZAÇÃO 1.08 · GUARITAS NOS CAMPOS, COMBOIOS DO EXÉRCITO E SOLDADOS INFE
   · No multijogador o amigo vê o mesmo soldado (a aparência vai junto com o infectado).
   CONSERTO: as árvores dos parques não nascem mais dentro do terreno dos locais (antes, uma árvore podia sair no meio
   de um acampamento).
+  AVISOS NA TELA (os textos que explicam o jogo: "MICROFONE LIGADO", falas dos NPCs, item pego, zona, ferimento):
+  · Agora ficam EMBAIXO, NO MEIO da tela, com letra menor e um pouco transparente (antes: grandes, no alto); o mais
+    novo fica embaixo e os de antes sobem.
+  · DÁ PARA MOVER E REDIMENSIONAR: Opções › HUD › Personalizar HUD › item "AVISOS" (uma faixa de exemplo: arraste e
+    ajuste o tamanho, como os botões; "Item padrão" volta ao lugar de fábrica). Fora do editor não é botão.
+  · Opções › HUD › "Fundo dos avisos": Sem fundo (padrão, só texto com sombra leve) ou Com fundo (faixa escura atrás
+    de cada aviso, lê melhor com céu ou chão claro). Ligar/desligar os avisos continua em Opções › HUD › "Avisos na
+    tela".
   ARQUIVOS MEXIDOS (testado: teste_locais_108 NOVO (as 8 guaritas montam e ficam em parque; do caminho até a cabine
   da torre andando; os comboios ficam no fim da lista de carros; a carga militar; subir no tanque pulando; o humvee
   anda; soldados nascem perto do comboio e têm mais vida); + a bateria):
@@ -92,7 +100,13 @@ ATUALIZAÇÃO 1.08 · GUARITAS NOS CAMPOS, COMBOIOS DO EXÉRCITO E SOLDADOS INFE
     inimigos/modelo_infectado.gd ... SOLDADOS (semente de soldado), o capacete com o material dele
     inimigos/vago.gd ............... soldado: mais vida e loot de munição
     inimigos/vagos.gd .............. _criar com a semente (soldado); chama inimigos/soldados.gd
-    menu/config.gd ................. VERSAO "1.08"
+    jogador/controles.gd ........... item "AVISOS" no editor da HUD (medido do meio de baixo da tela; faixa de exemplo)
+    armas/hud_combate.gd ........... avisos embaixo, no meio (ou onde o editor puser), menores, com fundo opcional
+    menu/opcoes.gd ................. Opções › HUD › "Fundo dos avisos" (e "Avisos na tela")
+    menu/aplicar_opcoes.gd ......... "avisos_fundo" é lido na hora pela HUD
+    ferramentas/testes/teste_editor_hud.gd ... o item AVISOS: aparece no editor, embaixo no meio, muda de lugar e
+                                     tamanho, e fora do editor não é botão
+    menu/config.gd ................. VERSAO "1.08" · opção "avisos_fundo"
     menu/novidades_lista.gd ........ refeita
     estudos/ESTUDO_AAA.md .......... ✅ storytelling dos comboios, pontos altos (guarita, tanque)
     LEIA-ME.txt .................... este bloco + seções 4, 5, mapa "QUERO MEXER EM..." e 10
@@ -3295,8 +3309,10 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - não cair no void (espera do chão,
   ponto seguro, altura do resgate) .... jogador/jogador.gd (Y_VOID, ESPERA_CHAO, SEGURO_A_CADA, _resgatar)
 - câmera de ombro (quanto para o lado) . jogador/jogador.gd (lateral_camera, LADO_MIN) + menu/aplicar_opcoes.gd (LADO)
-- avisos no meio da tela e ícone da
-  munição (ligar/desligar) ............ Opções › HUD (menu/opcoes.gd) · desenho: armas/hud_combate.gd
+- avisos na tela e ícone da munição
+  (ligar/desligar, fundo dos avisos) .. Opções › HUD (menu/opcoes.gd) · desenho: armas/hud_combate.gd
+                                          (_desenhar_avisos) · lugar e tamanho dos avisos: item "AVISOS" do editor
+                                          da HUD (jogador/controles.gd)
 - TELA DE CARREGAMENTO (aparência,
   DICAS, tempo de cada dica) .......... menu/tela_carregamento.gd
 - etapas do carregamento (textos e

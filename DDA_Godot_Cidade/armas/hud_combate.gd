@@ -98,6 +98,44 @@ func _texto(txt: String, centro_x: float, base_y: float, tam: int, cor: Color) -
 	_tela.draw_string(_fonte, Vector2(centro_x - w * 0.5 + 1.5, base_y + 1.5), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, Color(0, 0, 0, 0.7))
 	_tela.draw_string(_fonte, Vector2(centro_x - w * 0.5, base_y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, cor)
 
+# 1.08 · AVISOS DISCRETOS: embaixo, no meio da tela (ou onde o jogador puser no editor da HUD: o item "AVISOS" de
+# jogador/controles.gd dá o lugar e o tamanho), letra menor e um pouco transparente; o mais novo fica embaixo e os de
+# antes sobem. Opções › HUD › "Fundo dos avisos": uma faixa escura atrás de cada um (lê melhor com o céu claro).
+const AVISO_LETRA := 2.4                # vh (antes: 4,0, no alto da tela)
+var _fundo_aviso: StyleBoxFlat = null
+
+func _desenhar_avisos(vs: Vector2) -> void:
+	if _avisos.is_empty():
+		return
+	var ancora := Vector2(vs.x * 0.5, vs.y - 92.0)
+	var fator := 1.0
+	var ctl = jogador.get("controles") if jogador != null else null
+	if ctl != null:
+		var b: Dictionary = ctl._botao("AVISOS")
+		if not b.is_empty():
+			ancora = ctl._centro(b)
+			fator = float(b["r"]) / float(b["r0"])          # tamanho do editor x tamanho geral da HUD
+	var tam := maxi(10, int(AVISO_LETRA * vs.y / 100.0 * fator))
+	var passo := tam * 1.55
+	var fundo: bool = bool(Config.valor("avisos_fundo"))
+	if fundo and _fundo_aviso == null:
+		_fundo_aviso = StyleBoxFlat.new()
+		_fundo_aviso.bg_color = Color(0.0, 0.0, 0.0, 0.55)
+		_fundo_aviso.set_corner_radius_all(6)
+	var n := _avisos.size()
+	for k in n:
+		var a: Array = _avisos[k]
+		var alfa := minf(1.0, float(a[1]) * 3.0)
+		var txt: String = a[0]
+		var w := _fonte.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam).x
+		var base_y: float = ancora.y + tam * 0.35 - (n - 1 - k) * passo
+		if fundo:
+			_fundo_aviso.bg_color.a = 0.55 * alfa
+			_tela.draw_style_box(_fundo_aviso, Rect2(ancora.x - w * 0.5 - tam * 0.6, base_y - tam * 0.95, w + tam * 1.2, tam * 1.3))
+		else:
+			_tela.draw_string(_fonte, Vector2(ancora.x - w * 0.5 + 1.0, base_y + 1.0), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, Color(0, 0, 0, 0.6 * alfa))
+		_tela.draw_string(_fonte, Vector2(ancora.x - w * 0.5, base_y), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tam, Color(1, 1, 1, 0.88 * alfa))
+
 func _desenhar() -> void:
 	if armas == null:
 		return
@@ -127,9 +165,7 @@ func _desenhar() -> void:
 		_tela.draw_line(c + Vector2(-s, s), c + Vector2(-s * 0.4, s * 0.4), cor, esp * 1.3)
 		_tela.draw_line(c + Vector2(s, s), c + Vector2(s * 0.4, s * 0.4), cor, esp * 1.3)
 	# ----- aviso -----
-	for k in _avisos.size():
-		var a: Array = _avisos[k]
-		_texto(a[0], c.x, vs.y * 0.3 + k * 5.0 * vh, int(4.0 * vh), Color(1, 1, 1, minf(1.0, float(a[1]) * 3.0)))
+	_desenhar_avisos(vs)
 	# ----- munição (0.65 · HUD mínima): um ícone de PENTE que muda de cor, sem números nem barra -----
 	# branco = cheio · amarelo · laranja · vermelho piscando = vazio · âmbar pulsando = recarregando
 	# chave inglesa vermelha (ou X) = EMPERRADA · pente apagado (ou só contorno) = SEM PENTE

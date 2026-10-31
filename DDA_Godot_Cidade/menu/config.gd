@@ -22,6 +22,7 @@ const PADRAO := {
 	"mira_ferro": true,                   # 0.98: em 3ª pessoa, MIRAR com arma de fogo entra na mira de ferro
 	"cam": 0, "dist": "near", "pos": "left", "fov": 42,
 	"map": true, "op": 100, "sc": 100, "avisos": false, "icone_mun": false,
+	"avisos_fundo": false,                # 1.08: faixa escura atrás dos avisos (armas/hud_combate.gd)
 	"fps": false, "som": true, "vol": 100, "awake": false, "mus": true, "mvol": 70,
 	"svol": 100,                          # volume dos efeitos (tiros, passos, infectados, chuva)
 	"dif": 1,                             # dificuldade do modo livre: 0 fácil, 1 normal, 2 difícil
