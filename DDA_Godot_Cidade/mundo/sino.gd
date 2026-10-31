@@ -11,6 +11,7 @@ const Sons := preload("res://audio/sons.gd")
 const RAIO := 1.9
 const RAIO_BARULHO := 400.0             # (de dia os infectados ouvem só 40% disso: regras_infectados.gd)
 const ESPERA := 8.0
+const ACIMA := 16.0                      # m acima do sino de onde "sai" o barulho (para os infectados)
 
 static var todas: Array = []
 static var ao_tocar := Callable()        # (posição) rede/sessao_rede.gd manda para os outros
@@ -66,4 +67,5 @@ static func badalar(pos: Vector3, fazer_barulho: bool) -> void:
 		return
 	var vagos = arv.current_scene.get("vagos")
 	if vagos != null and vagos.has_method("barulho"):
-		vagos.barulho(pos, RAIO_BARULHO, true)
+		# o som sai pelo ALTO da torre (por cima da agulha): parapeito, paredes e prédios em volta não abafam o sino
+		vagos.barulho(pos + Vector3(0, ACIMA, 0), RAIO_BARULHO, true)

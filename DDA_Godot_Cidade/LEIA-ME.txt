@@ -40,6 +40,58 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.06 · IGREJAS E A PREFEITURA DE NOVA YORK (1ª PARTE DAS ESTRUTURAS NOVAS)
+  Plano das estruturas novas, em 3 partes: 1.06 igrejas e prefeitura · 1.07 portos com navio e hangares de carga ·
+  1.08 guaritas nos campos, comboios do Exército (tanques, jipes, caminhões) e soldados infectados.
+  IGREJAS (4, uma em cada ilha), no estilo das fotos de referência (neoclássica, branca):
+  · Por fora: ESCADARIA larga até o embasamento, PÓRTICO de 6 colunas com o frontão e o nome da igreja (São Patrício,
+    Santo Antônio, Nossa Senhora da Paz, São José), CÚPULA verde de cobre no cruzeiro, TORRE DO SINO com relógio e a
+    agulha com a cruz, vitrais coloridos em arco, adro com grade, canteiros, estátua e postes.
+  · Por dentro: nave alta com colunatas, bancos, tapete vermelho, altar com o retábulo e a cruz, púlpito,
+    confessionários, sacristia (armário com o dinheiro do dízimo), CORO em cima da entrada com o órgão.
+  · Virou ABRIGO: colchões e cobertas nas naves laterais, caixas de doação, velas no chão do altar, o mural de recados
+    ("PROCURO MINHA FILHA · ANA · 7 ANOS", "FOMOS PARA O SUL"), a porta do transepto oeste barrada com bancos
+    ("NÃO ABRAM"). Os refugiados que viraram estão lá dentro.
+  · A TORRE DÁ PARA SUBIR: do coro, escada em caracol (em volta de um núcleo de pedra: não tem vão para cair) até o
+    CAMPANÁRIO, a 22 m — o lugar mais alto do bairro para vigiar. Lá em cima tem uma caixa com rifle de caça.
+  · O SINO: chegue perto e aperte PEGAR ("TOCAR SINO"). As badaladas se ouvem longe e CHAMAM OS INFECTADOS (até 400 m
+    à noite; de dia eles ouvem menos): use para puxar uma horda para longe (sua ou de um amigo)... ou cuidado.
+    No multijogador todos ouvem.
+  PREFEITURA DE NOVA YORK (1, no centro, perto dos arranha-céus):
+  · Palácio de 2 andares com PÓRTICO de 8 colunas ("PREFEITURA DE NOVA YORK"), CÚPULA com 4 RELÓGIOS e a bandeira
+    de Nova York, escadaria, praça com chafariz, mastros e estátua.
+  · Térreo: saguão da rotunda (piso de xadrez, 2 escadas), atendimento ao cidadão, escritórios, PLENÁRIO em degraus
+    e o ARQUIVO. 2º andar: GABINETE DO PREFEITO (COFRE com até US$ 400 e pistola), CENTRO DE COMANDO DE CRISE (mesa
+    com o mapa da cidade, rádios, o quadro "EVACUAÇÃO · ZONA SUL · PONTES FECHADAS ÀS 06:00"), escritórios e um
+    dormitório improvisado. Escada até o TERRAÇO, com o ninho de sacos de areia que os soldados deixaram.
+  · Na frente, o POSTO DO EXÉRCITO da evacuação: sacos de areia, barreiras em zigue-zague, barracas, caminhão e jipe
+    militares, caixas militares e as faixas "EVACUAÇÃO — DIRIJAM-SE AO SUL" (a ordem do rádio no Livro 1).
+    É ÁREA MILITAR: o cartão de um bunker pode aparecer nas caixas.
+  · As igrejas e a prefeitura são ZONAS DE PvP como os outros locais especiais (aviso ao entrar, loot próprio,
+    infectados que voltam) e aparecem no mapa ("I" e "PF"). De longe, a cúpula, a torre e os telhados aparecem.
+  · SAVE: os 7 prédios comuns que estavam nos terrenos novos saíram; o jogo salvo de antes é convertido sozinho.
+  ARQUIVOS MEXIDOS (testado: teste_locais_106 NOVO (os 5 locais montam; da rua até o sino e da praça até o terraço
+  andando, sem pular; o sino chama um infectado; conversão do save); compilar_tudo; + a bateria):
+    mundo/local_igreja.gd .......... NOVO · a igreja e a prefeitura por dentro e por fora (e as peças neoclássicas)
+    mundo/sino.gd .................. NOVO · o sino (tocar com PEGAR, barulho, rede)
+    audio/sons/mundo/sino.ogg ...... NOVO · o som do sino (feito por síntese, sem gravação de terceiros)
+    ferramentas/testes/teste_locais_106.gd ... NOVO
+    mundo/locais.gd ................ os 5 locais novos na lista; tamanhos, nomes, cores e siglas; a casca de longe
+                                     agora tem cilindro, cúpula e telhado de duas águas; prefeitura = área militar
+    mundo/local.gd ................. igreja/prefeitura montadas pelo mundo/local_igreja.gd; o nó do sino
+    mundo/cidade.gd ................ remapa_v4 (prédios que saíram para os terrenos novos)
+    menu/salvamento.gd ............. mapa dos prédios versão 5 (converte o save de antes com remapa_v4)
+    mundo/loot_mundo.gd ............ tabelas "igreja_*", "prefeitura_*", chão "chao_igreja"/"chao_prefeitura"
+    jogador/jogador.gd ............. PEGAR perto do sino = tocar
+    inventario/tela_inventario.gd .. o botão PEGAR mostra "TOCAR SINO"
+    rede/sessao_rede.gd ............ evento "sino" (todos ouvem; o host faz o barulho)
+    audio/sons/LICENCA.txt ......... o som do sino
+    ferramentas/escolher_locais.gd . NOVOS=2 (prefeitura no centro, uma igreja por ilha)
+    ferramentas/testes/rodar.sh .... + teste_locais_106
+    menu/config.gd ................. VERSAO "1.06"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + seções 4, 5 e mapa "QUERO MEXER EM..."
+
 ATUALIZAÇÃO 1.05 · CAIXAS D'ÁGUA COM FÍSICA (E DE VOLTA AOS TELHADOS)
   · As caixas d'água de madeira dos telhados agora têm física: você esbarra nelas (base de ferro, tanque e tampa),
     não atravessa mais, e os tiros param nelas. A física só existe nos prédios a até 30 m de você (junto com a das
