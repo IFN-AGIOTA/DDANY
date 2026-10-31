@@ -24,20 +24,21 @@ const LocalCls := preload("res://mundo/local.gd")
 const AmbienteCls := preload("res://mundo/ambiente_local.gd")
 const Malhas := preload("res://mundo/malhas.gd")
 const Mat := preload("res://mundo/materiais_cidade.gd")
+const ModeloInfectado := preload("res://inimigos/modelo_infectado.gd")     # 1.08: semente de soldado
 
 const TAMANHO := {"posto": Vector2(46, 36), "hospital": Vector2(72, 54), "supermercado": Vector2(66, 56), "armazem": Vector2(66, 50),
 	"delegacia": Vector2(56, 44), "escola": Vector2(70, 54), "metro": Vector2(64, 28), "quartel": Vector2(64, 50),
 	"bunker": Vector2(28, 22), "igreja": Vector2(48, 66), "prefeitura": Vector2(96, 76),
-	"porto": Vector2(160, 90), "hangar": Vector2(90, 70)}
+	"porto": Vector2(160, 90), "hangar": Vector2(90, 70), "guarita": Vector2(30, 30)}
 const NOMES := {"posto": "POSTO DE GASOLINA", "hospital": "HOSPITAL", "supermercado": "SUPERMERCADO", "armazem": "ARMAZÉM",
 	"delegacia": "DELEGACIA", "escola": "ESCOLA", "metro": "ESTAÇÃO DO METRÔ", "quartel": "QUARTEL DA GUARDA NACIONAL",
 	"bunker": "BUNKER", "igreja": "IGREJA", "prefeitura": "PREFEITURA DE NOVA YORK",
-	"porto": "PORTO DE CONTÊINERES", "hangar": "HANGAR DE CARGA"}
+	"porto": "PORTO DE CONTÊINERES", "hangar": "HANGAR DE CARGA", "guarita": "GUARITA DE OBSERVAÇÃO"}
 const CORES_MAPA := {"posto": Color(0.95, 0.45, 0.15), "hospital": Color(0.9, 0.2, 0.2), "supermercado": Color(0.3, 0.75, 0.35), "armazem": Color(0.35, 0.6, 0.95),
 	"delegacia": Color(0.25, 0.4, 0.95), "escola": Color(0.95, 0.8, 0.2), "metro": Color(0.7, 0.45, 0.9), "quartel": Color(0.5, 0.65, 0.3),
 	"bunker": Color(0.85, 0.85, 0.8), "igreja": Color(0.92, 0.88, 0.72), "prefeitura": Color(0.95, 0.75, 0.45),
-	"porto": Color(0.3, 0.55, 0.85), "hangar": Color(0.85, 0.5, 0.2)}
-const SIGLAS := {"igreja": "I", "prefeitura": "PF", "porto": "PT", "hangar": "HG", "posto": "P", "hospital": "H", "supermercado": "S", "armazem": "A", "delegacia": "D", "escola": "E", "metro": "M", "quartel": "Q", "bunker": "B"}
+	"porto": Color(0.3, 0.55, 0.85), "hangar": Color(0.85, 0.5, 0.2), "guarita": Color(0.45, 0.55, 0.28)}
+const SIGLAS := {"igreja": "I", "prefeitura": "PF", "porto": "PT", "hangar": "HG", "guarita": "G", "posto": "P", "hospital": "H", "supermercado": "S", "armazem": "A", "delegacia": "D", "escola": "E", "metro": "M", "quartel": "Q", "bunker": "B"}
 # 0.78: os 28 primeiros são os da 0.68 (a ordem não pode mudar: o loot salvo é "L<índice>_..."); os novos vêm depois
 const N_LOCAIS_068 := 28
 
@@ -106,16 +107,29 @@ const LOCAIS := [
 	["hangar", -902.0, 3465.0, 1],
 	["hangar", 2025.0, 1575.0, 1],
 	["hangar", -4261.0, -2895.5, 2],
+	# 1.08 (ferramentas/escolher_guaritas.gd): GUARITAS DE OBSERVAÇÃO no meio dos campos (parques; nenhum prédio sai).
+	# Montadas em mundo/local_guarita.gd.
+	["guarita", -1695.5, -740.5, 3],
+	["guarita", -1731.5, -1620.5, 1],
+	["guarita", -2921.0, 4666.0, 0],
+	["guarita", 2084.0, -3261.5, 1],
+	["guarita", -1311.0, 269.5, 0],
+	["guarita", -2932.5, 1088.0, 0],
+	["guarita", -5791.5, -1062.0, 1],
+	["guarita", -1425.5, -3462.5, 3],
 ]
 # 1.06: os locais até aqui (índice < N_LOCAIS_105) já existiam na 1.05; os prédios que saíram para os de depois
 # entram na conversão do save (mundo/cidade.gd remapa_v4)
 const N_LOCAIS_105 := 46
 const N_LOCAIS_106 := 51                 # 1.07: até aqui existiam na 1.06 (os portos tiram prédios: mundo/cidade.gd remapa_v5)
+const N_LOCAIS_107 := 56                 # 1.08: até aqui existiam na 1.07 (as guaritas ficam nos parques: não tiram prédio)
 
 # 0.83: ÁREAS MILITARES onde o CARTÃO DE ACESSO de um bunker pode aparecer (CHANCE_CARTAO a cada ciclo do loot, numa
 # das caixas militares): os quartéis e o posto militar na frente de cada hospital. Só existe 1 cartão de cada bunker
 # (mundo/loot_mundo.gd tentar_cartao).
-const AREAS_MILITARES := ["quartel", "hospital", "prefeitura"]   # 1.06: o posto do Exército na frente da prefeitura
+const AREAS_MILITARES := ["quartel", "hospital", "prefeitura", "guarita"]   # 1.06: o posto do Exército na frente da prefeitura · 1.08: guaritas
+# 1.08: onde parte dos infectados que nascem são SOLDADOS (farda e capacete: inimigos/modelo_infectado.gd SOLDADOS)
+const COM_SOLDADOS := {"quartel": 0.6, "prefeitura": 0.35, "guarita": 0.8}
 const TABELAS_MILITARES := ["militar", "militar_med", "quartel_arsenal"]
 
 # número do bunker (1, 2, 3...) do local i (0 = não é bunker)
@@ -171,6 +185,16 @@ static func em(p: Vector2, margem := 0.0) -> int:
 # longo de Z/X). Para o resto (tiro de longe, não nascer dentro) vale a caixa.
 static func casca(tipo: String) -> Array:
 	match tipo:
+		# 1.08 (mundo/local_guarita.gd): as 4 pernas da torre, a cabine e o telhado
+		"guarita":
+			var aco := Color(0.42, 0.44, 0.4)
+			var l: Array = []
+			for sx in [-1.0, 1.0]:
+				for sz in [-1.0, 1.0]:
+					l.append([Vector3(4.0 + sx * 2.1, 4.5, -4.0 + sz * 2.1), Vector3(0.3, 9.0, 0.3), aco])
+			l.append([Vector3(4, 9.6, -4), Vector3(4.6, 1.2, 4.6), Color(0.55, 0.5, 0.38)])
+			l.append([Vector3(4, 11.65, -4), Vector3(5.2, 0.14, 5.2), Color(0.3, 0.34, 0.22)])
+			return l
 		# 1.06 (mundo/local_igreja.gd)
 		"igreja":
 			var pd := Color(0.9, 0.88, 0.82)
@@ -549,13 +573,15 @@ func _infestar(i: int, no: Node3D, pontos: Array) -> void:
 	var t: Vector2 = TAMANHO[LOCAIS[i][0]]
 	var ainda: int = vagos.vivos_perto(no.global_position, maxf(t.x, t.y) * 0.5 + 10.0)
 	var falta := pontos.size() - ainda          # só completa o que falta (os de antes ainda estão por aí)
+	var soldados: float = COM_SOLDADOS.get(LOCAIS[i][0], 0.0)
 	for lp in pontos:
 		if falta <= 0:
 			break
 		var gp: Vector3 = no.global_transform * (lp as Vector3)
 		if jogador != null and gp.distance_to(jogador.global_position) < PERTO_INFECTADO:
 			continue
-		vagos._criar(gp + Vector3(0, 0.05, 0), Vector3.INF)
+		# 1.08: nas áreas do Exército, parte deles é SOLDADO (farda camuflada e capacete)
+		vagos._criar(gp + Vector3(0, 0.05, 0), Vector3.INF, false, "", ModeloInfectado.semente_soldado() if randf() < soldados else -1)
 		falta -= 1
 
 func ciclo_infectados(i: int) -> int:

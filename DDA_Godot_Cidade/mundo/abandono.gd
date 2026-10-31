@@ -8,10 +8,12 @@ extends RefCounted
 # 0.69: MODELOS BAIXADOS (mundo/cenario.gd): semáforo, hidrante, barris, sacos de lixo, barreiras, placas, lixeiras,
 # caixas de energia, bueiros, pneus, caixotes, caixas de papelão, carros cobertos, poste antigo e árvores de calçada.
 # De longe continuam as versões simples feitas por código (LOD). Se faltar o arquivo, usa o modelo de código.
+# 1.08: + os COMBOIOS DO EXÉRCITO (mundo/comboios.gd: humvee, blindado, caminhões e tanque), na etapa própria.
 # Mexa AQUI para: quantos carros/obstáculos por rua, modelos dos carros, cores.
 
 const Malhas := preload("res://mundo/malhas.gd")
 const Cenario := preload("res://mundo/cenario.gd")
+const Comboios := preload("res://mundo/comboios.gd")
 # nome da instância -> modelo baixado (mundo/cenario.gd)
 const BAIXADOS := {"semaforo": "semaforo_braco", "hidrante": "hidrante", "barril": "barril",
 	"saco_lixo": "saco_lixo", "barreira": "barreira", "lixeira": "lixeira", "caixa_energia": "caixa_energia", "bueiro": "bueiro", "pneu": "pneu", "caixote": "caixote",
@@ -37,6 +39,7 @@ var rng := RandomNumberGenerator.new()
 var densidade := 1.0
 var obstaculos := PackedFloat32Array()   # x, z, giro, tam_x, tam_y, tam_z, y_centro (7 por obstáculo)
 var carros: Array = []                   # [pos Vector3, giro, tipo, cor, estado, obstáculo, bloco, índice no bloco]
+var centros_comboio: Array = []          # 1.08: mundo/comboios.gd colocar() (inimigos/soldados.gd põe os soldados perto)
 										  # (porta-malas; 0.76: veículos dirigíveis, mundo/veiculos.gd)
 var _mm_bloco := {}                       # 0.76: tipo -> bloco -> [MultiMesh perto, MultiMesh longe] (sumir um carro)
 var _inst := {}                          # nome do modelo -> {Vector2i: [[Transform3D, Color, cor de longe], ...]}
@@ -69,6 +72,7 @@ func etapas() -> Array:
 		["Lixo nas calçadas", 1.3, _lixo_nas_calcadas],
 		["Postes, semáforos e placas", 3.5, _mobiliario_urbano],
 		["Entulho das ruínas", 1.3, func(): _entulho(_ruinas)],
+		["Comboios do Exército", 0.6, func(): centros_comboio = Comboios.colocar(self)],     # 1.08 (depois dos carros: os do comboio vêm no fim da lista)
 		["Juntando os objetos da rua", 11.5, _montar],
 		["Fios e luzes da rua", 16.0, _fios_e_halos],
 	]
@@ -106,6 +110,8 @@ func aplicar_luzes(com_fios: bool, com_halos: bool) -> void:
 
 # ---------- modelos ----------
 static func modelo(nome: String) -> ArrayMesh:
+	if nome in Comboios.MODELOS:
+		return Comboios.modelo(nome)            # 1.08
 	var c := Malhas.Construtor.new()
 	var vidro := Color(0.1, 0.11, 0.12)
 	var pneu := Color(0.05, 0.05, 0.05)
@@ -216,6 +222,8 @@ const PERTO_LOD := 300.0                 # até aqui o modelo completo (medido a
 const TEM_LOD := ["sedan", "taxi", "van", "onibus", "entulho", "poste", "semaforo", "arvore_rua", "poste_duplo", "carro_coberto"]
 
 static func modelo_longe(nome: String) -> ArrayMesh:
+	if nome in Comboios.MODELOS:
+		return Comboios.modelo_longe(nome)      # 1.08
 	var c := Malhas.Construtor.new()
 	var vidro := Color(0.1, 0.11, 0.12)
 	match nome:
@@ -651,13 +659,14 @@ func _montar() -> void:
 		"cacamba": 450.0, "lixo": 300.0, "entulho": 700.0, "cacos": 250.0, "poste": 600.0, "semaforo": 600.0,
 		"hidrante": 200.0, "banco": 250.0, "arvore_rua": 700.0, "lixeira": 220.0, "caixa_energia": 250.0, "caixa_energia_2": 250.0,
 		"bueiro": 120.0, "pneu": 160.0, "caixote": 200.0, "caixa_papelao": 140.0, "carro_coberto": 900.0, "placa_pare": 260.0,
-		"placa_proibido": 220.0, "placa_atencao": 220.0, "poste_duplo": 600.0}
+		"placa_proibido": 220.0, "placa_atencao": 220.0, "poste_duplo": 600.0,
+		"humvee": 900.0, "mrap": 1000.0, "caminhao_exercito": 1100.0, "caminhao_tanque": 1100.0, "tanque": 1100.0, "sacos_areia": 400.0}
 	var n_nome := 0
 	for nome in _inst:
 		n_nome += 1
 		await cid.respirar(n_nome, _inst.size())        # 0.99.1: a tela de carregamento não congela
 		var base := _base(nome)
-		var concreto: bool = base in ["barreira", "entulho", "cacos", "lixo", "arvore_rua", "banco"]
+		var concreto: bool = base in ["barreira", "entulho", "cacos", "lixo", "arvore_rua", "banco", "sacos_areia"]
 		var malha: Mesh
 		var perto := PERTO_LOD
 		if _tem_baixado(nome):
@@ -669,7 +678,7 @@ func _montar() -> void:
 			malha = modelo(base)
 			malha.surface_set_material(0, mat_concreto if concreto else mat_metal)
 		var longe: ArrayMesh = null
-		if base in TEM_LOD:
+		if base in TEM_LOD or base in Comboios.MODELOS:
 			longe = modelo_longe(base)
 			longe.surface_set_material(0, mat_concreto if concreto else mat_metal)
 		for k in _inst[nome]:

@@ -76,6 +76,11 @@ const DIST_FISICA := 20.0             # física de verdade só a menos disso do 
 const DIST_FISICA_CACANDO := 26.0     # 0.79: perseguindo/atacando, física de verdade a menos disso (bate em tudo)
 const CHANCE_LOOT := 0.25
 const LOOT := ["bandagem", "feijao", "agua", "mun_9mm"]
+# 1.08 · SOLDADO INFECTADO (inimigos/modelo_infectado.gd SOLDADOS): o capacete e o colete seguram mais e ele deixa
+# munição/pente mais vezes
+const SOLDADO_VIDA := 1.35
+const CHANCE_LOOT_SOLDADO := 0.55
+const LOOT_SOLDADO := ["mun_556", "mun_556", "mun_762", "pente_stanag", "pente_ak", "bandagem", "barra", "mun_9mm"]
 const IMUNE_ATORDOAR := 1.0           # depois de atordoado por golpe, fica esse tempo sem atordoar de novo
 # tipo: [chance, vida, velocidade (x), dano (x), escala do corpo]
 # 0.89: o jeito de andar vem da opção Velocidade (Regras.sortear_classe); a vida e a força, das opções Resistência e Força
@@ -273,6 +278,8 @@ func _ready() -> void:
 		vida *= Regras.MUTADO_VIDA
 		_mult_dano *= Regras.MUTADO_DANO
 		modelo.virar_mutado()
+	elif soldado():
+		vida *= SOLDADO_VIDA                                     # 1.08
 	_vida_max = vida
 	som = AudioStreamPlayer3D.new()
 	som.max_distance = ALCANCE_SOM
@@ -687,16 +694,21 @@ func _morrer(cabeca: bool, direcao: Vector3) -> void:
 	if not remoto:
 		if gerente != null:
 			gerente.rede_ani(self, "morrer", {"c": cabeca, "d": direcao, "por": _quem_bateu})
-		if randf() < CHANCE_LOOT:
+		if randf() < (CHANCE_LOOT_SOLDADO if soldado() else CHANCE_LOOT):
 			_soltar_loot()
 	morreu.emit(self, cabeca)
+
+# 1.08: soldado infectado (farda e capacete)
+func soldado() -> bool:
+	return ModeloCls.eh_soldado(semente_modelo)
 
 func _soltar_loot() -> void:
 	if gerente == null:
 		return
 	var pai: Node = gerente.get_parent() if gerente.get_parent() != null else gerente
-	var id: String = LOOT[randi() % LOOT.size()]
-	var qtd := randi_range(5, 15) if id == "mun_9mm" else 1
+	var lista: Array = LOOT_SOLDADO if soldado() else LOOT
+	var id: String = lista[randi() % lista.size()]
+	var qtd := randi_range(5, 15) if id.begins_with("mun_") else 1
 	var it = ItemCls.novo(id, qtd)
 	if it == null:
 		return

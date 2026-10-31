@@ -22,12 +22,17 @@ const GIRO_MAX := 0.5                   # rad
 const BARULHO := 38.0                   # metros: os infectados ouvem o motor
 const DANO_ATROPELAR := 9.0             # por m/s de velocidade
 
-# rodas e corpo de cada tipo (no sistema do carro: frente = +Z) · [rodas x, rodas z frente, z trás, raio, caixa, massa]
+# rodas e corpo de cada tipo (no sistema do carro: frente = +Z) · [rodas x, rodas z frente, z trás, raio, caixa, massa,
+# força do motor (x FORCA)]
+# 1.08: o HUMVEE e o CAMINHÃO DO EXÉRCITO dos comboios (mundo/comboios.gd): pesados, motor mais forte
 const TIPOS := {
-	"sedan": [0.86, 1.4, -1.35, 0.34, Vector3(1.85, 1.1, 4.4), 1250.0],
-	"taxi": [0.86, 1.4, -1.35, 0.34, Vector3(1.85, 1.1, 4.4), 1250.0],
-	"van": [0.9, 1.6, -1.6, 0.36, Vector3(2.0, 1.8, 4.9), 1900.0],
+	"sedan": [0.86, 1.4, -1.35, 0.34, Vector3(1.85, 1.1, 4.4), 1250.0, 1.0],
+	"taxi": [0.86, 1.4, -1.35, 0.34, Vector3(1.85, 1.1, 4.4), 1250.0, 1.0],
+	"van": [0.9, 1.6, -1.6, 0.36, Vector3(2.0, 1.8, 4.9), 1900.0, 1.0],
+	"humvee": [1.0, 1.6, -1.6, 0.45, Vector3(2.2, 1.9, 4.9), 2400.0, 1.9],
+	"caminhao_exercito": [1.05, 2.8, -2.1, 0.55, Vector3(2.5, 3.2, 8.0), 4500.0, 2.9],
 }
+const NOMES := {"sedan": "CARRO", "taxi": "TÁXI", "van": "VAN", "humvee": "HUMVEE", "caminhao_exercito": "CAMINHÃO DO EXÉRCITO"}
 
 var id := ""                            # mundo/veiculos.gd ("v123_-456": posição de onde estava largado)
 var tipo := "sedan"
@@ -49,10 +54,12 @@ var _t_barulho := 0.0
 var _t_atropelo := 0.0
 var _vel_ant := Vector3.ZERO
 var _corpo: CollisionShape3D
+var _forca_x := 1.0                     # 1.08: força do motor deste tipo
 
 func _ready() -> void:
 	var d: Array = TIPOS.get(tipo, TIPOS["sedan"])
 	mass = float(d[5])
+	_forca_x = float(d[6])
 	collision_layer = 1                 # mundo: o jogador, os infectados e os tiros batem nele
 	collision_mask = 1 | 4 | 16
 	center_of_mass_mode = RigidBody3D.CENTER_OF_MASS_MODE_CUSTOM
@@ -82,7 +89,7 @@ func _ready() -> void:
 		w.wheel_radius = float(d[3])
 		w.wheel_rest_length = 0.15
 		w.suspension_travel = 0.22
-		w.suspension_stiffness = 45.0 if tipo != "van" else 55.0
+		w.suspension_stiffness = 45.0 if tipo in ["sedan", "taxi"] else 55.0
 		w.suspension_max_force = mass * 9.0
 		w.damping_compression = 2.6
 		w.damping_relaxation = 3.2
@@ -145,12 +152,12 @@ func _physics_process(dt: float) -> void:
 	if ligado and motorista != null:
 		var f := 0.0
 		if _acel > 0.05:
-			f = FORCA * _acel * (0.35 + 0.65 * motor) * clampf(1.0 - v_frente / VEL_MAX, 0.0, 1.0)
+			f = FORCA * _forca_x * _acel * (0.35 + 0.65 * motor) * clampf(1.0 - v_frente / VEL_MAX, 0.0, 1.0)
 		elif _acel < -0.05:
 			if v_frente > 1.0:
 				brake = FREIO * -_acel             # andando para a frente: o "para trás" freia
 			else:
-				f = -FORCA_RE * -_acel * (0.35 + 0.65 * motor)
+				f = -FORCA_RE * _forca_x * -_acel * (0.35 + 0.65 * motor)
 		engine_force = f
 		if _acel >= -0.05 or v_frente <= 1.0:
 			brake = (FREIO * 1.6 if _freio_mao else 0.0) + (0.0 if absf(_acel) > 0.05 else 3.0)

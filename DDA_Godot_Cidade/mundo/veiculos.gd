@@ -16,6 +16,7 @@ const VeiculoCls := preload("res://mundo/veiculo.gd")
 const UI := preload("res://menu/ui.gd")
 
 const CHANCE := 0.045                    # dos carros inteiros que podem funcionar
+const CHANCE_MILITAR := 0.25             # 1.08: do humvee e do caminhão dos comboios do Exército (mundo/comboios.gd)
 const COMB_MAX := 9.0                    # litros que um carro largado pode ter
 const RAIO_ENTRAR := 3.2
 const RAIO_BOMBA := 1.9
@@ -60,7 +61,8 @@ func ligar(cid, mun, jog: Node3D, lm, vg) -> void:
 		if c.size() < 8 or not (c[2] in VeiculoCls.TIPOS) or str(c[4]) != "":
 			continue
 		var cid_s := id_de(c[0])
-		if absi(hash(cid_s)) % 1000 >= int(CHANCE * 1000.0):
+		var chance: float = CHANCE_MILITAR if c[2] in ["humvee", "caminhao_exercito"] else CHANCE
+		if absi(hash(cid_s)) % 1000 >= int(chance * 1000.0):
 			continue
 		_ids[cid_s] = i
 		var k := Vector2i(floori(c[0].x / CEL), floori(c[0].z / CEL))
@@ -76,6 +78,11 @@ func ligar(cid, mun, jog: Node3D, lm, vg) -> void:
 func sincronizar() -> void:
 	for vid in loot.veiculos:
 		tirar_original(vid)
+
+# 1.08: veículo comprido (caminhão do Exército): dá para entrar de mais longe do meio dele
+static func _alem(tipo: String) -> float:
+	var d: Array = VeiculoCls.TIPOS.get(tipo, VeiculoCls.TIPOS["sedan"])
+	return maxf(0.0, (d[4] as Vector3).z - 4.4) * 0.5
 
 static func id_de(p: Vector3) -> String:
 	return "v%d_%d" % [roundi(p.x), roundi(p.z)]
@@ -198,7 +205,7 @@ func _process(dt: float) -> void:
 	for vid in nos:
 		var v = nos[vid]
 		if is_instance_valid(v) and not v.remoto and not ocupados.has(vid):
-			var dd: float = v.global_position.distance_to(pj)
+			var dd: float = v.global_position.distance_to(pj) - _alem(v.tipo)
 			if dd < md:
 				md = dd
 				perto = vid
@@ -209,7 +216,7 @@ func _process(dt: float) -> void:
 				if tirados.has(vid) or ocupados.has(vid):
 					continue
 				var c: Array = ab.carros[_ids[vid]]
-				var dd: float = (c[0] as Vector3).distance_to(pj)
+				var dd: float = (c[0] as Vector3).distance_to(pj) - _alem(c[2])
 				if dd < md:
 					md = dd
 					perto = vid
@@ -238,7 +245,7 @@ func entrar(vid: String) -> String:
 	if mudou.is_valid():
 		mudou.call("entrou", vid, v.estado())
 	var msg: String = v.ligar_motor()
-	return msg if msg != "" else ("%s · GASOLINA %.0f/%.0f L" % [{"van": "VAN", "taxi": "TÁXI"}.get(v.tipo, "CARRO"), v.combustivel, VeiculoCls.TANQUE])
+	return msg if msg != "" else ("%s · GASOLINA %.0f/%.0f L" % [VeiculoCls.NOMES.get(v.tipo, "CARRO"), v.combustivel, VeiculoCls.TANQUE])
 
 func sair() -> void:
 	var v = dirigindo

@@ -413,7 +413,8 @@ parques temáticos), entrevista de Shaver (80.lv).
   ✅ 1.06: as 4 igrejas (torre de ~41 m com a cruz, cúpula verde) e a prefeitura (cúpula com relógios e bandeira) são
   marcos vistos de longe (a casca de longe tem a torre, a cúpula e os telhados) e são úteis: loot próprio, o
   campanário para vigiar e o sino que puxa a horda. ✅ 1.07: os guindastes azuis dos 2 portos (lança a 31 m) e o
-  navio são marcos da costa, com a passarela do guindaste e a ponte de comando como mirantes.
+  navio são marcos da costa, com a passarela do guindaste e a ponte de comando como mirantes. ✅ 1.08: as torres das
+  8 guaritas marcam o meio dos parques (casca de longe com as pernas e a cabine).
 - **"Onde estou?" em 15 segundos:** se o jogador não responde isso nos primeiros 15 s, já está perdido. *(Carson)*
 - **Luz:** iluminar mais forte as saídas e portas importantes que os espaços secundários; portas bem iluminadas
   ajudam a ler o caminho. Um feixe de luz num objeto vale mais que uma sala cheia de detalhe. *(LDB, Carson)*
@@ -437,7 +438,9 @@ parques temáticos), entrevista de Shaver (80.lv).
 
 - **Mirante antes do combate:** deixar o jogador ver o perigo antes de se comprometer (entrada de mão única, inimigos
   sem saber). "A coisa mais perto de uma luta justa." *(LDB: Encounter)* ✅ 1.06: o campanário das igrejas e o
-  terraço da prefeitura são mirantes (dá para ver o adro/praça antes de descer).
+  terraço da prefeitura são mirantes (dá para ver o adro/praça antes de descer). ✅ 1.08: a cabine da guarita (9 m,
+  vê o parque inteiro) e o alto do tanque (dá para subir pulando) são mirantes; a caixa da cabine é a recompensa
+  ("pôr recompensa no mirante atrai para ele").
 - **Contra hordas corpo a corpo** *(LDB, estudo do Undead Burg do Dark Souls)*: um **funil** (escada, rua estreita)
   que estica a horda em fila; uma **pista para recuar**; e **pelo menos uma saída que não fique atrás da horda**.
   Nunca prender o jogador numa arena sem saída com uma horda.
@@ -451,7 +454,8 @@ parques temáticos), entrevista de Shaver (80.lv).
   também guia: ~50%). *(LDB, Carson)*
 - **A casa como retrato do dono.** *(LDB, estudo de Thief)* ✅ 1.06: a igreja virou abrigo (colchões, doações, mural de
   recados, porta barrada com bancos) e a prefeitura conta a evacuação (quadro do comando de crise, posto do Exército,
-  faixas "DIRIJAM-SE AO SUL").
+  faixas "DIRIJAM-SE AO SUL"). ✅ 1.08: os comboios do Exército parados nas avenidas (veículos queimados e
+  atravessados, o bloqueio na frente, os soldados que viraram em volta) contam a evacuação que não passou.
 - **Legibilidade antes de tudo:** no *The Last of Us Part II*, **hera cobrindo = prédio fechado; hera arrancada =
   aberto**. "Tudo na arte do cenário tem função de leitura." *(LDB)* ➜ **Para nós:** um sinal visual único e
   consistente para prédio que dá para entrar (porta entreaberta + luz/lixo na frente) e para o que não dá (tábuas,

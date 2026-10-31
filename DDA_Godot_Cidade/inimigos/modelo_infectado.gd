@@ -17,6 +17,9 @@ extends Node3D
 #   seco, veios negros que pulsam, unhas como garras"): virar_mutado() troca o material pelo SHADER_MUTADO (pele
 #   cinza de barro rachada e veios escuros pulsando, desenhados na posição de descanso de cada vértice: não
 #   "escorrem" com a animação), alonga os antebraços, entorta a cabeça e deixa os braços sempre meio à frente.
+# 1.08 · SOLDADO INFECTADO: farda camuflada, coturno e capacete (inimigos/infectados/soldado_*.scn, feitos por
+#   ferramentas/preparar_soldados.gd a partir de 3 homens). Sai quando a SEMENTE é de soldado (>= SOLDADO_BASE:
+#   semente_soldado()), então a rede não precisa mandar mais nada (a semente já vai no pacote do infectado).
 # Mexa AQUI para: quais tipos aparecem e quanto (TIPOS), altura e velocidade das animações.
 
 const PASTA := "res://inimigos/infectados/"
@@ -24,6 +27,8 @@ const PASTA := "res://inimigos/infectados/"
 const TIPOS := [["homem_0", 1.0], ["homem_1", 1.0], ["homem_2", 1.0], ["homem_3", 1.0], ["homem_4", 1.0],
 	["homem_5", 1.0], ["homem_6", 1.0], ["homem_7", 1.0], ["mulher_0", 1.0], ["mulher_1", 1.0],
 	["mulher_2", 1.0], ["mulher_3", 1.0]]
+const SOLDADOS := ["soldado_0", "soldado_1", "soldado_2"]      # 1.08
+const SOLDADO_BASE := 16000000         # sementes daqui até 16.777.215 = soldado (cabem exatas no float da rede)
 const ALTURA_ORIGINAL := 1.83          # altura do manequim (m)
 const ALTURA := 1.75
 const VEL_ANDAR_ANIM := 0.9            # m/s em que a animação de andar (zumbi) não "patina"
@@ -131,6 +136,13 @@ func virar_mutado() -> void:
 	for nome in ["lowerarm_l", "lowerarm_r"]:
 		_osso[nome] = esqueleto.find_bone(nome)
 
+# 1.08: uma semente de SOLDADO (farda e capacete) · e se esta semente é de soldado
+static func semente_soldado() -> int:
+	return SOLDADO_BASE + randi() % 700000
+
+static func eh_soldado(semente: int) -> bool:
+	return semente >= SOLDADO_BASE
+
 func montar(semente: int) -> void:
 	var r := RandomNumberGenerator.new()
 	r.seed = semente
@@ -149,6 +161,8 @@ func montar(semente: int) -> void:
 		if s <= 0.0:
 			arquivo = t[0]
 			break
+	if eh_soldado(semente):
+		arquivo = SOLDADOS[r.randi() % SOLDADOS.size()]          # 1.08
 	if not _cenas.has(arquivo):
 		_cenas[arquivo] = load(PASTA + arquivo + ".scn")
 	corpo = _cenas[arquivo].instantiate()
@@ -157,7 +171,8 @@ func montar(semente: int) -> void:
 	add_child(corpo)
 	esqueleto = corpo.find_child("Skeleton3D", true, false)
 	for mi in corpo.find_children("*", "MeshInstance3D", true, false):
-		mi.material_override = _mat
+		if mi.material_override == null:                       # 1.08: o capacete do soldado já tem o dele
+			mi.material_override = _mat
 		mi.visibility_range_end = 140.0
 	for nome in ["Head", "upperarm_l", "upperarm_r"]:
 		_osso[nome] = esqueleto.find_bone(nome)

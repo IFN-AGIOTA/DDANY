@@ -281,10 +281,24 @@ const TABELAS := {
 		["cano", 2, 1, 1], ["fita", 1, 1, 1], ["agua", 1, 1, 1], ["dinheiro", 2, 5, 30]],
 	"chao_hangar": [["garrafa_vazia", 3, 1, 1], ["trapos", 3, 1, 2], ["revista", 2, 1, 1], ["pilha", 2, 1, 1], ["cano", 2, 1, 1], ["tabuas", 2, 1, 2],
 		["biscoito", 2, 1, 1], ["agua", 1, 1, 1], ["galao", 1, 1, 1], ["fita", 1, 1, 1]],
+	# ---- 1.08: GUARITAS DE OBSERVAÇÃO (mundo/local_guarita.gd) e COMBOIOS DO EXÉRCITO (mundo/comboios.gd) ----
+	"guarita_torre": [["rifle_caca", 3, 1, 1], ["mun_308", 4, 3, 12], ["luneta", 2, 1, 1], ["m4", 1, 1, 1], ["pente_stanag", 2, 1, 1], ["mun_556", 3, 10, 30],
+		["radio", 3, 1, 1], ["pilha", 3, 1, 2], ["lanterna", 2, 1, 1], ["agua", 3, 1, 1], ["barra", 3, 1, 2], ["feijao", 2, 1, 1], ["capacete", 1, 1, 1]],
+	"guarita_acampamento": [["feijao", 4, 1, 2], ["atum", 3, 1, 2], ["agua", 4, 1, 2], ["barra", 3, 1, 2], ["isqueiro", 3, 1, 1], ["kit_medico", 2, 1, 1],
+		["bandagem", 3, 1, 2], ["jaqueta", 2, 1, 1], ["gorro", 2, 1, 1], ["mochila_combate", 1, 1, 1], ["corda", 2, 1, 1], ["facao", 2, 1, 1],
+		["mun_556", 2, 10, 30], ["pente_stanag", 1, 1, 1], ["mascara_gas", 1, 1, 1]],
+	"chao_guarita": [["mun_556", 3, 3, 12], ["mun_308", 2, 2, 6], ["garrafa_vazia", 3, 1, 1], ["trapos", 2, 1, 2], ["pilha", 2, 1, 1], ["bandagem", 2, 1, 1],
+		["agua", 1, 1, 1], ["barra", 1, 1, 1]],
+	# o "porta-malas" de cada veículo de comboio (mundo/interiores.gd): mais munição, ração e remédio que arma
+	"comboio": [["mun_556", 6, 10, 40], ["mun_762", 5, 10, 30], ["mun_9mm", 3, 8, 20], ["pente_stanag", 4, 1, 1], ["pente_ak", 3, 1, 1],
+		["m4", 1, 1, 1], ["ak", 1, 1, 1], ["feijao", 4, 1, 3], ["atum", 3, 1, 2], ["agua", 5, 1, 3], ["barra", 3, 1, 3], ["kit_medico", 3, 1, 1],
+		["bandagem", 4, 1, 3], ["antibiotico", 2, 1, 1], ["soro", 1, 1, 1], ["galao", 3, 1, 1], ["capacete", 2, 1, 1], ["colete", 1, 1, 1],
+		["mascara_gas", 2, 1, 1], ["radio", 2, 1, 1], ["pilha", 3, 1, 2], ["lanterna", 2, 1, 1], ["corda", 2, 1, 1], ["fita", 2, 1, 1],
+		["mochila_combate", 1, 1, 1], ["facao", 1, 1, 1], ["kit_armas", 1, 1, 1]],
 	"chao_quartel": [["mun_556", 4, 5, 20], ["mun_762", 3, 5, 15], ["mun_9mm", 2, 4, 12], ["pente_stanag", 1, 1, 1], ["bandagem", 3, 1, 2], ["trapos", 2, 1, 2],
 		["agua", 2, 1, 1], ["barra", 2, 1, 2], ["feijao", 1, 1, 1], ["garrafa_vazia", 2, 1, 1]],
 }
-const CHAO_DO_USO := {"igreja": "chao_igreja", "prefeitura": "chao_prefeitura", "porto": "chao_porto", "hangar": "chao_hangar", "residencial": "chao_residencial", "loja": "chao_comercio", "mercado": "chao_comercio",
+const CHAO_DO_USO := {"guarita": "chao_guarita", "igreja": "chao_igreja", "prefeitura": "chao_prefeitura", "porto": "chao_porto", "hangar": "chao_hangar", "residencial": "chao_residencial", "loja": "chao_comercio", "mercado": "chao_comercio",
 	"restaurante": "chao_comercio", "escritorio": "chao_comercio", "farmacia": "chao_saude", "clinica": "chao_saude",
 	"delegacia": "chao_policia", "posto": "chao_posto", "hospital": "chao_hospital", "supermercado": "chao_super", "armazem": "chao_armazem",
 	"escola": "chao_escola", "metro": "chao_metro", "quartel": "chao_quartel", "bunker": "chao_bunker"}

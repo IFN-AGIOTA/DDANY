@@ -1289,16 +1289,21 @@ func _arvores() -> void:
 			verde = Color(0.55, 0.40, 0.15) * rng.randf_range(0.8, 1.1)    # algumas já amareladas (outono)
 		verde.a = 1.0
 		var chave := Vector2i(floori(x / BLOCO_ARVORE), floori(z / BLOCO_ARVORE))
-		if not blocos.has(chave):
-			blocos[chave] = []
-		blocos[chave].append([t, verde])
+		# 1.08: nada de árvore no terreno dos locais especiais (as guaritas ficam no meio dos parques); os sorteios
+		# continuam iguais, então as outras árvores não mudam de lugar
+		var no_local := LocaisCls.em(Vector2(x, z), 3.5) >= 0
+		if not no_local:
+			if not blocos.has(chave):
+				blocos[chave] = []
+			blocos[chave].append([t, verde])
 		# 0.69: de perto, um modelo baixado (sorteio à parte: as posições continuam as mesmas)
 		var tipo := _tipo_arvore(rv, verde)
 		var tom := Color(1, 1, 1) * rv.randf_range(0.78, 1.0)
 		if verde.r > verde.g and not tipo.begins_with("arvore_seca"):
 			tom = Color(1.0, 0.7, 0.4)                                    # outono
 		tom.a = 1.0
-		_veg(veg, tipo, t, tom)
+		if not no_local:
+			_veg(veg, tipo, t, tom)
 	var tronco := CylinderMesh.new()
 	tronco.top_radius = 0.18
 	tronco.bottom_radius = 0.3

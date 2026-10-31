@@ -70,6 +70,8 @@ static func preparar(t: String, i: int, gi: int, c: Vector2) -> RefCounted:
 		arq = "res://mundo/local_igreja.gd"
 	if t in PORTUARIOS:
 		arq = "res://mundo/local_porto.gd"
+	if t == "guarita":
+		arq = "res://mundo/local_guarita.gd"          # 1.08
 	var m = load(arq).new()
 	m.tipo = t
 	m.idx = i
@@ -90,7 +92,8 @@ static func preparar(t: String, i: int, gi: int, c: Vector2) -> RefCounted:
 		"prefeitura": m._prefeitura()
 		"porto": m._porto()               # 1.07: mundo/local_porto.gd
 		"hangar": m._hangar()
-	if t in NOVOS or t == "bunker" or t in NEOCLASSICOS or t in PORTUARIOS:
+		"guarita": m._guarita_obs()      # 1.08: mundo/local_guarita.gd
+	if t in NOVOS or t == "bunker" or t in NEOCLASSICOS or t in PORTUARIOS or t == "guarita":
 		m._livrar_pontos()
 	m._criar_malha()
 	return m

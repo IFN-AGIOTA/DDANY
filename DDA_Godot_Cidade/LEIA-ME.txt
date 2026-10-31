@@ -40,6 +40,63 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.08 · GUARITAS NOS CAMPOS, COMBOIOS DO EXÉRCITO E SOLDADOS INFECTADOS (3ª E ÚLTIMA PARTE DAS ESTRUTURAS)
+  GUARITAS DE OBSERVAÇÃO (8, no meio dos campos: os maiores parques têm 2):
+  · O posto avançado que o Exército montou para vigiar a evacuação: TORRE DE AÇO de 4 pernas com travas em X, a
+    CABINE a 9 m com parapeito de sacos de areia, telhado camuflado, holofote, binóculo de tripé, rádio e a caixa
+    militar; a ESCADA EM ZIGUE-ZAGUE (3 lances, com corrimão) encostada na torre sobe até a cabine — a melhor vista
+    do parque.
+  · Embaixo: cercado de HESCO em L com a entrada para o caminho, sacos de areia, barreira, a barraca, a fogueira
+    apagada com os caixotes de sentar, cápsulas no chão, um JIPE debaixo da rede de camuflagem e a placa "POSTO DE
+    OBSERVAÇÃO · ÁREA MILITAR · NÃO ENTRE".
+  · Loot próprio (torre: rifle de caça, .308, às vezes luneta ou M4; acampamento: ração, remédio, roupa de frio,
+    munição) e a caixa "militar" de sempre. É ÁREA MILITAR: o cartão do bunker pode aparecer lá. No mapa: "G".
+  COMBOIOS DO EXÉRCITO (~30, pelas avenidas das 4 ilhas): a evacuação do Dia -1 ("dirijam-se ao sul") parada no meio
+  da rua — colunas de 4 a 9 veículos na pista da direita: HUMVEES (com a metralhadora na torreta), BLINDADOS (MRAP),
+  CAMINHÕES DE LONA, CAMINHÕES-TANQUE de combustível e, em ~40% deles, um TANQUE (esteiras, torre e canhão). Alguns
+  queimados, alguns atravessados; às vezes um bloqueio de barreiras e sacos de areia na frente da coluna.
+  · Atrás de cada veículo, a CARGA (como o porta-malas dos carros): munição 5.56/7.62/9 mm, pentes, ração, água,
+    remédio, galão, capacete e máscara — arma (M4/AK) é rara.
+  · O TANQUE dá para SUBIR: caixotes de munição largados atrás dele, o casco, o cesto atrás da torre e a torre
+    (pulando, cada degrau tem menos de 0,9 m). Bom lugar para atirar de cima.
+  · DIRIGIR: 1 em cada 4 HUMVEES e CAMINHÕES DO EXÉRCITO inteiros funciona (PEGAR = ENTRAR, igual aos carros):
+    mais pesados e com motor mais forte; gasolina e galão como nos outros. Os comboios ficam na pista livre da
+    avenida, parados antes do cruzamento (a outra pista fica para passar).
+  SOLDADOS INFECTADOS: farda camuflada, coturno e capacete (os soldados que ficaram nos comboios e nos postos).
+  · Aparecem em volta dos comboios (2 a 5, quando você chega perto; voltam depois de um dia do jogo, como nos locais),
+    nas guaritas (quase todos), nos quartéis (mais da metade) e no posto do Exército da prefeitura.
+  · O capacete e o colete seguram mais: 35% mais vida. Quando morrem, deixam munição ou um pente mais vezes (55%).
+  · No multijogador o amigo vê o mesmo soldado (a aparência vai junto com o infectado).
+  CONSERTO: as árvores dos parques não nascem mais dentro do terreno dos locais (antes, uma árvore podia sair no meio
+  de um acampamento).
+  ARQUIVOS MEXIDOS (testado: teste_locais_108 NOVO (as 8 guaritas montam e ficam em parque; do caminho até a cabine
+  da torre andando; os comboios ficam no fim da lista de carros; a carga militar; subir no tanque pulando; o humvee
+  anda; soldados nascem perto do comboio e têm mais vida); + a bateria):
+    mundo/local_guarita.gd ......... NOVO · a guarita (torre, escada, cabine, acampamento)
+    mundo/comboios.gd .............. NOVO · onde ficam os comboios e os modelos (humvee, blindado, caminhões, tanque)
+    inimigos/soldados.gd ........... NOVO · os soldados que nascem perto dos comboios
+    inimigos/infectados/soldado_0.scn, soldado_1.scn, soldado_2.scn ... NOVOS · os 3 soldados (farda e capacete)
+    ferramentas/preparar_soldados.gd ... NOVO · faz os soldado_*.scn a partir de 3 infectados (farda pela parte do
+                                     corpo, o mesmo sangue de antes, capacete no osso da cabeça)
+    ferramentas/escolher_guaritas.gd ... NOVO · escolhe onde ficam as guaritas (meio dos maiores parques)
+    ferramentas/testes/teste_locais_108.gd ... NOVO · rodar.sh: + teste_locais_108
+    mundo/cidade.gd ................ nenhuma árvore de parque dentro do terreno de um local
+    mundo/locais.gd ................ as 8 guaritas no fim da lista; tamanho, nome, cor, sigla, casca de longe; guarita é
+                                     área militar; COM_SOLDADOS (quanto dos infectados de cada local é soldado)
+    mundo/local.gd ................. guarita montada pelo mundo/local_guarita.gd
+    mundo/abandono.gd .............. etapa "Comboios do Exército" no carregamento; modelos, versão de longe e alcance
+    mundo/interiores.gd ............ a carga dos veículos do comboio (tabela "comboio")
+    mundo/veiculo.gd ............... humvee e caminhão do Exército dirigíveis (rodas, peso, força do motor), NOMES
+    mundo/veiculos.gd .............. 25% dos militares funcionam; entra de mais longe no caminhão; nome no painel
+    mundo/loot_mundo.gd ............ tabelas "guarita_torre", "guarita_acampamento", "comboio", chão "chao_guarita"
+    inimigos/modelo_infectado.gd ... SOLDADOS (semente de soldado), o capacete com o material dele
+    inimigos/vago.gd ............... soldado: mais vida e loot de munição
+    inimigos/vagos.gd .............. _criar com a semente (soldado); chama inimigos/soldados.gd
+    menu/config.gd ................. VERSAO "1.08"
+    menu/novidades_lista.gd ........ refeita
+    estudos/ESTUDO_AAA.md .......... ✅ storytelling dos comboios, pontos altos (guarita, tanque)
+    LEIA-ME.txt .................... este bloco + seções 4, 5, mapa "QUERO MEXER EM..." e 10
+
 ATUALIZAÇÃO 1.07 · PORTOS COM NAVIO E HANGARES DE CARGA (2ª PARTE DAS ESTRUTURAS NOVAS)
   (A 1.06 — igrejas e prefeitura — não chegou a sair sozinha: as duas saem juntas nesta atualização. O bloco dela
   está logo abaixo.)
@@ -2987,6 +3044,13 @@ BASE (0.90): parede 3 tábuas / 350 de vida · parede com porta 4 / 350 · barri
 LOCAIS ESPECIAIS (0.78): 42 = 12 postos, 4 hospitais, 6 supermercados, 6 armazéns, 4 delegacias, 4 escolas,
   4 estações do metrô (plataformas a 7,1 m; trilhos a 6 m) e 2 quartéis (torres de vigia a 6 m) · 6 em cada 10
   com gerador · só 15% dos móveis vazios
+GUARITAS E COMBOIOS (1.08): 8 guaritas (terreno de 30 x 30 no meio dos parques; cabine a 9 m, 3 lances de 3 m;
+  telhado a 11,65 m) · 30 comboios nas avenidas (trechos de 110 m ou mais, pista livre, 550 m entre eles; 4 a 9
+  veículos; 40% com tanque; 25% queimados; 15% atravessados; 40% com bloqueio na frente) · tanque: caixotes 0,7 m,
+  casco 1,5 m, cesto 2,1 m, torre 2,5 m (o pulo sobe 0,9 m) · humvee 2.400 kg, motor x1,9 · caminhão do Exército
+  4.500 kg, motor x2,9 · 25% dos militares inteiros funcionam (carros comuns: 4,5%) · SOLDADO: vida x1,35, deixa loot
+  55% das vezes (munição 5.56/7.62/9 mm, pente, curativo, barra) · 2 a 5 soldados em volta do comboio a 130 m, 1 vez
+  por dia do jogo · nos locais: guarita 80%, quartel 60%, prefeitura 35% dos infectados são soldados
 PORTOS E HANGARES (1.07): 2 portos (na costa) e 3 hangares de carga · porto: terreno de 160 x 90 + cais de 14 m e o
   navio atrás (140 m, convés a 9 m, ponte de comando a 24 m); 3 guindastes com a passarela do pórtico a 28 m (8 lances
   de 3,5 m) e a lança até 31 m em cima do navio; pilhas de contêineres de até 4 (10,4 m) · hangar: galpão de 64 x 34
@@ -3054,6 +3118,10 @@ LOOT (mundo/loot_mundo.gd; tabelas no topo, com raridade e quantidades)
   munição 5.56/7.62, colete, capacete, miras, silenciador, mochila de combate), "quartel_alojamento" (roupas,
   mochila, lanterna, munição) e as caixas "militar"/"militar_med". Chão: "chao_policia", "chao_escola",
   "chao_metro", "chao_quartel".
+- GUARITAS E COMBOIOS (1.08): guarita "guarita_torre" (rifle de caça, .308, luneta, às vezes M4, rádio, ração),
+  "guarita_acampamento" (comida, água, remédio, roupa de frio, mochila de combate, facão, munição 5.56) e a caixa
+  "militar"; a CARGA de cada veículo de comboio "comboio" (munição 5.56/7.62/9 mm, pentes, ração, água, kit médico,
+  antibiótico, galão, capacete, máscara, rádio; M4/AK raros). Chão: "chao_guarita" (cápsulas e munição solta).
 - PORTOS E HANGARES (1.07): porto "porto_conteiner" (roupas, eletrônicos, ferramentas, comida em caixa),
   "porto_apreendido" (o contêiner lacrado da polícia: pistolas, espingarda, AK, dinheiro), "porto_bagagem" (as malas
   largadas na fila de embarque), "porto_navio" (mesa de cartas e armário do comandante: rádio, kit médico, às vezes
@@ -3278,6 +3346,16 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   NAVIO) e HANGAR DE CARGA (1.07) ...... mundo/local_porto.gd (peças: escada em zigue-zague das torres, contêiner de
                                           12 m, carreta porta-contêiner, cavalo mecânico, reach stacker, guindaste,
                                           navio) · onde ficam: ferramentas/escolher_portos.gd (costa com mar atrás)
+- GUARITA DE OBSERVAÇÃO (1.08) ......... mundo/local_guarita.gd (torre, escada em zigue-zague, cabine, acampamento) ·
+                                          onde ficam: ferramentas/escolher_guaritas.gd (meio dos maiores parques)
+- COMBOIOS DO EXÉRCITO (1.08: quantos,
+  onde, modelos do humvee/blindado/
+  caminhões/tanque) ................... mundo/comboios.gd (entra pelo mundo/abandono.gd, etapa "Comboios do Exército")
+                                          · a carga atrás: mundo/interiores.gd (tabela "comboio") · humvee e caminhão
+                                          dirigíveis: mundo/veiculo.gd TIPOS e mundo/veiculos.gd CHANCE_MILITAR
+- SOLDADOS INFECTADOS (1.08) ............ perto dos comboios: inimigos/soldados.gd · nos locais: mundo/locais.gd
+                                          COM_SOLDADOS · aparência: inimigos/modelo_infectado.gd SOLDADOS (os modelos:
+                                          ferramentas/preparar_soldados.gd) · vida e loot: inimigos/vago.gd SOLDADO_*
 - letreiros e pichações dos locais ...... mundo/local.gd (_texto) e mundo/local_novos.gd
 - trocar de ombro (câmera) .............. jogador/jogador.gd (trocar_ombro) · botão em jogador/controles.gd
 - quando o infectado usa física de
@@ -3581,6 +3659,9 @@ MÚSICA (pasta audio/)
 -----------------------------------------------------------------------------------------------------
 10. LIMITAÇÕES CONHECIDAS E PRÓXIMOS PASSOS
 -----------------------------------------------------------------------------------------------------
+- 1.08: o TANQUE e o BLINDADO não andam (só o humvee e o caminhão de lona); nenhum veículo do comboio tem interior
+  (a carga abre por trás, como o porta-malas); o jipe da guarita é cenário; os soldados infectados não atiram (só
+  mordem e arranham, como os outros); as guaritas não têm porta nem cerca fechada.
 - 1.06/1.07: igrejas, prefeitura, portos e hangares não têm portas de abrir (os vãos ficam abertos); o guindaste e o
   navio não se mexem; a cúpula da igreja e a da prefeitura são só por fora (dentro, o forro é reto com o céu pintado);
   quem cai entre o navio e o cais vai para a água (sai nadando pela ponta do cais). Na escada de incêndio, DE PERNA

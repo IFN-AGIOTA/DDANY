@@ -15,6 +15,7 @@ extends Node
 const InteriorCls := preload("res://mundo/interior.gd")
 const EscadasIncendioCls := preload("res://mundo/escadas_incendio.gd")
 const CaixaMundoCls := preload("res://inventario/caixa_mundo.gd")
+const Comboios := preload("res://mundo/comboios.gd")          # 1.08: a carga dos veículos do Exército
 
 const RAIO_ABRIR := 42.0
 const RAIO_FECHAR := 62.0
@@ -311,7 +312,14 @@ func _porta_malas(p: Vector2) -> void:
 				cx.invisivel = true
 				cx.nome = "ÔNIBUS" if nome == "onibus" else "PORTA-MALAS"
 				cx.tamanho = Vector2i(6, 4) if nome != "onibus" else Vector2i(8, 5)
-				cx.grade = loot.grade("c%d" % i, "carro", cx.nome, cx.tamanho)
+				var tabela := "carro"
+				if Comboios.TAM.has(nome):
+					# 1.08: veículo de comboio do Exército: a carga atrás (munição, ração, remédio; arma é rara)
+					comp = (Comboios.TAM[nome] as Vector3).x
+					cx.nome = Comboios.NOMES[nome]
+					cx.tamanho = Vector2i(8, 5) if comp > 6.0 else Vector2i(6, 5)
+					tabela = "comboio"
+				cx.grade = loot.grade("c%d" % i, tabela, cx.nome, cx.tamanho)
 				add_child(cx)
 				cx.global_position = q + Basis(Vector3.UP, float(cs[i][1])) * Vector3(-comp * 0.5 - 0.4, 0.0, 0.0)
 				_malas[i] = cx

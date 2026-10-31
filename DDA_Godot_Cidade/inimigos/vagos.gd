@@ -37,6 +37,7 @@ const VagoCls := preload("res://inimigos/vago.gd")
 const HordaCls := preload("res://inimigos/horda.gd")
 const DiretorCls := preload("res://inimigos/diretor.gd")
 const HordaLongeCls := preload("res://inimigos/horda_longe.gd")
+const SoldadosCls := preload("res://inimigos/soldados.gd")       # 1.08: soldados infectados perto dos comboios
 const Regras := preload("res://inimigos/regras_infectados.gd")
 const Hospitais := preload("res://npc/hospitais.gd")
 
@@ -59,6 +60,7 @@ var _t_orc := 1.0
 var horda: Node = null                  # 0.89: inimigos/horda.gd (população da cidade; solo e host)
 var diretor: Node = null                # 1.00: inimigos/diretor.gd (ritmo: tensão e alívio, hordas; solo e host)
 var horda_longe: Node3D = null          # 1.00: inimigos/horda_longe.gd (silhuetas da horda virtual de longe)
+var soldados := SoldadosCls.new()       # 1.08
 var _mult_pop := 1.0
 var _golpes: Array = []                 # 0.89: [hora (s), infectado] dos últimos golpes no jogador (puxar para o chão)
 var mult_dano := 1.0                    # dificuldade: força das mordidas
@@ -323,6 +325,7 @@ func _process(dt: float) -> void:
 		_garantir_horda()
 		horda.processar(dt)
 		diretor.processar(dt)
+		soldados.processar(self, dt)
 	# passos do jogador
 	_t_ruido -= dt
 	if _t_ruido <= 0.0:
@@ -583,12 +586,14 @@ func vivos_perto(p: Vector3, raio: float) -> int:
 				n += 1
 	return n
 
-func _criar(p: Vector3, destino: Vector3, da_horda := false, classe := "") -> Node:
+func _criar(p: Vector3, destino: Vector3, da_horda := false, classe := "", semente := -1) -> Node:
 	if espelho:
 		return null       # 0.70: no cliente quem cria é o host (prédio infestado, local, missão e evento chamam aqui)
 	var v = VagoCls.new()
 	v.gerente = self
 	v.da_horda = da_horda
+	if semente >= 0:
+		v.semente_modelo = semente               # 1.08: soldado (inimigos/modelo_infectado.gd semente_soldado)
 	if classe != "":
 		v.tipo_fixo = classe                     # 1.00: o Diretor solta um "mutado"
 	v.position = p + Vector3(0, 0.02, 0)
