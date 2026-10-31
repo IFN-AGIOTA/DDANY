@@ -478,14 +478,14 @@ func _torre_sino(ret: Rect2, y0: float, y_sino: float) -> void:
 	# CAMPANÁRIO: pilares nos cantos, arcos abertos com parapeito, cornija; o SINO pendurado na viga
 	var hc := 6.0
 	for cn in [a0, a1, a2, a3]:
-		var pc: Vector2 = cn + (ret.get_center() - cn).sign() * 0.7
-		_bx(paredes, Vector3(pc.x, y_sino + hc * 0.5, pc.y), Vector3(1.4, hc, 1.4), PEDRA)
+		var pc: Vector2 = cn                        # no canto de fora (para dentro só 0,1 m: o patamar de chegada fica livre)
+		_bx(paredes, Vector3(pc.x, y_sino + hc * 0.5, pc.y), Vector3(1.0, hc, 1.0), PEDRA)
 	for k in 4:
 		var pa: Vector2 = [a0, a1, a2, a3][k]
 		var pb: Vector2 = [a1, a2, a3, a0][k]
 		var m := (pa + pb) * 0.5
 		var em_x := absf(pb.x - pa.x) > 0.5
-		var lw := pa.distance_to(pb) - 2.8
+		var lw := pa.distance_to(pb) - 1.0
 		_balaustrada(m - (pb - pa).normalized() * lw * 0.5, m + (pb - pa).normalized() * lw * 0.5, y_sino, y_sino, 1.05)
 		paredes.caixa(Vector3(m.x, y_sino + hc - 0.9, m.y), Vector3(lw, 1.8, E) if em_x else Vector3(E, 1.8, lw), PEDRA)
 		var dl := (pb - pa).normalized()

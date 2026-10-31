@@ -155,7 +155,7 @@ func _r():
 		var y2 := P + 5.0
 		var yt := P + 10.0
 		var pts := [Vector3(0, 0, 19.0), Vector3(0, P, 13.5), Vector3(0, P, 7.0), Vector3(0, P, 5.5), Vector3(10.0, P, 5.5),
-			Vector3(10.0, y2, -5.2), Vector3(10.0, y2, -17.0), Vector3(14.0, y2, -17.0), Vector3(28.0, y2, -17.0), Vector3(28.0, y2, -9.0),
+			Vector3(10.0, y2, -5.2), Vector3(10.0, y2, -16.0), Vector3(14.0, y2, -16.0), Vector3(28.0, y2, -16.0), Vector3(28.0, y2, -9.0),
 			Vector3(32.5, y2, -9.0), Vector3(32.5, yt, -18.9), Vector3(30.5, yt, -19.0), Vector3(28.5, yt, -18.8), Vector3(24.0, yt, -18.5)]
 		var parou := await _caminho(pn, pts, "prefeitura")
 		var yl: float = (pn.global_transform.affine_inverse() * j.global_position).y
