@@ -24,7 +24,7 @@ const CICLO := 16.0                   # 0.72: horas de JOGO para o loot de um pr
 const CICLO_LOCAL := 10.0             # 0.72: postos, hospitais, supermercados e armazéns (10 h = 20 min)
 const CHANCE_VAZIO_BUNKER := 0.03     # 0.83: bunkers: quase nada foi saqueado (muito loot)
 const MAX_CHAO_USO := {"bunker": 14}  # 0.83: itens soltos no chão (os outros: MAX_CHAO)
-const CHANCE_CARTAO := 0.12           # 0.83: chance de cada ÁREA MILITAR ter o cartão de um bunker (a cada ciclo do loot)
+const CHANCE_CARTAO := 0.20           # 0.83: chance de cada ÁREA MILITAR ter o cartão de um bunker (a cada ciclo do loot) · 1.08.1: era 0,12
 
 # [id, peso (raridade relativa), qtd mínima, qtd máxima]
 const TABELAS := {

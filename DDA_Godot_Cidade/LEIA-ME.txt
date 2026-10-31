@@ -40,6 +40,17 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.08.1 · CARTÃO DO BUNKER MAIS FÁCIL
+  · A chance de o CARTÃO DE ACESSO de um bunker aparecer numa área militar (quartéis, postos do Exército dos
+    hospitais e da prefeitura, guaritas) subiu de 12% para 20% a cada ciclo do loot. Continua existindo só um cartão
+    de cada bunker.
+  ARQUIVOS MEXIDOS:
+    mundo/loot_mundo.gd ............ CHANCE_CARTAO 0,12 -> 0,20
+    menu/config.gd ................. VERSAO "1.08.1"
+    menu/novidades_lista.gd ........ refeita
+    ferramentas/testes/teste_bunkers.gd ... confere a chance pela CHANCE_CARTAO (não mais fixo em 12%)
+    LEIA-ME.txt .................... este bloco + seção 4 (números do cartão)
+
 ATUALIZAÇÃO 1.08 · GUARITAS NOS CAMPOS, COMBOIOS DO EXÉRCITO E SOLDADOS INFECTADOS (3ª E ÚLTIMA PARTE DAS ESTRUTURAS)
   GUARITAS DE OBSERVAÇÃO (8, no meio dos campos: os maiores parques têm 2):
   · O posto avançado que o Exército montou para vigiar a evacuação: TORRE DE AÇO de 4 pernas com travas em X, a
@@ -3086,8 +3097,8 @@ IGREJA E PREFEITURA (1.06): 4 igrejas (uma por ilha) e 1 prefeitura (no centro, 
   8 s entre um toque e outro · prefeitura: embasamento de 1,5 m, 2 andares de 5 m, terraço a 11,5 m, cúpula até
   ~29 m · a prefeitura é ÁREA MILITAR (posto do Exército na frente: o cartão do bunker pode aparecer lá)
 BUNKERS (0.83): 4 (um por ilha) · 5 níveis de 3,9 m (NÍVEL 1 a 22 m e NÍVEL 5 a ~38 m abaixo da rua) · escuro
-  total · 3% dos móveis vazios · até 14 itens no chão · CARTÃO: 12% por área militar (6 áreas: 2 quartéis + 4
-  postos militares dos hospitais) a cada ciclo do loot (10 h de jogo), um só de cada bunker · usar a porta até 1,7 m
+  total · 3% dos móveis vazios · até 14 itens no chão · CARTÃO: 20% por área militar (1.08.1; era 12%) (15 áreas: 2 quartéis +
+  4 postos militares dos hospitais + o posto da prefeitura + 8 guaritas) a cada ciclo do loot (10 h de jogo), um só de cada bunker · usar a porta até 1,7 m
 LOOT E INFECTADOS QUE VOLTAM (0.72, relógio do jogo: 1 dia = 48 min): loot de prédios/carros a cada 16 h (~32 min),
   dos locais especiais a cada 10 h (~20 min) · infectados presos nos prédios a cada 6 h (~12 min), nos locais
   especiais a cada 4 h (~8 min)

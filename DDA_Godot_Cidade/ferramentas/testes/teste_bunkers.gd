@@ -7,7 +7,7 @@ extends SceneTree
 #   5. lá embaixo: escuro total (sem sol, sem luz ambiente, tela preta sem lanterna)
 #   6. escadas: cada uma tem rampa e espaço para a cabeça; os 5 níveis têm piso firme nos patamares
 #   7. elevador: sobe de volta para a frente da porta e a luz volta
-#   8. cartões: ~12% por área e ciclo; nunca 2 do mesmo bunker; um cartão perdido pode voltar (1 vez)
+#   8. cartões: ~CHANCE_CARTAO (20%) por área e ciclo; nunca 2 do mesmo bunker; um cartão perdido pode voltar (1 vez)
 var falhas := 0
 func ok(c: bool, msg: String) -> void:
 	if c: print("  ok   ", msg)
@@ -213,7 +213,7 @@ func _r():
 	for n in sorteados:
 		unicos[n] = true
 	ok(sorteados.size() == 4 and unicos.size() == 4, "8. só 1 cartão de cada bunker (%s)" % str(sorteados))
-	# taxa: com muitos bunkers (nunca acaba) ~12%
+	# taxa: com muitos bunkers (nunca acaba) ~CHANCE_CARTAO
 	var lm2 = LM.new()
 	lm2.semente = 99
 	var hh2 := [0.0]
@@ -232,7 +232,8 @@ func _r():
 					g.remover(it)
 				lm2.cartoes.clear()
 	var taxa := float(ganhos) / tent2
-	ok(taxa > 0.09 and taxa < 0.15, "8. chance por área e ciclo ~12%% (%.1f%%)" % (taxa * 100.0))
+	var ch: float = load("res://mundo/loot_mundo.gd").CHANCE_CARTAO
+	ok(absf(taxa - ch) < 0.03, "8. chance por área e ciclo ~%.0f%% (%.1f%%)" % [ch * 100.0, taxa * 100.0])
 	# cartão perdido (sumiu do mundo): pode aparecer de novo, uma vez
 	for a in areas:
 		var g = lm._grades[a + "_0"]
