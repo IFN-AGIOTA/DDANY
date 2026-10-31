@@ -70,10 +70,19 @@ func _subir_e_descer(i: int, rotulo: String) -> void:
 	await q(10)
 	var nv: PackedFloat32Array = pl["niveis"]
 	var subiu := true
+	var tempo := 20.0 if j.sobrevivencia.perna_quebrada else 12.0      # 1.06: mancando (0,9 m/s) a rampa de 35-45° é lenta
 	for k in pts.size():
-		if not await _andar(pts[k], 12.0):
+		if not await _andar(pts[k], tempo):
 			subiu = false
 			print("    %s: parou indo ao ponto %d de %d (altura %.1f, queria %.1f)" % [rotulo, k, pts.size() - 1, j.global_position.y, (pts[k] as Vector3).y])
+			# o que segura (para achar a causa se acontecer de novo)
+			for kk in 20:
+				j.controles.mover = Vector2(0, 1.0)
+				await physics_frame
+			j.controles.mover = Vector2.ZERO
+			for cc in j.get_slide_collision_count():
+				var o = j.get_slide_collision(cc).get_collider()
+				print("    bate em %s (camada %s) normal %s" % [str(o.name) if o != null else "?", str(o.get("collision_layer")) if o != null else "", str(j.get_slide_collision(cc).get_normal())])
 			break
 	var R: float = nv[nv.size() - 1]
 	var no_teto: bool = subiu and absf(j.global_position.y - R) < 0.4 and j.is_on_floor()

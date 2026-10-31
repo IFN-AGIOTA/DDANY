@@ -494,7 +494,7 @@ func _hangar() -> void:
 	concreto.caixa(Vector3(B.get_center().x, D + 0.02, B.get_center().y), Vector3(B.size.x - 0.3, 0.04, B.size.y - 0.3), CONCRETO, Basis.IDENTITY, true)
 	var docas: Array = []
 	for k in 8:
-		docas.append([4.0 + k * 8.0 - 1.9 + 0.15, 4.0 + k * 8.0 + 1.9 + 0.15, 0.0, 4.4])
+		docas.append([4.0 + k * 8.0 - 1.9, 4.0 + k * 8.0 + 1.9, 0.0, 4.4])
 	_perimetro(B, D, H, cor, Color(0.62, 0.64, 0.66), [docas, [_porta(10.0)], [], [_porta(8.0)]])
 	# portas de enrolar: 0 aberta, 1 meia, 2 fechada
 	for k in 8:
@@ -523,11 +523,12 @@ func _hangar() -> void:
 		for s in [x0, x1]:
 			_face(fora, [Vector3(s, yt, za), Vector3(s, yt, zb), Vector3(s, yt + 2.6, zb)], Vector3(sign(s), 0, 0), cor * 0.9)
 	teto.caixa(Vector3(B.get_center().x, D + H - 0.05, B.get_center().y), Vector3(B.size.x - 0.3, 0.1, B.size.y - 0.3), cor * 0.7, Basis.IDENTITY, false, true)
-	# ---- escadas do pátio até o piso das docas (nas pontas da frente) ----
-	_escada(Vector2(x0 - 1.4, z1 + 3.0), Vector2(0, -1), 2.2, 0.0, D, 2.0, CONCRETO, 1)
-	_escada(Vector2(x1 + 1.4, z1 + 3.0), Vector2(0, -1), 2.2, 0.0, D, 2.0, CONCRETO, -1)
-	_bx(concreto, Vector3(x0 - 1.4, D * 0.5, z1 - 0.5), Vector3(2.8, D, 1.0), CONCRETO_ESC)
-	_bx(concreto, Vector3(x1 + 1.4, D * 0.5, z1 - 0.5), Vector3(2.8, D, 1.0), CONCRETO_ESC)
+	# ---- plataforma das docas por fora das portas (z 3..5, na altura das carrocerias) e as escadas nas pontas ----
+	_bx(concreto, Vector3(0, D * 0.5, z1 + 1.0), Vector3(70.0, D, 2.0), CONCRETO_ESC)
+	concreto.caixa(Vector3(0, D + 0.02, z1 + 1.0), Vector3(70.0, 0.04, 2.0), CONCRETO, Basis.IDENTITY, true)
+	fora.caixa(Vector3(0, D - 0.05, z1 + 2.02), Vector3(70.0, 0.1, 0.06), AMARELO_SEG)
+	for s in [-1.0, 1.0]:
+		_escada(Vector2(s * 33.9, z1 + 4.0), Vector2(0, -1), 2.2, 0.0, D, 2.0, CONCRETO, 1 if s < 0 else -1)
 	# ---- dentro: porta-paletes, empilhadeiras, paletes ----
 	for k in 4:
 		_porta_palete(Vector2(x0 + 22.0 + k * 9.5, z0 + 3.0), 0.0, "carga_paletes", 6.0)
@@ -548,8 +549,7 @@ func _hangar() -> void:
 		_bx(fora, Vector3(p.x - 0.2, D + (ym - D) * 0.5, p.y - 0.2), Vector3(0.3, ym - D, 0.3), METAL_ESC)
 	_perimetro(mz, ym, 2.8, Color(0.85, 0.85, 0.82), Color(0.85, 0.85, 0.82), [[[3.0, 6.0, 1.0, 2.2, "janela"], [9.0, 12.0, 1.0, 2.2, "janela"], [13.4, 14.6, 0.0, 2.2]], [[2.0, 8.0, 1.0, 2.2, "janela"]], [], []])
 	_laje(mz.grow(0.1), ym + 2.8, 0.15, [], Color(0.6, 0.6, 0.6), true)
-	_escada(Vector2(mz.end.x + 0.8, mz.end.y + 6.2), Vector2(0, -1), 1.2, D, ym - D, 6.2, METAL, 1)
-	_bx(fora, Vector3(mz.end.x + 0.8, ym - 0.15, mz.end.y - 0.6), Vector3(1.4, 0.3, 1.2), METAL_ESC)
+	_escada(Vector2(mz.position.x + 14.0, mz.end.y + 6.2), Vector2(0, -1), 1.2, D, ym - D, 6.2, METAL, 1)   # chega na porta
 	_movel("mesa_escritorio", Vector3(mz.position.x + 3.0, ym, mz.position.y + 3.0), 0.0, "carga_escritorio", "MESA DO DESPACHANTE")
 	_movel("mesa_escritorio", Vector3(mz.position.x + 8.0, ym, mz.position.y + 3.0), 0.0, "carga_escritorio", "MESA")
 	_movel("arquivo", Vector3(mz.position.x + 12.0, ym, mz.position.y + 0.8), 0.0, "carga_escritorio", "ARQUIVO")
@@ -566,11 +566,10 @@ func _hangar() -> void:
 	# ---- PÁTIO: carretas nas docas, cavalos mecânicos, caminhão inteiro, balança, bomba de diesel, lava-jato ----
 	for k in [0, 2, 5]:
 		var xd: float = x0 + 4.0 + k * 8.0
-		_carreta(Vector2(xd, z1 + 6.2), 0.0)
+		_carreta(Vector2(xd, z1 + 8.2), 0.0)
 	_cavalo(Vector3(-30.0, 0, 26.0), PI * 0.5, Color(0.75, 0.12, 0.1))
 	_cavalo(Vector3(-22.0, 0, 27.0), PI * 0.5 + 0.1, Color(0.15, 0.3, 0.6))
 	_cavalo(Vector3(26.0, 0, 22.0), PI, Color(0.9, 0.88, 0.82))
-	_carreta(Vector2(26.0, 13.0), 0.0)
 	# balança de caminhões com a cabine
 	fora.caixa(Vector3(38.0, 0.06, 2.0), Vector3(3.6, 0.12, 18.0), Color(0.4, 0.42, 0.45), Basis.IDENTITY, true)
 	_guarita(Vector2(42.5, 2.0))
