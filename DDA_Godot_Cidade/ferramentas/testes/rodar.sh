@@ -11,7 +11,8 @@
 #   GODOT=... sudo ferramentas/testes/rodar.sh rede_nat            (0.86: ligação direta atrás de NAT de mentira)
 #   GODOT=... ferramentas/testes/rodar.sh teste_agua               (só um)
 # Sem monitor (servidor/CI) usa xvfb-run. Cada teste imprime "falhas: N"; o script termina com erro se algum falhar.
-# Testes com tela podem levar até 15 min (0.98: teste_camera_paredes passava de 10 min em máquina lenta).
+# Testes com tela podem levar até 25 min (0.98: teste_camera_paredes passava de 10 min em máquina lenta; 1.06:
+# teste_portas_corrimao sobe de perna quebrada as escadas de todos os tipos de local, inclusive a torre da igreja).
 # Os testes usam uma pasta de dados própria (não mexem no seu jogo salvo).
 set -u
 GODOT="${GODOT:-godot}"
@@ -23,7 +24,7 @@ falhou=0
 rodar() {   # nome, com_tela(0/1)
 	local saida
 	if [ "$2" = 1 ]; then
-		saida=$(XDG_DATA_HOME="$DADOS/$1" timeout 900 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s "res://ferramentas/testes/$1.gd" 2>&1)
+		saida=$(XDG_DATA_HOME="$DADOS/$1" timeout 1500 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s "res://ferramentas/testes/$1.gd" 2>&1)
 	else
 		saida=$(XDG_DATA_HOME="$DADOS/$1" timeout 300 "$GODOT" --headless -s "res://ferramentas/testes/$1.gd" 2>&1)
 	fi
