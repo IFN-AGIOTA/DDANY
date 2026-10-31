@@ -1,0 +1,30 @@
+MODELOS DO CENÁRIO (0.69) · mundo/cenario/ · todos CC0 1.0 (domínio público, sem precisar de crédito, mas creditados
+na tela de Créditos do jogo). Quem carrega: mundo/cenario.gd. Quem põe na cidade: mundo/abandono.gd e mundo/cidade.gd.
+
+rua/ ......... Quaternius · "LowPoly Modular Street Pack" (Street Pack) · CC0
+               https://opengameart.org/content/lowpoly-modular-street-pack (licença em rua/LICENSE_Quaternius.txt)
+               Streetlight_Double (poste de ferro antigo), Streetlight_Single (poste de jardim), TrafficLight_2
+               (semáforo com braço), Sign_Stop (PARE), Sign_NoParking (proibido estacionar), Sign_Triangle (atenção).
+
+natureza/ .... Quaternius · "Stylized Nature MegaKit" (versão Standard, gratuita) · CC0
+               https://opengameart.org/content/stylized-nature-megakit · https://quaternius.com
+               (licença em natureza/LICENSE_Quaternius.txt). Texturas reduzidas para 512/256 px; a das folhas do
+               arbusto e da árvore grande (Leaves_TwistedTree_C.png) foi recolorida de vermelho para verde.
+               CommonTree_1/3/4, DeadTree_1/2, Pine_1/2, TwistedTree_1, Bush_Common, Bush_Common_Flowers, Fern_1,
+               Plant_1_Big, Flower_3_Group, Grass_Common_Tall, Grass_Wispy_Tall, Rock_Medium_1/3.
+
+*.glb ........ Poly Haven (https://polyhaven.com) · CC0 · simplificados por ferramentas/preparar_cenario.py
+               (menos triângulos, texturas 512/256 px, origem embaixo no meio, tamanho real)
+  arquivo            modelo original               autor
+  hidrante.glb       fire_hydrant (aged)           Gonçalo Felício
+  barreira.glb       concrete_road_barrier_02      Amal Kumar
+  lixeira.glb        metal_trash_can (rust)        GurJas Studios
+  caixa_energia.glb  utility_box_02                James Ray Cock
+  bueiro.glb         water_manhole_cover           Raunox
+  saco_lixo.glb      trashbag                      Benny Weimer
+  barril.glb         Barrel_01                     Jorge Camacho
+  pneu.glb           old_tyre                      MP
+  caixote.glb        wooden_crate_02               James Ray Cock, Jurita Burger
+  carro_coberto.glb  covered_car                   MP
+  caixa_papelao.glb  cardboard_box_01              Rahul Chaudhary
+  (endereço de cada um: https://polyhaven.com/a/<modelo original>)

@@ -1,0 +1,30 @@
+# Regras do projeto
+
+- O jogo em Godot está em `DDA_Godot_Cidade/`. O `LEIA-ME.txt` de lá tem o mapa de qual arquivo mexe em cada sistema.
+- Responder sempre em português.
+- A cada atualização, entregar SÓ os arquivos que mudaram:
+  - listar os arquivos alterados/novos/apagados, com o caminho a partir de `DDA_Godot_Cidade/`, e dizer o que mudou em cada um;
+  - mandar um `.zip` com apenas esses arquivos, já nas pastas certas, para extrair por cima do projeto;
+  - não mandar o projeto inteiro, a não ser que o usuário peça.
+- OBRIGATÓRIO em TODA atualização: registrar no `DDA_Godot_Cidade/LEIA-ME.txt` tudo o que foi mexido, sem exceção (inclusive consertos pequenos, limpezas e mudanças de ajuste):
+  - criar um bloco novo `ATUALIZAÇÃO X.YY · TÍTULO` no topo da seção "2. O JOGO HOJE" (o mais novo fica em cima), com o que mudou para o jogador e os arquivos mexidos (caminho + o que mudou em cada um, e quais são NOVOS ou APAGADOS);
+  - se mudou controle, número, item, loot ou história, atualizar também a seção correspondente (3, 4, 5, 6);
+  - se um arquivo novo passou a cuidar de algum sistema, atualizar o mapa "QUERO MEXER EM... ARQUIVO";
+  - o `LEIA-ME.txt` sempre vai junto no `.zip` da atualização.
+
+# Lore (história do jogo)
+
+- A lore oficial fica em `lore/`: `Biblia_da_Lore_Dias_de_um_Apocalipse.pdf` (vale acima de tudo) e o Livro 1 (`DIAS_DE_UM_APOCALIPSE_Livro1.pdf`). Há cópias em texto (`lore/Biblia_da_Lore.txt`, `lore/Livro1.txt`) para consultar rápido.
+- Antes de mexer em história, falas, personagens ou nomes no jogo, consultar a Bíblia. Se algo do jogo contradizer a Bíblia, vale a Bíblia.
+- Regras fixas: "Vagos" é a GANGUE humana (Edy e V); os mortos-vivos são "infectados" (e os "mutados", especiais). A cidade mostrada ao jogador é sempre "Nova York" (nunca "Liberty City"). Dominic e Alyce são gêmeos de cabelo branco. Nick Evers (nunca "Nik").
+- Imagens de referência dos personagens também ficam em `lore/` (ex.: `lore/Mavie_referencia.png`); o visual no jogo fica em `npc/modelo_humano.gd` (tabela VISUAIS).
+- Quando o usuário mandar lore nova, substituir os arquivos em `lore/` e atualizar o jogo e o `LEIA-ME.txt`.
+
+# Estudos
+
+- `estudos/ESTUDO_AAA.md` reúne técnicas de jogos AAA (otimização, streaming, IA dos infectados, level design, código, rede e sensação de jogo), já comparadas com o nosso código, com um plano de ação por prioridade. Consultar antes de mexer nessas áreas e marcar ✅ no plano o que for feito.
+
+# Créditos
+
+- O usuário autorizou baixar da internet qualquer coisa útil para o jogo (modelos, texturas, sons, músicas, fontes, ferramentas, bibliotecas), sem precisar perguntar antes.
+- Tudo o que for baixado da internet (modelos, texturas, sons, músicas, fontes etc.) entra na tela de Créditos do menu principal: lista `RECURSOS` em `DDA_Godot_Cidade/menu/creditos.gd`, com o quê, autor, licença e endereço. Usar só recursos com licença livre (de preferência CC0) e guardar a licença junto dos arquivos.

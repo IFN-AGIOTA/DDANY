@@ -1,0 +1,26 @@
+{
+	"base militar (início)": {
+		"chamadas": 179,
+		"nos": 10376,
+		"objetos": 217,
+		"processando": 48,
+		"quadro_ms": 110.4,
+		"triangulos": 174252
+	},
+	"centro da cidade": {
+		"chamadas": 183,
+		"nos": 19735,
+		"objetos": 224,
+		"processando": 47,
+		"quadro_ms": 110.4,
+		"triangulos": 220591
+	},
+	"centro olhando a avenida": {
+		"chamadas": 266,
+		"nos": 19735,
+		"objetos": 306,
+		"processando": 47,
+		"quadro_ms": 131.9,
+		"triangulos": 275039
+	}
+}
