@@ -44,7 +44,6 @@ usadas com crédito aos autores abaixo (e na tela de Créditos do jogo).
   male_casualsuit05                        MakeHuman Team (Data Collection AB, Joel Palmius, Jonas Hauquier) CC0 1.0 (domínio público)
   male_casualsuit06                        MakeHuman Team (Data Collection AB, Joel Palmius, Jonas Hauquier) CC0 1.0 (domínio público)
   male_worksuit01                          MakeHuman Team (Data Collection AB, Joel Palmius, Jonas Hauquier) CC0 1.0 (domínio público)
-  mindfront_cardigan_long_open_front       Mindfront                        CC BY 4.0 (crédito ao autor)
   mindfront_female_trousers_1              Mindfront                        CC BY 4.0 (crédito ao autor)
   mindfront_helmet_kz45                    Mindfront                        CC BY 4.0 (crédito ao autor)
   mindfront_knitted_sweater_01             Mindfront                        CC BY 4.0 (crédito ao autor)

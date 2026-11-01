@@ -41,6 +41,23 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.11.1 · SAI O CARDIGÃ COMPRIDO (NÃO ACOMPANHAVA AS PERNAS)
+  · Revisão das roupas 3D em movimento (correndo, andando, 1ª pessoa): todas acompanham bem, menos o CARDIGÃ
+    COMPRIDO (nº 37): a aba comprida não segue as pernas (a calça furava a frente e aparecia uma ponta esticada
+    entre as pernas). Ele saiu do jogo. Ficam 64 roupas 3D (53 novas).
+  · Conferido em 1ª pessoa: gola, capuz, capacete e máscaras não tapam a visão; as luvas aparecem na mão.
+  ARQUIVOS MEXIDOS (testado: teste_roupas, compilar_tudo):
+    jogador/roupas/mindfront_cardigan_long_open_front_m.res e _f.res ... APAGADOS
+    jogador/roupas/texturas/mindfront_cardigan_long_open_front.png (+ .import) ... APAGADOS
+    inventario/icones/cardiga.png .. APAGADO
+    inventario/itens.gd ............ sem o item "cardiga"
+    jogador/roupas_tabela.gd ....... sem o cardigã (peça e loot)
+    jogador/roupas/LICENCA.txt ..... sem o cardigã
+    ferramentas/roupas_mh/catalogo.py ... sem o cardigã
+    menu/config.gd ................. VERSAO "1.11.1"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + seção 5
+
 ATUALIZAÇÃO 1.11 · ROUPAS 3D DE VERDADE (MAKEHUMAN, NO HOMEM E NA MULHER)
   · As roupas agora APARECEM NO CORPO como roupas de verdade: 65 roupas realistas do MakeHuman (as nº 10 a 79 da
     escolha), ajustadas ao corpo masculino E ao feminino do personagem. Acompanham todas as animações.
@@ -3272,8 +3289,8 @@ ITENS (inventario/itens.gd; item novo = 1 linha na tabela DB)
   GALÃO DE GASOLINA (0.76: 10 L; USAR perto do carro = abastecer; encher na bomba do posto).
 - Roupas (calor / chuva / proteção): capacete tático, gorro, boné, lanterna de cabeça, camiseta, moletom,
   jaqueta acolchoada, capa de chuva, colete tático, colete à prova de balas, calça cargo, jeans.
-  1.11: + 54 roupas 3D (lista e onde aparecem: jogador/roupas_tabela.gd, PECAS e LOOT): camisas, camisetas, regatas,
-  suéteres, cardigã, jaqueta e calça de socorrista, macacões (corpo inteiro), jeans, calças, legging, bermudas,
+  1.11: + 53 roupas 3D (lista e onde aparecem: jogador/roupas_tabela.gd, PECAS e LOOT): camisas, camisetas, regatas,
+  suéteres, jaqueta e calça de socorrista, macacões (corpo inteiro), jeans, calças, legging, bermudas,
   shorts, 14 calçados (encaixe CALÇADO), luvas (encaixe LUVAS), capacete de moto, boné militar, boina, chapéu, fone,
   bandana e máscara de poeira (ROSTO).
 - Mochilas: pochete, mochila escolar, de trilha, de combate.

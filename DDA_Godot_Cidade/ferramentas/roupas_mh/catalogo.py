@@ -29,7 +29,6 @@ I = [
  [33, "camiseta_estampada", "CAMISETA ESTAMPADA", "CAMISETA", "camisa", "elvs_male_logo_tshirt1", dict(w=2,h=2,peso=0.2,grade=[2,1],calor=0.08,desc="Camiseta com estampa.",loot=["casa","loja"])],
  [34, "regata_esporte", "REGATA ESPORTIVA", "REGATA", "camisa", "mindfront_tank_top_01", dict(w=2,h=1,peso=0.1,calor=0.03,desc="Regata leve.",loot=["casa","loja","academia"])],
  [35, "regata", "REGATA", "REGATA", "camisa", {"m": "elvs_male_tankshirt1", "f": "elvs_ladies_tank1"}, dict(w=2,h=1,peso=0.1,calor=0.03,desc="Regata de algodão.",loot=["casa","loja"])],
- [37, "cardiga", "CARDIGÃ COMPRIDO", "CARDIGÃ", "camisa", "mindfront_cardigan_long_open_front", dict(w=3,h=2,peso=0.5,grade=[2,2],grade_nome="BOLSO ESQUERDO",bolsos=[[2,2,"BOLSO DIREITO"]],calor=0.3,desc="Casaco de tricô comprido e aberto.",loot=["casa","loja"])],
  [38, "calca", "", "", "calca", "cortu_cargo_pants", dict(existe=True)],
  [39, "bermuda_jeans", "BERMUDA JEANS", "BERMUDA", "calca", "cortu_jeans_shorts", dict(w=2,h=2,peso=0.4,grade=[3,1],grade_nome="BOLSOS DA FRENTE",calor=0.05,desc="Bermuda jeans.",loot=["casa","loja"])],
  [40, "jeans", "", "", "calca", {"m": "punkduck_male_classic_jeans", "f": "punkduck_female_tight_jeans"}, dict(existe=True)],
