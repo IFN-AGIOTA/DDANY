@@ -83,6 +83,7 @@ ATUALIZAÇÃO 1.11 · ROUPAS 3D DE VERDADE (MAKEHUMAN, NO HOMEM E NA MULHER)
     menu/cena_menu.gd, menu/painel_personagem.gd ... o personagem do menu e o do Perfil de calçado (e luvas)
     menu/creditos.gd ............... roupas do MakeHuman (autores CC BY e CC0)
     menu/config.gd ................. VERSAO "1.11"
+    export_presets.cfg ............. "Servidor Windows" não leva jogador/roupas/ (o servidor não desenha roupa)
     ferramentas/preparar_roupas.gd . NOVO · monta jogador/roupas/*.res (reduz, LODs, pele coberta, espessura)
     ferramentas/roupas_mh/ ......... NOVA · o ajuste das roupas ao corpo (Python) e o passo a passo (LEIA-ME.txt)
     ferramentas/gerar_icones.gd .... fotos das roupas 3D
