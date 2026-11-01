@@ -23,6 +23,9 @@ const EQUIPE := [
 const RECURSOS := [
 	["Cartão de acesso dos bunkers (modelo 3D; textura repintada)", "codeinfernogames (Code Inferno Games) · \"3D Keycard\"",
 		"CC0 1.0 (domínio público)", "opengameart.org/content/3d-keycard"],
+	["Roupas 3D do personagem (1.11): camisas, camisetas, suéteres, jaquetas, macacões, calças, bermudas, calçados, luvas, chapéus, capacetes, máscaras e coletes (lista peça por peça em jogador/roupas/LICENCA.txt)",
+		"MakeHuman community: DredNicolson, Elvaerwyn, MaciekG, Mathias_Gredal, Mindfront, culturalibre e punkduck (CC BY) · Cortu, Joel Palmius, MargaretToigo, jujube e MakeHuman Team (CC0)",
+		"CC BY 4.0 / 3.0 (crédito aos autores) e CC0 1.0", "makehumancommunity.org · static.makehumancommunity.org/assets/assetpacks.html"],
 	["Personagem do jogador: homem e mulher (1.10), pele, olhos, sobrancelhas, todos os cabelos e a barba", "Quaternius · \"Universal Base Characters\"",
 		"CC0 1.0 (domínio público)", "quaternius.itch.io/universal-base-characters"],
 	["Modelos 3D (manequins) dos infectados e dos sobreviventes do hospital (0.91) e animações", "Quaternius · \"Universal Animation Library\" 1 e 2",

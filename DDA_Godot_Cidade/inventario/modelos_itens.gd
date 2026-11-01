@@ -8,6 +8,9 @@ extends RefCounted
 
 const PASTA := "res://inventario/modelos/"
 const Malhas := preload("res://mundo/malhas.gd")
+const RoupasTabela := preload("res://jogador/roupas_tabela.gd")
+const ItensDB := preload("res://inventario/itens.gd")
+const PASTA_ROUPAS := "res://jogador/roupas/"
 # id do item: [modelo, escala, deitado (gira 90° para ficar de lado no chão)]
 const ITENS := {
 	"kit_medico": ["kit_medico", 1.0, false],
@@ -57,6 +60,9 @@ static func cena(nome: String) -> PackedScene:
 
 # modelo pronto para pôr no chão (origem embaixo) ou null; deitar = false deixa em pé (fotos do inventário)
 static func instancia(id: String, deitar := true) -> Node3D:
+	var r3 := _roupa_3d(id, deitar)              # 1.11: roupa 3D (a mesma do corpo)
+	if r3 != null:
+		return r3
 	if ITENS.has(id):
 		var d: Array = ITENS[id]
 		var ps := cena(d[0])
@@ -77,6 +83,53 @@ static func instancia(id: String, deitar := true) -> Node3D:
 		_sem_sombra(raiz)
 		return raiz
 	return _por_codigo(id)
+
+# 1.11: ROUPA 3D no chão: a malha que vai no corpo (jogador/roupas/<peça>_m.res), parada em pé. Camisa, calça e
+# colete ficam deitados (a frente para cima); calçado, chapéu, máscara e luvas ficam em pé, encostados no chão.
+static func _roupa_3d(id: String, deitar: bool) -> Node3D:
+	var p := RoupasTabela.peca(id, "m")
+	if p == "":
+		return null
+	var k := PASTA_ROUPAS + p + "_m.res"
+	if not ResourceLoader.exists(k):
+		return null
+	var m: Mesh = load(k)
+	if str(ItensDB.def(id).get("slot", "")) == "luvas":
+		m = _so_um_lado(m)                    # as duas luvas ficam a 1,4 m uma da outra: mostra só a esquerda
+	var mi := MeshInstance3D.new()
+	mi.mesh = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var raiz := Node3D.new()
+	raiz.name = "Modelo_" + id
+	raiz.add_child(mi)
+	var ab := m.get_aabb()
+	var c := ab.get_center()
+	if deitar and str(ItensDB.def(id).get("slot", "")) in ["camisa", "calca", "colete"]:
+		mi.rotation.x = -PI * 0.5
+		mi.position = Vector3(-c.x, -ab.position.z, c.y)
+	else:
+		mi.position = Vector3(-c.x, -ab.position.y, -c.z)
+	return raiz
+
+static var _um_lado := {}
+static func _so_um_lado(m: Mesh) -> Mesh:
+	if _um_lado.has(m):
+		return _um_lado[m]
+	var a := m.surface_get_arrays(0)
+	var V: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+	var I: PackedInt32Array = a[Mesh.ARRAY_INDEX]
+	var I2 := PackedInt32Array()
+	for t in range(0, I.size(), 3):
+		if V[I[t]].x > 0.0 and V[I[t + 1]].x > 0.0 and V[I[t + 2]].x > 0.0:
+			I2.append_array([I[t], I[t + 1], I[t + 2]])
+	a[Mesh.ARRAY_INDEX] = I2
+	a[Mesh.ARRAY_BONES] = null
+	a[Mesh.ARRAY_WEIGHTS] = null
+	var nm := ArrayMesh.new()
+	nm.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a)
+	nm.surface_set_material(0, m.surface_get_material(0))
+	_um_lado[m] = nm
+	return nm
 
 static func _aabb(n: Node3D) -> AABB:
 	var ab := AABB()

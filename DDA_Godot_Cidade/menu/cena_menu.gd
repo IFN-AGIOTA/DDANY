@@ -328,7 +328,8 @@ func _soldado() -> void:
 	add_child(soldado)
 	soldado.rotation.y = PI + 0.32                  # o manequim olha para +Z; a cidade fica em -Z
 	var equip := {"slots": {}}
-	for par in [["camisa", "jaqueta"], ["calca", "calca"], ["colete", "colete"], ["cabeca", "capacete"], ["mochila", "mochila_combate"]]:
+	for par in [["camisa", "jaqueta"], ["calca", "calca"], ["colete", "colete"], ["cabeca", "capacete"], ["mochila", "mochila_combate"],
+			["pes", "coturno"], ["luvas", "luvas"]]:            # 1.11: calçado e luvas (roupas 3D)
 		equip["slots"][par[0]] = ItemCls.novo(par[1])
 	soldado.vestir(_Equip.new(equip["slots"]))
 	var m4 := ModelosArmas.construir("m4")

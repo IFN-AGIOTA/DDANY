@@ -19,8 +19,8 @@ const PortaBunkerCls := preload("res://mundo/porta_bunker.gd")
 const SinoCls := preload("res://mundo/sino.gd")
 
 const AMBAR := Color(1.0, 0.71, 0.0)
-const SLOTS_ESQ := ["cabeca", "rosto", "camisa", "colete", "cinto"]   # 0.65: ROSTO (máscara de gás)
-const SLOTS_DIR := ["ombro", "coldre", "calca", "mochila"]
+const SLOTS_ESQ := ["cabeca", "rosto", "camisa", "colete", "luvas", "cinto"]   # 0.65: ROSTO (máscara de gás) · 1.11: LUVAS
+const SLOTS_DIR := ["ombro", "coldre", "calca", "pes", "mochila"]               # 1.11: CALÇADO
 
 var inv = null                 # inventario.gd
 var controles = null
@@ -350,7 +350,7 @@ func _montar_meio() -> Control:
 	var corpo := HBoxContainer.new()
 	corpo.mouse_filter = Control.MOUSE_FILTER_PASS
 	corpo.add_theme_constant_override("separation", 6)
-	var tam_slot := Vector2(cel * 1.75, cel * 1.24)       # 0.65: 5 encaixes na coluna da esquerda
+	var tam_slot := Vector2(cel * 1.75, cel * 1.03)       # 1.11: 6 encaixes na coluna da esquerda (0.65: 5)
 	var ve := VBoxContainer.new()
 	var vd := VBoxContainer.new()
 	for col in [[ve, SLOTS_ESQ], [vd, SLOTS_DIR]]:

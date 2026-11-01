@@ -41,7 +41,8 @@ func equipamento_inicial() -> void:
 	var calca = ItemCls.novo("calca")
 	var colete = ItemCls.novo("colete")
 	var pochete = ItemCls.novo("pochete")
-	for par in [["camisa", jaq], ["calca", calca], ["colete", colete], ["cinto", pochete]]:
+	var botina = ItemCls.novo("botina")                 # 1.11: calçado
+	for par in [["camisa", jaq], ["calca", calca], ["colete", colete], ["cinto", pochete], ["pes", botina]]:
 		slots[par[0]] = par[1]
 		par[1].slot = par[0]
 	_por(jaq.conteudo, ItemCls.novo("bandagem", 4))
@@ -161,6 +162,10 @@ func equipamento_renascer() -> void:
 	cam.slot = "camisa"
 	slots["calca"] = jeans
 	jeans.slot = "calca"
+	var tenis = ItemCls.novo("tenis_sem_cadarco")       # 1.11: renasce de tênis velho
+	tenis.estado = randf_range(0.4, 0.8)
+	slots["pes"] = tenis
+	tenis.slot = "pes"
 	_por(cam.conteudo, ItemCls.novo("trapos", 2))
 	_por(jeans.conteudo, _com_pilha("lanterna", 0.5))
 	_por(jeans.conteudo, ItemCls.novo("maca"))

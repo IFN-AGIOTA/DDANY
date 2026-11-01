@@ -7,8 +7,13 @@ extends Node3D
 # atirar, morrer, agachado, andar agachado (+ soco, golpe, rolar, pegar... para usar depois).
 # O jogador/animador_modelo.gd escolhe a animação pelo estado (nomes exatos em NOMES_ANIM).
 #
-# (1.10: a ROUPA NO CORPO está DESLIGADA, ver ROUPA_NO_CORPO: o corpo fica o original do pack; o texto abaixo é de
-# como ela funciona quando ligada. Chapéu, mochila, pochete e armas aparecem do mesmo jeito.)
+# 1.11 · ROUPAS 3D DE VERDADE: as roupas do MakeHuman, ajustadas fora do jogo ao corpo masculino e ao feminino
+# (ferramentas/roupas_mh/ + ferramentas/preparar_roupas.gd -> jogador/roupas/<peça>_<m|f>.res; qual item usa qual
+# peça: jogador/roupas_tabela.gd). Cada peça é uma malha presa ao mesmo esqueleto (acompanha as animações) e traz a
+# lista dos vértices do corpo que ela cobre: essa pele some (textura "mascara" lida pelo VERTEX_ID no shader), então
+# o corpo não atravessa a roupa e nada fica "cortado" à vista. A calça entra na bota (jogador/roupa.gdshader corte_y).
+# Encaixes com roupa 3D: calça, calçado, camisa (macacão = corpo inteiro), colete, luvas, rosto e cabeça.
+# (1.10: as "cascas" antigas continuam DESLIGADAS, ver ROUPA_NO_CORPO; o texto abaixo é de como elas funcionavam.)
 # ROUPA DE VERDADE: cada vértice do corpo sabe a que PARTE pertence (rosto, pescoço, tronco, braço, antebraço, mão,
 # quadril, coxa, canela, pé). Cada roupa é uma "casca" feita dessas partes, um pouco por fora do corpo (acompanha a
 # animação), com a cor do item; a pele que fica embaixo é escondida (não atravessa a roupa).
@@ -44,6 +49,11 @@ const CamadaMutado := preload("res://jogador/camada_mutado.gd")
 const MiraFerro := preload("res://armas/mira_ferro.gd")
 const CabecaOculta := preload("res://jogador/cabeca_oculta.gd")
 const ModelosItens := preload("res://inventario/modelos_itens.gd")
+const RoupasTabela := preload("res://jogador/roupas_tabela.gd")
+const Itens := preload("res://inventario/itens.gd")
+const PASTA_ROUPAS := "res://jogador/roupas/"
+# 1.11: onde cada roupa 3D fica (ordem = de dentro para fora)
+const SLOTS_VISUAIS := ["calca", "pes", "camisa", "colete", "luvas", "rosto", "cabeca"]
 const PASTA := "res://jogador/sobrevivente/"
 const NOMES_ANIM := {"parado": "parado", "andar": "andar", "correr": "correr", "pular": "pular", "cair": "cair",
 	"mirar": "mirar", "atirar": "atirar", "morrer": "morrer", "agachado": "agachado", "andar_agachado": "andar_agachado"}
@@ -93,11 +103,17 @@ uniform sampler2D pele : source_color, filter_linear_mipmap;
 uniform sampler2D normal_pele : hint_normal, filter_linear_mipmap;
 uniform sampler2D rugosidade : hint_default_white, filter_linear_mipmap;
 uniform float esconde[12];
+uniform sampler2D mascara : filter_nearest;   // 1.11: pele coberta pela roupa (1 texel por vértice do corpo)
+uniform bool usa_mascara = false;
+varying float coberto;
 uniform vec3 tom = vec3(1.0);       // 1.10: tom da pele (multiplica a textura)
 uniform float mutado = 0.0;         // 0.94: 0 = humano · 1 = mutado completo
 uniform vec3 cor_veio : source_color = vec3(0.55, 0.03, 0.03);
 varying flat float regiao;          // flat: cada triângulo pega UMA parte (sem faixas misturadas na divisa)
-void vertex() { regiao = COLOR.r; }
+void vertex() {
+	regiao = COLOR.r;
+	coberto = usa_mascara ? texelFetch(mascara, ivec2(VERTEX_ID % 256, VERTEX_ID / 256), 0).r : 0.0;
+}
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float ruido(vec2 p) {
 	vec2 i = floor(p);
@@ -107,7 +123,7 @@ float ruido(vec2 p) {
 }
 void fragment() {
 	int r = clamp(int(regiao * 15.0 + 0.5), 0, 11);
-	if (esconde[r] > 0.5) { discard; }
+	if (esconde[r] > 0.5 || coberto > 0.5) { discard; }
 	vec3 c = clamp(texture(pele, UV).rgb * tom, 0.0, 1.0);
 	ROUGHNESS = texture(rugosidade, UV).r;
 	if (mutado > 0.001) {
@@ -219,12 +235,14 @@ func vestir(inventario) -> void:
 	var slots: Dictionary = inventario.slots if inventario != null else {}
 	if ROUPA_NO_CORPO:
 		_vestir_roupas(slots)
+	# 1.11: roupas 3D de verdade (MakeHuman ajustado ao corpo) + a pele que elas cobrem some
+	var com_3d := _vestir_3d(slots)
 	# chapéu, capacete e gorro escondem o cabelo (a barba fica)
 	var cab = slots.get("cabeca")
-	_cobre_cabeca = cab != null and cab.id in ["capacete", "gorro", "bone"]
+	_cobre_cabeca = cab != null and (cab.id in ["capacete", "gorro", "bone"] or bool(cab.def().get("cobre_cabelo", false)))
 	_mostrar_cabelo()
 	# peças 3D
-	_peca("cabeca", slots.get("cabeca"))
+	_peca("cabeca", null if com_3d.has("cabeca") else slots.get("cabeca"))
 	_peca("mochila", slots.get("mochila"))
 	_peca("cinto", slots.get("cinto"))
 	var na_mao = slots.get("maos")
@@ -232,6 +250,145 @@ func vestir(inventario) -> void:
 	var coldre = slots.get("coldre")
 	_arma_no_corpo("ombro", ombro if ombro != null and ombro != na_mao and ombro.eh_arma() else null, slots.get("mochila") != null)
 	_arma_no_corpo("coldre", coldre if coldre != null and coldre != na_mao and coldre.eh_arma() else null, false)
+
+# ---------- 1.11 · ROUPAS 3D ----------
+static var _malhas_3d := {}               # "peça_sexo" -> ArrayMesh (ou null se não existe)
+var _roupas_3d := {}                     # slot -> [peça, MeshInstance3D]
+var _mascara_img: Image
+var _mascara_tex: ImageTexture
+var _mascara_chave := ""
+
+static func malha_roupa(peca: String, sx: String) -> ArrayMesh:
+	var k := peca + "_" + sx
+	if not _malhas_3d.has(k):
+		var p := PASTA_ROUPAS + k + ".res"
+		_malhas_3d[k] = load(p) if ResourceLoader.exists(p) else null
+	return _malhas_3d[k]
+
+# devolve os slots que ganharam roupa 3D
+func _vestir_3d(slots: Dictionary) -> Dictionary:
+	var usar := {}
+	var cam = slots.get("camisa")
+	var inteira: bool = cam != null and bool(cam.def().get("corpo_inteiro", false)) and RoupasTabela.peca(cam.id, sexo()) != ""
+	for s in SLOTS_VISUAIS:
+		var it = slots.get(s)
+		if it == null or (s == "calca" and inteira):
+			continue
+		var p := RoupasTabela.peca(it.id, sexo())
+		if p != "" and malha_roupa(p, sexo()) != null:
+			usar[s] = p
+	var chave := ""
+	for s in SLOTS_VISUAIS:
+		var atual: Array = _roupas_3d.get(s, ["", null])
+		var quer: String = usar.get(s, "")
+		chave += quer + "|"
+		if atual[0] == quer:
+			continue
+		if atual[1] != null and is_instance_valid(atual[1]):
+			atual[1].queue_free()
+		_roupas_3d.erase(s)
+		if quer == "":
+			continue
+		var mi := MeshInstance3D.new()
+		mi.name = "Roupa3D_" + s
+		mi.mesh = malha_roupa(quer, sexo())
+		mi.skin = _corpo_mi.skin
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		esqueleto.add_child(mi)
+		mi.skeleton = NodePath("..")
+		_roupas_3d[s] = [quer, mi]
+	if chave != _mascara_chave:
+		_mascara_chave = chave
+		_atualizar_mascara(usar)
+		_materiais_3d(usar, inteira)
+	return usar
+
+# CAMADAS e CORTE (jogador/roupa.gdshader): cada peça ganha o material dela com
+#   corte_y: a calça (e as pernas do macacão) somem abaixo da boca do calçado (entram na bota)
+#   baixo:   a espessura das peças que estão POR BAIXO dela (camisa sobre a calça; colete sobre camisa e calça): ela
+#            se afasta da pele o necessário para ficar por fora (nada da de baixo atravessa)
+const DE_BAIXO := {"camisa": ["calca"], "colete": ["camisa", "calca"]}
+func _materiais_3d(usar: Dictionary, inteira: bool) -> void:
+	var corte := -10.0
+	if usar.has("pes"):
+		var mp := malha_roupa(usar["pes"], sexo())
+		if mp != null and mp.has_meta("y"):
+			corte = (mp.get_meta("y") as Vector2).y - 0.03
+	for s in _roupas_3d:
+		var mi: MeshInstance3D = _roupas_3d[s][1]
+		var params := {}
+		if corte > -5.0 and (s == "calca" or (s == "camisa" and inteira)):
+			params["corte_y"] = corte
+		var embaixo: Array = []
+		for b in DE_BAIXO.get(s, []):
+			if usar.has(b) and not (b == "calca" and inteira):
+				embaixo.append(usar[b])
+		if not embaixo.is_empty():
+			var t := _textura_camadas(embaixo)
+			if t != null:
+				params["baixo"] = t
+				params["usa_baixo"] = true
+		var base_m := mi.mesh.surface_get_material(0)
+		if params.is_empty() or not (base_m is ShaderMaterial):
+			mi.material_override = null
+			continue
+		var m: ShaderMaterial = base_m.duplicate()
+		for k in params:
+			m.set_shader_parameter(k, params[k])
+		mi.material_override = m
+
+# espessura das peças de baixo (o maior valor em cada vértice do corpo), 1 texel R8 por vértice
+static var _camadas_tex := {}
+func _textura_camadas(pecas: Array) -> ImageTexture:
+	var k := sexo() + ":" + ",".join(pecas)
+	if _camadas_tex.has(k):
+		return _camadas_tex[k]
+	var nv: int = _num_vertices_corpo()
+	var alt := int(ceil(nv / 256.0))
+	var dados := PackedByteArray()
+	dados.resize(256 * alt)
+	var tem := false
+	for p in pecas:
+		var m := malha_roupa(p, sexo())
+		if m == null or not m.has_meta("esp"):
+			continue
+		var e: PackedByteArray = m.get_meta("esp")
+		for i in mini(e.size(), dados.size()):
+			if e[i] > dados[i]:
+				dados[i] = e[i]
+				tem = true
+	var t: ImageTexture = ImageTexture.create_from_image(Image.create_from_data(256, alt, false, Image.FORMAT_R8, dados)) if tem else null
+	_camadas_tex[k] = t
+	return t
+
+func _num_vertices_corpo() -> int:
+	if _nv_corpo < 0:
+		_nv_corpo = (_corpo_mi.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
+	return _nv_corpo
+
+# pele coberta: 1 texel (R8) por vértice do corpo, 256 por linha (o shader lê pelo VERTEX_ID)
+func _atualizar_mascara(usar: Dictionary) -> void:
+	if usar.is_empty():
+		_mat.set_shader_parameter("usa_mascara", false)
+		return
+	var nv: int = _num_vertices_corpo()
+	var alt := int(ceil(nv / 256.0))
+	var dados := PackedByteArray()
+	dados.resize(256 * alt)
+	for s in usar:
+		var m := malha_roupa(usar[s], sexo())
+		if m != null and m.has_meta("esconde"):
+			for i in (m.get_meta("esconde") as PackedInt32Array):
+				if i < dados.size():
+					dados[i] = 255
+	_mascara_img = Image.create_from_data(256, alt, false, Image.FORMAT_R8, dados)
+	if _mascara_tex == null or _mascara_tex.get_size() != Vector2(256, alt):
+		_mascara_tex = ImageTexture.create_from_image(_mascara_img)
+	else:
+		_mascara_tex.update(_mascara_img)
+	_mat.set_shader_parameter("mascara", _mascara_tex)
+	_mat.set_shader_parameter("usa_mascara", true)
+var _nv_corpo := -1
 
 # (desligado na 1.10: ROUPA_NO_CORPO) camisa, calça e botas como cascas do corpo + o colete
 func _vestir_roupas(slots: Dictionary) -> void:

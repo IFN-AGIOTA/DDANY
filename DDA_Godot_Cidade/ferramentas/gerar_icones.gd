@@ -15,6 +15,7 @@ const ModelosArmas := preload("res://armas/modelos_armas.gd")
 const Equip := preload("res://equipamentos/modelos_equip.gd")
 const Sob := preload("res://jogador/modelo_sobrevivente.gd")
 const ModelosItens := preload("res://inventario/modelos_itens.gd")
+const RoupasTabela := preload("res://jogador/roupas_tabela.gd")
 # itens com modelo realista que continuam com o ícone desenhado por código (o desenho diferencia melhor:
 # munições de calibres diferentes, água limpa x suja x garrafa vazia)
 const SEM_FOTO := ["mun_9mm", "mun_556", "mun_762", "mun_12", "mun_308", "agua_suja", "garrafa_vazia", "bandagem",
@@ -76,6 +77,9 @@ func _rodar() -> void:
 		await _foto(id, Itens.def(id), _roupa(id), "frente")
 	for id in Sob.COLETES:
 		await _foto(id, Itens.def(id), _roupa(id), "frente")
+	# 1.11: roupas 3D (jogador/roupas_tabela.gd): a peça em pé, de frente (passam por cima das de cima)
+	for id in RoupasTabela.PECAS:
+		await _foto(id, Itens.def(id), ModelosItens.instancia(id, false), "frente")
 	print("ícones prontos em ", PASTA)
 	quit()
 

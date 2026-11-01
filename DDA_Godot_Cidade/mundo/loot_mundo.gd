@@ -15,6 +15,7 @@ const ItemCls := preload("res://inventario/item.gd")
 const GradeCls := preload("res://inventario/grade.gd")
 const ItemMundoCls := preload("res://inventario/item_mundo.gd")
 const Itens := preload("res://inventario/itens.gd")
+const RoupasTabela := preload("res://jogador/roupas_tabela.gd")   # 1.11: loot das roupas 3D
 
 const CHANCE_VAZIO := 0.35            # móvel já saqueado
 const CHANCE_VAZIO_LOCAL := 0.15      # 0.68: locais especiais (posto, hospital, supermercado, armazém...) têm mais coisa
@@ -560,7 +561,7 @@ func definir_conteudo(id: String, larg: int, alt: int, nome: String, itens: Arra
 
 func _sortear(tabela: String, r: RandomNumberGenerator, tam := Vector2i(99, 99)):
 	var t: Array = []
-	for e in TABELAS.get(tabela, []):            # só o que cabe no móvel (deitado ou em pé)
+	for e in TABELAS.get(tabela, []) + RoupasTabela.LOOT.get(tabela, []):   # só o que cabe no móvel (deitado ou em pé) · 1.11: + roupas novas
 		var d := Itens.def(e[0])
 		var w := int(d.get("w", 1))
 		var h := int(d.get("h", 1))

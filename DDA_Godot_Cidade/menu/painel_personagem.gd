@@ -2,7 +2,7 @@ extends HBoxContainer
 # 1.10 · SEU PERSONAGEM (no PERFIL: menu/tela_perfil.gd): escolher HOMEM ou MULHER, o tom da PELE, o CABELO, a BARBA
 # (só homem) e a COR DO CABELO. À esquerda, o personagem do MODO LIVRE em 3D (inventario/boneco_3d.gd), girando
 # devagar (arraste para girar), com o que ele está usando no jogo salvo (menu/salvamento.gd): chapéu/capacete,
-# mochila, pochete, armas nas costas/coldre e a arma da mão (a roupa no corpo está desligada: ROUPA_NO_CORPO).
+# mochila, pochete, armas nas costas/coldre e a arma da mão; 1.11: e as ROUPAS 3D (camisa, calça, calçado, luvas...).
 # Sem jogo salvo: o equipamento com que o jogo começa.
 # Cada toque já vale: grava em Config "aparencia" e o boneco muda na hora (o do menu principal também). No jogo, o
 # jogador (jogador/jogador.gd usar_sobrevivente), o boneco do inventário e a cópia que os amigos veem (rede) usam ela.
@@ -100,7 +100,7 @@ static func _carregar_roupa(inv) -> bool:
 			inv.slots[s] = it
 	if not inv.slots.is_empty():
 		return true
-	for par in [["camisa", "jaqueta"], ["calca", "calca"], ["colete", "colete"], ["cinto", "pochete"], ["maos", "pistola"]]:
+	for par in [["camisa", "jaqueta"], ["calca", "calca"], ["colete", "colete"], ["cinto", "pochete"], ["pes", "botina"], ["maos", "pistola"]]:
 		inv.slots[par[0]] = ItemCls.novo(par[1])
 	return false
 

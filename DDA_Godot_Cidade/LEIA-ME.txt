@@ -41,6 +41,55 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.11 · ROUPAS 3D DE VERDADE (MAKEHUMAN, NO HOMEM E NA MULHER)
+  · As roupas agora APARECEM NO CORPO como roupas de verdade: 65 roupas realistas do MakeHuman (as nº 10 a 79 da
+    escolha), ajustadas ao corpo masculino E ao feminino do personagem. Acompanham todas as animações.
+  · O corpo não atravessa a roupa e nada fica "cortado": a pele que fica embaixo da roupa some (só a parte coberta,
+    a borda continua), a calça entra dentro da bota e o colete fica por fora da camisa/jaqueta que estiver por baixo.
+  · ENCAIXES NOVOS no inventário: CALÇADO (pés) e LUVAS. O jogo começa de BOTINA; quem renasce volta de tênis velho.
+    O ROSTO (máscara de gás) agora também aparece no corpo, junto com bandana e máscara de poeira.
+  · 54 ROUPAS NOVAS para achar pela cidade (lojas de roupa, quartos das casas, quartéis, guaritas, comboios,
+    delegacia, hospital, oficina, escritórios...): camisas e camisetas (social azul, listrada, de botão, estampada,
+    camuflada, baby look, regatas, top de academia), suéteres e cardigã, jaqueta de socorrista e calça de
+    socorrista, macacão jeans e macacão de mecânico (vestem o corpo todo, no lugar da camisa), jeans (escuro, reto,
+    boca larga), calça social, de sarja, de lã, legging, bermudas e shorts, 14 calçados (sapatos, tênis, botina,
+    botas de couro, coturno, botas de neve...), luvas de couro, capacete de moto, boné militar, boina, chapéu, fone,
+    bandana e máscara de poeira. Cada uma com calor/chuva/proteção e bolsos próprios.
+  · As roupas que já existiam ganharam o visual novo: camiseta, moletom, jaqueta acolchoada, capa de chuva (vira a
+    jaqueta de socorrista), calça cargo, jeans, colete tático, colete à prova de balas, capacete tático, gorro e
+    máscara de gás. O boné de beisebol e a lanterna de cabeça continuam com o modelo de antes.
+  · Ícones novos no inventário (a foto da própria roupa) e a roupa caída no chão é a peça de verdade.
+  · Ficaram de fora (não encaixaram bem): o capacete M1 (nº 66: feito de milhares de pedacinhos, pesado demais para
+    o celular), o tênis de cano alto (nº 63: muitos pedaços soltos, ficava quebrado depois de simplificado) e a
+    botina feminina (nº 57: é de salto; a BOTINA usa a masculina nos dois corpos).
+  · Multijogador: os amigos veem as suas roupas, calçado, luvas e máscara (1.11 só joga com 1.11).
+  ARQUIVOS MEXIDOS (testado: teste_roupas NOVO (as 65 roupas com item, malha dos dois corpos, ícone e modelo no chão;
+  loot; rede; vestir no jogador: pele escondida, calça na bota, macacão, chapéu e cabelo; corpo feminino); + a bateria):
+    jogador/roupas/<peça>_m.res e _f.res (140) ... NOVOS · as roupas ajustadas a cada corpo (com LODs)
+    jogador/roupas/texturas/*.png (+ .import, 66) ... NOVOS · texturas das roupas (512 px)
+    jogador/roupas/LICENCA.txt ..... NOVO · autor e licença de cada peça (CC0 e CC BY)
+    jogador/roupa.gdshader ......... NOVO · material das roupas (calça cortada dentro da bota; CAMADAS: a peça de
+                                     cima se afasta da pele onde a de baixo passaria por fora)
+    jogador/roupas_tabela.gd ....... NOVO · qual peça cada item usa (homem/mulher) + o LOOT das roupas novas
+    jogador/modelo_sobrevivente.gd .. roupas 3D no esqueleto, pele escondida por vértice (máscara lida pelo
+                                     VERTEX_ID), calça na bota, camadas (colete > camisa > calça), chapéu e cabelo
+    inventario/itens.gd ............ 54 roupas novas; encaixes CALÇADO (pes) e LUVAS
+    inventario/tela_inventario.gd .. coluna da esquerda + LUVAS, da direita + CALÇADO
+    inventario/inventario.gd ....... começa de botina; renasce de tênis
+    inventario/modelos_itens.gd .... roupa no chão = a peça 3D (luvas: só uma)
+    inventario/icones/*.png ........ ícones das 65 roupas (novos e refeitos)
+    mundo/loot_mundo.gd ............ soma o LOOT de jogador/roupas_tabela.gd às tabelas
+    rede/sessao_rede.gd ............ a roupa enviada inclui rosto, luvas e calçado
+    menu/cena_menu.gd, menu/painel_personagem.gd ... o personagem do menu e o do Perfil de calçado (e luvas)
+    menu/creditos.gd ............... roupas do MakeHuman (autores CC BY e CC0)
+    menu/config.gd ................. VERSAO "1.11"
+    ferramentas/preparar_roupas.gd . NOVO · monta jogador/roupas/*.res (reduz, LODs, pele coberta, espessura)
+    ferramentas/roupas_mh/ ......... NOVA · o ajuste das roupas ao corpo (Python) e o passo a passo (LEIA-ME.txt)
+    ferramentas/gerar_icones.gd .... fotos das roupas 3D
+    ferramentas/testes/teste_roupas.gd ... NOVO · rodar.sh: + teste_roupas
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + seções 5, mapa "QUERO MEXER EM..." e 10
+
 ATUALIZAÇÃO 1.10 · PERSONAGEM MASCULINO OU FEMININO (ESCOLHA NO PERFIL)
   · O personagem agora é o pack "Universal Base Characters" do Quaternius COMPLETO (o nº 9 da lista de packs): além do
     HOMEM de antes, a MULHER do mesmo pack e TODOS os cabelos dele.
@@ -3222,6 +3271,10 @@ ITENS (inventario/itens.gd; item novo = 1 linha na tabela DB)
   GALÃO DE GASOLINA (0.76: 10 L; USAR perto do carro = abastecer; encher na bomba do posto).
 - Roupas (calor / chuva / proteção): capacete tático, gorro, boné, lanterna de cabeça, camiseta, moletom,
   jaqueta acolchoada, capa de chuva, colete tático, colete à prova de balas, calça cargo, jeans.
+  1.11: + 54 roupas 3D (lista e onde aparecem: jogador/roupas_tabela.gd, PECAS e LOOT): camisas, camisetas, regatas,
+  suéteres, cardigã, jaqueta e calça de socorrista, macacões (corpo inteiro), jeans, calças, legging, bermudas,
+  shorts, 14 calçados (encaixe CALÇADO), luvas (encaixe LUVAS), capacete de moto, boné militar, boina, chapéu, fone,
+  bandana e máscara de poeira (ROSTO).
 - Mochilas: pochete, mochila escolar, de trilha, de combate.
 - DINHEIRO (0.91): DÓLARES (cada um = US$ 1, até 1000 por pilha): compra e vende com a Mônica e paga as trocas.
 - Diversos: ursinho, revista velha, celular quebrado, CARTÃO DE ACESSO · BUNKER 1..4 (0.83: abre
@@ -3646,6 +3699,14 @@ SOBREVIVENTE (jogador no modo livre)
   animações no esqueleto dele) ........ ferramentas/preparar_personagem.gd (instruções no topo)
 - roupas no corpo (cascas; DESLIGADAS
   na 1.10) ............................. jogador/modelo_sobrevivente.gd (ROUPA_NO_CORPO, ROUPAS, TIPO_CAMISA)
+- ROUPAS 3D (1.11): qual peça cada item
+  usa e onde as roupas novas aparecem .. jogador/roupas_tabela.gd (PECAS, LOOT) · itens: inventario/itens.gd
+- roupa 3D no corpo, pele escondida,
+  calça na bota, colete por fora ...... jogador/modelo_sobrevivente.gd (_vestir_3d, _atualizar_mascara,
+                                        _materiais_3d, DE_BAIXO, _textura_camadas) + jogador/roupa.gdshader
+- fazer/ajustar as peças (MakeHuman ->
+  corpo do jogo) ...................... ferramentas/roupas_mh/ (passo a passo no LEIA-ME.txt de lá) +
+                                        ferramentas/preparar_roupas.gd -> jogador/roupas/*.res
 - ação só na parte de cima do corpo ... jogador/camada_acao.gd
 - animações novas (KayKit -> jogo) .. ferramentas/retarget_kaykit.gd (tabelas CONVERTER e DIRETAS)
 - animações de captura real (CMU) .... ferramentas/retarget_cmu.gd (tabela CLIPES; .bvh de github.com/una-dinosauria/cmu-mocap)
@@ -3824,9 +3885,9 @@ MÚSICA (pasta audio/)
   simulado de novo em cada aparelho: longe de quem recebe (sem a física dos prédios de lá) ele pode bater num
   lugar um pouco diferente.
 - O jogador é um sobrevivente genérico (Universal Base Characters: homem ou mulher, 1.10); o Dominic do livro (jaqueta de couro, cabelo branco) não tem modelo próprio (o 3D dele foi cancelado na 0.27).
-- 1.10: as ROUPAS não aparecem no corpo (camisa, calça, botas e colete): a casca antiga cortava o corpo e foi
-  desligada (ROUPA_NO_CORPO em jogador/modelo_sobrevivente.gd). Falta fazer roupas de verdade (modelos 3D presos ao
-  esqueleto). A mulher usa as mesmas animações do homem (convertidas para o esqueleto dela): o jeito de andar é o mesmo. A
+- 1.11: ROUPAS 3D: duas roupas grossas uma sobre a outra no mesmo lugar não existem (cada encaixe tem uma peça);
+  peças muito largas (jaqueta de socorrista + colete) podem raspar uma na outra em poses extremas. Bermuda/short com
+  bota alta: a perna da calça não aparece dentro da bota (é cortada). A mulher usa as mesmas animações do homem (convertidas para o esqueleto dela): o jeito de andar é o mesmo. A
   aparência é uma só por aparelho (vale no solo e em todos os mundos) e só muda pelo Perfil (no menu); no
   multijogador os amigos recebem a aparência quando você entra na partida.
 - A gangue VAGOS (Edy, V), Alyce, Nick, Mônica e Carlos ainda não aparecem no jogo (são do Ato 2 em diante).
