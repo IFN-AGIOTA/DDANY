@@ -41,6 +41,44 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.12 · MOVIMENTO NATURAL ESTILO UNREAL 5 (MOTION MATCHING)
+  · O personagem anda e corre como no "Game Animation Sample" da Unreal 5, com as nossas animações livres:
+    - BIBLIOTECA DE POSES: cada quadro de cada animação de andar/correr (parado, 4 caminhadas, trote, corrida,
+      corrida com fuzil, de costas, de lado, agachado, mancando) guarda onde estão os pés e para onde vão;
+    - BUSCA: 10 vezes por segundo o jogo escolhe a animação E O QUADRO que melhor continuam o movimento (a velocidade
+      e a direção que você está indo + os pés como estão agora). Acelerar, frear, parar e voltar a andar não
+      recomeçam o passo do início: ele continua com o pé que estava no chão;
+    - INÉRCIA ("inertialization"): a troca é na hora (responde ao controle sem atraso); a pose antiga continua com a
+      velocidade que tinha e a nova entra por cima, suave (sem "pulo" de pose);
+    - PÉS QUE NÃO PATINAM: a animação toca na velocidade em que o corpo anda de verdade (um pouco mais lenta ou
+      mais rápida). Nos testes, o pé de apoio escorrega ~12% menos no homem e ~16% menos na mulher que no jeito
+      antigo;
+    - PERNAS NA DIAGONAL ("orientation warping"): mirando ou em 1ª pessoa, andando na diagonal, o quadril gira para
+      a direção do passo e o tronco (e a arma) continuam na mira. Antes as pernas andavam reto e o corpo
+      "escorregava" de lado;
+    - INCLINAÇÃO NAS CURVAS: correndo e virando, o tronco inclina para dentro da curva (mais quanto mais rápido).
+  · Vale para o homem e a mulher, e para a cópia que os amigos veem no multijogador. As outras trocas (pular, mirar
+    parado, morrer...) também passaram a usar a inércia.
+  · OPÇÃO NOVA: Opções › Câmera › "Movimento do personagem" = Natural (novo, padrão) ou Clássico (o jeito antigo).
+  ARQUIVOS MEXIDOS (testado: teste_movimento NOVO (biblioteca, escolha por velocidade, entrada no meio do passo,
+  pé de apoio escorregando menos que o antigo, nenhum pulo de pose nas trocas, pernas e quadril na diagonal, tronco na mira, inclinação, corpo
+  feminino, tempo da busca); + a bateria):
+    jogador/base_movimento.gd ...... NOVO · a busca (custo de velocidade, escala e pose dos pés)
+    jogador/camada_inercia.gd ...... NOVO · trocas sem tranco (dead blending), 1ª camada do esqueleto
+    jogador/camada_orientacao.gd ... NOVO · pernas na direção do passo + inclinação na curva
+    jogador/sobrevivente/base_movimento_m.json, base_movimento_f.json ... NOVOS · a biblioteca de poses
+    ferramentas/gerar_base_movimento.gd ... NOVO · faz a biblioteca a partir das animações
+    ferramentas/testes/teste_movimento.gd ... NOVO · rodar.sh: + teste_movimento
+    jogador/animador_modelo.gd ..... motion matching (parado, andando, correndo, agachado), inércia nas trocas,
+                                     orientação e inclinação; usar_mm (opção)
+    jogador/modelo_sobrevivente.gd .. cria as camadas de inércia e orientação (as primeiras do esqueleto)
+    menu/config.gd ................. "movimento_mm"; VERSAO "1.12"
+    menu/opcoes.gd ................. Opções › Câmera › Movimento do personagem
+    menu/aplicar_opcoes.gd ......... "movimento_mm" é lida na hora
+    menu/novidades_lista.gd ........ refeita
+    estudos/ESTUDO_AAA.md .......... ✅ motion matching + inércia + orientação (seção 6 e plano, item 25)
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..." + seção 10
+
 ATUALIZAÇÃO 1.11.1 · SAI O CARDIGÃ COMPRIDO (NÃO ACOMPANHAVA AS PERNAS)
   · Revisão das roupas 3D em movimento (correndo, andando, 1ª pessoa): todas acompanham bem, menos o CARDIGÃ
     COMPRIDO (nº 37): a aba comprida não segue as pernas (a calça furava a frente e aparecia uma ponta esticada
@@ -3736,6 +3774,12 @@ SOBREVIVENTE (jogador no modo livre)
 - aba Opções › Teclado e mouse ........ menu/opcoes.gd (_pagina_teclado)
 - mira para cima/baixo ................ jogador/camada_mira.gd (FRACAO por vértebra) + MIRA_NEUTRA em jogador.gd
 - jeitos de andar dos infectados ...... inimigos/modelo_infectado.gd (ESTILOS) + ferramentas/retarget_cmu.gd
+- MOVIMENTO estilo Unreal 5 (1.12): a
+  busca (pesos, escala) ............... jogador/base_movimento.gd · biblioteca: jogador/sobrevivente/base_movimento_*.json
+                                        (refazer: ferramentas/gerar_base_movimento.gd) · quais animações entram:
+                                        jogador/animador_modelo.gd (_permitidas, _motion_matching)
+- trocas sem tranco (inércia) ......... jogador/camada_inercia.gd (DURACAO, MEIA_VIDA)
+- pernas na diagonal / inclinar na curva jogador/camada_orientacao.gd (MAX_ANGULO, MAX_INCLINA)
 - quais animações cada ação usa ....... jogador/animador_modelo.gd (8 direções, acao()), armas/armas.gd (GOLPES),
   inventario/inventario.gd (_anim_de_uso: comer, beber, tomar remédio)
 - quando usa (modo livre) ............. main.gd (_jogar) e jogador/jogador.gd (usar_sobrevivente)
@@ -3903,6 +3947,10 @@ MÚSICA (pasta audio/)
   simulado de novo em cada aparelho: longe de quem recebe (sem a física dos prédios de lá) ele pode bater num
   lugar um pouco diferente.
 - O jogador é um sobrevivente genérico (Universal Base Characters: homem ou mulher, 1.10); o Dominic do livro (jaqueta de couro, cabelo branco) não tem modelo próprio (o 3D dele foi cancelado na 0.27).
+- 1.12: MOVIMENTO: só com as animações que temos (sem animações de partida, freada ou virada no lugar): a busca
+  escolhe o melhor quadro delas, mas não existe um "freio" com o corpo indo para trás nem uma virada de 180° animada.
+  Animações novas (capturas de partida/parada/curva) melhoram sozinhas: entram na biblioteca refazendo
+  ferramentas/gerar_base_movimento.gd e pondo o nome em CLIPES (de lá) e em _permitidas (jogador/animador_modelo.gd).
 - 1.11: ROUPAS 3D: duas roupas grossas uma sobre a outra no mesmo lugar não existem (cada encaixe tem uma peça);
   peças muito largas (jaqueta de socorrista + colete) podem raspar uma na outra em poses extremas. Bermuda/short com
   bota alta: a perna da calça não aparece dentro da bota (é cortada). A mulher usa as mesmas animações do homem (convertidas para o esqueleto dela): o jeito de andar é o mesmo. A

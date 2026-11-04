@@ -561,6 +561,11 @@ mira assistida não estavam acessíveis; esses valores ficam para testar jogando
 - **Vibração** no acerto, na morte e na munição baixa, com opção de desligar. *(Android)* ✅ (opção Vibração).
 - **Tremor de tela e "soco" de FOV** com opção de desligar (enjoo). *(Swink + inferência)*
 - **Perfis de sensibilidade separados** por toque, controle e mouse. *(Swink)* ✅ (toque e mouse já são separados).
+- **Animação de locomoção estilo *motion matching* (Game Animation Sample da Unreal 5):** escolher a animação e o
+  QUADRO pela velocidade pedida + a pose dos pés (o passo continua, sem recomeçar do início); trocas por
+  *inertialization* ("dead blending": a pose antiga segue com a velocidade dela e a nova entra suave); *orientation
+  warping* (quadril gira para a direção do passo, tronco fica na mira) e inclinação nas curvas. *(Epic GASP, Holden
+  "Dead Blending")* ✅ 1.12: `jogador/base_movimento.gd`, `jogador/camada_inercia.gd`, `jogador/camada_orientacao.gd`.
 
 ---
 
@@ -600,6 +605,7 @@ Impacto e esforço estimados por mim; cada item cita a seção acima. **Todos os
 | 22 ✅ | **Área de toque ≥ 48 dp** (6) | Pelo dpi da tela; o mais perto ganha | `jogador/controles.gd` |
 | 23 ✅ | **Sinais de acerto** (6): som + vibração no abate | O ✕ já existia | `armas/armas.gd`, `armas/sons_armas.gd` |
 | 24 ✅ | Item de arremesso **na mão** ao mirar | Era a limitação da 1.00 | `armas/arremesso.gd`, `jogador/modelo_sobrevivente.gd` |
+| 25 ✅ | **Motion matching + inércia + orientação das pernas** (6) | Pé de apoio escorrega ~12–16% menos; troca continua o passo; diagonais com os passos na direção certa | `jogador/base_movimento.gd`, `jogador/camada_inercia.gd`, `jogador/camada_orientacao.gd`, `jogador/animador_modelo.gd` |
 | — | Conferidos sem mudança: transparências (capim/folhas já em recorte), sombras (só o sol) | | |
 | — | Ficam para depois: validar a POSIÇÃO no host (falsos positivos com carro/teleporte do jogo), compressão dos pacotes dos infectados (a banda não é problema hoje), predição + reconciliação | | |
 

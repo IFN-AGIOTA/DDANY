@@ -381,6 +381,9 @@ func _pagina_camera(v: float) -> Control:
 	_secao(g, "Mirar em 3ª pessoa", _seg("mira_ferro", [[true, "Mira de ferro"], [false, "Por cima do ombro"]],
 		{true: "Com arma de fogo, MIRAR leva a câmera para os olhos e você mira pela mira da própria arma.",
 		false: "MIRAR aproxima a câmera por cima do ombro (a mira de ferro só em 1ª pessoa)."}))
+	_secao(g, "Movimento do personagem", _seg("movimento_mm", [[true, "Natural (novo)"], [false, "Clássico"]],
+		{true: "Como na Unreal 5 (motion matching): o passo continua de onde está nas trocas, sem tranco; pernas na diagonal e corpo inclinando nas curvas.",
+		false: "O jeito antigo: cada troca começa a animação do início, com mistura curta."}))
 	_secao(g, "Distância (câmera traseira)", _seg("dist", [["near", "Perto"], ["mid", "Média"], ["far", "Longe"]]))
 	_secao(g, "Posição do personagem", _seg("pos", [["left", "Esquerda"], ["center", "Centro"], ["right", "Direita"]],
 		{"left": "Câmera no ombro direito. Troque de ombro no jogo com o botão OMBRO ou o botão do meio do mouse.",

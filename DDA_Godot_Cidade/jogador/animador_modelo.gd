@@ -231,6 +231,7 @@ func atualizar(dt: float, j) -> void:
 	_arma = str(j.armas.atual) if j.armas != null else ""
 	_mancando = bool(j.get("mancando")) if "mancando" in j else false
 	_fp = bool(j.get("primeira_pessoa")) if "primeira_pessoa" in j else false
+	usar_mm = bool(Config.valor("movimento_mm"))           # 1.12: Opções › Câmera › Movimento do personagem
 	# 1.12: quanto o corpo está girando (inclinar na curva)
 	if _yaw_ant != INF and dt > 0.0:
 		_giro = lerpf(_giro, wrapf(yaw - _yaw_ant, -PI, PI) / dt, minf(1.0, dt * 8.0))

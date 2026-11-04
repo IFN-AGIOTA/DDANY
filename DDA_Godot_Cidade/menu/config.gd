@@ -5,7 +5,7 @@ extends Node
 
 signal mudou(chave: String)          # "gfx" quando os gráficos foram aplicados; "hud" quando a HUD foi editada
 
-const VERSAO := "1.11.1"
+const VERSAO := "1.12"
 const ARQUIVO := "user://opcoes.cfg"
 
 const PADRAO := {
@@ -23,6 +23,7 @@ const PADRAO := {
 	"cam": 0, "dist": "near", "pos": "left", "fov": 42,
 	"map": true, "op": 100, "sc": 100, "avisos": false, "icone_mun": false,
 	"avisos_fundo": false,                # 1.08: faixa escura atrás dos avisos (armas/hud_combate.gd)
+	"movimento_mm": true,                 # 1.12: movimento estilo motion matching (jogador/animador_modelo.gd lê na hora)
 	"fps": false, "som": true, "vol": 100, "awake": false, "mus": true, "mvol": 70,
 	"svol": 100,                          # volume dos efeitos (tiros, passos, infectados, chuva)
 	"dif": 1,                             # dificuldade do modo livre: 0 fácil, 1 normal, 2 difícil

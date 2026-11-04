@@ -17,6 +17,7 @@ var _inc := 0.0
 var _pelvis := -1
 var _coluna := -1
 var aplicado := 0.0
+var dt_fixo := 0.0            # > 0: passo fixo (testes)
 
 func preparar(sk: Skeleton3D) -> void:
 	_pelvis = sk.find_bone("pelvis")
@@ -27,7 +28,7 @@ func _process_modification() -> void:
 	var sk := get_skeleton()
 	if sk == null or _pelvis < 0 or _coluna < 0:
 		return
-	var dt := get_process_delta_time() if is_inside_tree() else 0.016
+	var dt := dt_fixo if dt_fixo > 0.0 else (get_process_delta_time() if is_inside_tree() else 0.016)
 	_ang = lerp_angle(_ang, clampf(angulo, -MAX_ANGULO, MAX_ANGULO), minf(1.0, dt * 10.0))
 	_inc = lerpf(_inc, clampf(inclinacao, -MAX_INCLINA, MAX_INCLINA), minf(1.0, dt * 6.0))
 	aplicado = _ang

@@ -12,6 +12,7 @@ const DURACAO := 0.25
 const MEIA_VIDA := 0.06       # s: em quanto tempo a velocidade da pose antiga cai pela metade
 
 var ligado := true
+var dt_fixo := 0.0            # > 0: passo fixo (testes); 0 = o tempo real do quadro
 var _ult_r: Array = []        # rotação local de cada osso no último quadro mostrado
 var _ant_r: Array = []        # ... e no anterior (para a velocidade)
 var _ult_p: Array = []        # posição local (só ossos que andam: root, pelvis)
@@ -61,7 +62,7 @@ func _process_modification() -> void:
 	var sk := get_skeleton()
 	if sk == null or _ult_r.is_empty():
 		return
-	var dt := get_process_delta_time() if is_inside_tree() else 0.016
+	var dt := dt_fixo if dt_fixo > 0.0 else (get_process_delta_time() if is_inside_tree() else 0.016)
 	var n := sk.get_bone_count()
 	if _pedido and _ult_r[0] != null and _ant_r[0] != null:
 		_t = 0.0
