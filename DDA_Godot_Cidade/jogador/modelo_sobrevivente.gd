@@ -46,6 +46,8 @@ const CamadaAcao := preload("res://jogador/camada_acao.gd")
 const CamadaPostura := preload("res://jogador/camada_postura.gd")
 const CamadaMira := preload("res://jogador/camada_mira.gd")
 const CamadaMutado := preload("res://jogador/camada_mutado.gd")
+const CamadaInercia := preload("res://jogador/camada_inercia.gd")          # 1.12
+const CamadaOrientacao := preload("res://jogador/camada_orientacao.gd")    # 1.12
 const MiraFerro := preload("res://armas/mira_ferro.gd")
 const CabecaOculta := preload("res://jogador/cabeca_oculta.gd")
 const ModelosItens := preload("res://inventario/modelos_itens.gd")
@@ -164,6 +166,8 @@ var camada                             # jogador/camada_acao.gd: ações só na 
 var postura                            # jogador/camada_postura.gd: como segura a arma (pistola, faca, taco...)
 var mira_camada                        # jogador/camada_mira.gd: tronco inclina com a câmera ao mirar
 var mutado_camada                      # 0.94: jogador/camada_mutado.gd (corpo curvado do mutado)
+var inercia                            # 1.12: jogador/camada_inercia.gd (trocas de animação sem tranco)
+var orientacao                         # 1.12: jogador/camada_orientacao.gd (pernas na diagonal, inclinar na curva)
 var cabeca_oculta                      # 0.65: jogador/cabeca_oculta.gd (1ª pessoa: esconde a cabeça)
 var _osso_cabeca := -1
 var _ik: IkFuzil
@@ -707,6 +711,15 @@ func segurar_arma(tipo: String, no: Node3D) -> void:
 		_ponto_arma.add_child(no)
 
 func _criar_ponto_fuzil() -> void:
+	# 1.12: inércia (trocas) e orientação das pernas/inclinação primeiro: trabalham na animação, antes das outras
+	inercia = CamadaInercia.new()
+	inercia.name = "CamadaInercia"
+	esqueleto.add_child(inercia)
+	inercia.preparar(esqueleto)
+	orientacao = CamadaOrientacao.new()
+	orientacao.name = "CamadaOrientacao"
+	esqueleto.add_child(orientacao)
+	orientacao.preparar(esqueleto)
 	# postura da arma, depois camada de ação, depois IK do fuzil (os modificadores rodam na ordem dos filhos)
 	postura = CamadaPostura.new()
 	postura.name = "CamadaPostura"

@@ -20,6 +20,11 @@ extends Node
 #     referência em REF (a animação acompanha o chão sem "patinar").
 #   · 0.59 · POSTURA DA ARMA (jogador/camada_postura.gd): com pistola, faca/facão/pé de cabra ou taco/machado/
 #     cano/lança na mão, os braços seguram a arma do jeito dela por cima de qualquer caminhada (POSTURAS).
+#   · 1.12 · "MOTION MATCHING" (como o Game Animation Sample da Unreal 5), com o sobrevivente: parado, andando,
+#     correndo e agachado, a animação E O QUADRO vêm de jogador/base_movimento.gd (a velocidade/direção pedida + onde
+#     estão os pés agora: o passo continua, sem recomeçar do início). A troca é instantânea e a diferença de pose some
+#     sozinha (jogador/camada_inercia.gd). Na diagonal as pernas giram para a direção do passo e o tronco fica na mira;
+#     nas curvas o tronco inclina (jogador/camada_orientacao.gd). usar_mm = false volta ao jeito antigo.
 
 signal tocou_acao(nome: String, velocidade: float, corpo_todo: bool)   # multijogador repassa (rede/sessao_rede.gd)
 
@@ -61,6 +66,22 @@ var _morte := ""
 var _vel_h := 0.0
 var _no_chao := true
 const FUZIS := ["mp5", "m4", "ak", "espingarda", "rifle_caca"]
+# ---- 1.12 · motion matching ----
+const BaseMovCls := preload("res://jogador/base_movimento.gd")
+const BUSCA_A_CADA := 0.1      # s entre buscas (e na hora, quando a animação atual não serve mais)
+const MARGEM_TROCA := 0.08     # só troca se a melhor for este tanto melhor que continuar
+var usar_mm := true
+var _base = null               # jogador/base_movimento.gd (null = modelo sem a biblioteca: jeito antigo)
+var _inercia = null            # jogador/camada_inercia.gd do modelo
+var _orient = null             # jogador/camada_orientacao.gd do modelo
+var _t_busca := 0.0
+var _escala_mm := 1.0
+var _yaw_ant := INF
+var _giro := 0.0               # rad/s (suavizado): + = virando para a esquerda
+var trocas_mm := 0               # quantas trocas a busca fez (teste)
+var _pes_ant := PackedVector3Array()
+var _i_pes := []
+var _i_pelvis := -1
 # velocidade (m/s) em que cada animação de andar/correr acompanha o chão (os pés não "patinam"): medida por
 # ferramentas/medir_passos.gd (pé apoiado) e, nas capturas da CMU, pelo quanto a pessoa andou de verdade
 const REF := {"andar": 1.0, "andar_lento": 0.95, "andar_normal": 1.6, "andar_rapido": 1.95, "trote": 3.35,
@@ -92,6 +113,16 @@ func configurar(modelo: Node3D) -> void:
 		_esqueleto = sks[0] as Skeleton3D
 	_camada = modelo.get("camada")
 	_postura = modelo.get("postura")
+	_inercia = modelo.get("inercia")
+	_orient = modelo.get("orientacao")
+	_base = BaseMovCls.carregar(str(modelo.sexo())) if modelo.has_method("sexo") else null
+	_i_pes = []
+	_i_pelvis = -1
+	if _esqueleto != null:
+		_i_pelvis = _esqueleto.find_bone("pelvis")
+		for o in ["foot_l", "foot_r"]:
+			_i_pes.append(_esqueleto.find_bone(o))
+	_pes_ant = PackedVector3Array()
 	_nome_atual = ""
 	_t_acao = 0.0
 	_morte = ""
@@ -200,6 +231,10 @@ func atualizar(dt: float, j) -> void:
 	_arma = str(j.armas.atual) if j.armas != null else ""
 	_mancando = bool(j.get("mancando")) if "mancando" in j else false
 	_fp = bool(j.get("primeira_pessoa")) if "primeira_pessoa" in j else false
+	# 1.12: quanto o corpo está girando (inclinar na curva)
+	if _yaw_ant != INF and dt > 0.0:
+		_giro = lerpf(_giro, wrapf(yaw - _yaw_ant, -PI, PI) / dt, minf(1.0, dt * 8.0))
+	_yaw_ant = yaw
 	# 0.72: nadando (jogador/jogador.gd): a braçada no lugar de tudo
 	if bool(j.get("nadando")):
 		_nadar(j.vel_horizontal, bool(j.get("afundando")))
@@ -249,6 +284,15 @@ func atualizar_estado(dt: float, vel_h: float, no_chao: bool, vel_v: float, mira
 			return
 	var e := decidir(vel_h, no_chao, vel_v, mirando, atirando, morto, agachado)
 	_atual = e
+	# 1.12: motion matching (parado, andando, correndo, agachado; mirando/atirando só andando)
+	if _base != null and usar_mm and no_chao and not morto and not (mirando and _fuzil and vel_h <= VEL_ANDAR) \
+			and (e in [Estado.PARADO, Estado.ANDAR, Estado.CORRER, Estado.AGACHADO, Estado.ANDAR_AGACHADO] \
+			or (e in [Estado.MIRAR, Estado.ATIRAR] and vel_h > VEL_ANDAR)):
+		_morte = ""
+		_motion_matching(dt, mirando or atirando or _fp, agachado)
+		_atualizar_postura(e, vel_h, mirando, atirando)
+		return
+	_orientar(0.0, 0.0)
 	var nome := _nome_para(e)
 	var escala := 1.0
 	match e:
@@ -290,9 +334,84 @@ func atualizar_estado(dt: float, vel_h: float, no_chao: bool, vel_v: float, mira
 		escala = _escala(nome, vel_h)
 	if nome != "" and nome != _nome_atual:
 		_nome_atual = nome
-		_ap.play(nome, 0.1 if e == Estado.MORRER else mistura)
+		if _inercia != null and usar_mm:
+			_ap.play(nome, 0.0)                    # 1.12: troca na hora; a camada de inércia suaviza
+			_inercia.disparar()
+		else:
+			_ap.play(nome, 0.1 if e == Estado.MORRER else mistura)
 	_ap.speed_scale = escala
 	_atualizar_postura(e, vel_h, mirando, atirando)
+
+# ---------- 1.12 · MOTION MATCHING ----------
+func _permitidas(livre_dir: bool, agachado: bool) -> Array:
+	if agachado:
+		return ["agachado", "andar_agachado"]
+	if _mancando:
+		return ["parado", "mancar"]
+	var l := ["parado", "andar_lento", "andar_normal", "andar_rapido", "trote",
+		"correr_fuzil" if _fuzil and _base.tem("correr_fuzil") else "correr"]
+	if livre_dir:
+		l.append_array(["andar_tras", "andar_lado_dir", "andar_lado_esq"])
+	return l
+
+func _motion_matching(dt: float, livre_dir: bool, agachado: bool) -> void:
+	var perm := _permitidas(livre_dir, agachado)
+	var atual_ok: bool = perm.has(_nome_atual) and _base.tem(_nome_atual)
+	# corpo virado para o movimento (sem mira): tudo é "para a frente"; mirando, a direção vale (frente, lado, costas)
+	var vel := _dir if livre_dir else Vector2(0.0, _dir.length())
+	var viva := _pose_viva(dt)
+	_t_busca -= dt
+	if _t_busca <= 0.0 or not atual_ok:
+		_t_busca = BUSCA_A_CADA
+		var q: PackedFloat32Array = _base.quadro(_nome_atual, _ap.current_animation_position) if atual_ok else viva
+		var s_q := _escala_mm if atual_ok else 1.0
+		var r: Array = _base.buscar(perm, vel, q, s_q)
+		if r[0] != "" and (not atual_ok or (r[0] != _nome_atual and float(r[3]) < _base.custo_continuar(_nome_atual, vel) - MARGEM_TROCA)):
+			_nome_atual = r[0]
+			trocas_mm += 1
+			if _inercia != null:
+				_ap.play(r[0], 0.0)
+				_ap.seek(float(r[1]), true)
+				_inercia.disparar()
+			else:
+				_ap.play(r[0], mistura)
+				_ap.seek(float(r[1]), true)
+	if _base.tem(_nome_atual):
+		_escala_mm = _base.escala(_nome_atual, vel.length())
+		_ap.speed_scale = _escala_mm
+		# pernas na direção do passo (o que a animação não cobre) e inclinar na curva
+		var d: Vector2 = _base.clipes[_nome_atual]["dir"]
+		var ang := 0.0
+		if d.length() > 0.1 and _dir.length() > VEL_ANDAR:
+			ang = wrapf(atan2(_dir.x, _dir.y) - atan2(d.x, d.y), -PI, PI)
+		_orientar(ang, -_giro * _vel_h * 0.015 if d.length() > 0.1 else 0.0)
+
+func _orientar(ang: float, inclina: float) -> void:
+	if _orient != null:
+		_orient.angulo = ang
+		_orient.inclinacao = inclina
+
+# pés agora (do esqueleto), no mesmo formato da biblioteca (posições + velocidades por segundo)
+func _pose_viva(dt: float) -> PackedFloat32Array:
+	var q := PackedFloat32Array()
+	q.resize(12)
+	if _esqueleto == null or _i_pelvis < 0 or _i_pes.size() < 2:
+		return q
+	var p0 := _esqueleto.get_bone_global_pose(_i_pelvis).origin
+	var agora := PackedVector3Array()
+	for k in 2:
+		var p := _esqueleto.get_bone_global_pose(_i_pes[k]).origin - Vector3(p0.x, 0.0, p0.z)
+		agora.append(p)
+		q[k * 3] = p.x
+		q[k * 3 + 1] = p.y
+		q[k * 3 + 2] = p.z
+		if _pes_ant.size() == 2 and dt > 0.0:
+			var v := (p - _pes_ant[k]) / dt
+			q[6 + k * 3] = v.x
+			q[6 + k * 3 + 1] = v.y
+			q[6 + k * 3 + 2] = v.z
+	_pes_ant = agora
+	return q
 
 # velocidade da animação para os pés acompanharem o chão (REF); fora da tabela, 1
 func _escala(nome: String, vel_h: float) -> float:
