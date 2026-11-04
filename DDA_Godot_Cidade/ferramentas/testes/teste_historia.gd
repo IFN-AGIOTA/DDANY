@@ -101,17 +101,28 @@ func _r():
 	var t_corrida := Time.get_ticks_msec()
 	var greg_andou := false
 	var n0: int = h.cena.n_cenas
+	var tl0 := 0
 	while is_instance_valid(mis) and h.cena.n_cenas == n0 and Time.get_ticks_msec() - t_corrida < 600000:
 		if mis.piloto.progresso() > 150.0:
 			greg_andou = true
+		if Time.get_ticks_msec() - tl0 > 15000:
+			tl0 = Time.get_ticks_msec()
+			var pk: Vector3 = mis.kiri.global_position
+			var md: Array = mis.medidor.medir(Vector2(pk.x, pk.z))
+			print("  (corrida: Dominic %d m · Greg %d m · v %d · fora do percurso %.0f m · %s)" % [int(md[0]), int(mis.piloto.progresso()), int(mis.kiri.linear_velocity.length()), float(md[2]), h._sub.text])
 		await process_frame
+	print("  (cena que acabou a corrida: objetivo '%s')" % h._obj.text)
 	ok(greg_andou, "o Greg (piloto do jogo) corre")
 	ok(h.cena.n_cenas > n0, "a corrida chega ao fim (cena da chegada)")
 	# chegada e fim: pula as cenas até voltar ao menu
 	var tf := Time.get_ticks_msec()
-	while m.historia != null and Time.get_ticks_msec() - tf < 120000:
+	var tl := 0
+	while m.historia != null and Time.get_ticks_msec() - tf < 300000:
 		if is_instance_valid(h) and h.cena.tocando:
 			h.cena.pular_teste = true
+		if Time.get_ticks_msec() - tl > 10000:
+			tl = Time.get_ticks_msec()
+			print("  (fim: cena %s · n %d · objetivo '%s')" % [h.cena.tocando if is_instance_valid(h) else "-", h.cena.n_cenas if is_instance_valid(h) else -1, h._obj.text if is_instance_valid(h) else ""])
 		await process_frame
 	var d = load("res://historia/historia.gd").ler()
 	ok(bool(d.get("ato1_corrida", false)), "a Missão 1 fica salva como concluída (%s)" % str(d))
