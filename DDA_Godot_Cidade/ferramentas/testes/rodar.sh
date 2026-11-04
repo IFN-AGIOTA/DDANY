@@ -21,10 +21,10 @@ DADOS="$(mktemp -d)"
 TELA=()
 if [ -z "${DISPLAY:-}" ] && command -v xvfb-run >/dev/null; then TELA=(xvfb-run -a -s "-screen 0 1280x720x24"); fi
 falhou=0
-rodar() {   # nome, com_tela(0/1)
+rodar() {   # nome, com_tela(0/1), tempo máximo em s (opcional, com tela: 1500)
 	local saida
 	if [ "$2" = 1 ]; then
-		saida=$(XDG_DATA_HOME="$DADOS/$1" timeout 1500 "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s "res://ferramentas/testes/$1.gd" 2>&1)
+		saida=$(XDG_DATA_HOME="$DADOS/$1" timeout "${3:-1500}" "${TELA[@]}" "$GODOT" --rendering-driver opengl3 -s "res://ferramentas/testes/$1.gd" 2>&1)
 	else
 		saida=$(XDG_DATA_HOME="$DADOS/$1" timeout 300 "$GODOT" --headless -s "res://ferramentas/testes/$1.gd" 2>&1)
 	fi
@@ -160,7 +160,7 @@ elif [ "$alvo" = todos ]; then
 	rodar teste_ia_101 1
 	rodar teste_menu_leve 1
 	rodar teste_menus_rolagem 1
-	rodar teste_historia 1
+	rodar teste_historia 1 2700
 	rodar teste_portas_corrimao 1
 	rodar teste_mundos_rede 1
 	rodar teste_escadas_incendio 1

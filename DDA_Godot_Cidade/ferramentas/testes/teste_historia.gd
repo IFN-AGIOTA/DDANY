@@ -6,6 +6,8 @@ extends SceneTree
 #   · as cenas podem ser PULADAS (segurar) e o controle volta
 #   · os dois carros (Kiri '86 e JDM Sport '99) andam; o Greg é o piloto do jogo
 #   · um piloto de teste dirige o Kiri até a chegada: a missão termina e o progresso fica salvo (user://historia.json)
+#   · (1.14) MISSÃO 2: entrar no Kiri pelo botão PEGAR, seguir o Greg até o bar, sair, entrar no bar (cenário),
+#     sentar na mesa do canto (a cena da TV começa); depois o interlúdio; as duas ficam salvas
 #   · voltando ao menu, a cidade fica como era (o abandono volta) para o modo livre
 var falhas := 0
 func ok(c: bool, msg: String) -> void:
@@ -29,6 +31,10 @@ func _pular(h) -> void:
 	while h.cena.tocando and Time.get_ticks_msec() - t0 < 20000:
 		await process_frame
 	h.cena.pular_teste = false
+func _esperar(s: float) -> void:
+	var t0 := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - t0 < s * 1000.0:
+		await process_frame
 
 func _r():
 	await q(30)
@@ -114,7 +120,65 @@ func _r():
 	print("  (cena que acabou a corrida: objetivo '%s')" % h._obj.text)
 	ok(greg_andou, "o Greg (piloto do jogo) corre")
 	ok(h.cena.n_cenas > n0, "a corrida chega ao fim (cena da chegada)")
-	# chegada e fim: pula as cenas até voltar ao menu
+	m.jogador.piloto_externo = false
+	# MISSÃO 2 (1.14): cena da chegada, entrar no Kiri, seguir o Greg, entrar no bar, sentar
+	var tb := Time.get_ticks_msec()
+	while Time.get_ticks_msec() - tb < 120000 and not (is_instance_valid(h.missao) and str(h.missao.get_script().resource_path).ends_with("missao_bar.gd")):
+		if h.cena.tocando:
+			h.cena.pular_teste = true
+		await process_frame
+	var bar = h.missao
+	ok(is_instance_valid(bar) and str(bar.get_script().resource_path).ends_with("missao_bar.gd"), "depois da corrida começa a Missão 2 (o bar)")
+	if is_instance_valid(bar):
+		while bar.kiri == null and is_instance_valid(bar): await process_frame
+		while not h.cena.tocando and Time.get_ticks_msec() - tb < 180000: await process_frame
+		await _pular(h)
+		await _esperar(1.0)
+		m.jogador.teleportar(bar.kiri.global_position + bar.kiri.global_basis.x * 1.8 + Vector3(0, 0.3, 0), 0.0)
+		await _esperar(1.0)
+		ok(m.jogador.texto_interacao.begins_with("ENTRAR NO"), "o botão PEGAR vira \"ENTRAR NO KIRI\" perto do carro ('%s')" % m.jogador.texto_interacao.replace("\n", " "))
+		m.jogador._pegar_do_chao()
+		await _esperar(1.0)
+		ok(m.jogador.veiculo == bar.kiri, "o Dominic entra no Kiri pela interação")
+		var p2 = P.new()
+		p2.carro = bar.kiri
+		p2.definir(bar.caminho)
+		p2.vel_max = 18.0
+		bar.add_child(p2)
+		p2.ligado = true
+		m.jogador.piloto_externo = true
+		var ts := Time.get_ticks_msec()
+		var greg_seguiu := false
+		while h._obj.text != "Estacione e entre no bar" and Time.get_ticks_msec() - ts < 300000:
+			if bar.piloto != null and bar.piloto.progresso() > 100.0:
+				greg_seguiu = true
+			await process_frame
+		ok(greg_seguiu, "o Greg vai na frente até o bar")
+		ok(h._obj.text == "Estacione e entre no bar", "seguindo o Greg chega ao bar")
+		p2.ligado = false
+		m.jogador.piloto_externo = false
+		bar.kiri.controlar(0, 0, true)
+		await _esperar(2.0)
+		m.jogador._pegar_do_chao()
+		await _esperar(1.5)
+		ok(m.jogador.veiculo == null, "sai do carro na porta do bar")
+		m.jogador.teleportar(bar.porta_rua + Vector3(0, 0.2, 0), bar.giro_rua + PI)
+		await _esperar(1.0)
+		ok(m.jogador.texto_interacao.begins_with("ENTRAR NO"), "na porta, o botão vira \"ENTRAR NO BAR\"")
+		m.jogador._pegar_do_chao()
+		await _esperar(3.0)
+		ok(h.dentro_de == bar.bar, "entra no cenário do bar")
+		var cad: Vector3 = bar.bar.pontos["cadeira_dom"]
+		ok(m.jogador.global_position.distance_to(cad) < 12.0, "dentro do bar, perto da mesa do canto")
+		m.jogador.teleportar(cad + Vector3(0, 0.2, -0.4), 0.0)
+		await _esperar(1.0)
+		ok(m.jogador.texto_interacao == "SENTAR", "na mesa do canto o botão vira SENTAR ('%s')" % m.jogador.texto_interacao)
+		var nc: int = h.cena.n_cenas
+		m.jogador._pegar_do_chao()
+		var tc := Time.get_ticks_msec()
+		while h.cena.n_cenas == nc and not h.cena.tocando and Time.get_ticks_msec() - tc < 20000: await process_frame
+		ok(h.cena.tocando or h.cena.n_cenas > nc, "sentar começa a cena da TV")
+	# cena do bar, interlúdio e fim: pula as cenas até voltar ao menu
 	var tf := Time.get_ticks_msec()
 	var tl := 0
 	while m.historia != null and Time.get_ticks_msec() - tf < 300000:
@@ -126,6 +190,7 @@ func _r():
 		await process_frame
 	var d = load("res://historia/historia.gd").ler()
 	ok(bool(d.get("ato1_corrida", false)), "a Missão 1 fica salva como concluída (%s)" % str(d))
+	ok(bool(d.get("ato1_bar", false)) and bool(d.get("ato1_tres_dias", false)), "a Missão 2 e o interlúdio ficam salvos como concluídos")
 	ok(m.menu != null, "no fim volta para o menu")
 	var vis := 0
 	for n in m.cidade.detalhes_abandono:

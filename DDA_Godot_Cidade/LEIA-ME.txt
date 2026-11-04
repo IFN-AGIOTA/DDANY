@@ -41,6 +41,45 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.14 · MODO HISTÓRIA: MISSÃO 2 "PÂNICO MIDIÁTICO" (O BAR E A TV) + INTERLÚDIO "TRÊS DIAS"
+  · MISSÃO 2 "PÂNICO MIDIÁTICO" (Cap. 2), logo depois da corrida, DIA -5 à noite:
+    - cena na chegada: "Quase te peguei dessa vez." / "Você está melhorando..." / "O bar de sempre. A primeira
+      rodada é por minha conta.";
+    - de volta ao Kiri (botão PEGAR = "ENTRAR NO KIRI"), SIGA O GREG de carro até o bar: ele vai na frente no JDM
+      e espera se você ficar para trás; a linha do GPS mostra o caminho e as ruas em volta ficam fechadas;
+    - estacione, desça e ENTRE NO BAR "A MORTE DO MEDO" (fachada com porta, vitrine, toldo e letreiro de neon na
+      rua); dentro, o bar de verdade: paredes de tijolo, balcão com garrafas, banquetas, mesas, mesa de sinuca, luz
+      baixa pendurada, neon e gente (barman, clientes no balcão, alguém jogando sinuca);
+    - SENTE com o Greg na mesa do canto: a conversa sobre a Mavie ("Bom, se você esperar o mundo acabar, vai perder
+      sua chance.") e a TV interrompendo com Tóquio, Paris e Nova York (a TV mostra o noticiário de verdade, com a
+      faixa URGENTE e o letreiro correndo), a câmera se aproximando devagar da tela, "Provavelmente só mais um
+      pânico midiático.", o silêncio e "TRÊS DIAS DEPOIS".
+  · INTERLÚDIO "TRÊS DIAS" (início do Cap. 3), montagem numa esquina movimentada:
+    - DIA -4 (manhã): gente rindo da "nova gripe" na frente da banca de revistas;
+    - DIA -3 (tarde): fila na porta do MERCADO 24H;
+    - DIA -2 (noite, chuva): a rua quase vazia, uma viatura de giroflex ligado, alguém correndo e os primeiros
+      carros largados;
+    - o CELULAR do Dominic recebe mensagens no canto da tela (grupo da corrida, notícias, central de aviação), e as
+      frases do livro aparecem entre os planos.
+  · No fim do interlúdio, "CONTINUA": a Missão 3 "A Manhã Sem Sol" (o Harlem, a Mavie e o vulto) vem na 1.15.
+  · Cenários de dentro (como o bar) são montados longe do mapa: a porta fica numa fachada de verdade da rua e
+    entrar/sair é com um escurecer rápido. Dentro, o minimapa some.
+  · No modo história os carros largados da cidade não aparecem mais como "ENTRAR CARRO".
+  ARQUIVOS (testado: compilar_tudo, teste_historia + um teste de ponta a ponta da Missão 2 e do interlúdio, com
+  fotos de cada cena):
+    historia/missao_bar.gd ......... NOVO · Missão 2: cena da chegada, seguir o Greg, entrar no bar, sentar, a
+                                     conversa e a TV
+    historia/interludio_tres_dias.gd  NOVO · interlúdio Dias -4/-3/-2 (banca, mercado, noite de chuva, celular)
+    historia/cenario.gd ............ NOVO · cenários de dentro (o bar, com a TV animada) e fachadas na rua
+                                     (fachada_perto, fachada)
+    historia/historia.gd ........... ordem das missões (+ bar e tres_dias), "em breve" Missão 3; interações pelo
+                                     botão PEGAR (interacao, esperar_interacao); entrar/sair de cenário;
+                                     revelar_abandono (o Dia -2 mostra carros largados); carros largados desligados
+    historia/cutscene.gd ........... mensagem de CELULAR nas cenas ("celular": [quem, texto])
+    menu/config.gd ................. VERSAO "1.14"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + seção 6 + mapa "QUERO MEXER EM..." + seção 10
+
 ATUALIZAÇÃO 1.13.1 · CENAS COM TRANSIÇÕES SUAVES E LUZ NAS RUAS POR ONDE ELES PASSAM
   · TRANSIÇÕES (antes os planos trocavam de uma vez, muito bruscos):
     - a câmera do jogo DESLIZA até o 1º plano da cena;
@@ -3544,7 +3583,7 @@ escolhas. O ATO 1 "NOVA YORK" adapta o Prólogo e os Caps. 1 a 4 em 6 missões:
   3. A Manhã Sem Sol (Harlem, Mavie ferida, o vulto) · 4. Harlem River Drive (ponte fechada, fuga no Kiri do Dominic) ·
   5. Uma Noite Emprestada (a casa dos pais da Mavie em NOVA JERSEY = a parte OESTE do mapa; a vigia das 2h) ·
   6. Asas (o aeroporto executivo novo, hangar 4, o jato).
-Já no jogo: o PRÓLOGO e a MISSÃO 1. Personagens no corpo padrão; falas = "som de fala" estilo Stray + legenda.
+Já no jogo: o PRÓLOGO, a MISSÃO 1, a MISSÃO 2 e o interlúdio "Três Dias" (1.14). Personagens no corpo padrão; falas = "som de fala" estilo Stray + legenda.
 A cidade fica "antes do caos" e vai piorando de missão em missão; a área de cada missão é fechada por bloqueios.
 
 -----------------------------------------------------------------------------------------------------
@@ -3554,6 +3593,12 @@ QUERO MEXER EM...                         ARQUIVO
 - MODO HISTÓRIA (1.13): ordem das missões,
   mundo antes do caos, progresso ........ historia/historia.gd
 - Prólogo + Missão 1 (a corrida) ....... historia/missao_corrida.gd
+- Missão 2 (seguir o Greg, o bar, a TV) . historia/missao_bar.gd
+- interlúdio "Três Dias" (Dias -4/-3/-2) historia/interludio_tres_dias.gd
+- cenários de dentro (o bar e a TV) e
+  fachadas na rua (porta, neon) ........ historia/cenario.gd
+- interações da história (ENTRAR,
+  SENTAR), entrar/sair de cenário ...... historia/historia.gd (interacao, entrar, sair_para)
 - cutscenes (planos, faixas, legendas,
   câmera lenta, pular) ................. historia/cutscene.gd
 - "som de fala" dos personagens ........ historia/vozes.gd (TIMBRES)
@@ -4080,7 +4125,10 @@ MÚSICA (pasta audio/)
 10. LIMITAÇÕES CONHECIDAS E PRÓXIMOS PASSOS
 -----------------------------------------------------------------------------------------------------
 - 1.13 MODO HISTÓRIA:
-  · só o Prólogo e a Missão 1 por enquanto; as Missões 2 a 6 do Ato 1 vêm nas próximas atualizações;
+  · o Prólogo, as Missões 1 e 2 e o interlúdio por enquanto; as Missões 3 a 6 do Ato 1 vêm nas próximas
+    atualizações (a 3 na 1.15);
+  · 1.14: no bar, os figurantes ficam parados nas poses (não andam pelo bar); o Dominic senta com um corte (não há
+    animação de sentar); o bar é um cenário à parte (pela vitrine de fora não se vê o de dentro);
   · os personagens não têm animação de rosto (as cenas usam silhuetas, perfil e mãos) e não têm voz (de propósito:
     "som de fala" estilo Stray);
   · as portas dos carros não abrem (entrar/sair é com corte); os prédios em ruína do mapa continuam no Dia -5;

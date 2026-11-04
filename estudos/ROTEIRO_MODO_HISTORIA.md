@@ -314,11 +314,14 @@ curta sem tirar o controle (fala, câmera guiada e câmera lenta).
    - motor de cenas, GPS com linha, áreas com bloqueio e cidade do Dia -5;
    - Dominic e Greg no corpo padrão;
    - menu História.
-2. **1.14 · Missão 2 (bar) + Interlúdio + Missão 3 (Harlem):**
+2. ✅ **1.14 · Missão 2 (bar) + Interlúdio:** (feito; a Missão 3 ficou para a 1.15, que é grande)
+   - seguir o Greg de carro até o bar "A Morte do Medo" (cenário de dentro feito em código), sentar, a conversa
+     e a TV com as notícias de Tóquio; interlúdio dos Dias -4, -3 e -2 com mensagens no celular.
+3. **1.15 · Missão 3 (Harlem):**
    - cidade do Dia -1, bloqueios que se fecham, o vulto e a Mavie.
-3. **1.15 · Missão 4 (Harlem River Drive / ponte) + Missão 5 (a casa e a vigia):**
+4. **1.16 · Missão 4 (Harlem River Drive / ponte) + Missão 5 (a casa e a vigia):**
    - a casa dos pais da Mavie e a silhueta no quintal.
-4. **1.16 · Missão 6 (Asas) + fim do Ato 1:**
+5. **1.17 · Missão 6 (Asas) + fim do Ato 1:**
    - aeroporto executivo, jato e decolagem.
 
 ---
