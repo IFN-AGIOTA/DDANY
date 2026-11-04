@@ -205,10 +205,21 @@ curta sem tirar o controle (fala, câmera guiada e câmera lenta).
 **Limites do nosso jogo e como contornar:**
 - **Não temos animação de rosto:** o enquadramento favorece silhuetas, contraluz, mãos, por cima do ombro e corpo
   inteiro. O rosto em close fica só com expressão "parada" e luz dramática, como na abertura antiga.
-- **Não temos voz:**
-  - legendas no estilo do livro (falas curtas, travessão);
-  - sons de respiração, passos e ambiente;
-  - rádio e TV com voz sintetizada abafada, como já fizemos na abertura.
+- **Vozes (DECIDIDO): os personagens NÃO falam. Cada fala é um "som de fala" curto e gostoso, como os robôs de
+  Stray (bipes e murmúrios sintetizados), junto com a legenda.**
+  - O som é **gerado pelo jogo** (sem gravação e sem download): uma sílaba sintetizada para cada pedaço da
+    legenda, que vai aparecendo letra a letra no mesmo ritmo. Uma frase curta dá um murmúrio curto; uma
+    pergunta sobe no fim; um grito é mais alto e rápido; reticências deixam o som espaçado e baixo.
+  - **Cada personagem tem um timbre próprio**, para reconhecer quem fala de olhos fechados:
+    - **Dominic:** grave, calmo e com poucas sílabas (ele fala pouco);
+    - **Greg:** médio, quente e com mais balanço;
+    - **Mavie:** mais aguda, suave e às vezes trêmula (está ferida);
+    - **figurantes** (policial, segurança, garoto da largada): timbres variados, o policial mais seco e firme.
+  - **Rádio e TV** usam o mesmo tipo de som passado por um "filtro de rádio" (chiado e som abafado), para tudo
+    combinar. A voz sintetizada antiga sai.
+  - Tem volume próprio em Opções › Som ("Vozes dos personagens") e pode ser desligado (fica só a legenda).
+  - As legendas continuam no estilo do livro (falas curtas, travessão), com o nome de quem fala; ao fundo,
+    respiração, passos e ambiente.
 
 ---
 
@@ -223,6 +234,10 @@ curta sem tirar o controle (fala, câmera guiada e câmera lenta).
   - Lista de planos com câmera (posição, alvo, lente, curva de movimento, tremor e foco).
   - Atores (andar até, olhar para, animação, sentar), legendas, sons e música.
   - Faixas pretas, câmera lenta, cor da cena, pular e a passagem sem emenda de volta à câmera do jogo.
+- `historia/vozes.gd`: o "som de fala" estilo Stray.
+  - Sílabas sintetizadas na hora (AudioStreamGenerator) a partir do texto da legenda, com o timbre de cada
+    personagem e o filtro de rádio/TV.
+  - Leve: não precisa de arquivo de som.
 - `historia/atores.gd`: Dominic, Greg, Mavie e figurantes, no **corpo padrão** (masculino e feminino) do jogo,
   usando a aparência do Perfil e as roupas 3D. Ficha de cada um:
   - **Dominic:** masculino, pele mais clara, cabelo branco (é preciso uma cor "Branco" nova; hoje a mais perto é
@@ -295,8 +310,8 @@ curta sem tirar o controle (fala, câmera guiada e câmera lenta).
      muda a geografia do livro).
 2. **Volante na Missão 4:** no livro o Greg dirige o carro dele. A proposta é o Dominic assumir o volante na fuga
    ("Fica com ela") para o jogador dirigir. Pode?
-3. **Vozes:** só legendas (como no livro) ou voz sintetizada também nas falas dos personagens? Hoje a voz
-   sintetizada fica só no rádio e na TV.
+3. ~~Vozes~~ **DECIDIDO:** sem fala. Cada personagem tem um "som de fala" curto e sintetizado, como os robôs de
+   Stray, com timbre próprio, mais a legenda (veja a seção 3).
 4. **Pessoas na rua no Dia -5:** "pouca gente perto do jogador" (leve no celular) é suficiente?
 
 ---
