@@ -92,7 +92,7 @@ func _r():
 	p.vel_max = 36.0
 	mis.add_child(p)
 	p.ligado = true
-	mis.piloto.vel_max = 24.0          # o Greg mais devagar no teste: quem tem que ganhar é o Dominic
+	mis.piloto.vel_max = 16.0          # o Greg mais devagar no teste: os dois pilotos do jogo empatam; aqui quem ganha é o Dominic
 	m.jogador.piloto_externo = true
 	m.jogador.primeira_pessoa = true
 	await q(20)
