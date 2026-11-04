@@ -1,0 +1,24 @@
+CARROS DO MODO HISTÓRIA (guardados aqui até entrarem no jogo na 1.13; ao entrar: copiar para
+DDA_Godot_Cidade/historia/carros/ e pôr o crédito em DDA_Godot_Cidade/menu/creditos.gd, lista RECURSOS)
+
+Autor: Daniel Zhabotinsky (Sketchfab: https://sketchfab.com/DanielZhabotinsky)
+Licença: Creative Commons Attribution 4.0 (CC-BY 4.0) · https://creativecommons.org/licenses/by/4.0/
+O autor escreve na página de cada um: "I unconditionally give you permission to use this model at your discretion,
+modify it or implement it into a digital product."
+
+  kiri86_dominic.glb ........ "Kiri '86 - Low poly model"
+                              https://sketchfab.com/3d-models/kiri-86-low-poly-model-5c17c582ef9549798f694b660feea42a
+                              CARRO DO DOMINIC (sedã vermelho, 4 portas, interior com textura)
+  jdm_sport99_greg.glb ...... "JDM Sport '99 - Low Poly model"
+                              https://sketchfab.com/3d-models/6dd4ae19c454414d9eed2bc524515d78
+                              CARRO DO GREG (esportivo azul com aerofólio, interior e motor)
+  duke69_dodge_futuro.glb ... "Duke '69 - Low Poly Model"
+                              https://sketchfab.com/3d-models/46fed79f600c4fc69e060991f9e3e4f9
+                              FUTURO: o Dodge Charger R/T 1969 preto do Cap. 7 (interior e motor)
+
+Como os modelos são (medido em 04/11/2026):
+  - em METROS, frente para +X, volante à esquerda (lado -Z), rodas no chão (y = 0);
+  - rodas, volante, interior, vidros e luzes são peças separadas (dá para girar rodas e volante);
+  - Kiri 4,32 x 1,32 x 1,76 m · JDM 4,68 x 1,35 x 1,97 m · Duke 5,24 x 1,40 x 1,96 m;
+  - texturas de até 1024 px; ~12 a 22 mil triângulos cada; as portas não abrem.
+  No jogo (mundo/veiculo.gd) a frente é +Z: girar -90° em Y (o motorista fica em +X, a esquerda do carro).
