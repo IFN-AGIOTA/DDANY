@@ -59,6 +59,7 @@ const TelaPerfilCls := preload("res://menu/tela_perfil.gd")
 const AvisoChamadoCls := preload("res://menu/aviso_chamado.gd")
 const TelaCarregamentoCls := preload("res://menu/tela_carregamento.gd")
 const PreAquecer := preload("res://menu/pre_aquecer.gd")   # 1.00
+const HistoriaCls := preload("res://historia/historia.gd")  # 1.13: modo história
 # 0.99: as partes de _criar_jogo() na TELA DE CARREGAMENTO: chave -> [texto, peso (tempo relativo; os da cidade estão
 # em mundo/cidade.gd etapas())]
 const ETAPAS_JOGO := {
@@ -121,6 +122,7 @@ var _tempo_jogo := 0.0
 var _t_salvar := 0.0
 var carregamento = null                     # 0.99: menu/tela_carregamento.gd enquanto o jogo é montado
 var carregar_em_etapas := true              # falso nos testes automáticos (montam tudo de uma vez, como antes)
+var historia: Node = null                   # 1.13: historia/historia.gd (só no modo história)
 
 # Preview dentro do editor (não é salvo na cena; leva alguns segundos e pesa no celular)
 @export var preview_no_editor := false:
@@ -188,6 +190,7 @@ func _abrir_menu() -> void:
 	add_child(menu)
 	menu.jogar.connect(_jogar)
 	menu.continuar.connect(func(): _jogar(true))
+	menu.historia.connect(_jogar_historia)
 	menu.opcoes.connect(_abrir_opcoes)
 	menu.multijogador.connect(_abrir_multijogador)
 	menu.perfil.connect(_abrir_perfil)
@@ -301,6 +304,50 @@ func _jogar(carregar_salvo := false) -> void:
 	_ligar_rede()
 	await _fim_carregamento()
 	Sons.tocar("partida/entrada", -3.0)        # 0.49: entrada da partida (pancada grave + eco + coração)
+
+# ---------- 1.13: MODO HISTÓRIA (historia/historia.gd) ----------
+# a mesma cidade e o mesmo jogo do modo livre, com o mundo "antes do caos" e as missões tocando em ordem
+func _jogar_historia() -> void:
+	if carregamento != null or jogo != null:
+		return
+	if carregar_em_etapas:
+		await _abrir_carregamento("MODO HISTÓRIA · ATO 1 · NOVA YORK")
+	else:
+		menu.mostrar_carregando()
+		await get_tree().process_frame
+	if menu != null:
+		menu.queue_free()
+		menu = null
+	if cena_menu != null:
+		cena_menu.queue_free()
+		cena_menu = null
+	var etapas_cidade: Array = [] if _cidade().is_built else cidade.etapas()
+	if carregamento != null:
+		for e in etapas_cidade:
+			carregamento.total += float(e[1])
+	cidade.fatiar = carregamento != null
+	for e in etapas_cidade:
+		await _etapa_texto(e[0], e[1])
+		await e[2].call()
+	cidade.fatiar = false
+	cidade.visible = true
+	await _criar_jogo()
+	# o modo livre fica de fora: sem missões do rádio, eventos, base e sobreviventes do hospital
+	for campo in ["missoes", "eventos", "hospitais", "construcao"]:
+		var n = get(campo)
+		if n != null and is_instance_valid(n):
+			n.queue_free()
+		set(campo, null)
+	jogador.hospitais = null
+	jogador.construcao = null
+	historia = HistoriaCls.new()
+	historia.name = "Historia"
+	jogo.add_child(historia)
+	historia.ligar(self)
+	await _fim_carregamento()
+	historia.acabou.connect(func(_ok):
+		_abrir_menu())
+	historia.comecar()
 
 # ---------- 0.99: tela de carregamento (menu/tela_carregamento.gd) ----------
 # 0.99.1: arquivos grandes lidos do disco EM SEGUNDO PLANO (outra thread) assim que a tela aparece, na ordem em que o
@@ -447,6 +494,8 @@ func _rede_caiu(motivo: String) -> void:
 func salvar_jogo() -> void:
 	if carregamento != null:                 # 0.99: o jogo ainda está sendo montado
 		return
+	if historia != null:                     # 1.13: o modo história tem o progresso dele (user://historia.json)
+		return
 	if Rede.ligado:
 		if jogo != null and jogador != null:  # 0.77: partida em rede salva no arquivo dela (não estraga o jogo salvo sozinho)
 			_t_salvar = 0.0
@@ -554,6 +603,10 @@ func _pausar() -> void:
 # pausa › Voltar ao início: monta o jogo de novo (com a tela de carregamento)
 func _recomecar() -> void:
 	_continuar()
+	if historia != null:                     # 1.13: no modo história, recomeça a missão atual
+		_fechar_jogo()
+		_jogar_historia()
+		return
 	if carregar_em_etapas:
 		await _abrir_carregamento("RECOMEÇANDO · MUNDO LIVRE" if not Rede.ligado else "RECOMEÇANDO · MULTIJOGADOR")
 	_fechar_jogo()
@@ -915,6 +968,9 @@ func _ponto_renascer(longe_de: Vector2) -> Vector2:
 
 func _fechar_jogo() -> void:
 	_fechar_morte()
+	if historia != null and is_instance_valid(historia):
+		historia.restaurar()                 # 1.13: a cidade volta como era (carros largados, lixo...)
+	historia = null
 	if construcao != null and is_instance_valid(construcao):
 		construcao.fechar_menu()
 	construcao = null

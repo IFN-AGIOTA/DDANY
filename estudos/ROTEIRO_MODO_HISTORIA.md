@@ -309,7 +309,8 @@ curta sem tirar o controle (fala, câmera guiada e câmera lenta).
 
 ## 5. Ordem de entrega (proposta, cada etapa testada e publicada)
 
-1. **1.13 · Base do modo história + Prólogo + Missão 1 (corrida):**
+1. ✅ **1.13 · Base do modo história + Prólogo + Missão 1 (corrida):** (feito; a corrida ficou só em Manhattan,
+   porque o Brooklyn não tem ponte ligada às ruas nos dados do mapa)
    - motor de cenas, GPS com linha, áreas com bloqueio e cidade do Dia -5;
    - Dominic e Greg no corpo padrão;
    - menu História.

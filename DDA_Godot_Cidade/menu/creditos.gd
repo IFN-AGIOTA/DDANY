@@ -21,6 +21,9 @@ const EQUIPE := [
 ]
 # [o quê, autor, licença, endereço]
 const RECURSOS := [
+	["Carros do modo história com interior: Kiri '86 (Dominic) e JDM Sport '99 (Greg)",
+		"Daniel Zhabotinsky · \"Kiri '86 - Low poly model\" e \"JDM Sport '99 - Low Poly model\" (Sketchfab)",
+		"CC BY 4.0 (Creative Commons Atribuição 4.0)", "sketchfab.com/DanielZhabotinsky (licença em historia/carros/LICENCA.txt)"],
 	["Cartão de acesso dos bunkers (modelo 3D; textura repintada)", "codeinfernogames (Code Inferno Games) · \"3D Keycard\"",
 		"CC0 1.0 (domínio público)", "opengameart.org/content/3d-keycard"],
 	["Roupas 3D do personagem (1.11): camisas, camisetas, suéteres, jaquetas, macacões, calças, bermudas, calçados, luvas, chapéus, capacetes, máscaras e coletes (lista peça por peça em jogador/roupas/LICENCA.txt)",

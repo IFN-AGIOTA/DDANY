@@ -434,6 +434,7 @@ func _pagina_video(v: float) -> Control:
 	_secao(g, "Música", _seg("mus", [[true, "Ligada"], [false, "Desligada"]]))
 	_deslizante("mvol", 0, 100, 5, "%", g, "Volume da música")
 	_deslizante("svol", 0, 100, 5, "%", g, "Volume dos efeitos")
+	_deslizante("vvoz", 0, 100, 5, "%", g, "Vozes dos personagens (modo história)")
 	_secao(g, "Dificuldade", _seg("dif", [[0, "Fácil"], [1, "Normal"], [2, "Difícil"]],
 		{0: "Menos infectados e mordidas mais fracas.", 1: "Equilíbrio do jogo.", 2: "Mais infectados, mordidas mais fortes."}))
 	_secao(g, "PvP no multijogador (quando você cria a partida)", _seg("pvp", [["zonas", "Só nas zonas"], ["tudo", "Cidade toda"], ["desligado", "Desligado"]],

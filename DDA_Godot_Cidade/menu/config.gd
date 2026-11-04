@@ -5,7 +5,7 @@ extends Node
 
 signal mudou(chave: String)          # "gfx" quando os gráficos foram aplicados; "hud" quando a HUD foi editada
 
-const VERSAO := "1.12.2"
+const VERSAO := "1.13"
 const ARQUIVO := "user://opcoes.cfg"
 
 const PADRAO := {
@@ -26,6 +26,7 @@ const PADRAO := {
 	"movimento_mm": true,                 # 1.12: movimento estilo motion matching (jogador/animador_modelo.gd lê na hora)
 	"fps": false, "som": true, "vol": 100, "awake": false, "mus": true, "mvol": 70,
 	"svol": 100,                          # volume dos efeitos (tiros, passos, infectados, chuva)
+	"vvoz": 100,                          # 1.13: volume do "som de fala" dos personagens (modo história; 0 = só legenda)
 	"dif": 1,                             # dificuldade do modo livre: 0 fácil, 1 normal, 2 difícil
 	"pvp": "zonas",                       # 0.71: PvP quando VOCÊ cria a partida: "zonas", "tudo" ou "desligado"
 	# 0.89 · INFECTADOS no estilo Project Zomboid (Opções › Infectados; números em inimigos/regras_infectados.gd)

@@ -64,6 +64,7 @@ func ligar(m) -> void:
 	add_child(cena)
 	_criar_hud()
 	_mundo_antes_do_caos()
+	RotaGps.montar(main.cidade.dados_cidade)           # o grafo das ruas (GPS) já fica pronto para as missões
 	Atores.vestir_jogador(main.jogador, "dominic")
 
 func _process(_dt: float) -> void:

@@ -206,21 +206,43 @@ func _process(_dt: float) -> void:
 	var vp := get_viewport()
 	var atual := vp.get_camera_3d() if vp != null else null
 	var m = motorista
-	var quer := m != null and is_instance_valid(m) and bool(m.get("primeira_pessoa"))
+	var quer: bool = m != null and is_instance_valid(m) and m.get("primeira_pessoa") == true
 	if quer:
 		var cj: Camera3D = m.get("camera")
 		if atual == cj or atual == cam_interior:
 			if atual != cam_interior:
 				cam_interior.make_current()
 			# olhar em volta: o quanto a câmera do jogador está girada em relação à traseira do carro
+			_luz_painel(true)
 			var rel := wrapf(float(m.get("cam_yaw")) - (rotation.y + PI), -PI, PI)
 			cam_interior.rotation = Vector3(clampf(-(float(m.get("cam_pit")) - 0.3) * 0.6, -0.5, 0.35), PI + clampf(rel, -2.2, 2.2), 0.0)
-	elif atual == cam_interior:
+	else:
+		_luz_painel(false)
+	if not quer and atual == cam_interior:
 		var cj2 = m.get("camera") if m != null and is_instance_valid(m) else null
 		if cj2 != null:
 			(cj2 as Camera3D).make_current()
 		else:
 			cam_interior.clear_current(false)
+
+# 1.13: luz fraca e quente do painel, só com a câmera dentro do carro (à noite o interior ficava todo preto)
+var _luz: OmniLight3D = null
+func _luz_painel(ligar: bool) -> void:
+	if not ligar:
+		if _luz != null:
+			_luz.visible = false
+		return
+	if _luz == null:
+		_luz = OmniLight3D.new()
+		_luz.name = "LuzPainel"
+		_luz.light_color = Color(1.0, 0.78, 0.5)
+		_luz.light_energy = 0.55
+		_luz.omni_range = 1.6
+		_luz.shadow_enabled = false
+		var olho: Vector3 = MODELOS[tipo]["olho"]
+		_luz.position = olho + Vector3(-0.2, -0.15, 0.55)
+		add_child(_luz)
+	_luz.visible = true
 
 # transformação de "no" até "raiz" (sem a da raiz)
 func _no_ate(raiz: Node3D, no: Node3D) -> Transform3D:

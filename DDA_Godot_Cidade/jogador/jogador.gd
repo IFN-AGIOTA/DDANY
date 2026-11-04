@@ -130,6 +130,7 @@ var _tela_agua: ColorRect = null    # câmera embaixo d'água: tela azul-esverde
 var veiculo = null                  # 0.76: carro que está dirigindo (mundo/veiculo.gd) · null = a pé
 var veiculos_mgr = null             # 0.76: mundo/veiculos.gd (main.gd liga)
 var prender_no_carro := false       # 1.13: modo história (corrida): o botão SAIR não tira do carro
+var piloto_externo := false         # 1.13: outro script dirige o carro (cenas roteirizadas e testes)
 var _t_olhou := 0.0                 # 0.76: segundos desde que olhou em volta (a câmera volta para a frente do carro)
 var fator_agachado := 0.0           # 0 em pé · 1 agachado (suavizado, para a câmera)
 var fator_mira := 0.0
@@ -536,7 +537,8 @@ func _dirigir(delta: float) -> void:
 		iy = m.y
 		freio = controles.pulando()
 		armas.gatilho = false
-	v.controlar(iy, ix, freio)
+	if not piloto_externo:
+		v.controlar(iy, ix, freio)
 	# o boneco (invisível) vai junto: a câmera, o chão de física, os prédios abertos e os infectados seguem ele
 	global_position = v.global_position + Vector3(0, 1.0, 0)
 	velocity = v.linear_velocity

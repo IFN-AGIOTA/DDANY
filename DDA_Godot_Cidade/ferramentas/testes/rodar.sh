@@ -160,6 +160,7 @@ elif [ "$alvo" = todos ]; then
 	rodar teste_ia_101 1
 	rodar teste_menu_leve 1
 	rodar teste_menus_rolagem 1
+	rodar teste_historia 1
 	rodar teste_portas_corrimao 1
 	rodar teste_mundos_rede 1
 	rodar teste_escadas_incendio 1

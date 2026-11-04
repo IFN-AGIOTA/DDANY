@@ -41,6 +41,7 @@ var _pedido_pular := false
 var _barras := 0.0
 var _cam_jogo: Camera3D
 var pular_teste := false         # testes: como se alguém segurasse a tela
+var n_cenas := 0                 # quantas cenas já começaram (testes)
 
 func _ready() -> void:
 	layer = 40
@@ -73,7 +74,6 @@ func _ready() -> void:
 	_legenda.add_theme_font_size_override("bold_font_size", int(3.0 * v))
 	_legenda.add_theme_constant_override("outline_size", int(0.5 * v))
 	_legenda.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.9))
-	_legenda.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	raiz.add_child(_legenda)
 	_titulo = UI.rotulo("", 9.0 * v, UI.AMBAR, 900, 0.18 * 9.0 * v, true)
 	_titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -124,6 +124,7 @@ func _posicionar() -> void:
 
 # ---------- tocar ----------
 func tocar(planos: Array) -> void:
+	n_cenas += 1
 	tocando = true
 	pulando = false
 	_pedido_pular = false
@@ -254,7 +255,7 @@ func _plano(p: Dictionary) -> void:
 func _mostrar_fala(quem: String, texto: String) -> void:
 	var nome := quem.to_upper()
 	var cor: Color = cor_nomes.get(nome, Color(1.0, 0.85, 0.55))
-	_legenda.text = ("[b][color=#%s]%s[/color][/b]  " % [cor.to_html(false), nome] if nome != "" else "") + "— " + texto
+	_legenda.text = "[center]" + ("[b][color=#%s]%s[/color][/b]  " % [cor.to_html(false), nome] if nome != "" else "") + "— " + texto + "[/center]"
 	_legenda.visible_ratio = 0.0
 	_legenda.modulate.a = 1.0
 
@@ -303,7 +304,9 @@ func _input(e: InputEvent) -> void:
 
 func _process(dt: float) -> void:
 	if not tocando:
-		_seg = 0.0
+		if _seg > 0.0:
+			_seg = 0.0
+			_pular.queue_redraw()             # apaga a barrinha "SEGURE PARA PULAR"
 		return
 	var segurando := Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or _algum_toque() or Input.is_anything_pressed() or pular_teste
 	var dr := dt / maxf(Engine.time_scale, 0.05)

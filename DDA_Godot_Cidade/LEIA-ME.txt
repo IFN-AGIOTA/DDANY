@@ -41,6 +41,68 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.13 · MODO HISTÓRIA · ATO 1 "NOVA YORK": PRÓLOGO + MISSÃO 1 "A ÚLTIMA CORRIDA"
+  · O botão HISTÓRIA do menu voltou. O roteiro do Ato 1 inteiro, adaptado do Livro 1 (Prólogo ao Cap. 4) para
+    jogo, fica em estudos/ROTEIRO_MODO_HISTORIA.md. Esta etapa traz:
+    - PRÓLOGO (cena de ~45 s): Nova York viva à noite, as frases do prólogo em silêncio, Dominic, Greg e Mavie,
+      e o título;
+    - MISSÃO 1 "A ÚLTIMA CORRIDA" (Cap. 1), DIA -5 à noite, com neblina:
+      · largada com o garoto do bastão de luz, a conversa dos dois e a garrafa caindo em câmera lenta;
+      · corrida de 2,8 km por Manhattan, de Chinatown até a reta "A Morte do Medo": o DOMINIC no Kiri '86 vermelho
+        contra o GREG no JDM Sport '99 azul (dirigido pelo jogo, sempre colado: "uma batida de coração");
+      · 8 pontos de controle, uma viatura de giroflex ligado no meio do caminho e o Greg derrapando ao lado em
+        câmera lenta; a chegada também em câmera lenta. Se o Greg ganhar, a corrida recomeça da largada.
+  · A CIDADE ANTES DO CAOS: sem infectados, sem loot, sem fome/sede, sem morrer; os carros largados, o lixo, o
+    entulho e as barreiras do Exército somem (ficam postes, semáforos, hidrantes e bancos). O modo livre não muda.
+  · GPS IGUAL AO DO GTA V: uma LINHA COLORIDA pelas ruas, do jogador até o objetivo, no minimapa e no mapa
+    (amarela = missão, azul = corrida). É refeita sozinha quando você sai do caminho.
+  · ÁREA LIBERADA: as ruas que saem do percurso estão FECHADAS por cavaletes listrados e cones de verdade (com
+    colisão); a linha do GPS nunca manda para um bloqueio.
+  · CUTSCENES DE CINEMA, no próprio jogo (em tempo real):
+    - faixas pretas, planos gerais e fechados, plano e contraplano (a regra dos 180°);
+    - câmera na mão, câmera lenta e escurecer/clarear;
+    - no fim, a câmera da cena DESLIZA até a do jogo, sem tela preta;
+    - toda cena pode ser PULADA: segure a tela ou qualquer tecla (a barrinha enche).
+  · VOZES ESTILO STRAY: os personagens não falam; cada fala é um murmúrio de bipes feito pelo jogo (sem gravação),
+    no ritmo da legenda. Cada um tem o seu timbre: Dominic grave e calmo, Greg médio e quente, Mavie aguda e suave.
+    Opções › Som › "Vozes dos personagens" (0 = só a legenda).
+  · PERSONAGENS no corpo padrão do jogo:
+    - DOMINIC: cabelo BRANCO (cor nova no Perfil também), ÓCULOS ESCUROS DE AVIADOR, jaqueta de couro preta e botas;
+    - GREG: pele negra, barba, jaqueta preta e botas verde-oliva;
+    - MAVIE: aparece no Prólogo.
+  · CARROS COM INTERIOR: em 1ª PESSOA (botão CAM) a câmera fica no banco do motorista, com o painel, o volante (que
+    gira com a direção) e o retrovisor à vista, e uma luz fraca do painel à noite. As rodas do modelo giram e
+    esterçam. Modelos de Daniel Zhabotinsky (CC-BY 4.0), nos Créditos.
+  · Progresso em user://historia.json (o jogo salvo do modo livre não é tocado). No fim da Missão 1, "CONTINUA":
+    a Missão 2 (o bar e a TV) vem na próxima atualização.
+  ARQUIVOS (testado: teste_historia NOVO, que abre o modo história, pula as cenas e deixa um piloto dirigir o Kiri
+  até a chegada; confere o mundo antes do caos, o Dominic, o GPS dentro da área, os bloqueios, a câmera de dentro do
+  carro, o Greg correndo, o progresso salvo e a cidade voltando ao normal. Mais fotos de todas as cenas e a
+  bateria):
+    historia/historia.gd ........... NOVO · o modo história: mundo antes do caos, missões em ordem, progresso,
+                                     objetivo + GPS, cartelas, escurecer/clarear
+    historia/missao_corrida.gd ..... NOVO · Prólogo + Missão 1 (cenas, largada, corrida, chegada)
+    historia/cutscene.gd ........... NOVO · motor de cutscenes (planos, faixas, legendas, câmera lenta, pular, deslize)
+    historia/vozes.gd .............. NOVO · "som de fala" estilo Stray (sílabas sintetizadas, timbre por personagem)
+    historia/atores.gd ............. NOVO · Dominic, Greg, Mavie e figurantes (aparência, roupa tingida, óculos)
+    historia/area_liberada.gd ...... NOVO · bloqueios nas ruas que saem da área (cavaletes, cones, viaturas)
+    historia/piloto_ia.gd .......... NOVO · o piloto do jogo (o Greg): segue o caminho, freia nas curvas, "elástico"
+    historia/carros/ ............... NOVO · kiri86.glb e jdm99.glb (+ texturas e LICENCA.txt)
+    hud/rota_gps.gd ................ NOVO · o GPS: grafo das ruas + A*, corredor/área liberada, saídas da área
+    hud/mapa.gd .................... definir_rota()/limpar_rota(): a linha do GPS no minimapa e no mapa
+    mundo/veiculo.gd ............... carros da história (modelo baixado, rodas e volante que giram, câmera no banco
+                                     do motorista, luz do painel, velocidade própria, sem gasolina/dano no motor)
+    jogador/jogador.gd ............. prender_no_carro (a corrida não deixa sair) e piloto_externo (cenas e testes)
+    jogador/modelo_sobrevivente.gd .. cor de cabelo "Branco"
+    main.gd ........................ _jogar_historia(); o modo história não salva por cima do jogo salvo
+    menu/menu_principal.gd ......... botão História (com o progresso)
+    menu/config.gd ................. "vvoz" (volume das vozes) · VERSAO "1.13"
+    menu/opcoes.gd ................. Opções › Som › Vozes dos personagens
+    menu/creditos.gd ............... os carros de Daniel Zhabotinsky (CC-BY 4.0)
+    menu/novidades_lista.gd ........ refeita
+    ferramentas/testes/teste_historia.gd ... NOVO · rodar.sh: + teste_historia
+    LEIA-ME.txt .................... este bloco + seção 6 (a história) + mapa "QUERO MEXER EM..." + seção 10
+
 ATUALIZAÇÃO 1.12.2 · PERFIL COM O PERSONAGEM EMBAIXO E MENUS QUE NÃO SOBEM SOZINHOS
   · PERFIL: a criação do personagem ("SEU PERSONAGEM": corpo, pele, cabelo, barba e o boneco 3D) passou para
     EMBAIXO de tudo. Em cima ficam a conta, o código de amigo, os recordes e os amigos.
@@ -3446,13 +3508,32 @@ npc/modelo_npc.gd VISUAIS).
 NO JOGO (0.94): os MUTADOS da Bíblia (2.7) entram como uma chance do JOGADOR: morto pelos infectados, 1% levanta
 mutado (pele escura, veios, olhos amarelados, corpo curvado; os infectados o ignoram). O soro que devolve o controle
 fica para a 2ª parte.
-O modo história foi APAGADO na 0.63 para ser refeito do zero. No menu, o botão "História" mostra
-"Em breve". (O Ato 1 antigo, com abertura, cutscenes e os companheiros Greg e Mavie, ficou no histórico do git.)
+MODO HISTÓRIA (1.13, refeito do zero; roteiro em estudos/ROTEIRO_MODO_HISTORIA.md): linear e cinematográfico, sem
+escolhas. O ATO 1 "NOVA YORK" adapta o Prólogo e os Caps. 1 a 4 em 6 missões:
+  1. A Última Corrida (Dia -5) · 2. Pânico Midiático (o bar e a TV) · interlúdio "Três Dias" ·
+  3. A Manhã Sem Sol (Harlem, Mavie ferida, o vulto) · 4. Harlem River Drive (ponte fechada, fuga no Kiri do Dominic) ·
+  5. Uma Noite Emprestada (a casa dos pais da Mavie em NOVA JERSEY = a parte OESTE do mapa; a vigia das 2h) ·
+  6. Asas (o aeroporto executivo novo, hangar 4, o jato).
+Já no jogo: o PRÓLOGO e a MISSÃO 1. Personagens no corpo padrão; falas = "som de fala" estilo Stray + legenda.
+A cidade fica "antes do caos" e vai piorando de missão em missão; a área de cada missão é fechada por bloqueios.
 
 -----------------------------------------------------------------------------------------------------
 7. MAPA DO PROJETO (cada sistema no seu arquivo · numa atualização, troque só os arquivos que mudaram)
 -----------------------------------------------------------------------------------------------------
 QUERO MEXER EM...                         ARQUIVO
+- MODO HISTÓRIA (1.13): ordem das missões,
+  mundo antes do caos, progresso ........ historia/historia.gd
+- Prólogo + Missão 1 (a corrida) ....... historia/missao_corrida.gd
+- cutscenes (planos, faixas, legendas,
+  câmera lenta, pular) ................. historia/cutscene.gd
+- "som de fala" dos personagens ........ historia/vozes.gd (TIMBRES)
+- cara e roupa do Dominic, Greg, Mavie,
+  óculos de aviador .................... historia/atores.gd (FICHAS)
+- bloqueios das áreas da história ...... historia/area_liberada.gd
+- piloto do jogo (o Greg na corrida) ... historia/piloto_ia.gd
+- GPS (rota pelas ruas, linha colorida) . hud/rota_gps.gd (cálculo) · hud/mapa.gd (desenho, definir_rota)
+- carros da história (Kiri, JDM):
+  modelo, interior, câmera de dentro ... mundo/veiculo.gd (TIPOS e MODELOS) · historia/carros/
 - onde o jogador nasce / ordem do jogo,
   morte/renascer, autosave ............ main.gd (só liga as partes: menu -> jogo -> pausa)
 
@@ -3966,6 +4047,14 @@ MÚSICA (pasta audio/)
 -----------------------------------------------------------------------------------------------------
 10. LIMITAÇÕES CONHECIDAS E PRÓXIMOS PASSOS
 -----------------------------------------------------------------------------------------------------
+- 1.13 MODO HISTÓRIA:
+  · só o Prólogo e a Missão 1 por enquanto; as Missões 2 a 6 do Ato 1 vêm nas próximas atualizações;
+  · os personagens não têm animação de rosto (as cenas usam silhuetas, perfil e mãos) e não têm voz (de propósito:
+    "som de fala" estilo Stray);
+  · as portas dos carros não abrem (entrar/sair é com corte); os prédios em ruína do mapa continuam no Dia -5;
+  · a corrida fica só em Manhattan: o lado leste (Brooklyn/Queens) não tem ponte ligada às ruas de Manhattan nos
+    dados do mapa (o GPS não acha caminho entre os dois);
+  · na corrida, em 1ª pessoa, não aparecem as mãos do Dominic no volante.
 - Ao FECHAR o jogo pelos testes automáticos aparece "double free or corruption" (desde a 0.98, no desligamento da
   Godot, depois de tudo salvo); durante o jogo não acontece. Investigar quando sobrar tempo.
 - 1.08: o TANQUE e o BLINDADO não andam (só o humvee e o caminhão de lona); nenhum veículo do comboio tem interior

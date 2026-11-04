@@ -1,11 +1,12 @@
 extends CanvasLayer
 # MENU PRINCIPAL (igual ao do HTML): "DIAS DE UM / APOCALIPSE / NOVA YORK", versão, botões
-# Jogar (mundo livre) · História (em breve) · Multijogador (menu/tela_multijogador.gd) · Opções · Créditos (menu/creditos.gd), e o ícone do PERFIL no canto. Fica por cima da cena_menu.gd.
+# Jogar (mundo livre) · História (1.13: Ato 1) · Multijogador (menu/tela_multijogador.gd) · Opções · Créditos (menu/creditos.gd), e o ícone do PERFIL no canto. Fica por cima da cena_menu.gd.
 # 0.96: botão NOVIDADES no canto de baixo à direita (a versão e o título da última atualização) -> menu/tela_novidades.gd.
 # Mexa AQUI para: textos e botões do menu principal. (A cena 3D de fundo é menu/cena_menu.gd.)
 
 signal jogar
 signal continuar
+signal historia                          # 1.13: modo história (historia/historia.gd)
 signal opcoes
 signal multijogador
 signal perfil                            # ícone de perfil no canto (menu/tela_perfil.gd)
@@ -105,10 +106,10 @@ func _montar() -> void:
 	var nav := VBoxContainer.new()
 	nav.add_theme_constant_override("separation", int(1.4 * v))
 	nav.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# modo história: sendo refeito do zero; o botão só avisa "em breve"
-	var b1 := UI.BotaoMenu.new("História", "Em breve", false, 3.8)
-	b1.modulate.a = 0.55
-	b1.apertado.connect(func(): avisar("Modo história: em breve"))
+	# 1.13: MODO HISTÓRIA (Ato 1 · Nova York): Prólogo e Missão 1 · o progresso fica em user://historia.json
+	var res_hist: String = preload("res://historia/historia.gd").resumo()
+	var b1 := UI.BotaoMenu.new("História", res_hist if res_hist != "" else "Ato 1 · Nova York · Prólogo e Missão 1", false, 3.8)
+	b1.apertado.connect(func(): historia.emit())
 	var salvo: String = Salvamento.resumo()
 	var b2 := UI.BotaoMenu.new("Novo jogo" if salvo != "" else "Jogar", "Mundo livre", false, 3.8)
 	b2.apertado.connect(func():

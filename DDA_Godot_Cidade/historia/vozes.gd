@@ -94,7 +94,9 @@ func falar(texto: String, quem := "") -> float:
 	_feito = 0.0
 	falando = not _silabas.is_empty()
 	progresso = 0.0 if falando else 1.0
-	_p.volume_db = volume_db + (3.0 if grito else 0.0) + float(Config.g.get("vol_vozes", 0.0))
+	_p.volume_db = volume_db + (3.0 if grito else 0.0) + linear_to_db(maxf(0.0001, float(Config.g.get("vvoz", 100)) / 100.0))
+	if float(Config.g.get("vvoz", 100)) <= 0.0:
+		_p.volume_db = -80.0                       # desligado: fica só a legenda
 	if falando and not _p.playing:
 		_p.play()
 		_pb = _p.get_stream_playback()
