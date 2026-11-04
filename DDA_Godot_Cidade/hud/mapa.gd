@@ -8,6 +8,9 @@ extends CanvasLayer
 #  - BÚSSOLA (faixa no alto, no meio): N, NE, L, SE, S, SO, O, NO, marcas a cada 15° (0.65: sem o número dos graus).
 #  - OBJETIVO: definir_objetivo(Vector2(x, z), "nome") / limpar_objetivo(). Aparece no minimapa (seta na borda
 #    quando está fora do alcance), no mapa e na bússola, com a distância em metros.
+#  - 1.13 GPS (igual ao GTA V): definir_rota(Vector2(x, z), cor) / limpar_rota(). Uma LINHA COLORIDA pelas ruas do
+#    jogador até o ponto (hud/rota_gps.gd, A* nas ruas), no minimapa e no mapa; refeita sozinha quando o jogador anda
+#    (e quando sai do caminho). A distância mostrada passa a ser a da rota.
 #  - 0.95 MUTADO (jogador/sentidos.gd): o amigo MUTADO não aparece no mapa, só quando estala os dentes (marca
 #    vermelha "MUTADO" por 10 s no lugar do estalo).
 #  - 0.91 TROCAS DO LUCAS (npc/hospitais.gd notas_mapa): nos hospitais aparece um "$" com o que está te esperando
@@ -49,6 +52,11 @@ const COR_ESTALO := Color(1.0, 0.18, 0.12)       # 0.95: mutado que estalou os d
 const COR_OBJETIVO := Color(1.0, 0.706, 0.0)
 const COR_FUNDO := Color(0.03, 0.05, 0.08, 0.6)
 const RUMOS := ["N", "NE", "L", "SE", "S", "SO", "O", "NO"]
+const RotaGps := preload("res://hud/rota_gps.gd")
+const COR_ROTA_MISSAO := Color(0.98, 0.78, 0.12)    # 1.13: amarelo (missão), como no GTA V
+const COR_ROTA_CORRIDA := Color(0.35, 0.75, 1.0)    # azul (pontos de controle)
+const COR_ROTA_MARCA := Color(0.78, 0.38, 1.0)      # roxo (marcado no mapa)
+const ROTA_REFAZ := 0.6                             # s entre um cálculo e outro
 
 const SHADER_MINI := """
 shader_type canvas_item;
@@ -92,6 +100,10 @@ var _mostrar_mini := true
 var _obj := false
 var _obj_pos := Vector2.ZERO
 var _obj_nome := ""
+var _rota_dest := Vector2.INF       # 1.13: destino do GPS (INF = sem rota)
+var _rota_cor := COR_ROTA_MISSAO
+var rota := PackedVector2Array()    # o caminho atual (x, z), do jogador até o destino
+var _t_rota := 0.0
 var _pos := Vector2.ZERO            # quem está olhando (jogador, ou a câmera do VOO)
 var _rumo := 0.0                    # rad, horário a partir do norte
 
@@ -208,6 +220,34 @@ func definir_objetivo(pos: Vector2, nome := "") -> void:
 func limpar_objetivo() -> void:
 	_obj = false
 	_obj_nome = ""
+
+# 1.13 · GPS: a linha pelas ruas até "destino" (x, z). Também marca o objetivo (losango) se ainda não houver.
+func definir_rota(destino: Vector2, cor := COR_ROTA_MISSAO, nome := "") -> void:
+	if not RotaGps.pronto() and cidade != null:
+		RotaGps.montar(cidade.get("dados_cidade"))
+	_rota_dest = destino
+	_rota_cor = cor
+	_t_rota = 0.0
+	definir_objetivo(destino, nome)
+	_refazer_rota()
+
+func limpar_rota() -> void:
+	_rota_dest = Vector2.INF
+	rota = PackedVector2Array()
+
+func tem_rota() -> bool:
+	return _rota_dest != Vector2.INF
+
+# metros pela rota (ou em linha reta, sem rota)
+func distancia_objetivo() -> float:
+	if rota.size() > 1:
+		return RotaGps.comprimento(rota)
+	return (_obj_pos - _pos).length()
+
+func _refazer_rota() -> void:
+	if _rota_dest == Vector2.INF:
+		return
+	rota = RotaGps.rota(_pos, _rota_dest)
 
 func abrir_mapa() -> void:
 	if aberto or controles == null:
@@ -397,6 +437,11 @@ func _process(_dt: float) -> void:
 		_raiz.visible = false
 		return
 	_observador()
+	if _rota_dest != Vector2.INF:
+		_t_rota -= _dt
+		if _t_rota <= 0.0:
+			_t_rota = ROTA_REFAZ
+			_refazer_rota()
 	if aberto and (not visivel_hud or bool(controles.editando)):
 		fechar_mapa()
 	if aberto:
@@ -698,6 +743,64 @@ func _icone_local(ci: CanvasItem, c: Vector2, r: float, tipo: String, i := -1) -
 	var n := Locais.numero_bunker(i) if i >= 0 else 0           # 0.83: bunker mostra o número (B1, B2...)
 	_texto(ci, Locais.SIGLAS[tipo] + (str(n) if n > 0 else ""), c, int(r * (1.0 if n > 0 else 1.25)), cor)
 
+# 1.13 GPS: a rota no minimapa, cortada no círculo (contorno escuro + linha colorida, como no GTA V)
+func _linha_rota_mini(ci: CanvasItem, c: Vector2, r: float, esc: float, frente: Vector2, direita: Vector2, vh: float) -> void:
+	var trechos: Array = []
+	var atual := PackedVector2Array()
+	var r2 := r * r
+	for i in rota.size() - 1:
+		var da: Vector2 = rota[i] - _pos
+		var db: Vector2 = rota[i + 1] - _pos
+		var a := Vector2(da.dot(direita), -da.dot(frente)) * esc
+		var b := Vector2(db.dot(direita), -db.dot(frente)) * esc
+		# corta o trecho a..b no círculo de raio r
+		var ina := a.length_squared() <= r2
+		var inb := b.length_squared() <= r2
+		if not ina or not inb:
+			var ab := b - a
+			var qa := ab.length_squared()
+			if qa < 0.0001:
+				continue
+			var qb := 2.0 * a.dot(ab)
+			var qc := a.length_squared() - r2
+			var disc := qb * qb - 4.0 * qa * qc
+			if disc < 0.0:
+				if atual.size() > 1:
+					trechos.append(atual)
+				atual = PackedVector2Array()
+				continue
+			var sq := sqrt(disc)
+			var t0 := clampf((-qb - sq) / (2.0 * qa), 0.0, 1.0)
+			var t1 := clampf((-qb + sq) / (2.0 * qa), 0.0, 1.0)
+			if t1 <= t0:
+				if atual.size() > 1:
+					trechos.append(atual)
+				atual = PackedVector2Array()
+				continue
+			var na := a + ab * t0
+			var nb := a + ab * t1
+			if not ina:
+				if atual.size() > 1:
+					trechos.append(atual)
+				atual = PackedVector2Array([c + na])
+			elif atual.is_empty():
+				atual.append(c + a)
+			atual.append(c + nb)
+			if not inb:
+				trechos.append(atual)
+				atual = PackedVector2Array()
+			continue
+		if atual.is_empty():
+			atual.append(c + a)
+		atual.append(c + b)
+	if atual.size() > 1:
+		trechos.append(atual)
+	var w := maxf(2.5, 0.75 * vh)
+	for t in trechos:
+		ci.draw_polyline(t, Color(0, 0, 0, 0.7), w + maxf(2.0, 0.35 * vh), true)
+	for t in trechos:
+		ci.draw_polyline(t, _rota_cor, w, true)
+
 # losango do objetivo
 func _losango(ci: CanvasItem, c: Vector2, tam: float, cor: Color) -> void:
 	var pts := PackedVector2Array([c + Vector2(0, -tam), c + Vector2(tam * 0.75, 0), c + Vector2(0, tam), c + Vector2(-tam * 0.75, 0)])
@@ -727,6 +830,9 @@ func _desenhar_minimapa(vh: float) -> void:
 	var esc := r / RAIO_MINI
 	var frente := Vector2(sin(_rumo), -cos(_rumo))
 	var direita := Vector2(cos(_rumo), sin(_rumo))
+	# 1.13 GPS: a linha da rota (cortada no círculo do minimapa)
+	if rota.size() > 1:
+		_linha_rota_mini(ci, c, r - 0.4 * vh, esc, frente, direita, vh)
 	# objetivo: no mapa (dentro do alcance) ou seta na borda
 	if _obj:
 		var d := _obj_pos - _pos
@@ -783,7 +889,7 @@ func _desenhar_minimapa(vh: float) -> void:
 	_texto(ci, "N", pn, int(2.0 * vh), Color(1.0, 0.55, 0.3))
 	# distância do objetivo embaixo do minimapa
 	if _obj:
-		var txt := _metros((_obj_pos - _pos).length())
+		var txt := _metros(distancia_objetivo())
 		if _obj_nome != "":
 			txt = _obj_nome + " · " + txt
 		_texto(ci, txt, Vector2(16.0, c.y + r + 2.6 * vh), int(1.9 * vh), COR_OBJETIVO, -1)
@@ -909,11 +1015,19 @@ func _desenhar_mapa() -> void:
 	_fila_txt.clear()
 	if _tex == null:
 		_texto(ci, "PREPARANDO O MAPA...", vs * 0.5, int(3.0 * vh), UI.TEXTO)
+	# 1.13 GPS: a linha da rota
+	if rota.size() > 1:
+		var pts := PackedVector2Array()
+		for q in rota:
+			pts.append(_mundo_para_tela(q))
+		var w := clampf(14.0 / _mpp, 0.55 * vh, 1.6 * vh)
+		ci.draw_polyline(pts, Color(0, 0, 0, 0.75), w + maxf(2.0, 0.35 * vh), true)
+		ci.draw_polyline(pts, _rota_cor, w, true)
 	# objetivo
 	if _obj:
 		var po := _mundo_para_tela(_obj_pos)
 		var dentro := Rect2(Vector2(4.0 * vh, 14.0 * vh), vs - Vector2(21.0 * vh, 24.0 * vh))   # fora dos botões e do título
-		var dist := _metros((_obj_pos - _pos).length())
+		var dist := _metros(distancia_objetivo())
 		var rot := (_obj_nome + " · " + dist) if _obj_nome != "" else dist
 		var tr := int(2.2 * vh)
 		var meia_txt := _largura(rot, tr) * 0.5 + 1.0 * vh
@@ -981,7 +1095,7 @@ func _desenhar_mapa() -> void:
 	ci.draw_colored_polygon(PackedVector2Array([rn + Vector2(0, 2.6 * vh), rn + Vector2(1.0 * vh, 0.4 * vh), rn + Vector2(-1.0 * vh, 0.4 * vh)]), Color(1, 1, 1, 0.7))
 	_texto(ci, "N", rn + Vector2(-2.6 * vh, -1.9 * vh), int(2.2 * vh), Color(1.0, 0.55, 0.3))
 	if _obj:
-		var txt := "OBJETIVO: " + ((_obj_nome + " · ") if _obj_nome != "" else "") + _metros((_obj_pos - _pos).length())
+		var txt := "OBJETIVO: " + ((_obj_nome + " · ") if _obj_nome != "" else "") + _metros(distancia_objetivo())
 		var w := _largura(txt, int(2.2 * vh)) + 3.0 * vh
 		UI.caixa_arredondada(ci, Rect2(vs.x * 0.5 - w * 0.5, 2.0 * vh, w, 4.6 * vh), COR_FUNDO, 1.0 * vh)
 		_texto(ci, txt, Vector2(vs.x * 0.5, 4.3 * vh), int(2.2 * vh), COR_OBJETIVO)

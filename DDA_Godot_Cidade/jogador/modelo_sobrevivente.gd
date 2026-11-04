@@ -82,7 +82,7 @@ const PELES := [["Clara", Color(1.26, 1.38, 1.52)], ["Morena clara", Color(1.14,
 # cor do cabelo, da barba e das sobrancelhas (multiplica a textura cinza)
 const CORES_CABELO := [["Castanho escuro", Color(0.32, 0.22, 0.15)], ["Preto", Color(0.10, 0.09, 0.085)],
 	["Castanho", Color(0.55, 0.37, 0.22)], ["Loiro", Color(1.15, 0.92, 0.55)], ["Ruivo", Color(0.85, 0.36, 0.15)],
-	["Grisalho", Color(0.86, 0.85, 0.83)]]
+	["Grisalho", Color(0.86, 0.85, 0.83)], ["Branco", Color(1.9, 1.9, 1.95)]]     # 1.13: o Dominic (cabelo branco de nascença)
 const APARENCIA_PADRAO := {"sexo": "m", "pele": 2, "cabelo": "Hair_Buzzed", "barba": true, "cor": 0}
 const APARENCIA_PADRAO_F := {"sexo": "f", "pele": 2, "cabelo": "Hair_Long", "barba": false, "cor": 0}
 

@@ -129,6 +129,7 @@ var _fundo := 0.0                   # da superfície até o chão, aqui
 var _tela_agua: ColorRect = null    # câmera embaixo d'água: tela azul-esverdeada
 var veiculo = null                  # 0.76: carro que está dirigindo (mundo/veiculo.gd) · null = a pé
 var veiculos_mgr = null             # 0.76: mundo/veiculos.gd (main.gd liga)
+var prender_no_carro := false       # 1.13: modo história (corrida): o botão SAIR não tira do carro
 var _t_olhou := 0.0                 # 0.76: segundos desde que olhou em volta (a câmera volta para a frente do carro)
 var fator_agachado := 0.0           # 0 em pé · 1 agachado (suavizado, para a câmera)
 var fator_mira := 0.0
@@ -311,7 +312,7 @@ func _pegar_do_chao() -> void:
 		return
 	# 0.76: dentro do carro, PEGAR = sair
 	if veiculo != null:
-		if veiculos_mgr != null:
+		if veiculos_mgr != null and not prender_no_carro:
 			veiculos_mgr.sair()
 		return
 	# 0.91: sobrevivente do hospital (Mônica: loja · Lucas: trocas · os outros falam): vale o que estiver mais perto,

@@ -4,7 +4,7 @@
 > Pedido: cinematográfico, LINEAR (sem escolhas relevantes), cidade ANTES do caos, área liberada aos poucos com
 > bloqueios policiais, personagens no corpo padrão (masculino e feminino), sem o sistema de infectados por enquanto,
 > GPS com linha colorida pelas ruas igual ao do GTA V.
-> Status: PROPOSTA. Nada foi implementado ainda.
+> Status: APROVADO. Em construção a partir da 1.13.
 
 ---
 
@@ -322,19 +322,13 @@ curta sem tirar o controle (fala, câmera guiada e câmera lenta).
 
 ---
 
-## 6. Decisões que preciso de você antes de começar
+## 6. Decisões (TODAS RESPONDIDAS pelo usuário)
 
-1. **Onde fica "Nova Jersey" no mapa?** O livro põe a casa da Mavie e o aeroporto executivo em Nova Jersey, do
-   outro lado do rio. O mapa já tem um aeroporto com base militar a LESTE.
-   - **(a)** Usar a parte oeste do mapa como "Nova Jersey" e construir lá a casa e um aeroporto executivo pequeno
-     (fiel à Bíblia, mais trabalho).
-   - **(b)** Usar o aeroporto que já existe a leste e pôr a casa num bairro tranquilo no caminho (mais rápido, mas
-     muda a geografia do livro).
-2. **Volante na Missão 4:** no livro o Greg dirige o carro dele. A proposta é o Dominic assumir o volante na fuga
-   ("Fica com ela") para o jogador dirigir. Pode?
-3. ~~Vozes~~ **DECIDIDO:** sem fala. Cada personagem tem um "som de fala" curto e sintetizado, como os robôs de
-   Stray, com timbre próprio, mais a legenda (veja a seção 3).
-4. **Pessoas na rua no Dia -5:** "pouca gente perto do jogador" (leve no celular) é suficiente?
+1. **Nova Jersey = a parte OESTE do mapa**, com os elementos novos: a casa dos pais da Mavie e um aeroporto
+   executivo pequeno com o hangar 4 e o jato (fiel à Bíblia).
+2. **A fuga (Missões 3 e 4) é no Kiri '86 do Dominic.** O Dominic dirige; o Greg vai atrás com a Mavie.
+3. **Vozes:** som de fala sintetizado estilo Stray, com timbre por personagem, mais a legenda.
+4. **Pessoas na rua no Dia -5:** pouca gente, só perto do jogador.
 
 ---
 
