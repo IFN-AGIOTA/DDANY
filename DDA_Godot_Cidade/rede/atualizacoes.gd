@@ -8,7 +8,8 @@ extends Node
 #   · APK mais novo que este -> aviso no menu com o botão BAIXAR (abre o link: o Android baixa e pergunta se instala;
 #     o save e a conta continuam). Precisa de APK quando muda algo do Android (permissões, plugins, a Godot).
 #   · PACOTE para ESTE APK ("base" = Atualizador.CODIGO_APK) e ainda não instalado -> baixa sozinho em segundo plano,
-#     confere tamanho e SHA-256 e avisa: "vale quando abrir o jogo de novo" (botão FECHAR O JOGO).
+#     confere tamanho e SHA-256 e, SÓ DEPOIS de baixado, avisa: "Atualização disponível, por favor reinicie o jogo."
+#     (botão REINICIAR). (1.12.1) O ícone da NUVEM no menu (menu/menu_principal.gd) mostra o download: estado_icone().
 #     Consertos, ajustes, coisas novas e remoções (trocando o arquivo por outro) chegam assim, sem reinstalar.
 #   · "pacote": null (ou de outro APK) com um pacote instalado -> o pacote é tirado na próxima abertura.
 # Os pacotes e o manifesto são feitos pela ferramenta ferramentas/gerar_pacote.gd (ver LEIA-ME).
@@ -35,6 +36,8 @@ var _url := ""
 var _t_procurar := PROCURAR_A_CADA
 var _notificados := {}                        # "tipo:versão" já avisados dentro da partida (não repete)
 var _ja_avisado := {}                         # "tipo:versão" já mostrados (a nova busca não repete o aviso)
+var pronta := ""                              # versão do pacote já baixado, esperando reiniciar
+const FRASE_PRONTA := "Atualização disponível, por favor reinicie o jogo."
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -115,6 +118,7 @@ func _pacote_chegou(res: int, codigo: int, _h: PackedStringArray, _c: PackedByte
 		DirAccess.remove_absolute(arq)        # veio corrompido: tenta de novo na próxima abertura
 		return
 	boot.instalar(arq, str(p.get("versao", "")))
+	pronta = str(p.get("versao", ""))
 	print("Atualizações: pacote ", p.get("versao", ""), " baixado (vale na próxima abertura)")
 	_mostrar({"tipo": "pacote", "versao": str(p.get("versao", "")), "notas": str(p.get("notas", ""))})
 
@@ -122,7 +126,33 @@ func progresso() -> float:
 	if _baixando.is_empty() or _http == null or not is_instance_valid(_http):
 		return -1.0
 	var tot := _http.get_body_size()
-	return float(_http.get_downloaded_bytes()) / float(tot) if tot > 0 else 0.0
+	if tot <= 0:
+		tot = int(_baixando.get("tamanho", 0))
+	return clampf(float(_http.get_downloaded_bytes()) / float(tot), 0.0, 1.0) if tot > 0 else 0.0
+
+# para o ícone da nuvem no menu: pct = 0..1 baixando (-1 = não está baixando); pronta = baixada, falta reiniciar
+func estado_icone() -> Dictionary:
+	return {"pct": progresso(), "pronta": pronta != ""}
+
+# tocar na nuvem: com a atualização pronta mostra o aviso de novo; sem nada, procura agora
+func tocar_icone() -> void:
+	if pronta != "":
+		if _caixa == null:
+			_abrir({"tipo": "pacote", "versao": pronta})
+	elif _url != "" and _baixando.is_empty() and (_http == null or not is_instance_valid(_http)):
+		_t_procurar = PROCURAR_A_CADA
+		_buscar(_url)
+
+# fecha e abre o jogo de novo (o pacote novo entra na abertura)
+func reiniciar() -> void:
+	print("Atualizações: reiniciando para a versão ", pronta)
+	if OS.get_name() == "Android":
+		# Android: a Godot recria o app (GodotActivity.onNewGodotInstanceRequested -> triggerRebirth)
+		if OS.create_instance(PackedStringArray()) >= 0:
+			await get_tree().create_timer(3.0).timeout     # se o Android não reabrir sozinho, só fecha
+	else:
+		OS.set_restart_on_exit(true, OS.get_cmdline_args())
+	get_tree().quit()
 
 # ---------- aviso na tela (só no menu; no meio do jogo espera) ----------
 func _mostrar(a: Dictionary) -> void:
@@ -146,8 +176,8 @@ func _notificar_na_partida(a: Dictionary) -> void:
 	if _notificados.has(chave):
 		return
 	_notificados[chave] = true
-	var titulo := "NOVA ATUALIZAÇÃO %s" % a.get("versao", "")
-	var texto := "Baixando agora · entra quando você abrir o jogo de novo."
+	var titulo := FRASE_PRONTA
+	var texto := "(no menu, toque em REINICIAR)"
 	if tipo == "apk":
 		titulo = "NOVA VERSÃO %s DISPONÍVEL" % a.get("versao", "")
 		texto = "Volte ao menu para baixar."
@@ -171,6 +201,9 @@ func _notificar_na_partida(a: Dictionary) -> void:
 	caixa.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	caixa.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	caixa.offset_top = 13.0 * v                 # embaixo da bússola
+	var larg := minf(90.0 * v, camada.get_viewport().get_visible_rect().size.x - 6.0 * v)
+	caixa.offset_left = -larg * 0.5
+	caixa.offset_right = larg * 0.5
 	camada.add_child(caixa)
 	var col := VBoxContainer.new()
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -181,12 +214,14 @@ func _notificar_na_partida(a: Dictionary) -> void:
 	for t in [t1, t2]:
 		t.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		t.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		col.add_child(t)
-	var notas := str(a.get("notas", ""))
+	var notas := str(a.get("notas", "")) if tipo == "apk" else ""
 	if notas != "":
 		var t3: Label = UI.rotulo(notas, 1.9 * v, Color(1, 0.91, 0.82, 0.65), 400)
 		t3.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		t3.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		t3.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		col.add_child(t3)
 	caixa.modulate.a = 0.0
 	preload("res://audio/sons.gd").ui("aviso", -4.0)
@@ -238,11 +273,15 @@ func _abrir(a: Dictionary) -> void:
 	sb.content_margin_top = 1.6 * v
 	sb.content_margin_bottom = 1.6 * v
 	_caixa.add_theme_stylebox_override("panel", sb)
+	# (1.12.1) largura fixa que SEMPRE cabe na tela e texto que quebra linha: antes a caixa crescia para a direita
+	# com as notas compridas e ficava metade fora da tela
+	var larg := minf(90.0 * v, _ui.get_viewport().get_visible_rect().size.x - 6.0 * v)
 	_caixa.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
-	_caixa.offset_left = -52.0 * v
-	_caixa.offset_right = 52.0 * v
-	_caixa.offset_top = -22.0 * v
+	_caixa.offset_left = -larg * 0.5
+	_caixa.offset_right = larg * 0.5
+	_caixa.offset_top = -3.0 * v
 	_caixa.offset_bottom = -3.0 * v
+	_caixa.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	_caixa.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_ui.add_child(_caixa)
 	var col := VBoxContainer.new()
@@ -255,16 +294,19 @@ func _abrir(a: Dictionary) -> void:
 			titulo = "NOVA VERSÃO %s DISPONÍVEL" % a["versao"]
 			texto = "Toque em BAIXAR: o Android baixa e pergunta se quer instalar. Seu jogo salvo e sua conta continuam."
 		"pacote":
-			titulo = "ATUALIZAÇÃO %s BAIXADA" % a["versao"]
-			texto = "Ela entra quando você abrir o jogo de novo."
+			titulo = FRASE_PRONTA                 # só a frase
 		_:
 			titulo = "ATUALIZAÇÃO"
 			texto = str(a.get("texto", ""))
-	col.add_child(UI.rotulo(titulo, 3.4 * v, UI.AMBAR, 900))
-	var notas := str(a.get("notas", ""))
+	var linhas: Array = [UI.rotulo(titulo, 3.4 * v, UI.AMBAR, 900)]
+	var notas := str(a.get("notas", "")) if a["tipo"] == "apk" else ""
 	if notas != "":
-		col.add_child(UI.rotulo(notas, 2.4 * v, Color(1, 0.93, 0.85), 500, 0.0, true))
-	col.add_child(UI.rotulo(texto, 2.2 * v, Color(1, 0.91, 0.82, 0.8), 400, 0.0, true))
+		linhas.append(UI.rotulo(notas, 2.4 * v, Color(1, 0.93, 0.85), 500, 0.0, true))
+	if texto != "":
+		linhas.append(UI.rotulo(texto, 2.2 * v, Color(1, 0.91, 0.82, 0.8), 400, 0.0, true))
+	for l in linhas:
+		(l as Label).autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		col.add_child(l)
 	var bs := HBoxContainer.new()
 	bs.add_theme_constant_override("separation", int(1.4 * v))
 	bs.alignment = BoxContainer.ALIGNMENT_END
@@ -279,8 +321,8 @@ func _abrir(a: Dictionary) -> void:
 			_fechar())
 		bs.add_child(b)
 	elif a["tipo"] == "pacote":
-		var b := UI.BotaoMenu.new("FECHAR O JOGO", "", true, 3.4, 22.0)
-		b.apertado.connect(func(): get_tree().quit())
+		var b := UI.BotaoMenu.new("REINICIAR", "", true, 3.4, 18.0)
+		b.apertado.connect(reiniciar)
 		bs.add_child(b)
 
 func _fechar() -> void:

@@ -41,6 +41,24 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.12.1 · ÍCONE DE ATUALIZAÇÃO (NUVEM) E AVISO QUE NÃO SAI DA TELA
+  · No menu, embaixo do perfil (canto de cima à direita), fica uma NUVEM com uma flecha para baixo:
+    - sem atualização: só a nuvem (tocar nela procura atualização na hora);
+    - baixando: um CÍRCULO em volta vai enchendo, com a PORCENTAGEM ao lado (a flecha sobe e desce);
+    - baixada: o círculo fica cheio (verde, "pronta"); tocar na nuvem mostra o aviso de novo.
+  · O aviso só aparece DEPOIS que a atualização terminou de baixar, só com a frase "Atualização disponível, por favor
+    reinicie o jogo." e o botão REINICIAR (fecha e abre o jogo sozinho, no Android e no PC) ou "Depois". Dentro da
+    partida aparece a mesma frase, curta, no alto da tela.
+  · Conserto: o aviso às vezes ficava metade fora da tela (o texto comprido não quebrava linha e a caixa crescia
+    para a direita). Agora a caixa tem largura que sempre cabe na tela, centralizada, e o texto quebra linha.
+  ARQUIVOS MEXIDOS (testado: de ponta a ponta, baixando o pacote de verdade do GitHub: a nuvem mostrou 0% -> 100%,
+  ficou "pronta" e o aviso abriu; fotos do menu em 1600x720 com o aviso e com notas longas, tudo dentro da tela):
+    menu/menu_principal.gd ......... NOVO ícone da nuvem (_IconeAtualizacao), embaixo do perfil
+    rede/atualizacoes.gd ........... estado_icone(), tocar_icone(), reiniciar(); aviso com só a frase + REINICIAR;
+                                     caixa com largura que cabe na tela e texto que quebra linha
+    menu/config.gd ................. VERSAO "1.12.1"
+    menu/novidades_lista.gd ........ refeita
+
 ATUALIZAÇÃO 1.12 · MOVIMENTO NATURAL ESTILO UNREAL 5 (MOTION MATCHING)
   · O personagem anda e corre como no "Game Animation Sample" da Unreal 5, com as nossas animações livres:
     - BIBLIOTECA DE POSES: cada quadro de cada animação de andar/correr (parado, 4 caminhadas, trote, corrida,
@@ -3687,6 +3705,7 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - colisão em volta dos amigos (host) ............. mundo/colisao_mundo.gd (criar_extra) + rede/sessao_rede.gd
 - servidor de teste no PC (Windows) ............... rede/servidor.gd + servidor_windows/ (preset "Servidor Windows")
 - atualizações pelo jogo (APK e pacotes) .......... rede/atualizador.gd, rede/atualizacoes.gd, ferramentas/gerar_pacote.gd
+- ícone da nuvem (progresso da atualização) no menu  menu/menu_principal.gd (_IconeAtualizacao) · aviso: rede/atualizacoes.gd
 - assinatura do APK (chave nova + rotação) ......... ferramentas/assinar_apk.sh (chaves em ../chaves_privadas, fora do git)
 - texturas do chão (concreto, terra, grama...) ... mundo/texturas/ + shader TERRA (mundo/materiais_cidade.gd)
 - placas, pichações, cortinas e luzes

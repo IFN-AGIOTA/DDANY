@@ -147,6 +147,15 @@ func _montar() -> void:
 		bp.offset_bottom = 8.5 * v
 		bp.apertado.connect(func(): perfil.emit())
 		_raiz.add_child(bp)
+	# (1.12.1) ATUALIZAÇÃO: nuvem com a flecha para baixo, embaixo do perfil. Baixando: círculo em volta com a
+	# porcentagem. Baixada: círculo cheio (tocar mostra o aviso com REINICIAR). Sem nada: só a nuvem.
+	var nv := _IconeAtualizacao.new()
+	nv.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	nv.offset_left = -9.0 * v
+	nv.offset_right = -2.5 * v
+	nv.offset_top = (10.0 if Conta.configurado else 2.0) * v
+	nv.offset_bottom = nv.offset_top + 6.5 * v
+	_raiz.add_child(nv)
 	# NOVIDADES: canto de baixo à direita (a última atualização; abre a lista de todas)
 	var ult: Array = ListaNovidades.LISTA[0] if not ListaNovidades.LISTA.is_empty() else ["", "", []]
 	var tit_ult: String = str(ult[1])
@@ -227,6 +236,79 @@ func _exit_tree() -> void:
 	if Conta.mudou.is_connected(_montar):
 		Conta.mudou.disconnect(_montar)
 		Conta.pedidos_mudaram.disconnect(_montar)
+
+# (1.12.1) ícone de ATUALIZAÇÃO: nuvem com flecha para baixo; o círculo em volta é o progresso do download
+# (rede/atualizacoes.gd estado_icone()). Desenhado em código (sem imagem).
+class _IconeAtualizacao extends Control:
+	const UIp := preload("res://menu/ui.gd")
+	var _pct := -1.0
+	var _pronta := false
+	var _t := 0.0
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_STOP
+	func _atu() -> Node:
+		return get_node_or_null("/root/Atualizador/Atualizacoes")
+	func _process(dt: float) -> void:
+		_t += dt
+		var a := _atu()
+		var pct := -1.0
+		var pronta := false
+		if a != null and a.has_method("estado_icone"):
+			var e: Dictionary = a.estado_icone()
+			pct = float(e.get("pct", -1.0))
+			pronta = bool(e.get("pronta", false))
+		if pct != _pct or pronta != _pronta or pct >= 0.0 or pronta:
+			_pct = pct
+			_pronta = pronta
+			queue_redraw()
+	func _gui_input(e: InputEvent) -> void:
+		if e is InputEventMouseButton and e.pressed and e.button_index == MOUSE_BUTTON_LEFT:
+			accept_event()
+			UIp.Sons.ui("clique")
+			var a := _atu()
+			if a != null and a.has_method("tocar_icone"):
+				a.tocar_icone()
+	func _draw() -> void:
+		var v: float = UIp.vh(self)
+		var s := minf(size.x, size.y)
+		var c := Vector2(size.x - s * 0.5, s * 0.5)
+		var r := s * 0.5
+		var ativo := _pct >= 0.0 or _pronta
+		# fundo redondo (igual ao avatar do perfil)
+		draw_circle(c, r * 0.86, Color(0.1, 0.04, 0.015, 0.55))
+		# círculo do progresso
+		if ativo:
+			var w := maxf(2.0, 0.55 * v)
+			draw_arc(c, r - w * 0.5, 0.0, TAU, 48, Color(1, 1, 1, 0.18), w, true)
+			var p := 1.0 if _pronta else _pct
+			var cor := Color("#7fd46a") if _pronta else UIp.AMBAR
+			if p > 0.0:
+				draw_arc(c, r - w * 0.5, -PI * 0.5, -PI * 0.5 + TAU * p, maxi(8, int(64 * p)), cor, w, true)
+		# nuvem: três bolhas + base
+		var cn := Color(1, 0.95, 0.88, 0.95 if ativo else 0.7)
+		var u := r * 0.74
+		var b := c + Vector2(0, u * 0.18)
+		draw_circle(b + Vector2(-u * 0.45, u * 0.08), u * 0.36, cn)
+		draw_circle(b + Vector2(u * 0.05, -u * 0.22), u * 0.5, cn)
+		draw_circle(b + Vector2(u * 0.5, u * 0.1), u * 0.33, cn)
+		draw_rect(Rect2(b + Vector2(-u * 0.45, u * 0.05), Vector2(u * 0.95, u * 0.39)), cn)
+		draw_circle(b + Vector2(-u * 0.45, u * 0.12), u * 0.32, cn)
+		draw_circle(b + Vector2(u * 0.5, u * 0.14), u * 0.3, cn)
+		# flecha para baixo dentro da nuvem (desce e sobe devagar enquanto baixa)
+		var fc := Color(0.16, 0.07, 0.03, 0.95)
+		var dy := (sin(_t * 5.0) * 0.07 * u) if (_pct >= 0.0 and not _pronta) else 0.0
+		var topo := b + Vector2(0.03 * u, -u * 0.42 + dy)
+		var ponta := b + Vector2(0.03 * u, u * 0.36 + dy)
+		draw_line(topo, ponta - Vector2(0, u * 0.12), fc, maxf(2.0, u * 0.16), true)
+		draw_colored_polygon(PackedVector2Array([ponta, ponta + Vector2(-u * 0.24, -u * 0.26), ponta + Vector2(u * 0.24, -u * 0.26)]), fc)
+		# porcentagem (ou "pronta") à esquerda do ícone
+		if ativo:
+			var txt := "pronta" if _pronta else "%d%%" % int(round(_pct * 100.0))
+			var ft: Font = UIp.fonte(900)
+			var tm := int(2.4 * v)
+			var tw := ft.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tm).x
+			draw_string(ft, Vector2(c.x - r - 1.0 * v - tw, c.y + tm * 0.36), txt, HORIZONTAL_ALIGNMENT_LEFT, -1, tm,
+				Color("#7fd46a") if _pronta else UIp.AMBAR)
 
 # botão do PERFIL: ícone, nome (ou "Entrar") e bolinha de pedidos de amizade
 class _BotaoPerfil extends Control:
