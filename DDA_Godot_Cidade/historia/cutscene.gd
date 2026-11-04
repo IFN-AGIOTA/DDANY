@@ -9,6 +9,7 @@ extends CanvasLayer
 #   "frase": texto do prólogo (grande, no meio, em silêncio) · "acao": Callable chamado no começo do plano
 #   "escuro": true = começa no preto e clareia · "escurece": true = termina no preto · "barras": false = sem faixas
 #   "corte": true = corte seco (sem fusão) para um impacto de propósito
+#   "celular": [quem mandou, texto] = aviso de mensagem no celular (canto de cima, à direita) · 1.14
 # 1.13.1 · TRANSIÇÕES SUAVES (antes os planos trocavam de uma vez): a câmera do jogo DESLIZA até o 1º plano; entre um
 #   plano e outro, FUSÃO (o último quadro do plano anterior some devagar por cima do novo); no fim, o deslize de volta
 #   para o jogo é mais longo e suave.
@@ -42,6 +43,9 @@ var _legenda: RichTextLabel
 var _titulo: Label
 var _sub: Label
 var _frase: Label
+var _cel: PanelContainer           # 1.14: aviso de mensagem no celular
+var _cel_quem: Label
+var _cel_txt: Label
 var _pular: Control
 var _seg := 0.0
 var _pedido_pular := false
@@ -101,6 +105,27 @@ func _ready() -> void:
 	_frase.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_frase.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	raiz.add_child(_frase)
+	_cel = PanelContainer.new()
+	var sbc := StyleBoxFlat.new()
+	sbc.bg_color = Color(0.08, 0.09, 0.11, 0.92)
+	sbc.set_corner_radius_all(int(1.4 * v))
+	sbc.content_margin_left = 1.6 * v
+	sbc.content_margin_right = 1.6 * v
+	sbc.content_margin_top = 1.0 * v
+	sbc.content_margin_bottom = 1.0 * v
+	_cel.add_theme_stylebox_override("panel", sbc)
+	_cel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var vb := VBoxContainer.new()
+	vb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_cel.add_child(vb)
+	_cel_quem = UI.rotulo("", 1.9 * v, Color(0.6, 0.8, 1.0), 800, 0.0, false)
+	_cel_txt = UI.rotulo("", 2.2 * v, Color(1, 1, 1), 500, 0.0, false)
+	_cel_txt.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_cel_txt.custom_minimum_size.x = 38.0 * v
+	vb.add_child(_cel_quem)
+	vb.add_child(_cel_txt)
+	_cel.modulate.a = 0.0
+	raiz.add_child(_cel)
 	_pular = Control.new()
 	_pular.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_pular.draw.connect(_desenhar_pular)
@@ -133,6 +158,7 @@ func _posicionar() -> void:
 	_sub.size = Vector2(vs.x, 4.0 * v)
 	_frase.position = Vector2(vs.x * 0.15, vs.y * 0.42)
 	_frase.size = Vector2(vs.x * 0.7, 16.0 * v)
+	_cel.position = Vector2(vs.x - 46.0 * v, vs.y * BARRA + 2.0 * v)
 	_pular.position = Vector2(vs.x - 26.0 * v, vs.y - 6.5 * v)
 	_pular.size = Vector2(24.0 * v, 5.0 * v)
 
@@ -284,6 +310,12 @@ func _plano(p: Dictionary) -> void:
 	if p.has("frase"):
 		_frase.text = str(p["frase"])
 		_fade(_frase, 1.0, 0.9)
+	if p.has("celular"):
+		_cel_quem.text = "MENSAGEM · " + str(p["celular"][0]).to_upper()
+		_cel_txt.text = str(p["celular"][1])
+		_cel.position.y = UI.vh(self) * 100.0 * BARRA + UI.vh(self) * 2.0
+		_fade(_cel, 1.0, 0.35)
+		UI.Sons.ui("aviso", -6.0)
 	if bool(p.get("escuro", false)):
 		_veu.color.a = 1.0
 		create_tween().tween_property(_veu, "color:a", 0.0, minf(1.2, dur * 0.5))
@@ -337,6 +369,8 @@ func _plano(p: Dictionary) -> void:
 		_fade(_sub, 0.0, 0.6)
 	if p.has("frase"):
 		_fade(_frase, 0.0, 0.6)
+	if p.has("celular"):
+		_fade(_cel, 0.0, 0.4)
 
 func _mostrar_fala(quem: String, texto: String) -> void:
 	var nome := quem.to_upper()
@@ -349,7 +383,7 @@ func _fade(n: CanvasItem, alvo: float, t: float) -> void:
 	create_tween().tween_property(n, "modulate:a", alvo, t)
 
 func _esconder_textos(t: float) -> void:
-	for n in [_legenda, _titulo, _sub, _frase]:
+	for n in [_legenda, _titulo, _sub, _frase, _cel]:
 		_fade(n, 0.0, t)
 
 # a câmera da cena desliza até a do jogo e devolve o controle

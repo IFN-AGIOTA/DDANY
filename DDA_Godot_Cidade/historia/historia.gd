@@ -16,8 +16,10 @@ const RotaGps := preload("res://hud/rota_gps.gd")
 const UI := preload("res://menu/ui.gd")
 
 const ARQUIVO := "user://historia.json"
-const MISSOES := [["corrida", "res://historia/missao_corrida.gd", "MISSÃO 1 · A ÚLTIMA CORRIDA"]]
-const PROXIMA_EM_BREVE := "MISSÃO 2 · PÂNICO MIDIÁTICO"
+const MISSOES := [["corrida", "res://historia/missao_corrida.gd", "MISSÃO 1 · A ÚLTIMA CORRIDA"],
+	["bar", "res://historia/missao_bar.gd", "MISSÃO 2 · PÂNICO MIDIÁTICO"],
+	["tres_dias", "res://historia/interludio_tres_dias.gd", "INTERLÚDIO · TRÊS DIAS"]]
+const PROXIMA_EM_BREVE := "MISSÃO 3 · A MANHÃ SEM SOL"
 # peças do abandono que somem antes do caos (nomes dos MultiMesh de mundo/abandono.gd: "<modelo>_<x>_<z>")
 const ESCONDER := ["sedan", "taxi", "van", "onibus", "barreira", "barril", "cacamba", "lixo", "entulho", "cacos", "pneu",
 	"caixote", "caixa_papelao", "carro_coberto", "humvee", "mrap", "caminhao_exercito", "caminhao_tanque", "tanque",
@@ -36,6 +38,9 @@ var _veu: ColorRect
 var _escondidos: Array = []
 var _obst_original := PackedFloat32Array()
 var testando := false                 # testes automáticos (pula esperas)
+var _inter: Array = []                # 1.14: interações ativas [texto, posição, raio, Callable]
+var _revelados: Array = []            # 1.14: peças de abandono mostradas de novo (a cidade trincando)
+var dentro_de: Node3D = null          # 1.14: cenário de interior em que o jogador está (historia/cenario.gd)
 
 static func ler() -> Dictionary:
 	if not FileAccess.file_exists(ARQUIVO):
@@ -47,8 +52,12 @@ static func resumo() -> String:
 	var d := ler()
 	if d.is_empty():
 		return ""
+	if bool(d.get("ato1_tres_dias", false)):
+		return "Missão 2 e Interlúdio concluídos · a Missão 3 chega na próxima atualização"
+	if bool(d.get("ato1_bar", false)):
+		return "Interlúdio · Três Dias"
 	if bool(d.get("ato1_corrida", false)):
-		return "Missão 1 concluída · a Missão 2 chega na próxima atualização"
+		return "Missão 2 · Pânico Midiático"
 	return "Missão 1 · A Última Corrida"
 
 func salvar() -> void:
@@ -70,6 +79,7 @@ func ligar(m) -> void:
 func _process(_dt: float) -> void:
 	if main == null or main.jogador == null or not is_instance_valid(main.jogador):
 		return
+	_atualizar_interacoes()
 	var s = main.jogador.sobrevivencia
 	if s != null:
 		s.fome = 100.0
@@ -81,6 +91,10 @@ func _process(_dt: float) -> void:
 func _mundo_antes_do_caos() -> void:
 	if main.vagos != null:
 		main.vagos.ativo = false
+	# 1.14: os carros largados do modo livre (que dá para dirigir) ficam de fora: só os carros da história
+	if main.veiculos != null:
+		main.veiculos.process_mode = Node.PROCESS_MODE_DISABLED
+		main.veiculos.perto = ""
 	if main.clima != null:
 		main.clima.parado = true
 	if main.hud_status != null:
@@ -225,6 +239,95 @@ func teleportar(p: Vector3, giro: float) -> void:
 	if main.chunks != null and main.chunks.has_method("forcar"):
 		main.chunks.forcar(p)
 	j.teleportar(p, giro)
+
+# ---------- 1.14: interações (o botão PEGAR vira "ENTRAR NO BAR", "SENTAR"...) ----------
+func interacao(texto: String, pos: Vector3, raio: float, acao: Callable) -> Array:
+	var item := [texto, pos, raio, acao]
+	_inter.append(item)
+	return item
+
+func tirar_interacao(item: Array) -> void:
+	_inter.erase(item)
+
+func limpar_interacoes() -> void:
+	_inter.clear()
+
+# espera o jogador chegar perto de pos e apertar o botão
+func esperar_interacao(texto: String, pos: Vector3, raio := 2.0) -> void:
+	var feito := [false]
+	var item := interacao(texto, pos, raio, func(): feito[0] = true)
+	while not feito[0] and is_instance_valid(self):
+		await get_tree().process_frame
+	tirar_interacao(item)
+	Sons_ui()
+
+func Sons_ui() -> void:
+	UI.Sons.ui("clique")
+
+func _atualizar_interacoes() -> void:
+	var j = main.jogador
+	var melhor: Array = []
+	var md := INF
+	if not cena.tocando and j.veiculo == null:
+		for it in _inter:
+			var d: float = (it[1] as Vector3).distance_to(j.global_position)
+			if d <= float(it[2]) and d < md:
+				md = d
+				melhor = it
+	if melhor.is_empty():
+		j.texto_interacao = ""
+		j.interacao_historia = Callable()
+	else:
+		j.texto_interacao = str(melhor[0])
+		j.interacao_historia = melhor[3]
+
+# ---------- 1.14: cenários de interior (historia/cenario.gd) ----------
+# entra: escurece, o jogador vai para dentro do cenário (sem minimapa lá dentro) e clareia
+func entrar(cen: Node3D, ponto: String, giro := 0.0) -> void:
+	esconder_hud(true)
+	await escuro(0.6)
+	dentro_de = cen
+	var p: Vector3 = cen.pontos[ponto]
+	main.jogador.teleportar(p + Vector3(0, 0.1, 0), giro)
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	esconder_hud(false)
+	if main.mapa != null:
+		main.mapa.visivel_hud = false
+	await clarear(0.8)
+
+# sai para a rua (pos/giro na calçada)
+func sair_para(pos: Vector3, giro := 0.0) -> void:
+	esconder_hud(true)
+	await escuro(0.6)
+	dentro_de = null
+	teleportar(pos, giro)
+	await get_tree().physics_frame
+	esconder_hud(false)
+	await clarear(0.8)
+
+# ---------- 1.14: a cidade trincando: mostra de novo as peças de abandono perto de um lugar ----------
+func revelar_abandono(centro: Vector2, raio: float, tipos: Array = []) -> int:
+	var n_rev := 0
+	for n in main.cidade.detalhes_abandono:
+		if not is_instance_valid(n) or n.visible:
+			continue
+		var base := str(n.name).rsplit("_", true, 2)[0]
+		if not tipos.is_empty() and not (base in tipos):
+			continue
+		var gi := n as GeometryInstance3D
+		var c := (gi.global_transform * gi.get_aabb()).get_center()
+		if Vector2(c.x, c.z).distance_to(centro) <= raio:
+			n.visible = true
+			_revelados.append(n)
+			n_rev += 1
+	return n_rev
+
+func esconder_revelados() -> void:
+	for n in _revelados:
+		if is_instance_valid(n):
+			n.visible = false
+	_revelados.clear()
 
 func esperar(s: float) -> void:
 	if testando:
