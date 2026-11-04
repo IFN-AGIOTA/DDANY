@@ -16,6 +16,7 @@ const Atores := preload("res://historia/atores.gd")
 const VeiculoCls := preload("res://mundo/veiculo.gd")
 const PilotoCls := preload("res://historia/piloto_ia.gd")
 const AreaCls := preload("res://historia/area_liberada.gd")
+const LuzCls := preload("res://historia/iluminacao.gd")
 const RotaGps := preload("res://hud/rota_gps.gd")
 const Sons := preload("res://audio/sons.gd")
 
@@ -42,6 +43,7 @@ var jdm: VehicleBody3D = null
 var greg: Node3D = null
 var dom_ator: Node3D = null
 var area: Node3D = null
+var luz: Node3D = null              # 1.13.1: postes, janelas e vitrines acesos só no caminho
 var garoto: Node3D = null
 var publico: Array = []
 var _colisao_greg: Node3D = null
@@ -65,6 +67,14 @@ func rodar(hist) -> bool:
 	area.mundo = main.mundo
 	main.jogo.add_child(area)
 	area.corredor(caminho, CORREDOR, "corrida")
+	# 1.13.1: a cidade antes do caos ainda tem luz, mas só onde eles passam (o percurso e o lugar da Mavie no Prólogo)
+	luz = LuzCls.new()
+	luz.name = "IluminacaoHistoria"
+	luz.cidade = main.cidade
+	luz.mundo = main.mundo
+	main.jogo.add_child(luz)
+	var dt0: Vector2 = preload("res://mundo/cidade.gd").DOWNTOWN
+	luz.acender(caminho, [Vector3(dt0.x + 40.0, 0.6, dt0.y + 60.0), Vector3(dt0.x, 0.6, dt0.y)])
 	_montar_carros()
 	_montar_largada()
 	if not bool(h.progresso.get("prologo", false)):
@@ -78,7 +88,7 @@ func rodar(hist) -> bool:
 		var venceu: bool = await _correr()
 		if venceu:
 			break
-		await h.cartela("O GREG VENCEU", "Tente de novo · a corrida recomeça da largada", 2.6)
+		await h.cartela("O GREG VENCEU", "Tente de novo · a corrida recomeça da largada", 2.6, false)
 		_posicionar_carros()
 	await _chegada()
 	_limpar()
@@ -229,7 +239,7 @@ func _prologo() -> void:
 		{"de": c + Vector3(0, 480, 340), "olha": c, "fov": 48, "dur": 4.2, "titulo": ["DIAS DE UM APOCALIPSE", "NOVA YORK"], "escurece": true,
 			"acao": func(): Sons.tocar("partida/entrada", -6.0)},
 	]
-	await h.cena.tocar(planos)
+	await h.cena.tocar(planos, true)              # termina no preto: a largada começa do preto
 	mavie.queue_free()
 	h.esconder_hud(false)
 
@@ -424,7 +434,7 @@ func _chegada() -> void:
 			"fala": ["Dominic", "Ainda não foi dessa vez, Greg."]},
 		{"de": pk + Vector3(0, 30, 6), "para": pk + Vector3(0, 60, 14), "olha": pk, "fov": 50, "dur": 3.5, "escurece": true,
 			"titulo": ["MISSÃO 1 CONCLUÍDA", "Dia -5 · a noite em que o mundo ainda achava que era só mais uma noite"]},
-	])
+	], true)
 	h.esconder_hud(false)
 
 func _limpar() -> void:
@@ -437,7 +447,7 @@ func _limpar() -> void:
 		j.sair_veiculo(j.global_position)
 	if _colisao_greg != null:
 		main.mundo.remover_extra(_colisao_greg)
-	for n in [kiri, jdm, garoto, area, _viatura, _marca]:
+	for n in [kiri, jdm, garoto, area, _viatura, _marca, luz]:
 		if n != null and is_instance_valid(n):
 			n.queue_free()
 	for a in publico:

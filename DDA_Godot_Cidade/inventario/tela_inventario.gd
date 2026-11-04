@@ -168,6 +168,11 @@ func _process(dt: float) -> void:
 				acao_porta = "ENTRAR\nCARRO"
 			elif perto == null and vm != null and vm.bomba_perto() != null:
 				acao_porta = "ENCHER\nGALÃO" if vm.tem_galao_para_encher(inv) else "BOMBA DE\nGASOLINA"
+			# 1.14: interação do modo história (ENTRAR NO BAR, SENTAR, PEGAR O REVÓLVER...): vale antes de tudo
+			var ti := str(inv.jogador.get("texto_interacao")) if inv.jogador != null and inv.jogador.get("texto_interacao") != null else ""
+			if ti != "":
+				perto = null
+				acao_porta = ti
 			if perto == null and acao_porta == "" and npc != null:
 				acao_porta = npc.acao()
 			if perto == null and acao_porta == "" and inv.jogador != null:
@@ -186,7 +191,8 @@ func _process(dt: float) -> void:
 				var pc = inv.jogador.construcao.usavel_perto(inv.jogador.global_position)     # 0.90: cama, coletor
 				if pc != null:
 					acao_porta = pc.acao(inv)
-			controles.ocultos["PEGAR"] = aberto or (perto == null and acao_porta == "")
+			controles.ocultos["PEGAR"] = aberto or (perto == null and acao_porta == "") \
+				or (inv.jogador != null and inv.jogador.get("prender_no_carro") == true)       # 1.13.1: corrida da história
 			# o botão diz O QUE vai pegar (nome curto do item)
 			if acao_porta != "":
 				controles.textos["PEGAR"] = acao_porta

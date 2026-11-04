@@ -41,6 +41,36 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.13.1 · CENAS COM TRANSIÇÕES SUAVES E LUZ NAS RUAS POR ONDE ELES PASSAM
+  · TRANSIÇÕES (antes os planos trocavam de uma vez, muito bruscos):
+    - a câmera do jogo DESLIZA até o 1º plano da cena;
+    - entre um plano e outro, FUSÃO: o último quadro some devagar por cima do plano novo;
+    - no fim, a volta para o jogo é mais longa e suave (começa e para devagar);
+    - cenas e cartelas que terminam no preto continuam do preto, sem o jogo piscar no meio (antes, depois da
+      cartela "O GREG VENCEU", a tela podia ficar escura).
+  · ILUMINAÇÃO SÓ ONDE OS PERSONAGENS PASSAM (a cidade antes do caos ainda tem luz):
+    - postes acesos ao longo do percurso, alternando os lados da rua: de perto são LUZ DE VERDADE (poucas, que
+      vão para os postes mais perto da câmera: 14 no PC, 7 no celular); de longe, um brilho leve;
+    - JANELAS ACESAS e VITRINES no térreo dos prédios da beira do caminho (luz quente, umas apagadas);
+    - na largada, na chegada e onde a Mavie aparece no Prólogo também.
+  · A corrida acontece no fim do crepúsculo (20h24): a cidade acesa e o céu ainda azul-escuro.
+  · Dentro do carro, a luz do painel ficou mais fraca e branca; na corrida, a dica "[E] SAIR CARRO" não aparece
+    mais no PC (não dá para sair do carro no meio da corrida).
+  ARQUIVOS (testado: teste_historia, compilar_tudo, teste_menu_leve + fotos das cenas e da corrida):
+    historia/iluminacao.gd ......... NOVO · postes, janelas e vitrines acesos só no caminho (luzes de verdade perto)
+    historia/cutscene.gd ........... deslize de entrada, fusão entre os planos, volta suave, véu único
+                                     (escurecer/clarear), tocar(planos, manter_escuro)
+    historia/historia.gd ........... escuro/clarear usam o véu das cenas; cartela(... clarear_depois)
+    historia/missao_corrida.gd ..... acende o caminho; hora 20h24; cenas que emendam no preto; 4º plano do Prólogo
+    mundo/veiculo.gd ............... luz do painel mais fraca
+    inventario/tela_inventario.gd .. na corrida da história o botão/dica de SAIR do carro não aparece; (preparo da
+                                     1.14) o botão PEGAR mostra a ação da história quando houver
+    jogador/jogador.gd ............. (preparo da 1.14) texto_interacao/interacao_historia: o botão PEGAR faz a
+                                     ação da história (ENTRAR, SENTAR...); sem efeito até a 1.14
+    menu/config.gd ................. VERSAO "1.13.1"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..."
+
 ATUALIZAÇÃO 1.13 · MODO HISTÓRIA · ATO 1 "NOVA YORK": PRÓLOGO + MISSÃO 1 "A ÚLTIMA CORRIDA"
   · O botão HISTÓRIA do menu voltou. O roteiro do Ato 1 inteiro, adaptado do Livro 1 (Prólogo ao Cap. 4) para
     jogo, fica em estudos/ROTEIRO_MODO_HISTORIA.md. Esta etapa traz:
@@ -3530,6 +3560,8 @@ QUERO MEXER EM...                         ARQUIVO
 - cara e roupa do Dominic, Greg, Mavie,
   óculos de aviador .................... historia/atores.gd (FICHAS)
 - bloqueios das áreas da história ...... historia/area_liberada.gd
+- luz das ruas e prédios por onde os
+  personagens passam (história) ........ historia/iluminacao.gd
 - piloto do jogo (o Greg na corrida) ... historia/piloto_ia.gd
 - GPS (rota pelas ruas, linha colorida) . hud/rota_gps.gd (cálculo) · hud/mapa.gd (desenho, definir_rota)
 - carros da história (Kiri, JDM):

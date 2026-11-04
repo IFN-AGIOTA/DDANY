@@ -235,8 +235,8 @@ func _luz_painel(ligar: bool) -> void:
 	if _luz == null:
 		_luz = OmniLight3D.new()
 		_luz.name = "LuzPainel"
-		_luz.light_color = Color(1.0, 0.78, 0.5)
-		_luz.light_energy = 0.55
+		_luz.light_color = Color(1.0, 0.88, 0.72)
+		_luz.light_energy = 0.28
 		_luz.omni_range = 1.6
 		_luz.shadow_enabled = false
 		var olho: Vector3 = MODELOS[tipo]["olho"]

@@ -137,7 +137,7 @@ func comecar() -> void:
 		progresso["ato1_" + m[0]] = true
 		salvar()
 	# acabou o que existe por enquanto
-	await cartela("CONTINUA", PROXIMA_EM_BREVE + " · na próxima atualização", 4.0)
+	await cartela("CONTINUA", PROXIMA_EM_BREVE + " · na próxima atualização", 4.0, false)
 	acabou.emit(true)
 
 # ---------- ferramentas das missões ----------
@@ -201,23 +201,22 @@ func chegar(p: Vector3, raio := 8.0) -> void:
 			return
 		await get_tree().process_frame
 
-# tela preta (alvo 1) ou clara (alvo 0)
-func escuro(t := 0.6) -> void:
-	var tw := create_tween()
-	tw.tween_property(_veu, "color:a", 1.0, t)
-	await tw.finished
+# tela preta e de volta (1.13.1: o MESMO véu do motor de cenas, historia/cutscene.gd)
+func escuro(t := 0.7) -> void:
+	await cena.escurecer(t)
 
-func clarear(t := 0.8) -> void:
-	var tw := create_tween()
-	tw.tween_property(_veu, "color:a", 0.0, t)
-	await tw.finished
+func clarear(t := 0.9) -> void:
+	await cena.clarear(t)
 
-# cartela de capítulo / fim (fundo preto, título e subtítulo)
-func cartela(titulo: String, sub: String, dur := 3.0) -> void:
+# cartela de capítulo / fim (fundo preto, título e subtítulo). clarear_depois = false: fica no preto (o que vem
+# depois começa do preto, sem piscar o jogo no meio)
+func cartela(titulo: String, sub: String, dur := 3.0, clarear_depois := true) -> void:
 	esconder_hud(true)
-	await escuro(0.5)
-	await cena.tocar([{"titulo": [titulo, sub], "dur": dur, "barras": false}])
-	esconder_hud(false)
+	await escuro(0.8)
+	await cena.tocar([{"titulo": [titulo, sub], "dur": dur, "barras": false}], true)
+	if clarear_depois:
+		esconder_hud(false)
+		await clarear(1.0)
 
 # o jogador (e a câmera) vai para um lugar sem ver o caminho
 func teleportar(p: Vector3, giro: float) -> void:

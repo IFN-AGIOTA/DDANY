@@ -8,6 +8,10 @@ extends CanvasLayer
 #   "fala": ["Dominic", "texto"] (legenda + som de fala de historia/vozes.gd) · "titulo": [texto grande, texto menor]
 #   "frase": texto do prólogo (grande, no meio, em silêncio) · "acao": Callable chamado no começo do plano
 #   "escuro": true = começa no preto e clareia · "escurece": true = termina no preto · "barras": false = sem faixas
+#   "corte": true = corte seco (sem fusão) para um impacto de propósito
+# 1.13.1 · TRANSIÇÕES SUAVES (antes os planos trocavam de uma vez): a câmera do jogo DESLIZA até o 1º plano; entre um
+#   plano e outro, FUSÃO (o último quadro do plano anterior some devagar por cima do novo); no fim, o deslize de volta
+#   para o jogo é mais longo e suave.
 # Tudo pode ser PULADO: segurar a tela/qualquer tecla por 0,8 s (a barrinha enche). Pulando, as "acao" que faltavam
 # rodam na ordem (o mundo fica como se a cena tivesse passado) e a câmera volta para o jogador.
 # No fim, a câmera da cena DESLIZA até a câmera do jogo (sem corte, sem tela preta), como em Uncharted 4.
@@ -18,7 +22,9 @@ const VozesCls := preload("res://historia/vozes.gd")
 
 const BARRA := 0.12              # altura de cada faixa preta (fração da tela): ~2,39:1 numa tela 16:9
 const SEGURAR_PULAR := 0.8
-const DESLIZE_VOLTA := 0.7
+const DESLIZE_VOLTA := 1.1
+const DESLIZE_ENTRADA := 1.0     # 1.13.1: do jogo até o 1º plano
+const FUSAO := 0.6               # 1.13.1: fusão entre os planos (s)
 
 signal acabou
 
@@ -31,6 +37,7 @@ var cor_nomes := {"DOMINIC": Color(0.93, 0.95, 1.0), "GREG": Color(1.0, 0.78, 0.
 var _barra_cima: ColorRect
 var _barra_baixo: ColorRect
 var _veu: ColorRect
+var _fusao: TextureRect           # 1.13.1: o último quadro do plano anterior, sumindo devagar
 var _legenda: RichTextLabel
 var _titulo: Label
 var _sub: Label
@@ -58,6 +65,13 @@ func _ready() -> void:
 	raiz.set_anchors_preset(Control.PRESET_FULL_RECT)
 	raiz.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(raiz)
+	_fusao = TextureRect.new()
+	_fusao.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_fusao.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_fusao.stretch_mode = TextureRect.STRETCH_SCALE
+	_fusao.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fusao.modulate.a = 0.0
+	raiz.add_child(_fusao)
 	_veu = _rect(raiz, Color(0, 0, 0, 0))
 	_veu.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_barra_cima = _rect(raiz, Color.BLACK)
@@ -123,7 +137,8 @@ func _posicionar() -> void:
 	_pular.size = Vector2(24.0 * v, 5.0 * v)
 
 # ---------- tocar ----------
-func tocar(planos: Array) -> void:
+# manter_escuro: a cena termina no preto e FICA no preto (a próxima cena/cartela continua dali, sem piscar o jogo)
+func tocar(planos: Array, manter_escuro := false) -> void:
 	n_cenas += 1
 	tocando = true
 	pulando = false
@@ -137,11 +152,16 @@ func tocar(planos: Array) -> void:
 	camera.make_current()
 	var com_barras: bool = planos.is_empty() or planos[0].get("barras", true)
 	_animar_barras(1.0 if com_barras else 0.0, 0.6)
+	# 1.13.1: entra deslizando da câmera do jogo até o 1º plano (a não ser que ele comece no preto)
+	if not planos.is_empty() and _cam_jogo != null and not bool(planos[0].get("escuro", false)) and planos[0].has("de"):
+		await _deslizar_ate(planos[0])
 	var i := 0
 	while i < planos.size():
 		var p: Dictionary = planos[i]
 		if _pedido_pular:
 			break
+		if i > 0 and not bool(p.get("corte", false)) and not bool(p.get("escuro", false)) and _veu.color.a < 0.5:
+			_fundir()
 		await _plano(p)
 		i += 1
 	if _pedido_pular:
@@ -156,11 +176,77 @@ func tocar(planos: Array) -> void:
 			if a2 is Callable and (a2 as Callable).is_valid():
 				a2.call()
 		_veu.color.a = 0.0
+		_fusao.modulate.a = 0.0
 	Engine.time_scale = 1.0
 	_esconder_textos(0.25)
-	await _voltar_ao_jogo()
+	if _veu.color.a > 0.5:
+		# terminou no preto: troca a câmera escondido e só depois clareia (sem deslize nenhum)
+		_animar_barras(0.0, 0.5)
+		_trocar_para_jogo()
+		if not manter_escuro:
+			await clarear(0.9)
+	else:
+		await _voltar_ao_jogo()
 	tocando = false
 	acabou.emit()
+
+# o mesmo véu preto para tudo (cenas, cartelas, teleportes): nunca dois véus brigando
+func escurecer(t := 0.6) -> void:
+	if _veu.color.a >= 0.999:
+		return
+	var tw := create_tween()
+	tw.tween_property(_veu, "color:a", 1.0, t).set_trans(Tween.TRANS_SINE)
+	await tw.finished
+
+func clarear(t := 0.9) -> void:
+	if _veu.color.a <= 0.001:
+		return
+	var tw := create_tween()
+	tw.tween_property(_veu, "color:a", 0.0, t).set_trans(Tween.TRANS_SINE)
+	await tw.finished
+
+func escuro() -> bool:
+	return _veu.color.a > 0.5
+
+func _trocar_para_jogo() -> void:
+	if _cam_jogo != null and is_instance_valid(_cam_jogo) and _cam_jogo != camera:
+		_cam_jogo.make_current()
+	elif get_viewport().get_camera_3d() == camera:
+		camera.clear_current(false)
+
+# 1.13.1: fusão: guarda o quadro atual e deixa ele sumir devagar por cima do plano novo
+func _fundir() -> void:
+	var vp := get_viewport()
+	var img := vp.get_texture().get_image() if vp != null else null
+	if img == null:
+		return
+	_fusao.texture = ImageTexture.create_from_image(img)
+	_fusao.modulate.a = 1.0
+	var tw := create_tween()
+	tw.tween_property(_fusao, "modulate:a", 0.0, FUSAO).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+
+# 1.13.1: a câmera sai de onde a do jogo está e desliza até o começo do 1º plano
+func _deslizar_ate(p: Dictionary) -> void:
+	var de := camera.global_transform
+	var fov0 := camera.fov
+	var pos: Vector3 = _ponto(p["de"])
+	var alvo_t := Transform3D(Basis(), pos)
+	if p.get("olha") != null:
+		var olha := _ponto(p["olha"])
+		if olha.distance_squared_to(pos) > 0.0001:
+			alvo_t = alvo_t.looking_at(olha, Vector3.UP)
+	var fov1: float = float(p.get("fov", fov0))
+	var t := 0.0
+	var t_ant := Time.get_ticks_usec()
+	while t < DESLIZE_ENTRADA and not _pedido_pular:
+		await get_tree().process_frame
+		var agora := Time.get_ticks_usec()
+		t += minf(0.1, (agora - t_ant) / 1000000.0)
+		t_ant = agora
+		var x := clampf(t / DESLIZE_ENTRADA, 0.0, 1.0)
+		var w := x * x * x * (x * (x * 6.0 - 15.0) + 10.0)       # mais suave que o smoothstep (começa e para devagar)
+		camera.global_transform = Transform3D(de.basis.slerp(alvo_t.basis, w).orthonormalized(), de.origin.lerp(alvo_t.origin, w))
+		camera.fov = lerpf(fov0, fov1, w)
 
 # só as faixas e a câmera (sem planos): para conversas curtas dentro do jogo
 func barras(ligar: bool) -> void:
@@ -281,7 +367,7 @@ func _voltar_ao_jogo() -> void:
 		if not is_instance_valid(_cam_jogo):
 			return
 		var x := clampf(t / DESLIZE_VOLTA, 0.0, 1.0)
-		var w := x * x * (3.0 - 2.0 * x)
+		var w := x * x * x * (x * (x * 6.0 - 15.0) + 10.0)
 		var alvo := _cam_jogo.global_transform
 		camera.global_transform = Transform3D(de.basis.slerp(alvo.basis, w).orthonormalized(), de.origin.lerp(alvo.origin, w))
 		camera.fov = lerpf(fov0, _cam_jogo.fov, w)
