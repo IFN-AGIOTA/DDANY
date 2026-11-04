@@ -276,6 +276,27 @@ curta sem tirar o controle (fala, câmera guiada e câmera lenta).
   - casa dos pais da Mavie;
   - aeroporto executivo com o hangar 4 e o jato (modelo novo).
 
+**Carros da história (com INTERIOR, para quem joga em 1ª pessoa):**
+- Todos são da série "Low poly model" de **Daniel Zhabotinsky** no Sketchfab, com licença **CC-BY 4.0**
+  (dá crédito em `menu/creditos.gd`). São desenhos genéricos com nomes inventados, no estilo GTA, sem marca
+  registrada; têm entre 15 e 25 mil faces e interior (painel, volante e bancos). As portas não abrem.
+- **Dominic** (corrida, Missões 1–2): **JDM Sport '99**, esportivo japonês dos anos 90 com interior simples e
+  motor: https://sketchfab.com/3d-models/6dd4ae19c454414d9eed2bc524515d78
+  - Reserva: **NFR '90**: https://sketchfab.com/3d-models/776078e51fbe4ec9addbe45ba13e1aad
+- **Greg** (corrida e fuga com a Mavie no banco de trás, Missões 1–4): **Kiri '86**, sedã compacto japonês dos
+  anos 80, clássico de racha, com 4 lugares e interior com textura:
+  https://sketchfab.com/3d-models/5c17c582ef9549798f694b660feea42a
+  - Reserva: **Riverside '88**, sedã americano com interior com textura:
+    https://sketchfab.com/3d-models/8509a7f82665442592627940b7a1cfab
+- **Futuro, Cap. 7 (o Dodge Charger R/T 1969):** **Duke '69**, muscle car dos anos 60 com interior e motor:
+  https://sketchfab.com/3d-models/46fed79f600c4fc69e060991f9e3e4f9
+- **Bloqueios e cidade antes do caos (do mesmo autor):**
+  - viaturas: **Fairheaven LT '80 Cop Cruiser**, **Illinois '90** (polícia) e **Urban '10 Cop Enforcer**;
+  - **Shvan '92 Ambulance**;
+  - táxis: **Canyon '75 Taxi** e **Illinois '90 Taxi**.
+- Para baixar precisa de uma conta grátis no Sketchfab. No botão "Download 3D Model", escolher **glTF** ou o
+  **glb**; os arquivos são postos no jogo com a licença ao lado.
+
 **Testes:**
 - cada missão, do começo ao fim, roda sozinha (o teste "joga");
 - o GPS acha rota entre pontos aleatórios e nunca passa por uma rua fechada;
