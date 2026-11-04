@@ -19,6 +19,21 @@ static var _fontes := {}
 static func vh(no: Node) -> float:
 	return no.get_viewport().get_visible_rect().size.y / 100.0
 
+# (1.12.2) telas que se REFAZEM sozinhas (lista de amigos de 20 em 20 s, partidas no Wi-Fi...) criam um
+# ScrollContainer novo, que começa no topo: a tela "subia sozinha". Antes de refazer guarde
+# antigo.scroll_vertical e passe aqui o novo: ele volta para o mesmo lugar assim que o conteúdo é montado.
+static func manter_rolagem(sc: ScrollContainer, valor: int) -> void:
+	if sc == null or valor <= 0:
+		return
+	var barra := sc.get_v_scroll_bar()
+	var por := func():
+		if is_instance_valid(sc):
+			sc.scroll_vertical = valor
+	barra.changed.connect(por)                 # o conteúdo cresce em mais de um passo: acompanha até assentar
+	sc.get_tree().create_timer(0.4).timeout.connect(func():
+		if is_instance_valid(barra) and barra.changed.is_connected(por):
+			barra.changed.disconnect(por))
+
 # fonte do jogo: Roboto Condensed (a mesma do HTML), em res://menu/fontes (licença OFL em LICENSE.txt)
 const PESOS := [400, 700, 800, 900]
 

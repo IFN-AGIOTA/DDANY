@@ -41,6 +41,23 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.12.2 · PERFIL COM O PERSONAGEM EMBAIXO E MENUS QUE NÃO SOBEM SOZINHOS
+  · PERFIL: a criação do personagem ("SEU PERSONAGEM": corpo, pele, cabelo, barba e o boneco 3D) passou para
+    EMBAIXO de tudo. Em cima ficam a conta, o código de amigo, os recordes e os amigos.
+  · Conserto: em alguns menus, depois de rolar a tela para baixo, ela voltava para o topo sozinha depois de um
+    tempo. Era a tela sendo refeita (o Perfil de 20 em 20 s quando a lista de amigos atualiza; o Multijogador
+    quando acha ou perde partidas no Wi-Fi, chega convite ou anda o contador de "Chamado"). Agora a rolagem
+    fica onde você deixou; só ao trocar de tela ela começa do topo.
+  ARQUIVOS MEXIDOS (testado: teste_menus_rolagem NOVO: Perfil sem conta e com conta/amigos e lista do Multijogador,
+  rolados para baixo e refeitos 2 vezes, ficam no lugar (sem o conserto o teste falha: voltava para 0); trocar de
+  tela começa do topo; o personagem fica depois da conta; + compilar_tudo e teste_menu_leve):
+    menu/ui.gd ..................... manter_rolagem(): a tela refeita volta para a mesma rolagem
+    menu/tela_perfil.gd ............ SEU PERSONAGEM embaixo de tudo; guarda a rolagem ao se refazer
+    menu/tela_multijogador.gd ...... guarda a rolagem ao se refazer na mesma tela (outra tela começa do topo)
+    ferramentas/testes/teste_menus_rolagem.gd ... NOVO · rodar.sh: + teste_menus_rolagem
+    menu/config.gd ................. VERSAO "1.12.2"
+    menu/novidades_lista.gd ........ refeita
+
 ATUALIZAÇÃO 1.12.1 · ÍCONE DE ATUALIZAÇÃO (NUVEM) E AVISO QUE NÃO SAI DA TELA
   · No menu, embaixo do perfil (canto de cima à direita), fica uma NUVEM com uma flecha para baixo:
     - sem atualização: só a nuvem (tocar nela procura atualização na hora);

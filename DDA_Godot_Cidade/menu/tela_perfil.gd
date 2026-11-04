@@ -3,7 +3,7 @@ extends CanvasLayer
 # conta (Google/convidado), RECORDES (melhor tempo vivo, mais abates), PEDIDOS DE AMIZADE (aceitar/recusar),
 # AMIGOS (online/jogando/visto há…, recorde, remover) e ADICIONAR AMIGO pelo código.
 # Dados: rede/conta.gd (Firebase). Sem conta: mostra o botão para entrar (main.gd abre a tela de login).
-# 1.10 · SEU PERSONAGEM (em cima, com ou sem conta): homem/mulher, pele, cabelo, barba e cor, com o personagem do modo
+# 1.10 · SEU PERSONAGEM (EMBAIXO de tudo desde a 1.12.2, com ou sem conta): homem/mulher, pele, cabelo, barba e cor, com o personagem do modo
 # livre em 3D (menu/painel_personagem.gd). O painel não é refeito quando a lista de amigos atualiza (só muda de lugar).
 # Mexa AQUI para: layout e textos do perfil.
 
@@ -23,6 +23,7 @@ var _remover := ""                            # uid do amigo aguardando o 2º to
 var _t := 0.0
 var painel_personagem: Control = null          # 1.10: menu/painel_personagem.gd (fica vivo entre os _montar)
 var _v_painel := 0.0
+var _rolar: ScrollContainer                   # 1.12.2: guarda a rolagem quando a tela é refeita (não "sobe sozinha")
 
 func _ready() -> void:
 	layer = 32
@@ -58,6 +59,7 @@ func _montar() -> void:
 	var nome_antes := _nome.text if _nome != null and is_instance_valid(_nome) else Conta.nome
 	if painel_personagem != null and painel_personagem.get_parent() != null:
 		painel_personagem.get_parent().remove_child(painel_personagem)
+	var rolagem := _rolar.scroll_vertical if _rolar != null and is_instance_valid(_rolar) else 0
 	if _raiz != null:
 		_raiz.queue_free()
 	var v := UI.vh(self)
@@ -94,12 +96,12 @@ func _montar() -> void:
 	rolar.offset_bottom = -3.0 * v
 	rolar.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_raiz.add_child(rolar)
+	_rolar = rolar
+	UI.manter_rolagem(rolar, rolagem)
 	var tudo := VBoxContainer.new()
 	tudo.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	tudo.add_theme_constant_override("separation", int(1.2 * v))
 	rolar.add_child(tudo)
-	_secao(tudo, "SEU PERSONAGEM", v)
-	tudo.add_child(painel_personagem)
 	if not Conta.logado:
 		var c := VBoxContainer.new()
 		c.add_theme_constant_override("separation", int(1.6 * v))
@@ -112,6 +114,7 @@ func _montar() -> void:
 		c.add_child(b)
 		if not Conta.configurado:
 			c.add_child(_texto("(Contas ainda não configuradas neste APK.)", v))
+		_secao_personagem(tudo, v)
 		return
 	var linhas := HBoxContainer.new()
 	linhas.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -227,6 +230,15 @@ func _montar() -> void:
 	badd.apertado.connect(func(): Conta.adicionar_amigo(_cod.text))
 	ha.add_child(badd)
 	dir.add_child(ha)
+	_secao_personagem(tudo, v)
+
+# SEU PERSONAGEM fica embaixo de tudo (1.12.2: antes ficava em cima)
+func _secao_personagem(tudo: Container, v: float) -> void:
+	var m := Control.new()
+	m.custom_minimum_size.y = 2.0 * v
+	tudo.add_child(m)
+	_secao(tudo, "SEU PERSONAGEM", v)
+	tudo.add_child(painel_personagem)
 
 # online primeiro, depois quem já aceitou, depois o resto (por nome)
 func _amigos_ordenados() -> Array:

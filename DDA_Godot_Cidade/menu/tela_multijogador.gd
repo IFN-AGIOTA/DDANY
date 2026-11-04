@@ -42,6 +42,8 @@ var _t_respostas := 0.0
 var _t_convites := 0.0
 var _t_tela := 0.0
 var _sinais: Array = []
+var _area: ScrollContainer                    # 1.12.2: a rolagem fica no lugar quando a tela se refaz sozinha
+var _modo_area := ""
 
 func _ready() -> void:
 	layer = 30
@@ -86,6 +88,9 @@ func _montar() -> void:
 	var nome_antes := _nome.text if _nome != null and is_instance_valid(_nome) else _meu_nome_salvo()
 	_texto_mundo = _nome_mundo.text if _nome_mundo != null and is_instance_valid(_nome_mundo) else _texto_mundo
 	_nome_mundo = null
+	# mesma tela refeita (partidas no Wi-Fi, convites, contador dos chamados...): a rolagem fica onde estava;
+	# trocou de tela (modo): começa do topo
+	var rolagem := _area.scroll_vertical if _area != null and is_instance_valid(_area) and _modo_area == modo else 0
 	if _raiz != null:
 		_raiz.queue_free()
 	_ip = null
@@ -128,6 +133,9 @@ func _montar() -> void:
 	area.offset_bottom = -7.0 * v
 	area.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_raiz.add_child(area)
+	_area = area
+	_modo_area = modo
+	UI.manter_rolagem(area, rolagem)
 	_status = UI.rotulo(st, 2.6 * v, UI.AMBAR, 700)
 	_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_status.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
