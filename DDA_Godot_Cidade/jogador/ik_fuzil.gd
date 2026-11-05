@@ -43,6 +43,8 @@ var modo := ""                         # 1.14.2: "fuzil" (arma no encaixe do fuz
 var ponto_antigo := Transform3D.IDENTITY   # 1.14.2: o encaixe antigo da arma na mão (medido na pose de mirar)
 var giro_correcao := 0.0              # (testes) quanto a mão girou da animação até a pegada certa (rad)
 const DIST_MIRA := 30.0
+const TORCAO := 0.38                   # 1.14.5: quanto o tronco gira mirando em 3ª pessoa (rad, ~22°)
+var alcance_e := 1.0                   # (testes) 1 = a esquerda segurou no ponto do guarda-mão; menos = recuou
 const FRENTE_MIN := 0.12               # 1.14.5: a arma a menos disto na frente do corpo (m): a esquerda não vai nela                # 1.14.3: distância do ponto mirado (o centro da tela) para alinhar o cano
 var _pref_e := Vector3.ZERO            # 1.14.2: para onde os dedos da esquerda apontam (arma branca de duas mãos)
 var usar_esquerda := true              # 1.14.2: a mão esquerda vai para a arma (não, recarregando)
@@ -78,10 +80,12 @@ func preparar(sk: Skeleton3D, anim: AnimationPlayer) -> void:
 	anim.play("parado")
 	anim.seek(0.0, true)
 	var d := dir_lado
-	# BAIXO: empunhadura na frente do quadril direito, cano para baixo, para a frente e cruzando para a esquerda
-	var cano := Vector3(-d * 0.62, -0.42, 0.66).normalized()
+	# BAIXO (descansando): empunhadura na frente do quadril direito, cano atravessado na frente do corpo, para a frente,
+	# para a esquerda e um pouco para baixo. 1.14.5: mais perto do corpo e mais atravessado: o guarda-mão fica na frente
+	# do quadril esquerdo, onde a mão esquerda alcança (antes ela não chegava e ficava na caixa da culatra)
+	var cano := Vector3(-d * 0.78, -0.22, 0.58).normalized()
 	var cima := (Vector3.UP - cano * cano.dot(Vector3.UP)).normalized()
-	baixo = Transform3D(Basis(cima.cross(cano), cima, cano), Vector3(d * 0.1, -0.27, 0.27))
+	baixo = Transform3D(Basis(cima.cross(cano), cima, cano), Vector3(d * 0.13, -0.16, 0.2))
 	# MIRANDO: coronha no ombro (a coronha fica ~0,28 m atrás da empunhadura), cano reto para a frente
 	mirando = Transform3D(Basis.IDENTITY, Vector3(-d * 0.12, 0.04, 0.33))
 
@@ -108,6 +112,10 @@ func _process_modification() -> void:
 		if modo == "mao":
 			_corrigir(sk)
 		return
+	# 1.14.5: mirando em 3ª pessoa o tronco gira um pouco (ombro esquerdo à frente, como quem atira de verdade): a mão
+	# esquerda alcança o guarda-mão (antes ficava curta e recuava até a caixa da culatra)
+	if mira > 0.01 and fp < 0.5:
+		_torcer_tronco(sk, smoothstep(0.0, 1.0, mira) * (1.0 - fp * 2.0))
 	var peito := sk.get_bone_global_pose(_i["spine_03"]).origin
 	var ombro := sk.get_bone_global_pose(_i["upperarm_r"]).origin
 	var tb := Transform3D(baixo.basis, peito + baixo.origin)
@@ -134,6 +142,7 @@ func _esq_ao_alcance(sk: Skeleton3D, t: Transform3D) -> Transform3D:
 	var ombro := sk.get_bone_global_pose(_i["upperarm_l"]).origin
 	var alc := _braco_e * 0.985
 	var alvo := t * _mao_esq()
+	alcance_e = 1.0
 	if ombro.distance_to(alvo.origin) <= alc:
 		return alvo
 	var lo := 0.0
@@ -144,6 +153,7 @@ func _esq_ao_alcance(sk: Skeleton3D, t: Transform3D) -> Transform3D:
 			lo = m
 		else:
 			hi = m
+	alcance_e = lo
 	return t * _mao_esq(lo)
 
 # 1.14.2 · ARMA NA MÃO PELA ANIMAÇÃO (arma branca, pistola em 3ª pessoa): a animação diz onde a arma vai (mão da
@@ -191,6 +201,19 @@ func _apontar(sk: Skeleton3D, t: Transform3D, peso: float) -> Transform3D:
 		return t                        # muito diferente (virando o corpo): não força
 	var q := Quaternion(agora, quer)
 	return Transform3D(Basis(Quaternion.IDENTITY.slerp(q, peso)) * t.basis, t.origin)
+
+# gira o peito em volta do eixo vertical (o ombro esquerdo vai para a frente) e o pescoço de volta (a cabeça continua
+# olhando para a frente)
+func _torcer_tronco(sk: Skeleton3D, f: float) -> void:
+	var a := dir_lado * TORCAO * f
+	_girar_osso(sk, _i["spine_03"], a)
+	_girar_osso(sk, _i["neck_01"], -a)
+
+func _girar_osso(sk: Skeleton3D, i: int, a: float) -> void:
+	var g := sk.get_bone_global_pose(i).basis.orthonormalized()
+	var ng := Basis(Vector3.UP, a) * g
+	var gp := sk.get_bone_global_pose(sk.get_bone_parent(i)).basis.orthonormalized()
+	sk.set_bone_pose_rotation(i, (gp.inverse() * ng).get_rotation_quaternion())
 
 # encosta o rosto na coronha: cabeça um pouco para baixo e para o lado da arma
 func _inclinar_cabeca(sk: Skeleton3D, f: float) -> void:

@@ -41,7 +41,7 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
-ATUALIZAÇÃO 1.14.5 · MIRA SEM TREMER E BRAÇO QUE NÃO ATRAVESSA O CORPO
+ATUALIZAÇÃO 1.14.5 · MIRA SEM TREMER, MÃO ESQUERDA NO GUARDA-MÃO E MP5 CENTRADA
   · MIRANDO COM FUZIL (M4, AK, MP5, espingarda, rifle) o personagem e a mira TREMIAM. Medido parado e mirando: o peito
     e o ombro oscilavam 1,2 a 2,4 cm de um quadro para o outro (a câmera junto, na mira de ferro). A causa era a
     animação "mirar_fuzil": a cada 1,6 s ela recomeçava com um pulo de 5,8 cm na cabeça (o começo da captura estava
@@ -54,13 +54,25 @@ ATUALIZAÇÃO 1.14.5 · MIRA SEM TREMER E BRAÇO QUE NÃO ATRAVESSA O CORPO
     correndo, o boneco do inventário e o do Perfil — a mão esquerda ia buscar a arma e o braço atravessava o corpo.
     Agora a esquerda só vai para a arma quando ela está NA FRENTE do corpo (empunhando ou mirando), entrando e saindo
     aos poucos; com a arma baixa, o braço esquerdo fica solto.
+  · MÃO ESQUERDA NO GUARDA-MÃO, descansando e mirando (M4, AK, MP5, espingarda, rifle), como nas fotos de referência:
+    - DESCANSANDO: o fuzil fica mais perto do corpo e atravessado (empunhadura no quadril direito, guarda-mão na
+      frente do quadril esquerdo): a mão esquerda segura o guarda-mão (antes não alcançava e ficava na caixa da
+      culatra, como no boneco do inventário);
+    - MIRANDO em 3ª pessoa: o tronco gira ~22° (ombro esquerdo à frente, como quem atira de verdade) e a esquerda
+      alcança o guarda-mão (antes ficava 5 a 15 cm curta);
+    - medido: M4, AK e MP5 seguram no ponto do guarda-mão (100%) descansando e mirando; o rifle a 87% descansando e
+      a espingarda a 67% descansando (na frente da caixa da culatra, perto da telha).
+  · MP5 NA MIRA: o olho no meio do furo do tambor (9,0 cm; era 8,8) e a massa na mesma altura: a alça fica no
+    centro e a traseira da arma desce um pouco (não tapa mais a mira).
   · O comando do modo desenvolvedor (que libera o modo história) é o INFINITYDEV no chat.
   ARQUIVOS (testado: medição do tremor mirando (M4, AK, pistola, nas 3 câmeras), emenda de todas as animações em
   ciclo, fotos do boneco do inventário e das armas erguidas + bateria: compilar_tudo, teste_movimento,
   teste_mira_ferro, teste_luneta, teste_personagem, teste_ombro, teste_jogo, teste_mutado, teste_troca_camera):
     jogador/emendar_animacoes.gd ... NOVO · conserta as animações em ciclo ao carregar (cortar, fundir, amortecer)
     jogador/modelo_sobrevivente.gd .. chama o conserto ao carregar as animações
-    jogador/ik_fuzil.gd ............ a esquerda só apoia a arma quando ela está na frente do corpo (FRENTE_MIN)
+    jogador/ik_fuzil.gd ............ a esquerda só apoia a arma quando ela está na frente do corpo (FRENTE_MIN);
+                                     fuzil descansando mais perto e atravessado (baixo); tronco gira mirando (TORCAO)
+    armas/mira_ferro.gd ............ MP5: alça no meio do furo do tambor e massa na mesma altura
     menu/config.gd ................. VERSAO "1.14.5"
     menu/novidades_lista.gd ........ refeita
     LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..."
