@@ -41,6 +41,24 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.14.4 · MODO HISTÓRIA BLOQUEADO (SÓ COM O MODO DESENVOLVEDOR)
+  · O modo história fica BLOQUEADO por padrão: o botão HISTÓRIA não aparece no menu principal e o jogo não abre a
+    história por nenhum outro caminho.
+  · Para liberar (quem está fazendo o jogo): dentro de um jogo, escreva INFINITYDEV no chat e envie (liga o MODO
+    DESENVOLVEDOR, seção 11) e volte ao menu principal: o botão HISTÓRIA aparece. Fica liberado neste aparelho até
+    /devoff (que bloqueia de novo). O comando novo /historia mostra se está liberado.
+  · Na versão final, apagando a pasta dev/, o modo história fica bloqueado para todos. Para liberar para todo mundo
+    (quando estiver pronto): historia/historia.gd liberado() devolve true.
+  ARQUIVOS (testado: teste_historia (com o bloqueio), teste_menu_leve, compilar_tudo):
+    historia/historia.gd ........... liberado(): só com o modo desenvolvedor gravado (user://dev.cfg) e a pasta dev/
+    menu/menu_principal.gd ......... o botão HISTÓRIA só aparece liberado
+    main.gd ........................ _jogar_historia() não abre bloqueado
+    dev/modo_dev.gd ................ comando /historia; o aviso do INFINITYDEV fala do modo história
+    ferramentas/testes/teste_historia.gd ... confere o bloqueio (sem botão e não abre) e a liberação
+    menu/config.gd ................. VERSAO "1.14.4"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + seção 11 + mapa "QUERO MEXER EM..."
+
 ATUALIZAÇÃO 1.14.3 · ARMAS RETAS NA MIRA (1ª E 3ª PESSOA)
   · O QUE ESTAVA TORTO (medido arma por arma: para onde o cano aponta x a mira da tela, giro em volta do cano e a
     imagem da mira ampliada):
@@ -3707,6 +3725,8 @@ A cidade fica "antes do caos" e vai piorando de missão em missão; a área de c
 7. MAPA DO PROJETO (cada sistema no seu arquivo · numa atualização, troque só os arquivos que mudaram)
 -----------------------------------------------------------------------------------------------------
 QUERO MEXER EM...                         ARQUIVO
+- modo história BLOQUEADO / liberado
+  (só com o modo desenvolvedor) ....... historia/historia.gd (liberado())
 - MODO HISTÓRIA (1.13): ordem das missões,
   mundo antes do caos, progresso ........ historia/historia.gd
 - Prólogo + Missão 1 (a corrida) ....... historia/missao_corrida.gd
@@ -4447,6 +4467,8 @@ COMANDOS:
   /fps ............................... FPS e posição no canto da tela liga/desliga
   /gasolina .......................... enche o tanque do veículo que você está dirigindo
   /salvar ............................ salva o jogo agora
+  /historia .......................... (1.14.4) o MODO HISTÓRIA só existe com o modo desenvolvedor ligado: mostra se
+                                       está liberado (o botão HISTÓRIA aparece no menu principal; /devoff bloqueia)
   /hora <0-24> · /dia · /noite ....... muda a hora (só host)
   /congelar .......................... para/solta a passagem do tempo (só host)
   /clima <limpo|nublado|chuva|tempestade> ... muda o tempo na hora (só host)

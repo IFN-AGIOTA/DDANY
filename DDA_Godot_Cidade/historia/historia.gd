@@ -51,6 +51,17 @@ static func ler() -> Dictionary:
 	var d = JSON.parse_string(FileAccess.get_file_as_string(ARQUIVO))
 	return d if d is Dictionary else {}
 
+# 1.14.4: o modo história fica BLOQUEADO por padrão; só com o MODO DESENVOLVEDOR ligado (INFINITYDEV no chat, que
+# grava user://dev.cfg; dev/modo_dev.gd) ele aparece no menu e abre. Sem a pasta dev/ (versão final), fica bloqueado
+# para todos. Para liberar para todo mundo: faça liberado() devolver true.
+const DEV_SCRIPT := "res://dev/modo_dev.gd"
+const DEV_CFG := "user://dev.cfg"
+static func liberado() -> bool:
+	if not ResourceLoader.exists(DEV_SCRIPT):
+		return false
+	var cf := ConfigFile.new()
+	return cf.load(DEV_CFG) == OK and bool(cf.get_value("dev", "ativo", false))
+
 static func resumo() -> String:
 	var d := ler()
 	if d.is_empty():

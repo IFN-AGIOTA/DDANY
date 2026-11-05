@@ -9,6 +9,7 @@ extends SceneTree
 #   · (1.14) MISSÃO 2: entrar no Kiri pelo botão PEGAR, seguir o Greg até o bar, sair, entrar no bar (cenário),
 #     sentar na mesa do canto (a cena da TV começa); depois o interlúdio; as duas ficam salvas
 #   · voltando ao menu, a cidade fica como era (o abandono volta) para o modo livre
+#   · (1.14.4) BLOQUEADO sem o modo desenvolvedor: sem botão no menu e não abre; com ele ligado, o botão aparece
 var falhas := 0
 func ok(c: bool, msg: String) -> void:
 	if c: print("  ok   ", msg)
@@ -20,6 +21,9 @@ func _initialize():
 	var arq := "user://historia.json"
 	if FileAccess.file_exists(arq):
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(arq))
+	# 1.14.4: começa SEM o modo desenvolvedor (o modo história tem de estar bloqueado)
+	if FileAccess.file_exists("user://dev.cfg"):
+		DirAccess.remove_absolute(ProjectSettings.globalize_path("user://dev.cfg"))
 	change_scene_to_file("res://main.tscn")
 	_r.call_deferred()
 func q(n):
@@ -36,11 +40,35 @@ func _esperar(s: float) -> void:
 	while Time.get_ticks_msec() - t0 < s * 1000.0:
 		await process_frame
 
+func _botao_historia(m) -> bool:
+	if m.menu == null:
+		return false
+	for b in m.menu.find_children("*", "Control", true, false):
+		if str(b.get("titulo")) == "História" and b.is_inside_tree():
+			return true
+	return false
+
 func _r():
 	await q(30)
 	var m = current_scene
 	if m.tela_login != null:
 		m.tela_login._sair()
+	await q(10)
+	# 1.14.4: BLOQUEADO por padrão: sem o modo desenvolvedor não há botão e o modo história não abre
+	ok(not _botao_historia(m), "sem o modo desenvolvedor o menu não mostra o botão HISTÓRIA")
+	m._jogar_historia()
+	await q(20)
+	ok(m.historia == null and m.jogo == null, "sem o modo desenvolvedor o modo história não abre")
+	var cf := ConfigFile.new()
+	cf.set_value("dev", "ativo", true)                  # como o INFINITYDEV no chat (dev/modo_dev.gd)
+	cf.save("user://dev.cfg")
+	for n in [m.menu, m.cena_menu]:                     # (o menu volta a ser montado, como ao sair de um jogo)
+		if n != null and is_instance_valid(n):
+			n.queue_free()
+	await q(2)
+	m._abrir_menu()
+	await q(10)
+	ok(_botao_historia(m), "com o modo desenvolvedor o botão HISTÓRIA aparece no menu")
 	m._jogar_historia()
 	var t0 := Time.get_ticks_msec()
 	while (m.historia == null or m.historia.missao == null) and Time.get_ticks_msec() - t0 < 300000:

@@ -310,6 +310,8 @@ func _jogar(carregar_salvo := false) -> void:
 func _jogar_historia() -> void:
 	if carregamento != null or jogo != null:
 		return
+	if not HistoriaCls.liberado():           # 1.14.4: bloqueado por padrão (só com o modo desenvolvedor)
+		return
 	if carregar_em_etapas:
 		await _abrir_carregamento("MODO HISTÓRIA · ATO 1 · NOVA YORK")
 	else:

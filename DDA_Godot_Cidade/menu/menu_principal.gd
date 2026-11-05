@@ -128,6 +128,10 @@ func _montar() -> void:
 	var b4 := UI.BotaoMenu.new("Créditos", "", false, 3.0, 26.0)
 	b4.apertado.connect(_abrir_creditos)
 	var botoes: Array = [b2, b1, bm, b3, b4]
+	# 1.14.4: o modo história só aparece com o MODO DESENVOLVEDOR ligado (historia/historia.gd liberado())
+	if not preload("res://historia/historia.gd").liberado():
+		botoes.erase(b1)
+		b1.queue_free()
 	if salvo != "":
 		var b0 := UI.BotaoMenu.new("Continuar", salvo, true, 3.8)
 		b0.apertado.connect(func(): continuar.emit())
