@@ -41,6 +41,30 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.14.5 · MIRA SEM TREMER E BRAÇO QUE NÃO ATRAVESSA O CORPO
+  · MIRANDO COM FUZIL (M4, AK, MP5, espingarda, rifle) o personagem e a mira TREMIAM. Medido parado e mirando: o peito
+    e o ombro oscilavam 1,2 a 2,4 cm de um quadro para o outro (a câmera junto, na mira de ferro). A causa era a
+    animação "mirar_fuzil": a cada 1,6 s ela recomeçava com um pulo de 5,8 cm na cabeça (o começo da captura estava
+    noutra postura) e a respiração subia/descia o peito 3,4 cm. Agora, quando o jogo carrega:
+    - o começo ruim é cortado, o fim emenda no começo sem pulo e a respiração fica com 35% (a mira fica firme, ainda
+      viva): o tremor caiu para menos de 1 mm por quadro;
+    - outras animações em ciclo com pulo na volta também emendam: andar de espreita (3,9 cm), mancar (3,1 cm),
+      correr com fuzil e trote.
+  · BRAÇO PARA DENTRO: com a pistola (ou taco, machado, cano, lança) BAIXA ao lado do quadril — parado sem postura,
+    correndo, o boneco do inventário e o do Perfil — a mão esquerda ia buscar a arma e o braço atravessava o corpo.
+    Agora a esquerda só vai para a arma quando ela está NA FRENTE do corpo (empunhando ou mirando), entrando e saindo
+    aos poucos; com a arma baixa, o braço esquerdo fica solto.
+  · O comando do modo desenvolvedor (que libera o modo história) é o INFINITYDEV no chat.
+  ARQUIVOS (testado: medição do tremor mirando (M4, AK, pistola, nas 3 câmeras), emenda de todas as animações em
+  ciclo, fotos do boneco do inventário e das armas erguidas + bateria: compilar_tudo, teste_movimento,
+  teste_mira_ferro, teste_luneta, teste_personagem, teste_ombro, teste_jogo, teste_mutado, teste_troca_camera):
+    jogador/emendar_animacoes.gd ... NOVO · conserta as animações em ciclo ao carregar (cortar, fundir, amortecer)
+    jogador/modelo_sobrevivente.gd .. chama o conserto ao carregar as animações
+    jogador/ik_fuzil.gd ............ a esquerda só apoia a arma quando ela está na frente do corpo (FRENTE_MIN)
+    menu/config.gd ................. VERSAO "1.14.5"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..."
+
 ATUALIZAÇÃO 1.14.4 · MODO HISTÓRIA BLOQUEADO (SÓ COM O MODO DESENVOLVEDOR)
   · O modo história fica BLOQUEADO por padrão: o botão HISTÓRIA não aparece no menu principal e o jogo não abre a
     história por nenhum outro caminho.
@@ -4076,6 +4100,8 @@ SOBREVIVENTE (jogador no modo livre)
                                         jogador/ik_fuzil.gd (_apontar)
 - dedos fechados (pistola, fuzil, punho,
   apoio, soco, item) .................. jogador/camada_dedos.gd (PEGADAS)
+- animação em ciclo com pulo na volta
+  (a mira com fuzil tremia) ........... jogador/emendar_animacoes.gd (CONSERTOS)
 - malha e animações ................... jogador/sobrevivente/corpo.scn, animacoes.res e texturas/ (homem) ·
                                         corpo_f.scn, animacoes_f.res (mulher, 1.10)
 - converter de novo ................... ferramentas/preparar_jogador.gd -> retarget_kaykit.gd -> preparar_personagem.gd

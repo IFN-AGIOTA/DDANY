@@ -52,6 +52,7 @@ const MiraFerro := preload("res://armas/mira_ferro.gd")
 const CabecaOculta := preload("res://jogador/cabeca_oculta.gd")
 const Pegada := preload("res://jogador/pegada.gd")            # 1.14.2: como cada mão segura cada arma
 const CamadaDedos := preload("res://jogador/camada_dedos.gd")  # 1.14.2: a mão fecha em volta do que segura
+const EmendarAnimacoes := preload("res://jogador/emendar_animacoes.gd")   # 1.14.5: animações em ciclo sem pulo
 const ModelosItens := preload("res://inventario/modelos_itens.gd")
 const RoupasTabela := preload("res://jogador/roupas_tabela.gd")
 const Itens := preload("res://inventario/itens.gd")
@@ -205,6 +206,7 @@ func _ready() -> void:
 	if not _cenas.has(sexo):
 		_cenas[sexo] = load(PASTA + SEXOS[sexo][0])
 		_anims[sexo] = load(PASTA + SEXOS[sexo][1])
+		EmendarAnimacoes.consertar(_anims[sexo])      # 1.14.5: ciclos sem pulo (a mira com fuzil tremia)
 	if _shader == null:
 		_shader = Shader.new()
 		_shader.code = SHADER

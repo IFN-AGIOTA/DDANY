@@ -42,7 +42,8 @@ var guarda_punhos := false             # as duas mãos (punhos) · false = arma 
 var modo := ""                         # 1.14.2: "fuzil" (arma no encaixe do fuzil) · "mao" (arma presa na mão) · ""
 var ponto_antigo := Transform3D.IDENTITY   # 1.14.2: o encaixe antigo da arma na mão (medido na pose de mirar)
 var giro_correcao := 0.0              # (testes) quanto a mão girou da animação até a pegada certa (rad)
-const DIST_MIRA := 30.0                # 1.14.3: distância do ponto mirado (o centro da tela) para alinhar o cano
+const DIST_MIRA := 30.0
+const FRENTE_MIN := 0.12               # 1.14.5: a arma a menos disto na frente do corpo (m): a esquerda não vai nela                # 1.14.3: distância do ponto mirado (o centro da tela) para alinhar o cano
 var _pref_e := Vector3.ZERO            # 1.14.2: para onde os dedos da esquerda apontam (arma branca de duas mãos)
 var usar_esquerda := true              # 1.14.2: a mão esquerda vai para a arma (não, recarregando)
 const GUARDA_DIR := Vector3(0.15, -0.19, 0.36)   # mão direita no quadro da câmera (x lado direito, y cima, z frente)
@@ -167,9 +168,15 @@ func _corrigir(sk: Skeleton3D) -> void:
 	_dois_ossos(sk, "r", alvo_d, gb - ga)
 	_pref_e = Vector3.ZERO
 	if usar_esquerda and (tipo == "pistola" or Pegada.duas_maos(tipo)):
-		if Pegada.duas_maos(tipo):
-			_pref_e = inv * (w * Pegada.ponto_esquerda(tipo) - sk.get_bone_global_pose(_i["upperarm_l"]).origin)
-		_dois_ossos(sk, "l", _esq_ao_alcance(sk, w), Vector3(-dir_lado * 0.3, -0.8, -0.1))
+		# 1.14.5: a esquerda só vai para a arma quando ela está NA FRENTE do corpo (empunhando/mirando). Com a arma
+		# baixa ao lado do quadril (parado sem postura, correndo, o boneco do inventário/Perfil) a mão esquerda
+		# atravessava o corpo e o braço ficava "para dentro". Entra e sai aos poucos.
+		var k := smoothstep(FRENTE_MIN, FRENTE_MIN + 0.12, w.origin.z)
+		if k > 0.001:
+			if Pegada.duas_maos(tipo):
+				_pref_e = inv * (w * Pegada.ponto_esquerda(tipo) - sk.get_bone_global_pose(_i["upperarm_l"]).origin)
+			var atual := sk.get_bone_global_pose(_i["hand_l"])
+			_dois_ossos(sk, "l", atual.interpolate_with(_esq_ao_alcance(sk, w), k), Vector3(-dir_lado * 0.3, -0.8, -0.1))
 
 # 1.14.3 · MIRANDO EM 3ª PESSOA o cano aponta para onde a MIRA DA TELA aponta (o tiro sai do centro da câmera): a câmera
 # por cima do ombro olha um pouco para baixo e a arma ficava ~7° acima do alvo (parecia torta). Gira a arma em volta
