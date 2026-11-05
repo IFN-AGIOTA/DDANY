@@ -41,6 +41,48 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.14.2 · ARMAS E OBJETOS NA POSIÇÃO CERTA NA MÃO (UMA POR UMA)
+  · O QUE ESTAVA ERRADO (revisto arma por arma com fotos de 1ª e 3ª pessoa, parado e mirando):
+    - os DEDOS ficavam esticados e abertos em todas as armas: a arma parecia colada na mão (no print, a pistola na
+      ponta dos dedos);
+    - a arma ficava presa como se fosse um cano saindo pela ponta dos dedos: a faca, o facão e o pé de cabra saíam
+      do indicador, a pistola ficava solta na frente da mão;
+    - nos fuzis a mão esquerda ficava longe do guarda-mão (o braço não alcançava) e aberta;
+    - no taco, machado, cano e lança a mão esquerda não segurava o cabo;
+    - mirando a espingarda/rifle em 1ª pessoa, a mão e o antebraço direitos subiam na frente do olho.
+  · AGORA:
+    - a mão FECHA em volta do que segura (camada nova dos dedos): pistola e fuzis com o indicador no gatilho e o
+      polegar do outro lado; armas brancas no punho fechado; a esquerda espalmada e meio fechada no guarda-mão;
+      punhos fechados no soco; itens (lata, remédio, tijolo) em concha;
+    - cada arma tem a sua PEGADA (onde a mão segura, a inclinação da empunhadura, onde a esquerda apoia): a
+      empunhadura/cabo atravessa a palma, do indicador ao mindinho;
+    - a arma continua indo para onde a animação manda (golpes, porte, mira) e a mão gira e se ajusta para
+      segurá-la direito. Nas armas brancas os dedos seguem o antebraço, então o punho não torce;
+    - PISTOLA: nas duas mãos também em 3ª pessoa (a esquerda do lado da empunhadura, por cima dos dedos da direita);
+      mirando em 1ª pessoa os braços ficam mais esticados (o olho a 46 cm, era 36): a pistola fica livre no centro;
+    - FUZIS (MP5, M4, AK, espingarda, rifle): a esquerda embaixo do guarda-mão; se o braço não alcança o ponto (arma
+      comprida, personagem de frente), a mão recua ao longo do guarda-mão em vez de ficar solta no ar;
+    - ESPINGARDA e RIFLE mirando: o olho a 20 cm atrás do gatilho (era 12, o rosto na coronha de verdade) e a mão
+      alinhada com o cano: o braço não tampa mais a tela;
+    - TACO, MACHADO, CANO e LANÇA: as duas mãos fechadas no cabo, a esquerda abaixo da direita, sem cruzar os braços.
+  ARQUIVOS (testado: fotos de cada arma em 1ª pessoa (reto, olhando para cima, mirando) e em 3ª pessoa (de lado e de
+  frente, parado e mirando), itens na mão + compilar_tudo, teste_mira_ferro, teste_luneta, teste_personagem,
+  teste_ombro, teste_troca_camera, teste_arremesso, teste_jogo, teste_mutado, teste_movimento):
+    jogador/pegada.gd .............. NOVO · a pegada de cada arma: onde a direita segura (G), inclinação da
+                                     empunhadura (A), onde a esquerda apoia (ESQ), as duas mãos das armas brancas
+    jogador/camada_dedos.gd ........ NOVO · fecha os dedos em volta do que a mão segura (PEGADAS: pistola, fuzil,
+                                     punho, apoio, apoio_pistola, soco, item)
+    jogador/ik_fuzil.gd ............ a direita na pegada de cada arma; a esquerda pela tabela e ao alcance do braço;
+                                     modo "mao" (arma branca e pistola em 3ª pessoa: onde a animação manda, com a
+                                     pegada certa, as duas mãos nas armas de duas mãos)
+    jogador/modelo_sobrevivente.gd .. todas as armas no encaixe do IK; escolhe o modo do IK e a pegada dos dedos;
+                                     item na mão no vão da mão fechada
+    armas/mira_ferro.gd ............ olho mais longe na pistola (0,46), espingarda e rifle (0,20)
+    ferramentas/testes/teste_mira_ferro.gd ... confere a mão direita na pegada nova
+    menu/config.gd ................. VERSAO "1.14.2"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..."
+
 ATUALIZAÇÃO 1.14.1 · MODELOS DE VERDADE NO MODO HISTÓRIA (MÓVEIS, GARRAFAS, VIATURA DE POLÍCIA, CONES)
   · Baixados 3 pacotes livres (CC0, domínio público) da Kenney: "Furniture Kit", "Food Kit" e "Car Kit". Os
     modelos usados ficam em historia/modelos/ (moveis, comida, veiculos), cada pasta com a sua LICENCA.txt, e estão
@@ -3980,6 +4022,10 @@ SOBREVIVENTE (jogador no modo livre)
                                         COLETES, CABECA no topo: item novo = cor nova ali)
 - fuzil nas duas mãos (posição do fuzil
   baixo/mirando e das mãos, IK) ....... jogador/ik_fuzil.gd
+- ONDE A MÃO SEGURA cada arma (pegada,
+  apoio da esquerda, duas mãos) ....... jogador/pegada.gd (DIREITA, ESQ, BRANCA_DIR, DUAS_MAOS, CANAL)
+- dedos fechados (pistola, fuzil, punho,
+  apoio, soco, item) .................. jogador/camada_dedos.gd (PEGADAS)
 - malha e animações ................... jogador/sobrevivente/corpo.scn, animacoes.res e texturas/ (homem) ·
                                         corpo_f.scn, animacoes_f.res (mulher, 1.10)
 - converter de novo ................... ferramentas/preparar_jogador.gd -> retarget_kaykit.gd -> preparar_personagem.gd

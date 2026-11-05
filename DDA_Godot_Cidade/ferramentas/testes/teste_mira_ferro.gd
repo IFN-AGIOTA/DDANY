@@ -57,7 +57,7 @@ func _r():
 		var massa: Vector3 = no.global_transform * Vector3(0, (dd[1] as Vector2).x, (dd[1] as Vector2).y)
 		var pm := _tela(cam, massa)
 		ok(j.em_mira_ferro() and absf(pm.x - 0.5) < 0.012 and absf(pm.y - 0.5) < 0.012, "%s: mirando, a massa no centro da tela (%.3f, %.3f)" % [arma, pm.x, pm.y])
-		var alvo_d: Vector3 = (mod._ponto_fuzil.global_transform * mod._ik.mao_dir).origin
+		var alvo_d: Vector3 = (mod._ponto_fuzil.global_transform * load("res://jogador/pegada.gd").mao_dir(arma)).origin   # 1.14.2: a pegada de cada arma
 		ok(ad.global_position.distance_to(alvo_d) < 0.06, "%s: a mão direita alcança a arma (%.2f m)" % [arma, ad.global_position.distance_to(alvo_d)])
 		ok(j.camera.fov < j.fov_camera + 18.0 - 3.0, "%s: mirando, a câmera aproxima (FOV %.0f)" % [arma, j.camera.fov])
 	j._mirar_ligado = false

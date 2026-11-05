@@ -50,6 +50,8 @@ const CamadaInercia := preload("res://jogador/camada_inercia.gd")          # 1.1
 const CamadaOrientacao := preload("res://jogador/camada_orientacao.gd")    # 1.12
 const MiraFerro := preload("res://armas/mira_ferro.gd")
 const CabecaOculta := preload("res://jogador/cabeca_oculta.gd")
+const Pegada := preload("res://jogador/pegada.gd")            # 1.14.2: como cada mão segura cada arma
+const CamadaDedos := preload("res://jogador/camada_dedos.gd")  # 1.14.2: a mão fecha em volta do que segura
 const ModelosItens := preload("res://inventario/modelos_itens.gd")
 const RoupasTabela := preload("res://jogador/roupas_tabela.gd")
 const Itens := preload("res://inventario/itens.gd")
@@ -169,6 +171,7 @@ var mutado_camada                      # 0.94: jogador/camada_mutado.gd (corpo c
 var inercia                            # 1.12: jogador/camada_inercia.gd (trocas de animação sem tranco)
 var orientacao                         # 1.12: jogador/camada_orientacao.gd (pernas na diagonal, inclinar na curva)
 var cabeca_oculta                      # 0.65: jogador/cabeca_oculta.gd (1ª pessoa: esconde a cabeça)
+var dedos                              # 1.14.2: jogador/camada_dedos.gd (dedos fechados na arma/item)
 var _osso_cabeca := -1
 var _ik: IkFuzil
 var _mira := 0.0
@@ -704,11 +707,12 @@ func _criar_ponto_arma() -> void:
 	_ponto_arma.transform = gh.affine_inverse() * Transform3D(Basis.IDENTITY, palma)
 	anim.play("parado")
 
-func segurar_arma(tipo: String, no: Node3D) -> void:
-	if tipo in FUZIS:
-		_ponto_fuzil.add_child(no)
-	else:
-		_ponto_arma.add_child(no)
+# 1.14.2: TODAS as armas ficam no encaixe que o IK posiciona (jogador/ik_fuzil.gd): fuzis (e a pistola em 1ª pessoa)
+# pelo corpo/câmera; arma branca e pistola em 3ª pessoa onde a ANIMAÇÃO manda (mão da animação x encaixe antigo). A
+# mão vai para a PEGADA certa (jogador/pegada.gd). Antes a arma branca e a pistola ficavam presas ao osso da mão.
+func segurar_arma(_tipo: String, no: Node3D) -> void:
+	_ponto_fuzil.add_child(no)
+	no.transform = Transform3D.IDENTITY
 
 func _criar_ponto_fuzil() -> void:
 	# 1.12: inércia (trocas) e orientação das pernas/inclinação primeiro: trabalham na animação, antes das outras
@@ -748,11 +752,17 @@ func _criar_ponto_fuzil() -> void:
 	esqueleto.add_child(_ik)
 	_ik.preparar(esqueleto, anim)
 	_ik.active = false
+	_ik.ponto_antigo = _ponto_arma.transform
 	cabeca_oculta = CabecaOculta.new()
 	cabeca_oculta.name = "CabecaOculta"
 	esqueleto.add_child(cabeca_oculta)
 	cabeca_oculta.preparar(esqueleto)
 	_osso_cabeca = esqueleto.find_bone("Head")
+	# 1.14.2: os dedos por ÚLTIMO (depois de animação, posturas e IK): a mão fecha em volta do que segura
+	dedos = CamadaDedos.new()
+	dedos.name = "CamadaDedos"
+	esqueleto.add_child(dedos)
+	dedos.preparar(esqueleto)
 
 func _process(dt: float) -> void:
 	var j = get_parent().get_parent() if get_parent() != null else null
@@ -773,7 +783,6 @@ func _process(dt: float) -> void:
 	var fp_jog: float = float(j.get("_fp")) if j != null and j.get("_fp") != null else 0.0
 	var luneta: bool = j != null and j.has_method("mirando_com_luneta") and j.mirando_com_luneta()
 	_fp_arma = move_toward(_fp_arma, 0.0 if luneta else fp_jog, dt * 6.0)
-	_pistola_nas_duas_maos(_fp_arma > 0.02)
 	# IK só com um fuzil visível na mão (e não segurando um item)
 	var arma: Node3D = null
 	for c in _ponto_fuzil.get_children():
@@ -781,19 +790,33 @@ func _process(dt: float) -> void:
 			arma = c
 	if _t_item > 0.0:
 		arma = null
+	var tipo_a := str(arma.name).trim_prefix("Arma_") if arma != null else ""
+	var branca := arma != null and not Pegada.eh_fogo(tipo_a)
 	# 0.98: GUARDA em 1ª pessoa sem arma de fogo (punhos / arma branca); no golpe ela sai (a animação aparece)
 	var guarda_alvo := 0.0
-	if arma == null and _t_item <= 0.0 and j != null and j.get("armas") != null and fp_jog > 0.5 \
+	if (arma == null or branca) and _t_item <= 0.0 and j != null and j.get("armas") != null and fp_jog > 0.5 \
 			and not bool(j.get("nadando")) and j.get("veiculo") == null and not bool(j.get("morto")):
 		var at := str(j.armas.atual)
 		if at != "" and j.armas.eh_corpo():
 			guarda_alvo = 0.0 if float(j.armas.since) < 0.55 else 1.0
 			_ik.guarda_punhos = at == "punhos"
 	_guarda = move_toward(_guarda, guarda_alvo, dt * (10.0 if guarda_alvo < _guarda else 4.0))
-	_ik.guarda = _guarda if arma == null else 0.0
+	_ik.guarda = _guarda if (arma == null or branca) else 0.0
 	_ik.camera = j.camera if j != null and j.get("camera") != null else null
-	_ik.active = arma != null or _guarda > 0.001
+	# 1.14.2: modo do IK: "fuzil" (fuzis; pistola em 1ª pessoa) · "mao" (arma branca e pistola em 3ª pessoa: onde a
+	# animação manda, com a pegada certa) · "" (sem arma)
+	var recarregando: bool = j != null and j.get("armas") != null and float(j.armas.get("rel")) > 0.0
+	_ik.usar_esquerda = not recarregando
 	if arma == null:
+		_ik.modo = ""
+	elif tipo_a in FUZIS or (tipo_a == "pistola" and _fp_arma > 0.02):
+		_ik.modo = "fuzil"
+	else:
+		_ik.modo = "mao"
+	_ik.tipo = tipo_a
+	_ik.active = arma != null or _guarda > 0.001
+	_pegada_dedos(j, tipo_a, recarregando)
+	if _ik.modo != "fuzil":
 		return
 	# a mão esquerda segura mais ou menos no meio do caminho entre a empunhadura e a boca do cano
 	var cano := arma.get_node_or_null("Cano") as Node3D
@@ -823,15 +846,26 @@ var _fp_arma := 0.0                     # 0.98: 1ª pessoa (suavizado; 0 mirando
 var _guarda := 0.0                      # 0.98: guarda em 1ª pessoa (punhos / arma branca)
 var _ads := 0.0                         # 0.98: mira de ferro (suavizado)
 
-# 0.98: em 1ª pessoa a pistola sai da mão direita e vai para o encaixe das duas mãos (o mesmo dos fuzis)
-func _pistola_nas_duas_maos(sim: bool) -> void:
-	var de := _ponto_arma if sim else _ponto_fuzil
-	var para := _ponto_fuzil if sim else _ponto_arma
-	var p := de.get_node_or_null("Arma_pistola") as Node3D
-	if p != null:
-		de.remove_child(p)
-		para.add_child(p)
-		p.transform = Transform3D.IDENTITY
+# 1.14.2: como cada mão fecha (jogador/camada_dedos.gd): pistola/fuzil (indicador no gatilho), apoio da esquerda,
+# punho fechado no cabo das armas brancas, concha no item, soco com os punhos
+func _pegada_dedos(j, tipo: String, recarregando: bool) -> void:
+	if dedos == null:
+		return
+	var pd := ""
+	var pe := ""
+	if _t_item > 0.0:
+		pd = "item"
+	elif tipo != "" and Pegada.eh_fogo(tipo):
+		pd = "pistola" if tipo == "pistola" else "fuzil"
+		pe = "" if recarregando else ("apoio_pistola" if tipo == "pistola" else "apoio")
+	elif tipo != "":
+		pd = "punho"
+		pe = "punho" if Pegada.duas_maos(tipo) else ""
+	elif j != null and j.get("armas") != null and str(j.armas.atual) == "punhos" and (_guarda > 0.1 or float(j.armas.since) < 0.6):
+		pd = "soco"
+		pe = "soco"
+	dedos.pegada_d = pd
+	dedos.pegada_e = pe
 
 # ---------- MUTADO (0.94) ----------
 # nível 0 = humano · 1 = mutado (pele escura, veios, olhos, curvado) · 2 = controlado (só os veios, mais fracos)
@@ -885,7 +919,8 @@ func segurar_item(id: String, duracao: float) -> void:
 		var suporte := Node3D.new()
 		suporte.name = "ItemNaMao"
 		_ponto_arma.get_parent().add_child(suporte)
-		suporte.transform = _ponto_arma.transform
+		# 1.14.2: o meio do item no vão da mão fechada (antes ficava na superfície da palma, com a mão aberta)
+		suporte.transform = Transform3D(_ponto_arma.transform.basis, Pegada.CANAL)
 		suporte.add_child(n)
 		n.position = Vector3(0, -minf(ab.size.y * 0.5, 0.12), 0)
 		_item_mao = suporte
