@@ -99,6 +99,7 @@ func _r():
 	mis.add_child(p)
 	p.ligado = true
 	mis.piloto.vel_max = 16.0          # o Greg mais devagar no teste: os dois pilotos do jogo empatam; aqui quem ganha é o Dominic
+	mis.kiri.add_collision_exception_with(mis.jdm)    # (só no teste) os dois seguem a mesma linha: o Kiri passa "por dentro" do JDM
 	m.jogador.piloto_externo = true
 	m.jogador.primeira_pessoa = true
 	await q(20)
@@ -128,8 +129,9 @@ func _r():
 			h.cena.pular_teste = true
 		await process_frame
 	var bar = h.missao
-	ok(is_instance_valid(bar) and str(bar.get_script().resource_path).ends_with("missao_bar.gd"), "depois da corrida começa a Missão 2 (o bar)")
-	if is_instance_valid(bar):
+	var tem_bar: bool = is_instance_valid(bar) and str(bar.get_script().resource_path).ends_with("missao_bar.gd")
+	ok(tem_bar, "depois da corrida começa a Missão 2 (o bar)")
+	if tem_bar:
 		while bar.kiri == null and is_instance_valid(bar): await process_frame
 		while not h.cena.tocando and Time.get_ticks_msec() - tb < 180000: await process_frame
 		await _pular(h)
