@@ -41,6 +41,33 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.14.3 · ARMAS RETAS NA MIRA (1ª E 3ª PESSOA)
+  · O QUE ESTAVA TORTO (medido arma por arma: para onde o cano aponta x a mira da tela, giro em volta do cano e a
+    imagem da mira ampliada):
+    - AK e RIFLE DE CAÇA: os modelos baixados têm o corpo ~8 mm fora do meio; mirando, a arma aparecia de lado (a MP5
+      e a M4 tinham 1 a 1,5 mm);
+    - M4: a mira de ferro olhava 3 mm abaixo do furo da alça (a linha de mira batia na placa da alça);
+    - RIFLE: a mira olhava por cima do anel da alça (não pelo furo) e a arma ficava 1,65° inclinada para cima;
+    - 3ª PESSOA mirando (opção "por cima do ombro"), TODAS as armas: o cano apontava ~7° acima da mira da tela (a
+      câmera por cima do ombro olha um pouco para baixo e a arma ficava na horizontal).
+  · AGORA:
+    - os modelos fora do meio vão para o meio (AK, rifle, MP5, M4): olho, alça, massa e cano na mesma linha;
+    - M4: o olho no furo da alça e a ponta da massa no centro da tela;
+    - RIFLE: mira pelo FURO do anel; a inclinação caiu para ~1° (é a diferença de altura entre o anel e a massa do
+      próprio modelo);
+    - 3ª pessoa mirando: o cano aponta exatamente para onde a mira da tela aponta (a 25 m, no centro), sem girar em
+      volta do cano. Vale para fuzis e pistola.
+  · Os tiros não mudaram (sempre saíram do centro da câmera): a correção é de como a arma aparece.
+  ARQUIVOS (testado: medição de alinhamento de cada arma + fotos ampliadas da mira, teste_mira_ferro, teste_luneta,
+  compilar_tudo, teste_ombro, teste_troca_camera, teste_arremesso, teste_jogo, teste_personagem, teste_movimento):
+    armas/modelos_armas.gd ......... CENTRO_X: modelos fora do meio vão para o meio (AK, rifle, MP5, M4)
+    armas/mira_ferro.gd ............ M4 (furo da alça e ponta da massa) e rifle (pelo furo do anel)
+    jogador/ik_fuzil.gd ............ mirando em 3ª pessoa, o cano aponta para a mira da tela (_apontar)
+    jogador/modelo_sobrevivente.gd .. a arma erguida (0..1) também com a pistola em 3ª pessoa
+    menu/config.gd ................. VERSAO "1.14.3"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..."
+
 ATUALIZAÇÃO 1.14.2 · ARMAS E OBJETOS NA POSIÇÃO CERTA NA MÃO (UMA POR UMA)
   · O QUE ESTAVA ERRADO (revisto arma por arma com fotos de 1ª e 3ª pessoa, parado e mirando):
     - os DEDOS ficavam esticados e abertos em todas as armas: a arma parecia colada na mão (no print, a pistola na
@@ -4024,6 +4051,9 @@ SOBREVIVENTE (jogador no modo livre)
   baixo/mirando e das mãos, IK) ....... jogador/ik_fuzil.gd
 - ONDE A MÃO SEGURA cada arma (pegada,
   apoio da esquerda, duas mãos) ....... jogador/pegada.gd (DIREITA, ESQ, BRANCA_DIR, DUAS_MAOS, CANAL)
+- arma reta na mira: modelo no meio,
+  alça/massa, cano na mira em 3ª pessoa  armas/modelos_armas.gd (CENTRO_X) · armas/mira_ferro.gd (DADOS) ·
+                                        jogador/ik_fuzil.gd (_apontar)
 - dedos fechados (pistola, fuzil, punho,
   apoio, soco, item) .................. jogador/camada_dedos.gd (PEGADAS)
 - malha e animações ................... jogador/sobrevivente/corpo.scn, animacoes.res e texturas/ (homem) ·

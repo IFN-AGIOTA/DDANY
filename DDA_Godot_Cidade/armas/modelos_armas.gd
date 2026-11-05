@@ -51,6 +51,10 @@ static var _acess := {}
 const Malhas := preload("res://mundo/malhas.gd")
 const SILENCIADOR := ["pistola", "mp5", "m4", "ak", "rifle_caca"]
 const MIRA := {"m4": "mira_acog", "ak": "mira_acog", "rifle_caca": "luneta"}
+# 1.14.3: modelos baixados com o corpo fora do meio (medido na alça, na massa e na boca do cano): a malha vai para o
+# meio (x = 0), onde ficam o olho da mira de ferro, o encaixe da mira/luneta ("Mira") e o "Cano". Antes a AK e o rifle
+# ficavam ~8 mm de lado na mira (a arma parecia torta)
+const CENTRO_X := {"ak": 0.0085, "rifle_caca": 0.007, "mp5": -0.0015, "m4": 0.0008}
 
 static func construir(tipo: String) -> Node3D:
 	if not _cenas.has(tipo):
@@ -60,6 +64,10 @@ static func construir(tipo: String) -> Node3D:
 	if _cenas[tipo] != null:
 		var n: Node3D = _cenas[tipo].instantiate()
 		n.name = "Arma_" + tipo
+		if CENTRO_X.has(tipo):
+			for c in n.get_children():
+				if c is Node3D and not (str(c.name) in ["Cano", "Mira"]):
+					(c as Node3D).position.x -= float(CENTRO_X[tipo])
 		Malhas.culling_fechadas(n)                 # malha fechada: só a frente dos triângulos (back-face culling)
 		for mi in n.find_children("*", "MeshInstance3D", true, false):
 			(mi as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

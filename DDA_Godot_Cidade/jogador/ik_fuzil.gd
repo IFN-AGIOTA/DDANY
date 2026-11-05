@@ -42,6 +42,7 @@ var guarda_punhos := false             # as duas mãos (punhos) · false = arma 
 var modo := ""                         # 1.14.2: "fuzil" (arma no encaixe do fuzil) · "mao" (arma presa na mão) · ""
 var ponto_antigo := Transform3D.IDENTITY   # 1.14.2: o encaixe antigo da arma na mão (medido na pose de mirar)
 var giro_correcao := 0.0              # (testes) quanto a mão girou da animação até a pegada certa (rad)
+const DIST_MIRA := 30.0                # 1.14.3: distância do ponto mirado (o centro da tela) para alinhar o cano
 var _pref_e := Vector3.ZERO            # 1.14.2: para onde os dedos da esquerda apontam (arma branca de duas mãos)
 var usar_esquerda := true              # 1.14.2: a mão esquerda vai para a arma (não, recarregando)
 const GUARDA_DIR := Vector3(0.15, -0.19, 0.36)   # mão direita no quadro da câmera (x lado direito, y cima, z frente)
@@ -112,6 +113,7 @@ func _process_modification() -> void:
 	var giro := Basis(Vector3.RIGHT, -pitch)          # o fuzil gira em volta do ombro junto com o tronco
 	var tm := Transform3D(giro * mirando.basis, ombro + giro * mirando.origin)
 	var t := tb.interpolate_with(tm, smoothstep(0.0, 1.0, mira))
+	t = _apontar(sk, t, smoothstep(0.0, 1.0, mira))
 	if fp > 0.001 and camera != null and is_instance_valid(camera) and MiraFerro.tem(tipo):
 		# 0.98: 1ª pessoa: a arma presa à câmera (quadril <-> mira de ferro)
 		var w := MiraFerro.transform_arma(tipo, camera.global_transform, ads, luneta)
@@ -151,6 +153,8 @@ func _corrigir(sk: Skeleton3D) -> void:
 	var gh := sk.get_bone_global_pose(_i["hand_r"])
 	var w := gh * ponto_antigo
 	w.basis = w.basis.orthonormalized()
+	if Pegada.eh_fogo(tipo):
+		w = _apontar(sk, w, smoothstep(0.0, 1.0, mira))
 	ponto.transform = w
 	var inv := w.basis.inverse()
 	var ga := sk.get_bone_global_pose(_i["upperarm_r"]).origin
@@ -166,6 +170,20 @@ func _corrigir(sk: Skeleton3D) -> void:
 		if Pegada.duas_maos(tipo):
 			_pref_e = inv * (w * Pegada.ponto_esquerda(tipo) - sk.get_bone_global_pose(_i["upperarm_l"]).origin)
 		_dois_ossos(sk, "l", _esq_ao_alcance(sk, w), Vector3(-dir_lado * 0.3, -0.8, -0.1))
+
+# 1.14.3 · MIRANDO EM 3ª PESSOA o cano aponta para onde a MIRA DA TELA aponta (o tiro sai do centro da câmera): a câmera
+# por cima do ombro olha um pouco para baixo e a arma ficava ~7° acima do alvo (parecia torta). Gira a arma em volta
+# da empunhadura o mínimo para isso (sem girar em volta do cano).
+func _apontar(sk: Skeleton3D, t: Transform3D, peso: float) -> Transform3D:
+	if peso <= 0.001 or camera == null or not is_instance_valid(camera):
+		return t
+	var alvo := sk.global_transform.affine_inverse() * (camera.global_position - camera.global_basis.z * DIST_MIRA)
+	var quer := (alvo - t.origin).normalized()
+	var agora := t.basis.z.normalized()
+	if quer.dot(agora) < 0.6:
+		return t                        # muito diferente (virando o corpo): não força
+	var q := Quaternion(agora, quer)
+	return Transform3D(Basis(Quaternion.IDENTITY.slerp(q, peso)) * t.basis, t.origin)
 
 # encosta o rosto na coronha: cabeça um pouco para baixo e para o lado da arma
 func _inclinar_cabeca(sk: Skeleton3D, f: float) -> void:

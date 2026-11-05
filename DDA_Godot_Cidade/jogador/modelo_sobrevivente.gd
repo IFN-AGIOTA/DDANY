@@ -816,6 +816,12 @@ func _process(dt: float) -> void:
 	_ik.tipo = tipo_a
 	_ik.active = arma != null or _guarda > 0.001
 	_pegada_dedos(j, tipo_a, recarregando)
+	# a arma erguida (0..1): o IK alinha o cano com a mira da tela em 3ª pessoa (fuzil e pistola)
+	var alvo_mira := 0.0
+	if j != null and j.get("armas") != null and arma != null and Pegada.eh_fogo(tipo_a):
+		alvo_mira = clampf(float(j.armas.aim), 0.0, 1.0)
+	_mira = move_toward(_mira, alvo_mira, dt * 5.0)
+	_ik.mira = _mira
 	if _ik.modo != "fuzil":
 		return
 	# a mão esquerda segura mais ou menos no meio do caminho entre a empunhadura e a boca do cano
@@ -823,11 +829,6 @@ func _process(dt: float) -> void:
 	_ik.mao_esq_z = clampf(cano.position.z * 0.5, 0.22, 0.38) if cano != null else 0.25
 	if _fp_arma > 0.5 and cano != null:
 		_ik.mao_esq_z = clampf(cano.position.z * 0.4, 0.15, 0.28)    # 0.98: 1ª pessoa: a mão esquerda mais perto (alcança)
-	var alvo := 0.0
-	if j != null and j.get("armas") != null:
-		alvo = clampf(float(j.armas.aim), 0.0, 1.0)
-	_mira = move_toward(_mira, alvo, dt * 5.0)
-	_ik.mira = _mira
 	_ik.pitch = mira_camada.aplicado
 	# 0.98: 1ª pessoa / mira de ferro
 	var tipo := str(arma.name).trim_prefix("Arma_")

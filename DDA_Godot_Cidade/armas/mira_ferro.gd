@@ -13,10 +13,10 @@ extends RefCounted
 const DADOS := {
 	"pistola": [Vector2(0.0545, -0.01), Vector2(0.054, 0.15), -0.4, 1.15],
 	"mp5": [Vector2(0.088, 0.02), Vector2(0.089, 0.36), -0.09, 1.25],
-	"m4": [Vector2(0.094, -0.06), Vector2(0.098, 0.355), -0.13, 1.3],
+	"m4": [Vector2(0.097, -0.06), Vector2(0.1012, 0.355), -0.13, 1.3],     # 1.14.3: o furo da alça e a ponta da massa
 	"ak": [Vector2(0.0875, 0.19), Vector2(0.0895, 0.53), -0.17, 1.3],
 	"espingarda": [Vector2(0.0535, 0.05), Vector2(0.0535, 0.72), -0.2, 1.2],
-	"rifle_caca": [Vector2(0.0745, 0.05), Vector2(0.0545, 0.745), -0.2, 1.35],
+	"rifle_caca": [Vector2(0.0655, 0.05), Vector2(0.053, 0.745), -0.2, 1.35],   # 1.14.3: pelo FURO do anel (era o topo dele)
 }
 # sem mirar (1ª pessoa): onde a EMPUNHADURA fica em relação à câmera (x direita, y cima, -z frente) e um giro leve
 # (x = cano para cima, y = cano para a esquerda/centro, z = inclinada), em radianos
