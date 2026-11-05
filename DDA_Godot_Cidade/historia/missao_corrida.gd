@@ -12,6 +12,7 @@ extends Node
 # rodar(h) devolve true quando a missão termina (h = historia/historia.gd).
 # Mexa AQUI para: o percurso (DE/ATE), os pontos de controle, os textos e os planos das cenas.
 
+const Modelos := preload("res://historia/modelos.gd")
 const Atores := preload("res://historia/atores.gd")
 const VeiculoCls := preload("res://mundo/veiculo.gd")
 const PilotoCls := preload("res://historia/piloto_ia.gd")
@@ -384,30 +385,14 @@ func _voltar_pista(s: float) -> void:
 func _viatura_no_caminho(s: float) -> void:
 	if _viatura != null:
 		return
-	var cor := Color(0.12, 0.13, 0.16)
-	_viatura = Node3D.new()
-	main.jogo.add_child(_viatura)
 	var t := Transform3D(Basis(Vector3.UP, _giro(s) + 0.9), _ponto(s, 9.0, 0.0))
-	var mi := MeshInstance3D.new()
-	mi.mesh = preload("res://mundo/abandono.gd").modelo("sedan")
-	var mat := StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.albedo_color = cor
-	mi.material_override = mat
-	mi.transform = t * Transform3D(Basis(Vector3.UP, -PI * 0.5), Vector3.ZERO)
-	_viatura.add_child(mi)
-	for k in 2:
-		var o := OmniLight3D.new()
-		o.light_color = Color(1, 0.1, 0.1) if k == 0 else Color(0.15, 0.3, 1.0)
-		o.omni_range = 14.0
-		o.light_energy = 3.0
-		o.transform = t * Transform3D(Basis(), Vector3((k - 0.5) * 0.6, 1.9, 0))
-		_viatura.add_child(o)
+	var v: Array = Modelos.viatura(main.jogo, t, 14.0, 3.0)          # 1.14.1: a viatura de verdade (Kenney, CC0)
+	_viatura = v[0]
+	var luzes: Array = v[1]
 	var tw := _viatura.create_tween().set_loops()
 	tw.tween_callback(func():
-		if _viatura.get_child_count() > 2:
-			_viatura.get_child(1).visible = not _viatura.get_child(1).visible
-			_viatura.get_child(2).visible = not _viatura.get_child(1).visible)
+		(luzes[0] as OmniLight3D).visible = not (luzes[0] as OmniLight3D).visible
+		(luzes[1] as OmniLight3D).visible = not (luzes[0] as OmniLight3D).visible)
 	tw.tween_interval(0.16)
 	h.info("UMA VIATURA DE GIROFLEX LIGADO... ACELERA!")
 

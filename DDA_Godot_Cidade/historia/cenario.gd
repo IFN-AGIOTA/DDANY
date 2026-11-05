@@ -10,6 +10,7 @@ extends Node3D
 const Mat := preload("res://mundo/materiais_cidade.gd")
 const Malhas := preload("res://mundo/malhas.gd")
 const Moveis := preload("res://mundo/moveis.gd")
+const Modelos := preload("res://historia/modelos.gd")    # 1.14.1: modelos baixados (Kenney, CC0)
 
 const ORIGEM := Vector3(-1500.0, 900.0, -9000.0)
 
@@ -134,32 +135,41 @@ func montar_bar() -> void:
 	for prateleira in [1.25, 1.75, 2.25]:
 		_caixa(Vector3(6.5, prateleira, 0.8), Vector3(0.35, 0.04, 6.4), madeira, false)
 	_garrafas(Vector3(6.5, 0, 0.8), 6.0)
-	# banquetas do balcão
-	var banco := _cor(Color(0.6, 0.12, 0.1), 0.5)
-	var ferro := _cor(Color(0.2, 0.2, 0.22), 0.4, 0.8)
+	# banquetas do balcão (1.14.1: modelo "stoolBar")
 	for k in 5:
-		var z := -1.6 + k * 1.2
-		var pe := MeshInstance3D.new()
-		var cm := CylinderMesh.new()
-		cm.top_radius = 0.04
-		cm.bottom_radius = 0.12
-		cm.height = 0.75
-		cm.material = ferro
-		pe.mesh = cm
-		pe.position = Vector3(3.75, 0.38, z)
-		add_child(pe)
-		var as_ := MeshInstance3D.new()
-		var cm2 := CylinderMesh.new()
-		cm2.top_radius = 0.2
-		cm2.bottom_radius = 0.2
-		cm2.height = 0.08
-		cm2.material = banco
-		as_.mesh = cm2
-		as_.position = Vector3(3.75, 0.78, z)
-		add_child(as_)
+		Modelos.criar(self, "moveis/stoolBar", Vector3(3.75, 0, -1.6 + k * 1.2), PI * 0.5, 0.78, 1, Color(0.55, 0.22, 0.2))
+	# no balcão: copos, canecas e uma garrafa aberta
+	var rng_b := RandomNumberGenerator.new()
+	rng_b.seed = 11
+	for k in 7:
+		var nome: String = ["comida/glass", "comida/mug", "comida/glass", "comida/soda-bottle", "comida/glass-wine", "comida/mug", "comida/glass"][k]
+		var alt: float = {"comida/glass": 0.13, "comida/mug": 0.11, "comida/soda-bottle": 0.25, "comida/glass-wine": 0.19}[nome]
+		Modelos.criar(self, nome, Vector3(4.45 + rng_b.randf_range(-0.15, 0.15), 1.16, -2.0 + k * 0.62 + rng_b.randf_range(-0.1, 0.1)), rng_b.randf() * TAU, alt)
 	# mesas (a do CANTO é a dos dois: fundo à esquerda)
-	_moveis([["mesa_bar", Vector3(-4.6, 0, 3.4), PI], ["mesa_bar", Vector3(-1.2, 0, 3.4), PI], ["mesa_bar", Vector3(-4.6, 0, -0.6), PI],
-		["mesa_bar", Vector3(-1.2, 0, -0.6), PI], ["luminaria", Vector3(-6.4, 0, 4.4), PI]])
+	# (1.14.1: mesa redonda de madeira + cadeiras "chairCushion"; nada caído: o bar está vivo)
+	for m in [Vector3(-4.6, 0, 3.4), Vector3(-1.2, 0, 3.4), Vector3(-4.6, 0, -0.6), Vector3(-1.2, 0, -0.6)]:
+		_mesa(m, madeira)
+		var cadeiras: Array = [Vector3(0, 0, -0.85), Vector3(0, 0, 0.85)] if m.x < -4.0 else [Vector3(0, 0, -0.85), Vector3(0, 0, 0.85), Vector3(0.85, 0, 0)]
+		for o in cadeiras:
+			Modelos.criar(self, "moveis/chairCushion", m + o, atan2(-o.x, -o.z), 0.92, 1, Color(0.42, 0.27, 0.17))
+	# na mesa do canto: dois copos e duas garrafas (a primeira rodada do Greg)
+	var mc := Vector3(-4.6, 0.77, 3.4)
+	Modelos.criar(self, "comida/glass", mc + Vector3(0.12, 0, -0.22), 0.0, 0.13)
+	Modelos.criar(self, "comida/glass", mc + Vector3(-0.1, 0, 0.24), 0.0, 0.13)
+	Modelos.criar(self, "comida/soda-bottle", mc + Vector3(0.2, 0, 0.05), 0.0, 0.25)
+	Modelos.criar(self, "comida/soda-bottle", mc + Vector3(-0.22, 0, -0.04), 0.0, 0.25)
+	Modelos.criar(self, "comida/mug", Vector3(-1.2, 0.77, -0.6) + Vector3(0.15, 0, 0.1), 1.0, 0.11)
+	Modelos.criar(self, "comida/glass-wine", Vector3(-1.2, 0.77, -0.6) + Vector3(-0.15, 0, -0.1), 0.0, 0.19)
+	# luminária de pé no canto, plantas, caixas de som perto da TV, cabideiro na porta, lixeira e rádio
+	Modelos.criar(self, "moveis/lampRoundFloor", Vector3(-6.45, 0, 4.5), PI, 1.6)
+	_luz(Vector3(-6.45, 1.5, 4.5), Color(1.0, 0.78, 0.5), 0.5, 3.0)
+	Modelos.criar(self, "moveis/pottedPlant", Vector3(-6.4, 0, -4.4), 0.4, 1.2)
+	Modelos.criar(self, "moveis/pottedPlant", Vector3(6.3, 0, -4.4), 2.0, 1.1)
+	Modelos.criar(self, "moveis/speaker", Vector3(-5.3, 0, d * 0.5 - 0.3), PI, 1.15, 1, Color(0.22, 0.22, 0.24))
+	Modelos.criar(self, "moveis/speaker", Vector3(-1.1, 0, d * 0.5 - 0.3), PI, 1.15, 1, Color(0.22, 0.22, 0.24))
+	Modelos.criar(self, "moveis/coatRackStanding", Vector3(-1.4, 0, -d * 0.5 + 0.45), 0.3, 1.75, 1, Color(0.4, 0.26, 0.16))
+	Modelos.criar(self, "moveis/trashcan", Vector3(3.8, 0, 4.3), 0.0, 0.6, 1, Color(0.45, 0.45, 0.48))
+	Modelos.criar(self, "moveis/radio", Vector3(6.5, 2.29, -1.9), -PI * 0.5, 0.2)
 	# mesa de sinuca no meio
 	_caixa(Vector3(1.0, 0.75, -3.0), Vector3(2.6, 0.18, 1.4), _cor(Color(0.08, 0.32, 0.16), 0.9))
 	_caixa(Vector3(1.0, 0.38, -3.0), Vector3(2.3, 0.75, 1.1), madeira)
@@ -202,33 +212,46 @@ func montar_bar() -> void:
 	_ponto("mesa_2", Vector3(-1.2, 0, -0.6))
 	_ponto("sinuca", Vector3(1.0, 0, -3.0))
 
+# 1.14.1: garrafas de verdade (Food Kit: vinho tinto, vinho branco, cerveja) nas prateleiras atrás do balcão
 func _garrafas(base: Vector3, compr: float) -> void:
-	var cores := [Color(0.25, 0.45, 0.2), Color(0.45, 0.25, 0.1), Color(0.75, 0.75, 0.8), Color(0.5, 0.1, 0.12), Color(0.85, 0.6, 0.2)]
+	var nomes := ["comida/wine-red", "comida/wine-white", "comida/soda-bottle", "comida/wine-red", "comida/soda-bottle"]
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 5
 	for prat in [1.27, 1.77, 2.27]:
 		var z := -compr * 0.5 + 0.15
 		while z < compr * 0.5 - 0.15:
-			var mi := MeshInstance3D.new()
-			var cm := CylinderMesh.new()
-			var alt := rng.randf_range(0.24, 0.34)
-			cm.top_radius = 0.025
-			cm.bottom_radius = 0.045
-			cm.height = alt
-			cm.radial_segments = 8
-			var cor: Color = cores[rng.randi() % cores.size()]
-			var m := StandardMaterial3D.new()
-			m.albedo_color = Color(cor.r, cor.g, cor.b, 0.85)
-			m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-			m.roughness = 0.1
-			m.metallic = 0.2
-			m.emission_enabled = true
-			m.emission = cor * 0.25
-			cm.material = m
-			mi.mesh = cm
-			mi.position = base + Vector3(rng.randf_range(-0.08, 0.08), prat + alt * 0.5, z)
-			add_child(mi)
-			z += rng.randf_range(0.11, 0.2)
+			var nome: String = nomes[rng.randi() % nomes.size()]
+			var alt := rng.randf_range(0.26, 0.33) if nome != "comida/soda-bottle" else rng.randf_range(0.22, 0.26)
+			Modelos.criar(self, nome, base + Vector3(rng.randf_range(-0.06, 0.06), prat, z), rng.randf() * TAU, alt)
+			z += rng.randf_range(0.13, 0.2)
+
+# mesa redonda de bar (tampo de madeira, pé de ferro) com colisão
+func _mesa(p: Vector3, madeira: Material) -> void:
+	var tampo := MeshInstance3D.new()
+	var cm := CylinderMesh.new()
+	cm.top_radius = 0.45
+	cm.bottom_radius = 0.45
+	cm.height = 0.05
+	cm.material = madeira
+	tampo.mesh = cm
+	tampo.position = p + Vector3(0, 0.745, 0)
+	add_child(tampo)
+	var pe := MeshInstance3D.new()
+	var cp := CylinderMesh.new()
+	cp.top_radius = 0.05
+	cp.bottom_radius = 0.22
+	cp.height = 0.72
+	cp.material = _cor(Color(0.15, 0.15, 0.16), 0.4, 0.8)
+	pe.mesh = cp
+	pe.position = p + Vector3(0, 0.36, 0)
+	add_child(pe)
+	var cs := CollisionShape3D.new()
+	var cy := CylinderShape3D.new()
+	cy.radius = 0.45
+	cy.height = 0.77
+	cs.shape = cy
+	cs.position = p + Vector3(0, 0.385, 0)
+	_corpo.add_child(cs)
 
 # ---------- A TV com o NOTICIÁRIO (SubViewport: a tela é uma textura viva) ----------
 func _tv(p: Vector3) -> void:

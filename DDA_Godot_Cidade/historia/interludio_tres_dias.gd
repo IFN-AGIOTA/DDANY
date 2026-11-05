@@ -7,6 +7,7 @@ extends Node
 # Cada dia: um plano lento, a cartela com o dia e a hora, e a FUSÃO para o próximo (historia/cutscene.gd).
 # Mexa AQUI para: a esquina (ESQUINA), quem aparece em cada dia e as mensagens.
 
+const Modelos := preload("res://historia/modelos.gd")
 const Atores := preload("res://historia/atores.gd")
 const LuzCls := preload("res://historia/iluminacao.gd")
 const CenarioCls := preload("res://historia/cenario.gd")
@@ -58,6 +59,16 @@ func rodar(hist) -> bool:
 	mercado += nm * 2.5
 	var tb := Vector3(-nb.z, 0, nb.x)              # ao longo da fachada da banca
 	var tm := Vector3(-nm.z, 0, nm.x)
+	# 1.14.1: caixas de papelão empilhadas na porta do mercado e revistas na banca (modelos da Kenney, CC0)
+	var pm0 := mercado - nm * 1.3 - tm * 1.7
+	for k in 5:
+		var cx: Node3D = Modelos.criar(main.jogo, "moveis/cardboardBoxClosed", pm0 + tm * -float(k % 3) * 0.62 + Vector3(0, 0.5 * float(k / 3), 0), float(k) * 0.4, 0.5, 1, Color(0.78, 0.58, 0.38))
+		lojas.append(cx)
+	var pb0 := banca - nb * 1.6 + tb * 1.4
+	var expositor: Node3D = Modelos.criar(main.jogo, "moveis/cardboardBoxOpen", pb0, atan2(nb.x, nb.z), 0.7, 1, Color(0.78, 0.58, 0.38))
+	lojas.append(expositor)
+	for k in 3:
+		lojas.append(Modelos.criar(main.jogo, "moveis/books", pb0 + Vector3(0, 0.7 + k * 0.09, 0) + tb * (k - 1) * 0.12, atan2(nb.x, nb.z) + k * 0.3, 0.09))
 	var olho := c - la * 8.0 + fr * 2.0 + Vector3(0, 3.0, 0)
 	await h.cena.tocar([
 		# DIA -4: sol, gente rindo da "nova gripe" na frente da banca
@@ -151,30 +162,14 @@ func _dia2(c: Vector3, la: Vector3, fr: Vector3) -> void:
 	# os primeiros carros largados e o lixo voltam a aparecer nesta rua
 	h.revelar_abandono(Vector2(c.x, c.z), 220.0, ["sedan", "taxi", "lixo", "saco_lixo", "caixa_papelao", "cacamba"])
 	# uma viatura parada de giroflex ligado
-	viatura = Node3D.new()
-	main.jogo.add_child(viatura)
 	var t := Transform3D(Basis(Vector3.UP, atan2(fr.x, fr.z) + 0.4), c + fr * 38.0 - la * 3.0)
-	var mi := MeshInstance3D.new()
-	mi.mesh = preload("res://mundo/abandono.gd").modelo("sedan")
-	var mat := StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.albedo_color = Color(0.12, 0.13, 0.16)
-	mi.material_override = mat
-	mi.transform = t * Transform3D(Basis(Vector3.UP, -PI * 0.5), Vector3.ZERO)
-	viatura.add_child(mi)
-	for k in 2:
-		var o := OmniLight3D.new()
-		o.light_color = Color(1, 0.1, 0.1) if k == 0 else Color(0.15, 0.3, 1.0)
-		o.omni_range = 16.0
-		o.light_energy = 3.0
-		o.transform = t * Transform3D(Basis(), Vector3((k - 0.5) * 0.6, 1.9, 0))
-		viatura.add_child(o)
+	var v: Array = Modelos.viatura(main.jogo, t, 16.0, 3.0)          # 1.14.1: a viatura de verdade (Kenney, CC0)
+	viatura = v[0]
+	var luzes: Array = v[1]
 	var tw := viatura.create_tween().set_loops()
 	tw.tween_callback(func():
-		var a: Node3D = viatura.get_child(1)
-		var b: Node3D = viatura.get_child(2)
-		a.visible = not a.visible
-		b.visible = not a.visible)
+		(luzes[0] as OmniLight3D).visible = not (luzes[0] as OmniLight3D).visible
+		(luzes[1] as OmniLight3D).visible = not (luzes[0] as OmniLight3D).visible)
 	tw.tween_interval(0.18)
 	# um só passando com pressa, de capuz, debaixo da chuva
 	var a3 := Atores.criar(main.jogo, "corredor", c - la * 6.5 - fr * 4.0, atan2(fr.x, fr.z))

@@ -41,6 +41,36 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.14.1 · MODELOS DE VERDADE NO MODO HISTÓRIA (MÓVEIS, GARRAFAS, VIATURA DE POLÍCIA, CONES)
+  · Baixados 3 pacotes livres (CC0, domínio público) da Kenney: "Furniture Kit", "Food Kit" e "Car Kit". Os
+    modelos usados ficam em historia/modelos/ (moveis, comida, veiculos), cada pasta com a sua LICENCA.txt, e estão
+    na tela de Créditos.
+  · O BAR "A MORTE DO MEDO" ganhou: banquetas de bar de couro vermelho no balcão; garrafas de verdade (vinho tinto,
+    vinho branco, cerveja) nas três prateleiras; copos, canecas e uma garrafa aberta no balcão; mesas redondas de
+    madeira com cadeiras estofadas (nenhuma caída: o bar está vivo); na mesa do canto, os dois copos e as duas
+    garrafas da rodada do Greg; luminária de pé, vasos de planta, caixas de som perto da TV, cabideiro na porta,
+    lixeira e um rádio na prateleira. Os móveis da Kenney vêm brancos e rosa: foram tingidos de madeira e couro.
+  · VIATURA DE POLÍCIA DE VERDADE (branca, com a barra de luzes) no lugar do sedã pintado de preto: nos bloqueios da
+    polícia, no cruzamento do meio da corrida e na noite de chuva do interlúdio, com o giroflex piscando.
+  · CONES de verdade nos bloqueios das ruas.
+  · Interlúdio: caixas de papelão empilhadas na porta do mercado e revistas num expositor na banca.
+  · Já baixados para a Missão 3 (apartamentos do Dominic e do Greg): cama, cômoda, sofá, mesa de centro, cozinha
+    (geladeira, fogão, pia, armários, micro-ondas, cafeteira), TV, escrivaninha, notebook, banheiro, ventilador de
+    teto, tapete, livros, ambulância e táxi.
+  ARQUIVOS (testado: compilar_tudo, teste_historia, teste_menu_leve + fotos do bar, do interlúdio e da viatura):
+    historia/modelos.gd ............ NOVO · põe um modelo baixado no tamanho real (centraliza, escala, tinge) e
+                                     monta a viatura com o giroflex
+    historia/modelos/ .............. NOVO · moveis/, comida/, veiculos/ (.glb + Textures/colormap.png + LICENCA.txt)
+    historia/cenario.gd ............ o bar com os modelos (banquetas, garrafas, mesas e cadeiras, copos, decoração)
+    historia/area_liberada.gd ...... viatura e cones de verdade nos bloqueios
+    historia/missao_corrida.gd ..... a viatura do cruzamento é a de verdade
+    historia/interludio_tres_dias.gd  viatura de verdade no Dia -2; caixas no mercado e revistas na banca
+    menu/creditos.gd ............... os 3 pacotes da Kenney (CC0)
+    menu/config.gd ................. VERSAO "1.14.1"
+    menu/novidades_lista.gd ........ refeita
+    export_presets.cfg ............. o servidor não leva historia/modelos (não usa o modo história)
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..."
+
 ATUALIZAÇÃO 1.14 · MODO HISTÓRIA: MISSÃO 2 "PÂNICO MIDIÁTICO" (O BAR E A TV) + INTERLÚDIO "TRÊS DIAS"
   · MISSÃO 2 "PÂNICO MIDIÁTICO" (Cap. 2), logo depois da corrida, DIA -5 à noite:
     - cena na chegada: "Quase te peguei dessa vez." / "Você está melhorando..." / "O bar de sempre. A primeira
@@ -3617,6 +3647,8 @@ QUERO MEXER EM...                         ARQUIVO
   fachadas na rua (porta, neon) ........ historia/cenario.gd
 - prédios que enchem os terrenos vazios
   no modo história (perto da câmera) ... historia/preenchimento.gd (RAIO, TAMANHOS, alturas)
+- modelos baixados do modo história
+  (móveis, garrafas, viatura, cones) ... historia/modelos.gd (criar, viatura, malha) · historia/modelos/ (os .glb)
 - interações da história (ENTRAR,
   SENTAR), entrar/sair de cenário ...... historia/historia.gd (interacao, entrar, sair_para)
 - cutscenes (planos, faixas, legendas,

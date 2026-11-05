@@ -8,7 +8,7 @@ extends Node3D
 # Mexa AQUI para: o desenho dos bloqueios, a distância entre eles e as cores.
 
 const RotaGps := preload("res://hud/rota_gps.gd")
-const Abandono := preload("res://mundo/abandono.gd")
+const Modelos := preload("res://historia/modelos.gd")    # 1.14.1: viatura e cone baixados (Kenney, CC0)
 
 var dados_cidade = null
 var mundo = null                     # mundo/colisao_mundo.gd (altura do chão)
@@ -113,20 +113,13 @@ func _montar(saidas: Array, estilo: String) -> void:
 	pb.size = Vector3(0.06, 1.05, 0.06)
 	pb.material = mat_pe
 	_mm(pb, pes)
-	var mat_cone := StandardMaterial3D.new()
-	mat_cone.albedo_color = Color(1.0, 0.38, 0.05)
-	mat_cone.emission_enabled = true
-	mat_cone.emission = Color(0.35, 0.1, 0.0)
-	var cm := CylinderMesh.new()
-	cm.top_radius = 0.03
-	cm.bottom_radius = 0.17
-	cm.height = 0.7
-	cm.radial_segments = 10
-	cm.material = mat_cone
+	# 1.14.1: o cone de verdade (Car Kit da Kenney), 0,7 m
+	var mc: Array = Modelos.malha("veiculos/cone", 0.7)
 	var cones_ok: Array = []
 	for t in cones:
-		cones_ok.append(Transform3D(t.basis, t.origin + Vector3(0, 0.35, 0)))
-	_mm(cm, cones_ok)
+		cones_ok.append(t * (mc[1] as Transform3D))
+	if mc[0] != null:
+		_mm(mc[0], cones_ok)
 	if not viaturas.is_empty():
 		_viaturas(viaturas)
 
@@ -144,41 +137,11 @@ func _mm(malha: Mesh, lista: Array) -> void:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(mi)
 
-# viatura atravessada: o sedã da cidade em preto e branco, barra de luzes e o giroflex de verdade (2 luzes piscando)
+# viatura atravessada (1.14.1: a viatura de polícia de verdade, Car Kit da Kenney) com o giroflex (2 luzes piscando)
 func _viaturas(lista: Array) -> void:
-	var mat := StandardMaterial3D.new()
-	mat.vertex_color_use_as_albedo = true
-	mat.albedo_color = Color(0.12, 0.13, 0.16)
-	mat.metallic = 0.3
-	mat.roughness = 0.45
-	var malha := Abandono.modelo("sedan")
 	for t in lista:
-		var mi := MeshInstance3D.new()
-		mi.mesh = malha
-		mi.material_override = mat
-		mi.transform = t * Transform3D(Basis(Vector3.UP, -PI * 0.5), Vector3.ZERO)
-		add_child(mi)
-		for k in 2:
-			var bm := BoxMesh.new()
-			bm.size = Vector3(0.5, 0.1, 0.18)
-			var m2 := StandardMaterial3D.new()
-			var cor := Color(1, 0.1, 0.1) if k == 0 else Color(0.15, 0.3, 1.0)
-			m2.albedo_color = cor
-			m2.emission_enabled = true
-			m2.emission = cor
-			m2.emission_energy_multiplier = 3.0
-			bm.material = m2
-			var luz := MeshInstance3D.new()
-			luz.mesh = bm
-			luz.transform = t * Transform3D(Basis(), Vector3((k - 0.5) * 0.5, 1.55, 0.0))
-			add_child(luz)
-			var o := OmniLight3D.new()
-			o.light_color = cor
-			o.omni_range = 9.0
-			o.light_energy = 2.2
-			o.transform = t * Transform3D(Basis(), Vector3((k - 0.5) * 0.6, 1.9, 0.0))
-			add_child(o)
-			_luzes.append(o)
+		var v: Array = Modelos.viatura(self, t, 9.0, 2.2)
+		_luzes.append_array(v[1])
 		var cs := CollisionShape3D.new()
 		var bs := BoxShape3D.new()
 		bs.size = Vector3(1.85, 1.3, 4.4)
