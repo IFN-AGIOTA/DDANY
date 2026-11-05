@@ -157,7 +157,7 @@ static func colocar(ab) -> Array:
 	var cid = ab.cid
 	# trechos de avenida compridos (fora dos locais especiais e da base do aeroporto)
 	var cands: Array = []
-	for rd in cid.dados_cidade["roads"]:
+	for rd in cid.ruas_antigas():               # 1.15: sem as ruas novas das pontes (o sorteio continua igual)
 		var larg: float = float(rd[0])
 		if larg < 9.0:
 			continue

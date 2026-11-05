@@ -27,6 +27,7 @@ extends CanvasLayer
 const UI := preload("res://menu/ui.gd")
 const Teclas := preload("res://jogador/teclas.gd")
 const Locais := preload("res://mundo/locais.gd")
+const Pontes := preload("res://mundo/pontes.gd")     # 1.15: o nome das pontes no mapa
 
 const RAIO_MINI := 250.0            # metros do centro até a borda do minimapa
 const TAM_MINI := 22.0              # diâmetro do minimapa (vh = 1% da altura da tela)
@@ -1057,6 +1058,13 @@ func _desenhar_mapa() -> void:
 		_icone_local(ci, pl, 1.5 * vh, e[0], i)
 		if _mpp < 9.0:
 			_texto(ci, Locais.nome(i), pl + Vector2(0, 2.8 * vh), tl, Locais.CORES_MAPA[e[0]])
+	# 1.15: o nome das PONTES (no meio do vão), com zoom
+	if _mpp < 14.0:
+		Pontes.preparar()
+		for pt in Pontes.lista:
+			var pp := _mundo_para_tela(pt.ponto((pt.ini + pt.fim) * 0.5))
+			if Rect2(Vector2.ZERO, vs).grow(8.0 * vh).has_point(pp):
+				_texto(ci, pt.nome, pp + Vector2(0, -2.4 * vh), tl, Color(0.86, 0.92, 1.0, 0.92))
 	# 0.91: trocas te esperando nos hospitais (o "$" e o que é)
 	var por_lugar := {}
 	for nt in _notas():

@@ -414,7 +414,11 @@ parques temáticos), entrevista de Shaver (80.lv).
   marcos vistos de longe (a casca de longe tem a torre, a cúpula e os telhados) e são úteis: loot próprio, o
   campanário para vigiar e o sino que puxa a horda. ✅ 1.07: os guindastes azuis dos 2 portos (lança a 31 m) e o
   navio são marcos da costa, com a passarela do guindaste e a ponte de comando como mirantes. ✅ 1.08: as torres das
-  8 guaritas marcam o meio dos parques (casca de longe com as pernas e a cabine).
+  8 guaritas marcam o meio dos parques (casca de longe com as pernas e a cabine). ✅ 1.15: as 6 PONTES (Brooklyn,
+  Manhattan, George Washington, Queensboro, Macombs e Willis) são os marcos maiores da cidade: torres de 50 a 100 m
+  vistas de longe (versão simples além de ~950 m), o colar de luzes nos cabos à noite e a luz vermelha das torres;
+  são úteis (o único caminho de uma ilha à outra, o GPS passa por elas) e contam a história (o bloqueio do
+  Exército do Dia -1 na entrada do Brooklyn, o engarrafamento da fuga em cima delas).
 - **"Onde estou?" em 15 segundos:** se o jogador não responde isso nos primeiros 15 s, já está perdido. *(Carson)*
 - **Luz:** iluminar mais forte as saídas e portas importantes que os espaços secundários; portas bem iluminadas
   ajudam a ler o caminho. Um feixe de luz num objeto vale mais que uma sala cheia de detalhe. *(LDB, Carson)*

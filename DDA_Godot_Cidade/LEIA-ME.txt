@@ -41,6 +41,60 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.15 · PONTES DE NOVA YORK (BROOKLYN, MANHATTAN, GEORGE WASHINGTON, QUEENSBORO E MAIS DUAS)
+  · ANTES: as ruas que atravessavam o mar eram uma faixa de asfalto rente à água, e o lado leste (Brooklyn/Queens) não
+    se ligava às ruas de Manhattan (o GPS não achava caminho). AGORA são PONTES DE VERDADE, feitas do zero em código
+    no estilo das de Nova York, com o tabuleiro subindo em rampa (no máximo 6 a 7,5%) até 9 a 24 m acima da água:
+    - PONTE DO BROOKLYN (Manhattan sul -> Brooklyn): torres de PEDRA com os dois ARCOS GÓTICOS, 4 cabos, os pendurais
+      retos e os ESTAIS em leque (a "teia"), o PASSEIO de madeira elevado no meio (com grade, postes antigos e a
+      passagem pela torre), as treliças cor de areia e as ancoragens de pedra. Na entrada do lado de Manhattan está o
+      BLOQUEIO DO EXÉRCITO do Dia -1 (caminhão atravessado, barreiras, sacos de areia e humvee), como no Livro 1;
+    - PONTE DE MANHATTAN (rua NOVA, ao lado da do Brooklyn): torres de AÇO AZUL com o ARCO no alto e as BOLAS no topo,
+      4 cabos, a TRELIÇA funda azul, entradas sobre muros de pedra com arcadas, postes; um comboio do Exército ficou
+      parado no meio dela;
+    - PONTE GEORGE WASHINGTON (Manhattan norte -> ilha do norte): torres de aço CINZA VAZADAS (treliça) com o ARCO
+      grande entre as pernas, 4 cabos grossos (2 de cada lado), o andar de baixo em treliça e o FAROLZINHO VERMELHO
+      na margem de Manhattan;
+    - PONTE DE QUEENSBORO (Manhattan -> ilha do meio): treliça em balanço com os PICOS sobre os pilares de pedra e
+      os pináculos;
+    - PONTE MACOMBS (Nova Jersey -> Manhattan) e PONTE WILLIS (ilha do meio -> Brooklyn): treliças de aço menores
+      (verde e vermelha), com pilares de concreto.
+  · À NOITE: COLAR DE LUZES nos cabos (algumas queimadas), luzes no alto das treliças e a luz vermelha piscando no alto
+    das torres (Opções › Gráficos › Halos de luz).
+  · DÁ PARA: andar e DIRIGIR de uma ilha à outra (a colisão é a do tabuleiro, das grades, das torres e das
+    ancoragens); subir no passeio do Brooklyn; pular da ponte e cair na água (embaixo dela é o mar: dá para nadar).
+    Os carros largados que estavam nessas ruas ficam EM CIMA do tabuleiro, e as pontes têm o ENGARRAFAMENTO da fuga
+    (filas de carros parados nas faixas). Infectados e soldados infectados aparecem em cima delas.
+  · GPS: agora acha caminho de Manhattan para o Brooklyn, o Queens, a ilha do norte e Nova Jersey. No MAPA, o nome de
+    cada ponte aparece com zoom.
+  · DESEMPENHO: cada ponte é desenhada em pedaços de 320 m; de longe (mais de ~950 m) vira a versão simples (sem
+    pendurais nem treliças). A colisão das pontes fica sempre ligada (é leve).
+  · RUAS NOVAS (3): a Ponte de Manhattan, a avenida até a entrada da Ponte do Brooklyn e uma emenda de 60 m na ilha
+    do meio (as ruas do norte e do sul dela não se ligavam). Saíram 15 PRÉDIOS que ficavam em cima delas; os jogos
+    salvos são convertidos sozinhos (o loot dos outros prédios continua no lugar; o desses 15 some).
+  ARQUIVOS (testado: teste_pontes NOVO — montagem, rampa, GPS entre as ilhas, carros no tabuleiro, ficar em pé no vão,
+  nadar embaixo, andar pela pista e pelo passeio da Ponte do Brooklyn passando pelos arcos e DIRIGIR de ponta a ponta
+  pela Ponte de Manhattan — + fotos de todas as pontes de dia e de noite + bateria):
+    mundo/pontes.gd ................ NOVO · as pontes: dados (onde, altura, rampas, torres, âncoras, pilares), perfil,
+                                     altura(x, z) do tabuleiro, recortar() (tira das ruas o pedaço que virou ponte),
+                                     desenho de cada estilo (perto e longe), colisão e luzes · RUAS_NOVAS
+    mundo/cidade.gd ................ ruas novas no fim da lista (n_ruas_antigas, ruas_antigas()); o asfalto rente ao
+                                     mar sai (recortar); prédios em cima das ruas novas saem (remapa_v6); etapas
+                                     "Ruas novas das pontes" e "As pontes de Nova York"
+    mundo/colisao_mundo.gd ......... altura() vale o tabuleiro em cima das pontes; altura_chao() (o chão de verdade:
+                                     mapa de alturas da física e a água); o asfalto que virou ponte não é chão
+    mundo/abandono.gd .............. só as ruas antigas (os carros de antes continuam com os mesmos números); o que caiu
+                                     em cima das pontes sobe ao tabuleiro (árvores, hidrantes, placas e semáforos
+                                     saem); engarrafamento nas pontes; bloqueio do Exército no Brooklyn; comboio na
+                                     Ponte de Manhattan
+    mundo/comboios.gd .............. comboios sorteados só nas ruas antigas (continuam no mesmo lugar)
+    menu/salvamento.gd ............. MAPA_PREDIOS 7: save da 1.07..1.14 convertido com cidade.remapa_v6
+    hud/mapa.gd .................... nome das pontes no mapa (com zoom)
+    ferramentas/testes/teste_pontes.gd ... NOVO
+    menu/config.gd ................. VERSAO "1.15"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..." + seção 10
+
 ATUALIZAÇÃO 1.14.5 · MIRA SEM TREMER, MÃO ESQUERDA NO GUARDA-MÃO E MP5 CENTRADA
   · MIRANDO COM FUZIL (M4, AK, MP5, espingarda, rifle) o personagem e a mira TREMIAM. Medido parado e mirando: o peito
     e o ombro oscilavam 1,2 a 2,4 cm de um quadro para o outro (a câmera junto, na mira de ferro). A causa era a
@@ -3866,6 +3920,11 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - MODO ULTRA do PC (efeitos e arquivo) menu/aplicar_opcoes.gd (_efeitos_ultra, _modo_desenho) · opção: menu/opcoes.gd
 - aparência do mar, chão, asfalto,
   janelas, interiores (shaders) ....... mundo/materiais_cidade.gd
+- PONTES (1.15): onde ficam, altura, rampas,
+  torres, cabos, treliças, cores, luzes . mundo/pontes.gd (DADOS, RUAS_NOVAS, _brooklyn, _manhattan, _gwb,
+                                        _queensboro, _trelica, _tabuleiro, PERTO)
+- o que fica em cima das pontes (carros,
+  engarrafamento, bloqueio do Exército) mundo/abandono.gd (_pontes_extras, _subir_pontes, NAO_NA_PONTE)
 - colisão com chão/prédios/carros e tiros mundo/colisao_mundo.gd
 - fundo do mar e dos lagos (profundidade) mundo/colisao_mundo.gd (PROF_MAR, PROF_LAGO, RAMPA_AGUA)
 - nadar, afundar, água rasa ........... jogador/jogador.gd (NADO_*, VEL_NADO) + jogador/sobrevivencia.gd (estamina
@@ -4319,9 +4378,13 @@ MÚSICA (pasta audio/)
   · os personagens não têm animação de rosto (as cenas usam silhuetas, perfil e mãos) e não têm voz (de propósito:
     "som de fala" estilo Stray);
   · as portas dos carros não abrem (entrar/sair é com corte); os prédios em ruína do mapa continuam no Dia -5;
-  · a corrida fica só em Manhattan: o lado leste (Brooklyn/Queens) não tem ponte ligada às ruas de Manhattan nos
-    dados do mapa (o GPS não acha caminho entre os dois);
+  · a corrida fica só em Manhattan (desde a 1.15 as pontes ligam as ilhas e o GPS acha caminho: dá para levar a
+    corrida para o Brooklyn numa missão futura);
   · na corrida, em 1ª pessoa, não aparecem as mãos do Dominic no volante.
+- 1.15: as pontes não têm escadas para descer até a margem (só pulando na água); o passeio do Brooklyn só se sobe
+  pelas rampas das pontas; o engarrafamento das pontes não volta depois de mexido (como os outros carros); a ponte
+  de pedestres das torres do Brooklyn é só a passagem do passeio (não dá para subir na torre); os cabos e as treliças
+  não têm colisão (só o tabuleiro, as grades, as torres e as ancoragens).
 - Ao FECHAR o jogo pelos testes automáticos aparece "double free or corruption" (desde a 0.98, no desligamento da
   Godot, depois de tudo salvo); durante o jogo não acontece. Investigar quando sobrar tempo.
 - 1.08: o TANQUE e o BLINDADO não andam (só o humvee e o caminhão de lona); nenhum veículo do comboio tem interior

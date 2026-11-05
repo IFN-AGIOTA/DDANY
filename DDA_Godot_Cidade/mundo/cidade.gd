@@ -18,6 +18,7 @@ const AbandonoCls := preload("res://mundo/abandono.gd")
 const EscadasIncendioCls := preload("res://mundo/escadas_incendio.gd")   # 1.04 (substitui o mundo/fachadas.gd)
 const OclusaoCls := preload("res://mundo/oclusao.gd")
 const LocaisCls := preload("res://mundo/locais.gd")
+const PontesCls := preload("res://mundo/pontes.gd")      # 1.15: pontes de Nova York (e as ruas novas delas)
 const Cenario := preload("res://mundo/cenario.gd")
 
 const CELL := 20.0                          # resolução das máscaras (m)
@@ -103,8 +104,10 @@ func etapas() -> Array:
 		["Chão, praias e o mar", 1.2, func(): await _ground(dados_cidade)],
 		["Ruas e avenidas", 16.0, func(): await _roads(dados_cidade)],
 		["Levantando os prédios", 11.0, _buildings],
+		["Ruas novas das pontes", 0.1, _ruas_novas],
 		["Quarteirões e calçadas", 5.0, _lotes],
 		["Escadas de incêndio", 0.5, _fachadas],
+		["As pontes de Nova York", 3.0, func(): await _pontes()],
 	]
 	var ab := AbandonoCls.new()              # só vira o "abandono" da cidade quando estas etapas rodam
 	r.append(["Espalhando o abandono", 0.5, func(): _abandono_comecar(ab)])
@@ -120,6 +123,12 @@ func _comecar() -> void:
 	H = int(WORLD.y * 2.0 / CELL)
 	var data = JSON.parse_string(FileAccess.get_file_as_string("res://data/city.json"))
 	_ligar_pontas(data)
+	# 1.15: as RUAS NOVAS das pontes vão no fim da lista (depois de ligar as pontas: as contas das ruas antigas, os
+	# carros largados e os comboios continuam iguais; os prédios em cima delas saem em _buildings)
+	n_ruas_antigas = (data["roads"] as Array).size()
+	PontesCls.preparar()
+	for rd in PontesCls.RUAS_NOVAS:
+		(data["roads"] as Array).append((rd as Array).duplicate(true))
 	dados_cidade = data
 	_env()
 
@@ -508,30 +517,42 @@ func _roads(data) -> void:
 	var mv := PackedVector3Array()
 	var mc := PackedColorArray()
 	var n_rua := 0
-	for rd in data["roads"]:
+	var ruas: Array = data["roads"]
+	for ri in ruas.size():
+		var rd: Array = ruas[ri]
 		n_rua += 1
-		await respirar(n_rua, data["roads"].size())
+		await respirar(n_rua, ruas.size())
 		var w: float = rd[0]
 		var f: Array = rd[1]
 		var hw := w * 0.5
-		var pts := _pts(f)
-		for p in pts:
-			_disco(calc, p, hw + CALCADA, Y_CALCADA)
-			_disco(asf, p, hw, Y_RUA)
-		for i in pts.size() - 1:
-			var a := pts[i]
-			var b := pts[i + 1]
-			_faixa(calc, a, b, hw + CALCADA, Y_CALCADA)
-			_faixa(asf, a, b, hw, Y_RUA)
-			# quanto a rua vira em cada ponta (para as faixas se encontrarem em chanfro nas curvas)
-			var giro_a := 0.0
-			var giro_b := 0.0
-			if i > 0:
-				giro_a = (a - pts[i - 1]).angle_to(b - a)
-			if i < pts.size() - 2:
-				giro_b = (b - a).angle_to(pts[i + 2] - b)
-			_faixas_trecho(mv, mc, a, b, hw, i == 0, i == pts.size() - 2, giro_a, giro_b)
-			_mascara_rua(a, b, hw)
+		var pts_rua := _pts(f)
+		# máscara (onde não nasce prédio): a das ruas antigas como sempre; a das novas, depois dos prédios (_ruas_novas)
+		if ri < n_ruas_antigas or n_ruas_antigas == 0:
+			for i in pts_rua.size() - 1:
+				_mascara_rua(pts_rua[i], pts_rua[i + 1], hw)
+		# 1.15: o pedaço que virou PONTE sai (mundo/pontes.gd desenha o tabuleiro); nas pontas cortadas, sem o disco
+		for pedaco in PontesCls.recortar(pts_rua):
+			var pts: PackedVector2Array = pedaco[0]
+			var corte_a: bool = pedaco[1]
+			var corte_b: bool = pedaco[2]
+			for j in pts.size():
+				if (j == 0 and corte_a) or (j == pts.size() - 1 and corte_b):
+					continue
+				_disco(calc, pts[j], hw + CALCADA, Y_CALCADA)
+				_disco(asf, pts[j], hw, Y_RUA)
+			for i in pts.size() - 1:
+				var a := pts[i]
+				var b := pts[i + 1]
+				_faixa(calc, a, b, hw + CALCADA, Y_CALCADA)
+				_faixa(asf, a, b, hw, Y_RUA)
+				# quanto a rua vira em cada ponta (para as faixas se encontrarem em chanfro nas curvas)
+				var giro_a := 0.0
+				var giro_b := 0.0
+				if i > 0:
+					giro_a = (a - pts[i - 1]).angle_to(b - a)
+				if i < pts.size() - 2:
+					giro_b = (b - a).angle_to(pts[i + 2] - b)
+				_faixas_trecho(mv, mc, a, b, hw, i == 0 and not corte_a, i == pts.size() - 2 and not corte_b, giro_a, giro_b)
 	var m_calc := Mat.material(Mat.CALCADA, {"camada": CAMADA["calcada"]})
 	var m_asf := Mat.material(Mat.ASFALTO, {"camada": CAMADA["rua"]})
 	await _malha(calc, m_calc, PackedColorArray(), "Calcadas")
@@ -629,6 +650,9 @@ var remapa_v2 := PackedInt32Array()         # número do prédio na 0.43..0.67 -
 var remapa_v3 := PackedInt32Array()         # 0.78: número do prédio na 0.68..0.77 -> agora (-1 = saiu para os locais novos)
 var remapa_v4 := PackedInt32Array()         # 1.06: número do prédio na 0.78..1.05 -> agora (-1 = saiu para a igreja/prefeitura)
 var remapa_v5 := PackedInt32Array()         # 1.07: número do prédio na 1.06 -> agora (-1 = saiu para um porto)
+var remapa_v6 := PackedInt32Array()         # 1.15: número do prédio na 1.07..1.14 -> agora (-1 = saiu para as ruas novas das pontes)
+var n_ruas_antigas := 0                     # 1.15: as ruas de data/city.json (as novas das pontes vêm depois delas)
+var nos_pontes: Array = []                  # 1.15: nós das pontes (desenho, colisão e luzes: mundo/pontes.gd)
 
 func _sortear_uso(r: RandomNumberGenerator, h: float) -> String:
 	if h > 70.0:
@@ -660,12 +684,13 @@ func _buildings() -> void:
 	var n_entra := 0
 	_preparar_filtro(dados_cidade)
 	remapa_predios = PackedInt32Array()
-	removidos = {"agua": 0, "rua": 0, "local": 0}
+	removidos = {"agua": 0, "rua": 0, "local": 0, "ponte": 0}
 	pos_removidos = PackedVector2Array()
 	remapa_v2 = PackedInt32Array()
 	remapa_v3 = PackedInt32Array()
 	remapa_v4 = PackedInt32Array()
 	remapa_v5 = PackedInt32Array()
+	remapa_v6 = PackedInt32Array()
 	var n_105: int = LocaisCls.N_LOCAIS_105
 	var n_106: int = LocaisCls.N_LOCAIS_106
 	var rets_locais: Array[Rect2] = []
@@ -714,9 +739,11 @@ func _buildings() -> void:
 						if il >= n_105:
 							no_106 = true
 				var no_local := no_antigo or no_novo
-				remapa_v2.append(-1 if no_local else predio_info.size())
+				# 1.15: em cima de uma RUA NOVA das pontes (mundo/pontes.gd RUAS_NOVAS): sai também (todas as tabelas)
+				var na_ponte := PontesCls.em_rua_nova(bx, bz, sx, sz)
+				remapa_v2.append(-1 if (no_local or na_ponte) else predio_info.size())
 				if not no_antigo:
-					remapa_v3.append(-1 if no_novo else predio_info.size())
+					remapa_v3.append(-1 if (no_novo or na_ponte) else predio_info.size())
 				# 1.06: na 0.78..1.05 só os locais até N_LOCAIS_105 tiravam prédios
 				var no_ate_105 := false
 				if no_local:
@@ -725,7 +752,7 @@ func _buildings() -> void:
 							no_ate_105 = true
 							break
 				if not no_ate_105:
-					remapa_v4.append(-1 if no_106 else predio_info.size())
+					remapa_v4.append(-1 if (no_106 or na_ponte) else predio_info.size())
 				# 1.07: na 1.06 só os locais até N_LOCAIS_106 tiravam prédios
 				var no_ate_106 := false
 				var no_107 := false
@@ -737,9 +764,14 @@ func _buildings() -> void:
 							else:
 								no_107 = true
 				if not no_ate_106:
-					remapa_v5.append(-1 if no_107 else predio_info.size())
+					remapa_v5.append(-1 if (no_107 or na_ponte) else predio_info.size())
+				# 1.15: na 1.07..1.14 todos os locais já tiravam prédios; agora saem também os das ruas novas
+				if not no_local:
+					remapa_v6.append(-1 if na_ponte else predio_info.size())
 				if no_local:
 					fora = "local"
+				elif na_ponte:
+					fora = "ponte"
 			remapa_predios.append(-1 if fora != "" else predio_info.size())
 			if fora != "":
 				removidos[fora] += 1
@@ -866,7 +898,41 @@ func _buildings() -> void:
 		detalhes.append(mi)
 	print("Prédios: ", predios.size() / 5, " (", n, " blocos de malha) · com entrada: ", n_entra, " · em ruína: ", ruinas.size(),
 		" · removidos: ", removidos["agua"], " na/perto da água, ", removidos["rua"], " em cima da rua/calçada, ",
-		removidos["local"], " para os locais especiais")
+		removidos["local"], " para os locais especiais, ", removidos["ponte"], " para as ruas novas das pontes")
+
+# 1.15: depois dos prédios, as RUAS NOVAS das pontes entram na máscara (árvores, lotes) e no filtro de "prédio em cima
+# da rua" (o modo história não põe prédio de preenchimento nelas: historia/preenchimento.gd)
+func _ruas_novas() -> void:
+	var ruas: Array = dados_cidade["roads"]
+	for ri in range(n_ruas_antigas, ruas.size()):
+		var rd: Array = ruas[ri]
+		var hw: float = float(rd[0]) * 0.5
+		var f: Array = rd[1]
+		var alc: float = hw + CALCADA + MARGEM_RUA
+		for k in range(0, f.size() - 3, 2):
+			var a := Vector2(f[k], f[k + 1])
+			var b := Vector2(f[k + 2], f[k + 3])
+			_mascara_rua(a, b, hw)
+			var c0 := Vector2i(floori((minf(a.x, b.x) - alc) / CEL_FILTRO), floori((minf(a.y, b.y) - alc) / CEL_FILTRO))
+			var c1 := Vector2i(floori((maxf(a.x, b.x) + alc) / CEL_FILTRO), floori((maxf(a.y, b.y) + alc) / CEL_FILTRO))
+			for gx in range(c0.x, c1.x + 1):
+				for gz in range(c0.y, c1.y + 1):
+					var key := Vector2i(gx, gz)
+					var lst: PackedFloat32Array = _f_ruas.get(key, PackedFloat32Array())
+					lst.append_array(PackedFloat32Array([a.x, a.y, b.x, b.y, alc]))
+					_f_ruas[key] = lst
+
+# 1.15: as PONTES (mundo/pontes.gd): desenho por pedaços (os chunks cuidam), colisão e luzes
+func _pontes() -> void:
+	nos_pontes = await PontesCls.montar(self)
+	for n in nos_pontes:
+		_adopt(n)
+
+# 1.15: só as ruas de data/city.json (sem as novas das pontes): os carros largados, o lixo, os postes e os comboios
+# (mundo/abandono.gd, mundo/comboios.gd) são sorteados nelas, então continuam no mesmo lugar de antes
+func ruas_antigas() -> Array:
+	var ruas: Array = dados_cidade["roads"]
+	return ruas.slice(0, n_ruas_antigas) if n_ruas_antigas > 0 else ruas
 
 # 0.68: LOCAIS ESPECIAIS (mundo/locais.gd): o terreno vira lote (chão na altura da calçada) e ganha a casca de longe
 func _locais() -> void:
@@ -913,7 +979,11 @@ func _preparar_filtro(data) -> void:
 			cx = cx.expand(q)
 		(_f_lagos if int(l[0]) == 1 else _f_terra).append([cx, p])
 	var tmp := {}
-	for rd in data["roads"]:
+	# 1.15: só as ruas antigas (as novas das pontes entram depois dos prédios, em _ruas_novas: os prédios em cima
+	# delas saem como "ponte", com a tabela dos jogos salvos remapa_v6)
+	var ruas: Array = data["roads"]
+	for ri in (n_ruas_antigas if n_ruas_antigas > 0 else ruas.size()):
+		var rd: Array = ruas[ri]
 		var alc: float = float(rd[0]) * 0.5 + CALCADA + MARGEM_RUA
 		var f: Array = rd[1]
 		for k in range(0, f.size() - 3, 2):

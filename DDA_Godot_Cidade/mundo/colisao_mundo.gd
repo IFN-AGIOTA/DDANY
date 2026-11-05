@@ -16,6 +16,7 @@ extends Node3D
 # portas dos prédios abertos lá. tem_chao_fisico() vale para todas as cópias.
 
 const LocaisCls := preload("res://mundo/locais.gd")   # 0.79: terreno dos locais especiais (perto_de_aberto)
+const PontesCls := preload("res://mundo/pontes.gd")   # 1.15: o tabuleiro das pontes (o resto da colisão delas é do nó da ponte)
 const ALT_MAR := -0.5
 const ALT_TERRA := 0.0
 const ALT_LAGO := 0.2
@@ -257,25 +258,31 @@ func configurar(dados: Dictionary, predios: PackedFloat32Array) -> void:
 	for k in tmp_p:
 		_p_hash[k] = PackedInt32Array(tmp_p[k])
 	var tmp_r := {}
+	var trechos: Array = []                  # [ax, az, bx, bz, meia largura]
 	for rd in dados["roads"]:
 		var hw: float = float(rd[0]) * 0.5
-		var f: Array = rd[1]
-		for k in range(0, f.size() - 3, 2):
-			var ax: float = f[k]
-			var az: float = f[k + 1]
-			var bx: float = f[k + 2]
-			var bz: float = f[k + 3]
-			var m := hw + CALCADA
-			var r := Rect2(minf(ax, bx) - m, minf(az, bz) - m, absf(bx - ax) + 2.0 * m, absf(bz - az) + 2.0 * m)
-			var seg := [ax, az, bx, bz, hw]
-			var c0 := Vector2i(floori(r.position.x / CEL_RUA), floori(r.position.y / CEL_RUA))
-			var c1 := Vector2i(floori(r.end.x / CEL_RUA), floori(r.end.y / CEL_RUA))
-			for cx in range(c0.x, c1.x + 1):
-				for cz in range(c0.y, c1.y + 1):
-					var key := Vector2i(cx, cz)
-					if not tmp_r.has(key):
-						tmp_r[key] = []
-					tmp_r[key].append_array(seg)
+		# 1.15: o pedaço de rua que virou PONTE não é chão aqui (embaixo dele é o mar; o tabuleiro é a colisão da ponte)
+		for pedaco in PontesCls.recortar(_pts(rd[1])):
+			var pp: PackedVector2Array = pedaco[0]
+			for k in pp.size() - 1:
+				trechos.append([pp[k].x, pp[k].y, pp[k + 1].x, pp[k + 1].y, hw])
+	for tr in trechos:
+		var hw: float = tr[4]
+		var ax: float = tr[0]
+		var az: float = tr[1]
+		var bx: float = tr[2]
+		var bz: float = tr[3]
+		var m := hw + CALCADA
+		var r := Rect2(minf(ax, bx) - m, minf(az, bz) - m, absf(bx - ax) + 2.0 * m, absf(bz - az) + 2.0 * m)
+		var seg := [ax, az, bx, bz, hw]
+		var c0 := Vector2i(floori(r.position.x / CEL_RUA), floori(r.position.y / CEL_RUA))
+		var c1 := Vector2i(floori(r.end.x / CEL_RUA), floori(r.end.y / CEL_RUA))
+		for cx in range(c0.x, c1.x + 1):
+			for cz in range(c0.y, c1.y + 1):
+				var key := Vector2i(cx, cz)
+				if not tmp_r.has(key):
+					tmp_r[key] = []
+				tmp_r[key].append_array(seg)
 	for k in tmp_r:
 		_r_hash[k] = PackedFloat32Array(tmp_r[k])
 	_pred = predios
@@ -311,7 +318,15 @@ func _indexar(tmp: Dictionary, r: Rect2, cel: float, idx: int) -> void:
 			tmp[key].append(idx)
 
 # altura do chão (m) num ponto do mundo, igual às alturas usadas para desenhar a cidade
+# 1.15: em cima de uma PONTE vale o tabuleiro (quem nasce, cai ou larga algo ali fica em cima dela)
 func altura(x: float, z: float) -> float:
+	var p := PontesCls.altura(x, z)
+	if p > -1000.0:
+		return p
+	return altura_chao(x, z)
+
+# o chão de verdade (sem as pontes): o mapa de alturas da física e a água
+func altura_chao(x: float, z: float) -> float:
 	var r := altura_rua(x, z)
 	if r > -100.0:
 		return r
@@ -387,6 +402,8 @@ func altura_rua(x: float, z: float) -> float:
 # 0.49: de que é o chão aqui (som dos passos): "concreto" (rua, calçada, lote), "grama" (parque, terreno),
 # "madeira" (dentro de prédio) ou "agua"
 func tipo_piso(x: float, z: float) -> String:
+	if PontesCls.altura(x, z) > -1000.0:
+		return "concreto"
 	if dentro_de_predio(x, z, 0.0, true):
 		return "madeira"
 	if altura_rua(x, z) > -100.0 or altura_lote(x, z, ALT_TERRA) >= ALT_CALCADA - 0.01:
@@ -398,7 +415,7 @@ func tipo_piso(x: float, z: float) -> String:
 
 # 0.72: altura da superfície da água em (x, z): ALT_MAR, ALT_LAGO ou -INF (não é água: terra, rua, ponte, lote)
 func nivel_agua(x: float, z: float) -> float:
-	var a := altura(x, z)
+	var a := altura_chao(x, z)
 	if a == ALT_MAR:
 		return ALT_MAR
 	if absf(a - ALT_LAGO) < 0.0005:
@@ -492,7 +509,7 @@ func _calcular_linhas(max_linhas: int) -> void:
 	while _linha >= 0 and _linha < N and feitas < max_linhas:
 		var z := _novo_centro.y + (_linha - MEIO) * ESPACO
 		for i in N:
-			_novo_dados[_linha * N + i] = altura(_novo_centro.x + (i - MEIO) * ESPACO, z)
+			_novo_dados[_linha * N + i] = altura_chao(_novo_centro.x + (i - MEIO) * ESPACO, z)
 		_linha += 1
 		feitas += 1
 	if _linha >= N:

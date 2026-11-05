@@ -9,11 +9,15 @@ extends RefCounted
 # caixas de energia, bueiros, pneus, caixotes, caixas de papelão, carros cobertos, poste antigo e árvores de calçada.
 # De longe continuam as versões simples feitas por código (LOD). Se faltar o arquivo, usa o modelo de código.
 # 1.08: + os COMBOIOS DO EXÉRCITO (mundo/comboios.gd: humvee, blindado, caminhões e tanque), na etapa própria.
+# 1.15: PONTES (mundo/pontes.gd): o que caiu em cima delas SOBE até o tabuleiro (carros, lixo, postes e fios); árvores,
+# hidrantes, placas e semáforos não ficam em ponte. Depois de tudo (sorteio próprio): o ENGARRAFAMENTO da fuga em
+# cima das pontes, o BLOQUEIO DO EXÉRCITO na entrada da Ponte do Brooklyn e um comboio parado na Ponte de Manhattan.
 # Mexa AQUI para: quantos carros/obstáculos por rua, modelos dos carros, cores.
 
 const Malhas := preload("res://mundo/malhas.gd")
 const Cenario := preload("res://mundo/cenario.gd")
 const Comboios := preload("res://mundo/comboios.gd")
+const Pontes := preload("res://mundo/pontes.gd")      # 1.15: o que fica em cima das pontes sobe até o tabuleiro
 # nome da instância -> modelo baixado (mundo/cenario.gd)
 const BAIXADOS := {"semaforo": "semaforo_braco", "hidrante": "hidrante", "barril": "barril",
 	"saco_lixo": "saco_lixo", "barreira": "barreira", "lixeira": "lixeira", "caixa_energia": "caixa_energia", "bueiro": "bueiro", "pneu": "pneu", "caixote": "caixote",
@@ -73,6 +77,8 @@ func etapas() -> Array:
 		["Postes, semáforos e placas", 3.5, _mobiliario_urbano],
 		["Entulho das ruínas", 1.3, func(): _entulho(_ruinas)],
 		["Comboios do Exército", 0.6, func(): centros_comboio = Comboios.colocar(self)],     # 1.08 (depois dos carros: os do comboio vêm no fim da lista)
+		["Engarrafamento nas pontes", 0.4, _pontes_extras],       # 1.15 (depois de tudo: os números de antes não mudam)
+		["Subindo o que ficou nas pontes", 0.6, _subir_pontes],   # 1.15
 		["Juntando os objetos da rua", 11.5, _montar],
 		["Fios e luzes da rua", 16.0, _fios_e_halos],
 	]
@@ -328,7 +334,7 @@ func esconder_carro(i: int) -> void:
 			(mm as MultiMesh).set_instance_transform(int(c[7]), Transform3D(Basis.from_scale(Vector3.ONE * 0.001), Vector3(c[0].x, -500.0, c[0].z)))
 
 func _carros_nas_ruas() -> void:
-	for rd in cid.dados_cidade["roads"]:
+	for rd in cid.ruas_antigas():
 		var hw: float = float(rd[0]) * 0.5
 		var pts: PackedVector2Array = cid._pts(rd[1])
 		for i in pts.size() - 1:
@@ -382,7 +388,7 @@ func _engavetamentos() -> void:
 
 func _barreiras() -> void:
 	# fileiras de barreiras de concreto fechando parte de algumas ruas (bloqueios do exército)
-	for rd in cid.dados_cidade["roads"]:
+	for rd in cid.ruas_antigas():
 		var hw: float = float(rd[0]) * 0.5
 		var pts: PackedVector2Array = cid._pts(rd[1])
 		if rng.randf() > 0.045 * densidade or pts.size() < 2:
@@ -413,7 +419,7 @@ func _barreiras() -> void:
 
 func _lixo_nas_calcadas() -> void:
 	var cores_barril := [Color(0.5, 0.2, 0.08), Color(0.15, 0.25, 0.45), Color(0.2, 0.35, 0.2), Color(0.55, 0.12, 0.08)]
-	for rd in cid.dados_cidade["roads"]:
+	for rd in cid.ruas_antigas():
 		var hw: float = float(rd[0]) * 0.5
 		var pts: PackedVector2Array = cid._pts(rd[1])
 		for i in pts.size() - 1:
@@ -486,9 +492,9 @@ func _lixo_nas_calcadas() -> void:
 # postes (alguns caídos), semáforos nos cruzamentos (alguns tortos), hidrantes, bancos e árvores de calçada
 func _mobiliario_urbano() -> void:
 	var n_rua := 0
-	for rd in cid.dados_cidade["roads"]:
+	for rd in cid.ruas_antigas():
 		n_rua += 1
-		await cid.respirar(n_rua, cid.dados_cidade["roads"].size() + 1)
+		await cid.respirar(n_rua, cid.n_ruas_antigas + 1)
 		var hw: float = float(rd[0]) * 0.5
 		var pts: PackedVector2Array = cid._pts(rd[1])
 		var com_arvores := rng.randf() < 0.45
@@ -761,3 +767,157 @@ void fragment() {
 	ROUGHNESS = mix(0.55, 0.95, max(r, n * 0.5));
 }
 """
+
+# ======================= 1.15 · PONTES =======================
+# o que NÃO fica em ponte (some o desenho; o obstáculo de colisão dele desce para fora do mapa)
+const NAO_NA_PONTE := ["arvore_rua", "arvore_rua_1", "arvore_rua_2", "arvore_rua_seca_1", "hidrante", "bueiro", "banco",
+	"placa_proibido", "placa_atencao", "placa_pare", "caixa_energia", "semaforo"]
+# tamanho dos obstáculos deles (árvore, hidrante, placa, caixa de energia, semáforo)
+const OBST_NAO_NA_PONTE := [Vector3(0.45, 3.0, 0.45), Vector3(0.35, 0.8, 0.35), Vector3(0.2, 2.7, 0.2), Vector3(0.95, 1.15, 0.45), Vector3(0.3, 6.0, 0.3)]
+const COR_EXERCITO := Color(0.3, 0.34, 0.22)
+
+func _em_ponte(x: float, z: float) -> float:
+	for pt in Pontes.lista:
+		if (pt.caixa as Rect2).has_point(Vector2(x, z)):
+			return Pontes.altura(x, z)
+	return -INF
+
+# o ENGARRAFAMENTO da fuga (filas de carros parados nas faixas, com buracos), o BLOQUEIO do Exército na entrada da
+# Ponte do Brooklyn (lado de Manhattan) e um comboio parado no meio da Ponte de Manhattan · sorteio próprio
+func _pontes_extras() -> void:
+	Pontes.preparar()
+	var antes := rng
+	rng = RandomNumberGenerator.new()
+	rng.seed = 1150
+	for pt in Pontes.lista:
+		var perto := PackedVector2Array()
+		var cx: Rect2 = pt.caixa
+		for i in range(0, obstaculos.size(), 7):
+			if cx.has_point(Vector2(obstaculos[i], obstaculos[i + 1])):
+				perto.append(Vector2(obstaculos[i], obstaculos[i + 1]))
+		var faixas: Array = [7.2, 11.4, 15.4] if pt.estilo == "brooklyn" else [3.4, 7.8, 12.2, 16.0]
+		var cheio: float = 0.45 if pt.estilo == "manhattan" else 0.3       # a de Manhattan é rua nova: sem os carros de antes
+		for f in faixas:
+			for lado in [-1.0, 1.0]:
+				if rng.randf() > cheio + 0.25:
+					continue
+				var lat: float = f * lado
+				var s: float = pt.ini + rng.randf_range(40.0, 90.0)
+				while s < pt.fim - 40.0:
+					if rng.randf() < cheio:
+						# uma fila de 3 a 12 carros colados
+						for k in rng.randi_range(3, 12):
+							if s > pt.fim - 40.0:
+								break
+							var dir: Vector2 = pt.direcao(s)
+							var p: Vector2 = pt.ponto(s) + pt.lateral(s).normalized() * (lat + rng.randf_range(-0.5, 0.5))
+							var livre := true
+							for q in perto:
+								if q.distance_to(p) < 4.6:
+									livre = false
+									break
+							if livre:
+								var giro := _giro(dir * lado) + rng.randf_range(-0.12, 0.12)
+								var e := rng.randf()
+								var estado := "" if e < 0.9 else ("capotado" if e < 0.95 else "tombado")
+								_carro(p, giro if estado != "" or rng.randf() < 0.9 else rng.randf() * TAU, estado)
+								perto.append(p)
+							s += rng.randf_range(6.2, 8.6)
+					s += rng.randf_range(18.0, 70.0)
+	# BLOQUEIO na entrada da Ponte do Brooklyn: caminhão do Exército atravessado, barreiras de concreto (com uma
+	# passagem), sacos de areia e um humvee · os soldados infectados nascem aqui (inimigos/soldados.gd)
+	var pb = Pontes.lista[0]
+	var s_b: float = pb.ini + 16.0
+	var d: Vector2 = pb.direcao(s_b)
+	var n: Vector2 = pb.lateral(s_b).normalized()
+	var meio: Vector2 = pb.ponto(s_b)
+	Comboios._veiculo(self, "caminhao_exercito", meio + n * 9.0 + d * 7.0, _giro(n) + 0.12, COR_EXERCITO * 0.95, "")
+	Comboios._veiculo(self, "humvee", meio - n * 13.5 + d * 14.0, _giro(-d) + 0.3, COR_EXERCITO, "")
+	var k := -21.0
+	while k <= 21.0:
+		if k < -8.0 or k > 0.0:                 # a brecha (dá para passar a pé e, apertado, de carro)
+			var pbar: Vector2 = meio + n * k
+			_por("barreira", Transform3D(Basis(Vector3.UP, _giro(n)), Vector3(pbar.x, Y, pbar.y)), Color(0.75, 0.75, 0.72))
+			_obstaculo(Vector3(pbar.x, Y, pbar.y), _giro(n), Vector3(3.0, 0.85, 0.62))
+		k += 3.1
+	for q in [[-17.0, 3.0], [-14.0, 3.0], [16.0, -3.0], [19.0, -3.0], [-11.0, 4.5]]:
+		var ps: Vector2 = meio + n * float(q[0]) + d * float(q[1])
+		_por("sacos_areia", Transform3D(Basis(Vector3.UP, _giro(n)), Vector3(ps.x, Y, ps.y)), Color.WHITE)
+		_obstaculo(Vector3(ps.x, Y, ps.y), _giro(n), Vector3(3.0, 0.8, 0.45))
+	centros_comboio.append([Vector3(meio.x, Y, meio.y), Vector3(d.x, 0, d.y), Vector3(n.x, 0, n.y), 12.0, 6.0])
+	# um comboio que ficou no meio da Ponte de Manhattan (os que se separaram na travessia)
+	var pm = Pontes.lista[1]
+	var c := Comboios._comboio(self, rng, pm.ponto(600.0), pm.ponto(780.0), 18.0)
+	if not c.is_empty():
+		centros_comboio.append(c)
+	rng = antes
+
+# tudo que ficou em cima de uma ponte sobe até o tabuleiro (os números de carros/obstáculos não mudam)
+func _subir_pontes() -> void:
+	Pontes.preparar()
+	# carros: fora do canteiro do meio da Ponte do Brooklyn (o desenho, o obstáculo e o porta-malas vão juntos)
+	for c in carros:
+		var p: Vector3 = c[0]
+		var h := _em_ponte(p.x, p.z)
+		if h == -INF:
+			continue
+		var q: Vector2 = Pontes.ajustar_carro(Vector2(p.x, p.z))
+		var dx := q.x - p.x
+		var dz := q.y - p.z
+		if absf(dx) + absf(dz) > 0.001:
+			var lst: Array = _inst[c[2]][c[6]]
+			var e: Array = lst[c[7]]
+			var t: Transform3D = e[0]
+			t.origin += Vector3(dx, 0.0, dz)
+			e[0] = t
+			var j: int = int(c[5]) * 7
+			obstaculos[j] += dx
+			obstaculos[j + 1] += dz
+			h = Pontes.altura(q.x, q.y)
+		c[0] = Vector3(q.x, p.y + h - Y, q.y)
+	# desenhos
+	for nome in _inst:
+		var fora: bool = nome in NAO_NA_PONTE
+		for bk in _inst[nome]:
+			for e in _inst[nome][bk]:
+				var t: Transform3D = e[0]
+				var h := _em_ponte(t.origin.x, t.origin.z)
+				if h == -INF:
+					continue
+				if fora:
+					e[0] = Transform3D(Basis.from_scale(Vector3.ONE * 0.001), Vector3(t.origin.x, -500.0, t.origin.z))
+				else:
+					t.origin.y += h - Y
+					e[0] = t
+	# obstáculos de colisão
+	for j in range(0, obstaculos.size(), 7):
+		var h := _em_ponte(obstaculos[j], obstaculos[j + 1])
+		if h == -INF:
+			continue
+		var tam := Vector3(obstaculos[j + 3], obstaculos[j + 4], obstaculos[j + 5])
+		var some := false
+		for o in OBST_NAO_NA_PONTE:
+			if tam.is_equal_approx(o):
+				some = true
+		obstaculos[j + 6] = -1000.0 if some else obstaculos[j + 6] + h - Y
+	# fios dos postes e halos (os dos semáforos saem)
+	for f in fios:
+		for i in 2:
+			var a: Vector3 = f[i]
+			var h := _em_ponte(a.x, a.z)
+			if h > -INF:
+				f[i] = a + Vector3(0, h - Y, 0)
+	var halos_novos: Array = []
+	for hl in halos:
+		var a: Vector3 = hl[0]
+		var h := _em_ponte(a.x, a.z)
+		if h == -INF:
+			halos_novos.append(hl)
+		elif not bool(hl[1]):
+			halos_novos.append([a + Vector3(0, h - Y, 0), false])
+	halos = halos_novos
+	for cc in centros_comboio:
+		var a: Vector3 = cc[0]
+		var h := _em_ponte(a.x, a.z)
+		if h > -INF:
+			cc[0] = Vector3(a.x, a.y + h - Y, a.z)
