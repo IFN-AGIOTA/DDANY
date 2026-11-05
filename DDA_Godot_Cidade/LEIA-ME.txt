@@ -59,7 +59,7 @@ ATUALIZAÇÃO 1.14.2 · ARMAS E OBJETOS NA POSIÇÃO CERTA NA MÃO (UMA POR UMA)
     - a arma continua indo para onde a animação manda (golpes, porte, mira) e a mão gira e se ajusta para
       segurá-la direito. Nas armas brancas os dedos seguem o antebraço, então o punho não torce;
     - PISTOLA: nas duas mãos também em 3ª pessoa (a esquerda do lado da empunhadura, por cima dos dedos da direita);
-      mirando em 1ª pessoa os braços ficam mais esticados (o olho a 46 cm, era 36): a pistola fica livre no centro;
+      mirando em 1ª pessoa os braços ficam mais esticados (o olho a 40 cm, era 36): a pistola fica livre no centro;
     - FUZIS (MP5, M4, AK, espingarda, rifle): a esquerda embaixo do guarda-mão; se o braço não alcança o ponto (arma
       comprida, personagem de frente), a mão recua ao longo do guarda-mão em vez de ficar solta no ar;
     - ESPINGARDA e RIFLE mirando: o olho a 20 cm atrás do gatilho (era 12, o rosto na coronha de verdade) e a mão
@@ -77,7 +77,7 @@ ATUALIZAÇÃO 1.14.2 · ARMAS E OBJETOS NA POSIÇÃO CERTA NA MÃO (UMA POR UMA)
                                      pegada certa, as duas mãos nas armas de duas mãos)
     jogador/modelo_sobrevivente.gd .. todas as armas no encaixe do IK; escolhe o modo do IK e a pegada dos dedos;
                                      item na mão no vão da mão fechada
-    armas/mira_ferro.gd ............ olho mais longe na pistola (0,46), espingarda e rifle (0,20)
+    armas/mira_ferro.gd ............ olho mais longe na pistola (0,40), espingarda e rifle (0,20)
     ferramentas/testes/teste_mira_ferro.gd ... confere a mão direita na pegada nova
     menu/config.gd ................. VERSAO "1.14.2"
     menu/novidades_lista.gd ........ refeita
