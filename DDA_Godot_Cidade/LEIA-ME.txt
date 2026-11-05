@@ -65,17 +65,32 @@ ATUALIZAÇÃO 1.14 · MODO HISTÓRIA: MISSÃO 2 "PÂNICO MIDIÁTICO" (O BAR E A 
   · Cenários de dentro (como o bar) são montados longe do mapa: a porta fica numa fachada de verdade da rua e
     entrar/sair é com um escurecer rápido. Dentro, o minimapa some.
   · No modo história os carros largados da cidade não aparecem mais como "ENTRAR CARRO".
+  · CIDADE CHEIA NAS CENAS (conserto: "a cidade não aparece quando a câmera chega perto"): não era falha de desenho
+    (os prédios seguem a câmera e aparecem iguais com o jogador perto ou longe; a oclusão também foi conferida). Era o
+    MAPA: a cidade só põe prédio em quadrados de 40 x 40 m sem nenhum pedaço de rua, então na beira das ruas sobravam
+    faixas de terra, mato e árvore seca. De perto, nas cenas do Dia -5, parecia cidade não desenhada. Agora, no MODO
+    HISTÓRIA, esses terrenos vazios ganham PRÉDIOS DE PREENCHIMENTO em volta da CÂMERA (a da cena ou a do jogo, até
+    ~280 m), com o mesmo material e as janelas dos prédios da cidade e com colisão. Ficam longe do asfalto e da
+    calçada; parques, locais especiais e água ficam como estão. São sempre os mesmos em cada esquina, e nada nasce
+    em cima dos carros da história nem do jogador. O modo livre não muda.
+  · Toda cena esconde o HUD sozinha (no interlúdio o minimapa aparecia por cima da cena).
   ARQUIVOS (testado: compilar_tudo, teste_historia + um teste de ponta a ponta da Missão 2 e do interlúdio, com
   fotos de cada cena):
     historia/missao_bar.gd ......... NOVO · Missão 2: cena da chegada, seguir o Greg, entrar no bar, sentar, a
                                      conversa e a TV
     historia/interludio_tres_dias.gd  NOVO · interlúdio Dias -4/-3/-2 (banca, mercado, noite de chuva, celular)
     historia/cenario.gd ............ NOVO · cenários de dentro (o bar, com a TV animada) e fachadas na rua
-                                     (fachada_perto, fachada)
+                                     (fachada_perto, fachada; também nos prédios de preenchimento)
+    historia/preenchimento.gd ...... NOVO · prédios de preenchimento nos terrenos vazios, em volta da câmera
     historia/historia.gd ........... ordem das missões (+ bar e tres_dias), "em breve" Missão 3; interações pelo
                                      botão PEGAR (interacao, esperar_interacao); entrar/sair de cenário;
                                      revelar_abandono (o Dia -2 mostra carros largados); carros largados desligados
-    historia/cutscene.gd ........... mensagem de CELULAR nas cenas ("celular": [quem, texto])
+    historia/cutscene.gd ........... mensagem de CELULAR nas cenas ("celular": [quem, texto]); esconde o HUD em
+                                     toda cena; avisa o preenchimento quando a câmera vai para um plano novo
+    mundo/veiculo.gd ............... carros da história no grupo "historia_ocupa" (prédio de preenchimento não
+                                     nasce em cima)
+    ferramentas/testes/teste_historia.gd ... + a Missão 2 inteira (entrar no Kiri, seguir o Greg, entrar no bar,
+                                     sentar) e o interlúdio salvo · rodar.sh: tempo maior para ele
     menu/config.gd ................. VERSAO "1.14"
     menu/novidades_lista.gd ........ refeita
     LEIA-ME.txt .................... este bloco + seção 6 + mapa "QUERO MEXER EM..." + seção 10
@@ -3597,6 +3612,8 @@ QUERO MEXER EM...                         ARQUIVO
 - interlúdio "Três Dias" (Dias -4/-3/-2) historia/interludio_tres_dias.gd
 - cenários de dentro (o bar e a TV) e
   fachadas na rua (porta, neon) ........ historia/cenario.gd
+- prédios que enchem os terrenos vazios
+  no modo história (perto da câmera) ... historia/preenchimento.gd (RAIO, TAMANHOS, alturas)
 - interações da história (ENTRAR,
   SENTAR), entrar/sair de cenário ...... historia/historia.gd (interacao, entrar, sair_para)
 - cutscenes (planos, faixas, legendas,
@@ -4128,7 +4145,8 @@ MÚSICA (pasta audio/)
   · o Prólogo, as Missões 1 e 2 e o interlúdio por enquanto; as Missões 3 a 6 do Ato 1 vêm nas próximas
     atualizações (a 3 na 1.15);
   · 1.14: no bar, os figurantes ficam parados nas poses (não andam pelo bar); o Dominic senta com um corte (não há
-    animação de sentar); o bar é um cenário à parte (pela vitrine de fora não se vê o de dentro);
+    animação de sentar); o bar é um cenário à parte (pela vitrine de fora não se vê o de dentro); os prédios de
+    preenchimento não aparecem no minimapa nem no mapa, não têm escada de incêndio e não dá para entrar neles;
   · os personagens não têm animação de rosto (as cenas usam silhuetas, perfil e mãos) e não têm voz (de propósito:
     "som de fala" estilo Stray);
   · as portas dos carros não abrem (entrar/sair é com corte); os prédios em ruína do mapa continuam no Dia -5;

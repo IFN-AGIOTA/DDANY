@@ -80,6 +80,8 @@ var cam_interior: Camera3D = null       # 1.13: câmera no banco do motorista (1
 var historia := false                   # 1.13: carro do modo história (sem combustível, sem dano no motor)
 
 func _ready() -> void:
+	if historia:
+		add_to_group("historia_ocupa")         # 1.14: não nasce prédio de preenchimento em cima (historia/preenchimento.gd)
 	var d: Array = TIPOS.get(tipo, TIPOS["sedan"])
 	mass = float(d[5])
 	_forca_x = float(d[6])

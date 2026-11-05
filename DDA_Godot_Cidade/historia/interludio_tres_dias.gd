@@ -34,7 +34,7 @@ func rodar(hist) -> bool:
 	var c := Vector3(p0.x, y0, p0.y)
 	var fr := Vector3(d.x, 0, d.y)
 	var la := Vector3(esq.x, 0, esq.y)
-	h.teleportar(c + la * 14.0 + Vector3(0, 0.2, 0), 0.0)         # o jogador (escondido) perto: o chão e os prédios carregam
+	h.teleportar(c + Vector3(0, 0.2, 0), 0.0)         # o jogador (escondido) no meio da rua: o chão e os prédios carregam
 	main.jogador.visible = false
 	luz = LuzCls.new()
 	luz.cidade = main.cidade
@@ -43,8 +43,10 @@ func rodar(hist) -> bool:
 	luz.acender(cam, [c])
 	# a banca e o mercado: fachadas na calçada (lado esquerdo da rua)
 	# a banca e o mercado: fachadas nos prédios de verdade da beira da rua (lado esquerdo)
-	var fb := CenarioCls.fachada_perto(main.cidade, Vector2(c.x, c.z) + Vector2(la.x, la.z) * 16.0 + Vector2(fr.x, fr.z) * 6.0)
-	var fm := CenarioCls.fachada_perto(main.cidade, Vector2(c.x, c.z) + Vector2(la.x, la.z) * 16.0 + Vector2(fr.x, fr.z) * 30.0)
+	var pb := Vector2(c.x, c.z) + Vector2(la.x, la.z) * 16.0 + Vector2(fr.x, fr.z) * 6.0
+	var pm := Vector2(c.x, c.z) + Vector2(la.x, la.z) * 16.0 + Vector2(fr.x, fr.z) * 30.0
+	var fb := CenarioCls.fachada_perto(main.cidade, pb, 90.0, h.preencher.lotes_perto(pb, 90.0))
+	var fm := CenarioCls.fachada_perto(main.cidade, pm, 90.0, h.preencher.lotes_perto(pm, 90.0))
 	var banca := Vector3(fb[0].x, main.mundo.altura(fb[0].x, fb[0].y), fb[0].y)
 	var mercado := Vector3(fm[0].x, main.mundo.altura(fm[0].x, fm[0].y), fm[0].y)
 	var nb := Vector3(fb[1].x, 0, fb[1].y)

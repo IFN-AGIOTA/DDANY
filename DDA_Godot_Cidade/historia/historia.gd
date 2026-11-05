@@ -11,6 +11,7 @@ extends Node
 # Mexa AQUI para: a ordem das missões e o que some da cidade (ESCONDER).
 
 const CutsceneCls := preload("res://historia/cutscene.gd")
+const PreenchimentoCls := preload("res://historia/preenchimento.gd")
 const Atores := preload("res://historia/atores.gd")
 const RotaGps := preload("res://hud/rota_gps.gd")
 const UI := preload("res://menu/ui.gd")
@@ -29,6 +30,8 @@ signal acabou(ok: bool)
 
 var main = null
 var cena: CanvasLayer                 # historia/cutscene.gd
+var preencher: Node3D = null         # 1.14: historia/preenchimento.gd (terrenos vazios viram prédios perto da câmera)
+var _hud_escondido := false
 var progresso := {}
 var missao: Node = null
 var _hud: CanvasLayer
@@ -73,6 +76,15 @@ func ligar(m) -> void:
 	add_child(cena)
 	_criar_hud()
 	_mundo_antes_do_caos()
+	# 1.14: a cidade cheia em volta da câmera (da cena ou do jogo) e o HUD escondido em toda cena
+	preencher = PreenchimentoCls.new()
+	preencher.name = "Preenchimento"
+	add_child(preencher)
+	preencher.ligar(main.cidade)
+	preencher.jogador = main.jogador
+	cena.ao_mover = preencher.forcar
+	cena.esconder_hud = esconder_hud
+	cena.hud_escondido = func() -> bool: return _hud_escondido
 	RotaGps.montar(main.cidade.dados_cidade)           # o grafo das ruas (GPS) já fica pronto para as missões
 	Atores.vestir_jogador(main.jogador, "dominic")
 
@@ -197,6 +209,7 @@ func info(texto: String) -> void:
 	_sub.text = texto
 
 func esconder_hud(sim: bool) -> void:
+	_hud_escondido = sim
 	_obj.visible = not sim
 	_sub.visible = not sim
 	if main.mapa != null:
@@ -236,6 +249,8 @@ func cartela(titulo: String, sub: String, dur := 3.0, clarear_depois := true) ->
 func teleportar(p: Vector3, giro: float) -> void:
 	var j = main.jogador
 	main.mundo.forcar(Vector2(p.x, p.z))
+	if preencher != null:
+		preencher.forcar(p)
 	if main.chunks != null and main.chunks.has_method("forcar"):
 		main.chunks.forcar(p)
 	j.teleportar(p, giro)

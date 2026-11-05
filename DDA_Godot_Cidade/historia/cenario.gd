@@ -336,8 +336,8 @@ func _process(dt: float) -> void:
 		_luz_tv.light_color = Color(0.8, 0.3, 0.35) if int(_t * 3.0) % 2 == 0 else Color(0.4, 0.5, 1.0)
 
 # a fachada de prédio mais perto de um ponto da rua: [ponto no chão da fachada (x, z), normal (para a rua)]
-static func fachada_perto(cidade, rua: Vector2, raio := 90.0) -> Array:
-	var pr: PackedFloat32Array = cidade.predios
+static func fachada_perto(cidade, rua: Vector2, raio := 90.0, extra := PackedFloat32Array()) -> Array:
+	var pr: PackedFloat32Array = cidade.predios + extra      # 1.14: extra = prédios de preenchimento (historia/preenchimento.gd)
 	var melhor := INF
 	var mp := rua
 	var mn := Vector2(0, 1)
@@ -351,12 +351,25 @@ static func fachada_perto(cidade, rua: Vector2, raio := 90.0) -> Array:
 			continue
 		var q := Vector2(clampf(rua.x, c.x - hx, c.x + hx), clampf(rua.y, c.y - hz, c.y + hz))
 		var d := q.distance_to(rua)
-		if d < melhor and d > 2.0:
-			melhor = d
-			mp = q
+		var n := Vector2.ZERO
+		if d < 0.01:
+			# 1.14: o ponto caiu DENTRO do prédio: a parede mais perto (com a mesma distância, conta como encostado)
+			var ds := [c.x + hx - rua.x, rua.x - (c.x - hx), c.y + hz - rua.y, rua.y - (c.y - hz)]
+			var k := 0
+			for j in 4:
+				if ds[j] < ds[k]:
+					k = j
+			n = [Vector2(1, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(0, -1)][k]
+			q = rua + n * float(ds[k])
+			d = 0.0
+		else:
 			var dx := absf(q.x - (c.x + hx)) if rua.x > c.x else absf(q.x - (c.x - hx))
 			var dz := absf(q.y - (c.y + hz)) if rua.y > c.y else absf(q.y - (c.y - hz))
-			mn = Vector2(signf(rua.x - c.x), 0.0) if dx < dz else Vector2(0.0, signf(rua.y - c.y))
+			n = Vector2(signf(rua.x - c.x), 0.0) if dx < dz else Vector2(0.0, signf(rua.y - c.y))
+		if d < melhor:
+			melhor = d
+			mp = q
+			mn = n
 	return [mp, mn]
 
 # ---------- a FACHADA na rua (porta + letreiro de neon + toldo), presa num prédio de verdade ----------

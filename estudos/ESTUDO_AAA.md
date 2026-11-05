@@ -456,6 +456,9 @@ parques temáticos), entrevista de Shaver (80.lv).
   recados, porta barrada com bancos) e a prefeitura conta a evacuação (quadro do comando de crise, posto do Exército,
   faixas "DIRIJAM-SE AO SUL"). ✅ 1.08: os comboios do Exército parados nas avenidas (veículos queimados e
   atravessados, o bloqueio na frente, os soldados que viraram em volta) contam a evacuação que não passou.
+  ✅ 1.14 (modo história): o bar "A Morte do Medo" retrata os corredores (tijolo, neon, sinuca, copos, a TV ligada no
+  noticiário), e o interlúdio conta os três dias só com a mesma rua mudando (risadas na banca → fila no mercado →
+  noite de chuva com viatura e os primeiros carros largados).
 - **Legibilidade antes de tudo:** no *The Last of Us Part II*, **hera cobrindo = prédio fechado; hera arrancada =
   aberto**. "Tudo na arte do cenário tem função de leitura." *(LDB)* ➜ **Para nós:** um sinal visual único e
   consistente para prédio que dá para entrar (porta entreaberta + luz/lixo na frente) e para o que não dá (tábuas,

@@ -97,7 +97,7 @@ func _giro(s: float) -> float:
 
 # a fachada do bar no prédio mais perto do fim do caminho, virada para a rua
 func _montar_fachada(rua: Vector2) -> void:
-	var f := CenarioCls.fachada_perto(main.cidade, rua)
+	var f := CenarioCls.fachada_perto(main.cidade, rua, 90.0, h.preencher.lotes_perto(rua, 90.0))
 	var mp: Vector2 = f[0]
 	var mn: Vector2 = f[1]
 	giro_rua = atan2(mn.x, mn.y)

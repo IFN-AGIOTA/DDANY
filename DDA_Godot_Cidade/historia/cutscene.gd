@@ -53,6 +53,9 @@ var _barras := 0.0
 var _cam_jogo: Camera3D
 var pular_teste := false         # testes: como se alguém segurasse a tela
 var n_cenas := 0                 # quantas cenas já começaram (testes)
+var ao_mover := Callable()      # 1.14: (Vector3) a câmera vai para um plano novo: a cidade em volta é montada já
+var esconder_hud := Callable()  # 1.14: (bool) o HUD do jogo some durante a cena (historia.esconder_hud)
+var hud_escondido := Callable() # 1.14: -> bool (já estava escondido antes da cena?)
 
 func _ready() -> void:
 	layer = 40
@@ -167,6 +170,11 @@ func _posicionar() -> void:
 func tocar(planos: Array, manter_escuro := false) -> void:
 	n_cenas += 1
 	tocando = true
+	var hud_antes := false
+	if hud_escondido.is_valid():
+		hud_antes = bool(hud_escondido.call())
+	if esconder_hud.is_valid():
+		esconder_hud.call(true)
 	pulando = false
 	_pedido_pular = false
 	_seg = 0.0
@@ -213,6 +221,8 @@ func tocar(planos: Array, manter_escuro := false) -> void:
 			await clarear(0.9)
 	else:
 		await _voltar_ao_jogo()
+	if esconder_hud.is_valid() and not hud_antes:
+		esconder_hud.call(false)
 	tocando = false
 	acabou.emit()
 
@@ -292,6 +302,8 @@ func _ponto(x) -> Vector3:
 	return x
 
 func _plano(p: Dictionary) -> void:
+	if ao_mover.is_valid() and p.has("de"):
+		ao_mover.call(p["de"])
 	var a = p.get("acao")
 	if a is Callable and (a as Callable).is_valid():
 		a.call()
