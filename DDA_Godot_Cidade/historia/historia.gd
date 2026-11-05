@@ -147,6 +147,7 @@ func comecar() -> void:
 	for m in MISSOES:
 		if bool(progresso.get("ato1_" + m[0], false)):
 			continue
+		RotaGps.limitar_area(PackedVector2Array())    # 1.14: o GPS livre de novo (a área da missão anterior não vale mais)
 		var scr = load(m[1])
 		missao = scr.new()
 		missao.name = "Missao_" + m[0]

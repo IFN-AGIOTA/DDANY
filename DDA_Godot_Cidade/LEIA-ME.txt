@@ -74,6 +74,8 @@ ATUALIZAÇÃO 1.14 · MODO HISTÓRIA: MISSÃO 2 "PÂNICO MIDIÁTICO" (O BAR E A 
     calçada; parques, locais especiais e água ficam como estão. São sempre os mesmos em cada esquina, e nada nasce
     em cima dos carros da história nem do jogador. O modo livre não muda.
   · Toda cena esconde o HUD sozinha (no interlúdio o minimapa aparecia por cima da cena).
+  · Conserto: o limite de área do GPS de uma missão passava para a seguinte (depois da corrida, o caminho até o bar
+    não era achado e a Missão 2 não começava). Agora cada missão começa com o GPS livre.
   ARQUIVOS (testado: compilar_tudo, teste_historia + um teste de ponta a ponta da Missão 2 e do interlúdio, com
   fotos de cada cena):
     historia/missao_bar.gd ......... NOVO · Missão 2: cena da chegada, seguir o Greg, entrar no bar, sentar, a
@@ -82,7 +84,8 @@ ATUALIZAÇÃO 1.14 · MODO HISTÓRIA: MISSÃO 2 "PÂNICO MIDIÁTICO" (O BAR E A 
     historia/cenario.gd ............ NOVO · cenários de dentro (o bar, com a TV animada) e fachadas na rua
                                      (fachada_perto, fachada; também nos prédios de preenchimento)
     historia/preenchimento.gd ...... NOVO · prédios de preenchimento nos terrenos vazios, em volta da câmera
-    historia/historia.gd ........... ordem das missões (+ bar e tres_dias), "em breve" Missão 3; interações pelo
+    historia/historia.gd ........... ordem das missões (+ bar e tres_dias), "em breve" Missão 3; GPS livre no começo
+                                     de cada missão; liga o preenchimento e o HUD das cenas; interações pelo
                                      botão PEGAR (interacao, esperar_interacao); entrar/sair de cenário;
                                      revelar_abandono (o Dia -2 mostra carros largados); carros largados desligados
     historia/cutscene.gd ........... mensagem de CELULAR nas cenas ("celular": [quem, texto]); esconde o HUD em
