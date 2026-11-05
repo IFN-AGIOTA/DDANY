@@ -92,7 +92,7 @@ func _r():
 	while not h.cena.tocando: await process_frame
 	var tp := Time.get_ticks_msec()
 	await _pular(h)
-	ok(not h.cena.tocando and Time.get_ticks_msec() - tp < 15000, "o Prólogo pode ser pulado (segurando)")
+	ok(not h.cena.tocando and Time.get_ticks_msec() - tp < 25000, "o Prólogo pode ser pulado (segurando)")   # (folga: logo depois de carregar, o Xvfb fica bem lento; normal 7-8 s)
 	var mis = h.missao
 	# GPS e área
 	var R = load("res://hud/rota_gps.gd")
