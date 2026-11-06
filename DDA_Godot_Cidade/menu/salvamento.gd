@@ -87,7 +87,9 @@ static func salvar(main, morto := false) -> bool:
 # A 1.07 tirou os prédios dos terrenos dos PORTOS: save da 1.06 ("mapa_predios" = 5) é convertido com cidade.remapa_v5.
 # A 1.15 tirou os prédios de cima das RUAS NOVAS DAS PONTES (mundo/pontes.gd): save da 1.07..1.14 ("mapa_predios" = 6)
 # é convertido com cidade.remapa_v6.
-const MAPA_PREDIOS := 7
+# A 1.17 tirou os prédios FECHADOS (os que não dava para entrar): save da 1.15..1.16 ("mapa_predios" = 7) é convertido
+# com cidade.remapa_v7 (o loot guardado nos fechados some com eles; eles nunca tiveram loot dentro).
+const MAPA_PREDIOS := 8
 
 # id de algo de um prédio ("p12", "p12_3", "p12:3") com o número trocado pelo novo ("" = o prédio sumiu);
 # ids que não são de prédio (carros "c..", locais "L..") voltam iguais
@@ -126,8 +128,10 @@ static func _remapa_de(main, versao_mapa: int) -> PackedInt32Array:
 		return main.cidade.remapa_v4
 	if versao_mapa < 6:
 		return main.cidade.remapa_v5
-	if versao_mapa < MAPA_PREDIOS:
+	if versao_mapa < 7:
 		return main.cidade.remapa_v6
+	if versao_mapa < MAPA_PREDIOS:
+		return main.cidade.remapa_v7
 	return PackedInt32Array()
 
 # itens largados pelo jogador (filhos do nó Jogo; os dos prédios ficam no loot_mundo)

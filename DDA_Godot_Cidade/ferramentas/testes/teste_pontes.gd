@@ -100,7 +100,9 @@ func _r():
 		else:
 			cresce = cresce and v > ult
 			ult = v
-	ok(C.remapa_v6.size() == C.predios.size() / 5 + 15 and menos == 15 and cresce, "remapa_v6: %d prédios da 1.14 -> %d agora (%d saíram), em ordem" % [C.remapa_v6.size(), C.predios.size() / 5, menos])
+	# 1.17: os prédios fechados também saem (e viram -1 nesta tabela)
+	var fech: int = int(C.removidos.get("fechado", 0))
+	ok(C.remapa_v6.size() == C.predios.size() / 5 + 15 + fech and menos == 15 + fech and cresce, "remapa_v6: %d prédios da 1.14 -> %d agora (%d saíram: 15 das pontes + %d fechados), em ordem" % [C.remapa_v6.size(), C.predios.size() / 5, menos, fech])
 	print("== altura e chão")
 	var pb = P.ponte(0)
 	var hm: float = pb.h(700.0)

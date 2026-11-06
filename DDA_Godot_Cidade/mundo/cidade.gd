@@ -664,6 +664,11 @@ var remapa_v3 := PackedInt32Array()         # 0.78: número do prédio na 0.68..
 var remapa_v4 := PackedInt32Array()         # 1.06: número do prédio na 0.78..1.05 -> agora (-1 = saiu para a igreja/prefeitura)
 var remapa_v5 := PackedInt32Array()         # 1.07: número do prédio na 1.06 -> agora (-1 = saiu para um porto)
 var remapa_v6 := PackedInt32Array()         # 1.15: número do prédio na 1.07..1.14 -> agora (-1 = saiu para as ruas novas das pontes)
+var remapa_v7 := PackedInt32Array()         # 1.17: número do prédio na 1.15..1.16 -> agora (-1 = era um prédio FECHADO, que saiu)
+# 1.17 · SÓ FICAM OS PRÉDIOS QUE DÁ PARA ENTRAR (pedido): os inteiros sem entrada (térreo com portas de aço, ~29%)
+# saem da cidade; o terreno deles vira terreno vazio (terra, mato e árvore seca). As ruínas ficam. Os sorteios
+# continuam os mesmos (os outros prédios não mudam) e os jogos salvos são convertidos (remapa_v7, MAPA_PREDIOS 8).
+const SO_COM_ENTRADA := true
 var n_ruas_antigas := 0                     # 1.15: as ruas de data/city.json (as novas das pontes vêm depois delas)
 var nos_pontes: Array = []                  # 1.15: nós das pontes (desenho, colisão e luzes: mundo/pontes.gd)
 
@@ -704,6 +709,8 @@ func _buildings() -> void:
 	remapa_v4 = PackedInt32Array()
 	remapa_v5 = PackedInt32Array()
 	remapa_v6 = PackedInt32Array()
+	remapa_v7 = PackedInt32Array()
+	removidos["fechado"] = 0
 	var n_105: int = LocaisCls.N_LOCAIS_105
 	var n_106: int = LocaisCls.N_LOCAIS_106
 	var rets_locais: Array[Rect2] = []
@@ -737,6 +744,9 @@ func _buildings() -> void:
 			var bz := z + rng.randf_range(-3.0, 3.0)
 			# em cima/perto da água ou da rua/calçada? (os sorteios continuam iguais para os outros prédios não mudarem)
 			var fora := _predio_ruim(bx, bz, sx, sz)
+			# 1.17: posição desta entrada em cada tabela de jogo salvo (se o prédio for um fechado que sai, vira -1)
+			var marcas := PackedInt32Array([remapa_predios.size(), remapa_v2.size(), remapa_v3.size(), remapa_v4.size(),
+				remapa_v5.size(), remapa_v6.size()])
 			if fora == "":
 				# 0.68: no terreno de um local especial (posto, hospital, mercado, armazém) o prédio comum sai
 				var planta := Rect2(bx - sx * 0.5, bz - sz * 0.5, sx, sz)
@@ -794,10 +804,6 @@ func _buildings() -> void:
 			var cor: Color = CORES_TIPO[tipo] * extra.randf_range(0.82, 1.12)
 			cor.a = 1.0
 			var sem := extra.randf() * 0.98
-			if fora == "":
-				for o in [0, 1, W, W + 1]:
-					lote[lr * W + lc + o] = 1
-					_lote_idx.append(lr * W + lc + o)
 			var chave := Vector2i(floori(bx / BLOCO_PREDIO), floori(bz / BLOCO_PREDIO))
 			if fora == "" and not blocos.has(chave):
 				blocos[chave] = []
@@ -820,11 +826,14 @@ func _buildings() -> void:
 					lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * 0.85, h_b, sz * 0.5)), Vector3(bx, Y_RUA + h_b * 0.5, bz + sz * 0.25)), cz, Color(sx * 0.85, h_b, sz * 0.5, dado_predio(4, sem))])
 				info["h"] = h
 				if fora == "":
+					_marcar_lote(lr, lc)
+					remapa_v7.append(predio_info.size())
 					ruinas.append([bx, bz, sx, sz, h, pb.x, pb.y, h_b])
 					predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h]))
 					predio_info.append(info)
 				continue
 			var h1 := h
+			var topo: Array = []                         # 1.17: o topo da torre escalonada (entra junto com o prédio)
 			var caixa_t := Transform3D()                 # 1.05: a caixa d'água deste telhado (escala 0 = não tem)
 			caixa_t.basis = Basis.from_scale(Vector3.ZERO)
 			if h > 60.0 and extra.randf() < 0.55:
@@ -832,9 +841,7 @@ func _buildings() -> void:
 				h1 = h * extra.randf_range(0.6, 0.75)
 				var k2 := extra.randf_range(0.55, 0.75)
 				var h2 := h - h1 + extra.randf_range(4.0, 16.0)
-				lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * k2, h2, sz * k2)), Vector3(bx, Y_RUA + h1 + h2 * 0.5, bz)), cor, Color(sx * k2, h2, sz * k2, dado_predio(tipo, sem))])
-				if fora == "":
-					predio_topos[predio_info.size()] = [sx * k2, sz * k2, h1, h2]   # 1.04: o topo tem colisão própria
+				topo = [Transform3D(Basis.from_scale(Vector3(sx * k2, h2, sz * k2)), Vector3(bx, Y_RUA + h1 + h2 * 0.5, bz)), cor, Color(sx * k2, h2, sz * k2, dado_predio(tipo, sem)), [sx * k2, sz * k2, h1, h2]]
 			elif h < 70.0 and extra.randf() < 0.18:
 				# caixa d'água de madeira no telhado (marca registrada de Nova York)
 				# (1.05: na 1.04 este "elif" ficou preso no "if fora" de baixo e as caixas sumiram; agora ela fica
@@ -845,15 +852,28 @@ func _buildings() -> void:
 				if folga.x >= 0.0 and folga.y >= 0.0:
 					var off := Vector3(u.x * minf(folga.x, sx * 0.25), 0.0, u.y * minf(folga.y, sz * 0.25))
 					caixa_t = Transform3D(Basis.from_scale(Vector3.ONE * s), Vector3(bx, Y_RUA + h1, bz) + off)
-			if fora == "":
-				# guardado para a colisão (1.04: até o CORPO; antes ia até o alto da torre escalonada inteira e o
-				# telhado do corpo tinha uma parede invisível em volta do topo)
-				predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h1]))
 			var t := Transform3D(Basis.from_scale(Vector3(sx, h1, sz)), Vector3(bx, Y_RUA + h1 * 0.5, bz))
 			info["h"] = h1
 			info["t"] = t
-			info["idx"] = lista_bloco.size()
 			info["entra"] = sorte.randf() < CHANCE_ENTRA
+			if fora == "" and SO_COM_ENTRADA and not info["entra"]:
+				# 1.17: prédio FECHADO (não dá para entrar): sai da cidade; nas tabelas dos jogos salvos vira -1
+				_desmarcar(marcas)
+				remapa_v7.append(-1)
+				removidos["fechado"] += 1
+				pos_removidos.append(Vector2(bx, bz))
+				continue
+			if fora == "":
+				_marcar_lote(lr, lc)
+				remapa_v7.append(predio_info.size())
+				# guardado para a colisão (1.04: até o CORPO; antes ia até o alto da torre escalonada inteira e o
+				# telhado do corpo tinha uma parede invisível em volta do topo)
+				predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h1]))
+			if not topo.is_empty():
+				lista_bloco.append([topo[0], topo[1], topo[2]])
+				if fora == "":
+					predio_topos[predio_info.size()] = topo[3]   # 1.04: o topo tem colisão própria
+			info["idx"] = lista_bloco.size()
 			lista_bloco.append([t, cor, Color(sx, h1, sz, dado_predio(tipo, sem, not info["entra"]))])   # 1.00: térreo fechado = não entra
 			# a caixa d'água (os prédios baixos abertos já têm a deles no telhado do interior: mundo/interior.gd)
 			if fora == "" and caixa_t.basis.x.x > 0.0 and not (info["entra"] and EscadasIncendioCls.Interior.altura_telhado(info) > 0.0):
@@ -875,6 +895,8 @@ func _buildings() -> void:
 		n_bloco += 1
 		await respirar(blocos.size() + n_bloco, blocos.size() * 2)
 		var lista: Array = blocos[chave]
+		if lista.is_empty():
+			continue                                 # 1.17: o bloco só tinha prédios fechados
 		var mm := MultiMesh.new()
 		mm.transform_format = MultiMesh.TRANSFORM_3D
 		mm.use_colors = true
@@ -911,7 +933,30 @@ func _buildings() -> void:
 		detalhes.append(mi)
 	print("Prédios: ", predios.size() / 5, " (", n, " blocos de malha) · com entrada: ", n_entra, " · em ruína: ", ruinas.size(),
 		" · removidos: ", removidos["agua"], " na/perto da água, ", removidos["rua"], " em cima da rua/calçada, ",
-		removidos["local"], " para os locais especiais, ", removidos["ponte"], " para as ruas novas das pontes")
+		removidos["local"], " para os locais especiais, ", removidos["ponte"], " para as ruas novas das pontes, ",
+		removidos["fechado"], " fechados (sem entrada)")
+
+# 1.17: o prédio fechado que saiu vira -1 em cada tabela de jogo salvo em que ganhou entrada (as tabelas são da
+# cidade: alterar direto, sem guardar numa lista, que copiaria)
+func _desmarcar(m: PackedInt32Array) -> void:
+	if remapa_predios.size() > m[0]:
+		remapa_predios[m[0]] = -1
+	if remapa_v2.size() > m[1]:
+		remapa_v2[m[1]] = -1
+	if remapa_v3.size() > m[2]:
+		remapa_v3[m[2]] = -1
+	if remapa_v4.size() > m[3]:
+		remapa_v4[m[3]] = -1
+	if remapa_v5.size() > m[4]:
+		remapa_v5[m[4]] = -1
+	if remapa_v6.size() > m[5]:
+		remapa_v6[m[5]] = -1
+
+# a célula de 40 m do prédio vira LOTE (chão na altura da calçada) · 1.17: só quando o prédio fica
+func _marcar_lote(lr: int, lc: int) -> void:
+	for o in [0, 1, W, W + 1]:
+		lote[lr * W + lc + o] = 1
+		_lote_idx.append(lr * W + lc + o)
 
 # 1.15: depois dos prédios, as RUAS NOVAS das pontes entram na máscara (árvores, lotes) e no filtro de "prédio em cima
 # da rua" (o modo história não põe prédio de preenchimento nelas: historia/preenchimento.gd)

@@ -72,7 +72,28 @@ func _r():
 			certos += 1
 		if conferidos >= 4000:
 			break
-	ok(conferidos > 1000 and certos == conferidos and n_fechados > conferidos / 10, "prédio sem entrada = portas de aço no térreo (%d de %d certos, %d fechados)" % [certos, conferidos, n_fechados])
+	# 1.17: os prédios FECHADOS saíram da cidade: todo prédio inteiro que ficou dá para entrar (térreo aberto)
+	ok(conferidos > 1000 and certos == conferidos and n_fechados == 0, "só ficam prédios com entrada: térreo aberto e dado certo (%d de %d certos, %d fechados)" % [certos, conferidos, n_fechados])
+	var sem_entrada := 0
+	for info in cid.predio_info:
+		if not info["ruina"] and not info["entra"]:
+			sem_entrada += 1
+	var fechados_fora := int(cid.removidos.get("fechado", -1))
+	ok(sem_entrada == 0 and fechados_fora > 3000, "1.17: nenhum prédio inteiro sem entrada (%d); %d fechados saíram" % [sem_entrada, fechados_fora])
+	# jogo salvo da 1.15..1.16: remapa_v7 leva os números de antes para os de agora (os fechados viram -1), em ordem
+	var r7: PackedInt32Array = cid.remapa_v7
+	var menos7 := 0
+	var ult7 := -1
+	var cresce7 := true
+	for v in r7:
+		if v < 0:
+			menos7 += 1
+		else:
+			cresce7 = cresce7 and v == ult7 + 1
+			ult7 = v
+	ok(r7.size() == cid.predio_info.size() + fechados_fora and menos7 == fechados_fora and cresce7 and ult7 == cid.predio_info.size() - 1,
+		"remapa_v7: %d prédios da 1.16 -> %d agora (%d saíram), em ordem e sem buraco" % [r7.size(), cid.predio_info.size(), menos7])
+	ok(load("res://menu/salvamento.gd").MAPA_PREDIOS == 8, "MAPA_PREDIOS = 8 (save da 1.15/1.16 é convertido)")
 	# ---- halos (1.16: os fios de poste saíram, e a opção também) ----
 	var halos: Array = get_nodes_in_group("halos_luz")
 	print("  blocos com halos %d · halos %d" % [ab.nos_halos.size(), ab.halos.size()])
