@@ -107,6 +107,29 @@ func _r():
 	var conv: Dictionary = Sv._remapear_loot(velho_save, Sv._remapa_de(m, 7))
 	ok(ficou >= 0 and saiu >= 0 and conv["grades"].has("p%d_0" % r7[ficou]) and conv["grades"].size() == 1 and conv["portas"].has("p%d:0" % r7[ficou]),
 		"save da 1.16: loot do prédio %d vai para o %d; o do fechado %d some" % [ficou, r7[ficou] if ficou >= 0 else -1, saiu])
+	# ---- 1.19: nada em pé no meio do asfalto; nenhuma árvore (só os lugares guardados) ----
+	var no_asf := 0
+	for nome in ab._inst:
+		if nome in ab.FORA_DO_ASFALTO:
+			for kk in ab._inst[nome]:
+				for e in ab._inst[nome][kk]:
+					var tr: Transform3D = e[0]
+					if tr.basis.y.normalized().y > 0.9 and cid.no_asfalto(tr.origin.x, tr.origin.z):
+						no_asf += 1
+	var tirados := 0
+	for nome in ab.tirados_na_rua:
+		tirados += int(ab.tirados_na_rua[nome])
+	ok(no_asf == 0 and tirados > 500, "1.19: nada em pé no asfalto (%d) · saíram do meio da rua %d" % [no_asf, tirados])
+	var nos_arvore := 0
+	for no in cid.find_children("*", "GeometryInstance3D", true, false):
+		var nm := str(no.name)
+		if nm.begins_with("Arvores") or nm.begins_with("arvore") or nm.begins_with("Veg_arvore") or nm.begins_with("Veg_pinheiro"):
+			nos_arvore += 1
+	var lug: Array = cid.lugares_das_arvores()
+	ok(nos_arvore == 0 and lug.size() > 10000 and ResourceLoader.exists("res://data/arvores_lugares.json"),
+		"1.19: nenhuma árvore na cena (%d nós) · %d lugares guardados (e o arquivo)" % [nos_arvore, lug.size()])
+	ok(not ResourceLoader.exists("res://mundo/cenario/natureza/CommonTree_1.gltf") and not ResourceLoader.exists("res://historia/historia.gd"),
+		"1.19: arquivos das árvores e do modo história apagados")
 	# ---- halos (1.16: os fios de poste saíram, e a opção também) ----
 	var halos: Array = get_nodes_in_group("halos_luz")
 	print("  blocos com halos %d · halos %d" % [ab.nos_halos.size(), ab.halos.size()])

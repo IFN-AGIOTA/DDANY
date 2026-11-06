@@ -41,6 +41,51 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.19 · SEM O MODO HISTÓRIA, SEM ÁRVORES E NADA EM PÉ NO MEIO DA RUA
+  · MODO HISTÓRIA APAGADO (pedido): a pasta historia/ inteira saiu (missões, cutscenes, cenário do bar, prédios de
+    preenchimento, vozes, os carros Kiri '86 e JDM '99 e os modelos do bar), junto com o teste dela e o comando
+    /historia. O botão HISTÓRIA continua no menu principal, BLOQUEADO (apagado, com cadeado; tocar só avisa).
+  · NADA EM PÉ NO MEIO DO ASFALTO: o poste de uma rua caía na pista de outra (cruzamentos, curvas, ruas paralelas
+    juntas). Conferido em toda a cidade: saíram os que estavam em cima do asfalto (na densidade média: 220 postes, 49
+    postes duplos, 209 semáforos, 319 placas de PARE, 28 outras placas, 61 hidrantes, 49 lixeiras, 44 caixas de
+    energia e 35 bancos), com a colisão invisível deles. Ficam os bueiros (são da rua) e os postes CAÍDOS
+    atravessados (entulho de propósito). O resto da cidade não muda de lugar.
+  · ÁRVORES REMOVIDAS (pedido: vão ser refeitas com outros modelos): saíram todas, da rua, dos parques e dos
+    terrenos vazios, e os arquivos 3D delas foram APAGADOS (os do Quaternius: CommonTree_1/3/4, DeadTree_1/2,
+    Pine_1/2, TwistedTree_1 e as texturas só delas). O LUGAR de cada uma ficou guardado: no jogo em
+    cidade.lugares_das_arvores() e no arquivo data/arvores_lugares.json (13.207 lugares: 8.027 na rua, 4.696 nos
+    parques, 484 nos terrenos; com o modelo de antes, o giro, o tamanho e o tom de cada uma). As da rua mudam com a
+    "Densidade do cenário" (o arquivo é o da média).
+  ARQUIVOS (testado: compilar_tudo, conferência de que nada ficou em pé no asfalto e nenhuma árvore na cena, fotos,
+  e a bateria (lista na seção 9 do bloco 1.19 de testes abaixo)):
+    main.gd ........................ sem o modo história (_jogar_historia e o resto)
+    menu/menu_principal.gd ......... botão HISTÓRIA bloqueado
+    mundo/veiculo.gd ............... sem os carros Kiri/JDM e o "carro da história"
+    jogador/jogador.gd ............. sem os ganchos da história (texto_interacao, prender_no_carro, piloto_externo)
+    inventario/tela_inventario.gd .. sem a interação da história no botão PEGAR
+    dev/modo_dev.gd ................ sem o comando /historia
+    menu/creditos.gd ............... sem os modelos da história (Kiri, JDM, Kenney); árvores fora da linha do Quaternius
+    export_presets.cfg ............. sem as pastas da história no filtro do servidor
+    hud/rota_gps.gd ................ comentário
+    mundo/cidade.gd ................ árvores: arvores_lugares/lugar_arvore/lugares_das_arvores (sem plantar; sem a
+                                     árvore de código); no_asfalto(); console com o que saiu da rua
+    mundo/abandono.gd .............. FORA_DO_ASFALTO (_por/_obstaculo) e as árvores da rua viram lugares
+    mundo/cenario.gd ............... sem os modelos de árvore (MODELOS, LEVE)
+    mundo/cenario/LICENCA.txt ...... nota das árvores
+    data/arvores_lugares.json ...... NOVO · os lugares das árvores
+    ferramentas/exportar_arvores.gd  NOVO · grava o arquivo acima
+    ferramentas/testes/teste_desempenho.gd ... confere o poste do jardim leve (a árvore seca saiu)
+    ferramentas/testes/teste_graficos.gd ..... confere que nada fica em pé no asfalto e que não há árvore
+    ferramentas/testes/rodar.sh .... sem o teste da história
+    menu/config.gd ................. VERSAO "1.19"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + seções 6, 7 (mapa), 10 e 11
+  APAGADOS: historia/ (a pasta inteira: area_liberada.gd, atores.gd, carros/, cenario.gd, cutscene.gd, historia.gd,
+    iluminacao.gd, interludio_tres_dias.gd, missao_bar.gd, missao_corrida.gd, modelos/, modelos.gd, piloto_ia.gd,
+    preenchimento.gd, vozes.gd) · ferramentas/testes/teste_historia.gd · em mundo/cenario/natureza/: CommonTree_1/3/4,
+    DeadTree_1/2, Pine_1/2 e TwistedTree_1 (.gltf e .bin), Bark_NormalTree(_Normal).png, Bark_DeadTree(_Normal).png,
+    Bark_TwistedTree(_Normal).png e Leaf_Pine_C.png.
+
 ATUALIZAÇÃO 1.18 · COMANDO /mutado (MODO DESENVOLVEDOR)
   · Novo comando do chat no modo desenvolvedor: /mutado vira MUTADO na hora (os infectados te ignoram, garras, mais
     resistente, sem arma de fogo), sem precisar morrer pelos infectados (a chance de 1% continua igual no jogo normal).
@@ -3948,45 +3993,23 @@ escolhas. O ATO 1 "NOVA YORK" adapta o Prólogo e os Caps. 1 a 4 em 6 missões:
   3. A Manhã Sem Sol (Harlem, Mavie ferida, o vulto) · 4. Harlem River Drive (ponte fechada, fuga no Kiri do Dominic) ·
   5. Uma Noite Emprestada (a casa dos pais da Mavie em NOVA JERSEY = a parte OESTE do mapa; a vigia das 2h) ·
   6. Asas (o aeroporto executivo novo, hangar 4, o jato).
-Já no jogo: o PRÓLOGO, a MISSÃO 1, a MISSÃO 2 e o interlúdio "Três Dias" (1.14). Personagens no corpo padrão; falas = "som de fala" estilo Stray + legenda.
-A cidade fica "antes do caos" e vai piorando de missão em missão; a área de cada missão é fechada por bloqueios.
+1.19: o modo história (Prólogo, Missões 1 e 2 e o interlúdio "Três Dias", feitos na 1.13/1.14) foi APAGADO do jogo;
+o botão HISTÓRIA fica bloqueado no menu. O plano acima continua valendo para quando ele for refeito.
 
 -----------------------------------------------------------------------------------------------------
 7. MAPA DO PROJETO (cada sistema no seu arquivo · numa atualização, troque só os arquivos que mudaram)
 -----------------------------------------------------------------------------------------------------
 QUERO MEXER EM...                         ARQUIVO
-- modo história BLOQUEADO / liberado
-  (só com o modo desenvolvedor) ....... historia/historia.gd (liberado())
-- MODO HISTÓRIA (1.13): ordem das missões,
-  mundo antes do caos, progresso ........ historia/historia.gd
-- Prólogo + Missão 1 (a corrida) ....... historia/missao_corrida.gd
-- Missão 2 (seguir o Greg, o bar, a TV) . historia/missao_bar.gd
-- interlúdio "Três Dias" (Dias -4/-3/-2) historia/interludio_tres_dias.gd
-- cenários de dentro (o bar e a TV) e
-  fachadas na rua (porta, neon) ........ historia/cenario.gd
-- prédios que enchem os terrenos vazios
-  no modo história (perto da câmera) ... historia/preenchimento.gd (RAIO, TAMANHOS, alturas)
-- modelos baixados do modo história
-  (móveis, garrafas, viatura, cones) ... historia/modelos.gd (criar, viatura, malha) · historia/modelos/ (os .glb)
-- interações da história (ENTRAR,
-  SENTAR), entrar/sair de cenário ...... historia/historia.gd (interacao, entrar, sair_para)
-- cutscenes (planos, faixas, legendas,
-  câmera lenta, pular) ................. historia/cutscene.gd
-- "som de fala" dos personagens ........ historia/vozes.gd (TIMBRES)
-- cara e roupa do Dominic, Greg, Mavie,
-  óculos de aviador .................... historia/atores.gd (FICHAS)
-- bloqueios das áreas da história ...... historia/area_liberada.gd
-- luz das ruas e prédios por onde os
-  personagens passam (história) ........ historia/iluminacao.gd
-- piloto do jogo (o Greg na corrida) ... historia/piloto_ia.gd
+- MODO HISTÓRIA: APAGADO na 1.19 (a pasta historia/ saiu); o botão HISTÓRIA do menu fica BLOQUEADO .......
+                                        menu/menu_principal.gd
 - GPS (rota pelas ruas, linha colorida) . hud/rota_gps.gd (cálculo) · hud/mapa.gd (desenho, definir_rota)
-- carros da história (Kiri, JDM):
-  modelo, interior, câmera de dentro ... mundo/veiculo.gd (TIPOS e MODELOS) · historia/carros/
+- carros com modelo e interior: rodas,
+  volante, câmera de dentro ............ mundo/veiculo.gd (TIPOS e MODELOS) (1.19: Kiri e JDM saíram com a história)
 - carro que funciona no modo livre (Duke
   '69): modelo, pintura, parados na rua mundo/veiculo.gd (VIRA_DUKE, MODELOS "duke69", malha_duke) ·
                                         mundo/veiculos.gd (_desenhar_dukes, PERTO_DUKE) · mundo/carros/
 - quanto os vidros dos carros com
-  interior deixam ver (Duke, Kiri, JDM) mundo/veiculo.gd (OPACIDADE_VIDRO, vidro_claro)
+  interior deixam ver (Duke) .......... mundo/veiculo.gd (OPACIDADE_VIDRO, vidro_claro)
 - onde o jogador nasce / ordem do jogo,
   morte/renascer, autosave ............ main.gd (só liga as partes: menu -> jogo -> pausa)
 
@@ -4255,6 +4278,12 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd
 - chunks de 500 m (o que fica na cena, raio) ....... mundo/chunks.gd (+ Opções › Gráficos › Raio de chunks)
 - halos de luz (0.84; 1.16: os fios saíram) ...... mundo/luzes_rua.gd (onde ficam: mundo/abandono.gd _poste_luzes)
+- 1.19 · ÁRVORES: saíram (vão ser refeitas);
+  onde ficavam ......................... mundo/cidade.gd (arvores_lugares, lugar_arvore, lugares_das_arvores) ·
+                                          mundo/abandono.gd (as da rua) · data/arvores_lugares.json (gravado por
+                                          ferramentas/exportar_arvores.gd)
+- 1.19 · nada EM PÉ no meio do asfalto
+  (postes, semáforos, placas, hidrantes) mundo/abandono.gd (FORA_DO_ASFALTO, _por) · mundo/cidade.gd (no_asfalto)
 - 1.16 · versão LEVE dos modelos pesados (árvores,
   pinheiros, postes: quanto simplificar) ............ mundo/cenario.gd (LEVE, simplificar, com_lods)
 - 1.16 · troca perto/longe das árvores e postes da
@@ -4429,7 +4458,7 @@ MULTIJOGADOR (pasta rede/ · modo livre)
   perto, pausa, sem salvar em rede) ... main.gd (_ligar_rede, _rede_caiu)
 
 HISTÓRIA
-- botão "História · Em breve" ......... menu/menu_principal.gd (o modo história será refeito)
+- botão "História" BLOQUEADO (1.19) .. menu/menu_principal.gd (o modo história foi apagado; tocar só avisa)
 
 MÚSICA (pasta audio/)
 - compositor (escalas, andamento, quando
@@ -4530,25 +4559,15 @@ MÚSICA (pasta audio/)
 -----------------------------------------------------------------------------------------------------
 10. LIMITAÇÕES CONHECIDAS E PRÓXIMOS PASSOS
 -----------------------------------------------------------------------------------------------------
-- 1.13 MODO HISTÓRIA:
-  · o Prólogo, as Missões 1 e 2 e o interlúdio por enquanto; as Missões 3 a 6 do Ato 1 vêm nas próximas
-    atualizações (a 3 na 1.15);
-  · 1.14: no bar, os figurantes ficam parados nas poses (não andam pelo bar); o Dominic senta com um corte (não há
-    animação de sentar); o bar é um cenário à parte (pela vitrine de fora não se vê o de dentro); os prédios de
-    preenchimento não aparecem no minimapa nem no mapa, não têm escada de incêndio e não dá para entrar neles;
-  · os personagens não têm animação de rosto (as cenas usam silhuetas, perfil e mãos) e não têm voz (de propósito:
-    "som de fala" estilo Stray);
-  · as portas dos carros não abrem (entrar/sair é com corte); os prédios em ruína do mapa continuam no Dia -5;
-  · a corrida fica só em Manhattan (desde a 1.15 as pontes ligam as ilhas e o GPS acha caminho: dá para levar a
-    corrida para o Brooklyn numa missão futura);
-  · na corrida, em 1ª pessoa, não aparecem as mãos do Dominic no volante.
+- 1.19: o MODO HISTÓRIA foi apagado (botão bloqueado no menu); a lore continua em lore/ e o roteiro em
+  estudos/ROTEIRO_MODO_HISTORIA.md, para quando ele for refeito. As ÁRVORES saíram e vão ser refeitas com outros
+  modelos (os lugares estão guardados; os da rua mudam com a "Densidade do cenário", veja ferramentas/exportar_arvores.gd).
 - 1.15: as pontes não têm escadas para descer até a margem (só pulando na água); o passeio do Brooklyn só se sobe
   pelas rampas das pontas; o engarrafamento das pontes não volta depois de mexido (como os outros carros); a ponte
   de pedestres das torres do Brooklyn é só a passagem do passeio (não dá para subir na torre); os cabos e as treliças
   não têm colisão (só o tabuleiro, as grades, as torres e as ancoragens).
 - 1.17: só ficam os prédios que dá para entrar (os fechados saíram). Os 4 mil terrenos vazios novos são terra e mato
-  (sem loot nem infectados próprios); as ruínas continuam (não dá para entrar nelas: são cenário). No modo história os
-  terrenos vazios perto da câmera ganham prédios de preenchimento (não dá para entrar neles), como antes.
+  (sem loot nem infectados próprios); as ruínas continuam (não dá para entrar nelas: são cenário).
 - 1.16: os modelos leves usam o simplificador da Godot ao carregar (se um aparelho não tiver, fica o modelo inteiro,
   só mais pesado). A troca pelo ponto mais perto vale para as árvores e os postes da rua; carros, lixo e o resto
   ainda trocam pelo centro do bloco (300 m, longe o bastante para não aparecer). As árvores dos PARQUES ainda trocam
@@ -4738,8 +4757,6 @@ COMANDOS:
   /fps ............................... FPS e posição no canto da tela liga/desliga
   /gasolina .......................... enche o tanque do veículo que você está dirigindo
   /salvar ............................ salva o jogo agora
-  /historia .......................... (1.14.4) o MODO HISTÓRIA só existe com o modo desenvolvedor ligado: mostra se
-                                       está liberado (o botão HISTÓRIA aparece no menu principal; /devoff bloqueia)
   /hora <0-24> · /dia · /noite ....... muda a hora (só host)
   /congelar .......................... para/solta a passagem do tempo (só host)
   /clima <limpo|nublado|chuva|tempestade> ... muda o tempo na hora (só host)
