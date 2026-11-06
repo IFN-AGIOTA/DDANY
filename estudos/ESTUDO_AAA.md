@@ -595,7 +595,7 @@ Impacto e esforço estimados por mim; cada item cita a seção acima. **Todos os
 | 1 ✅ | **Diretor de IA** (intensidade, crescendo/pico/esfriando/alívio, hordas de trás a cada 90–180 s) | Maior ganho de jogabilidade: ritmo de tensão e alívio, o que fez o L4D ser rejogável (2.1) | Médio | novo `inimigos/diretor.gd` + `vagos.gd`/`horda.gd` |
 | 2 ✅ | **Arremessar garrafa/tijolo** para distrair | Furtividade e estratégia; "tão valioso quanto uma arma" no TLOU (2.2) | Baixo | `inventario/`, `armas/`, `vagos.barulho` |
 | 3 ✅ | **Estado "desconfiado"** (já existia desde a 0.65; 1.00: audição pelo estado) antes de perseguir (gemido, virar a cabeça) | O jogador entende o que vai acontecer (2.2) | Baixo | `inimigos/vago.gd` |
-| 4 ✅ | **Sinal visual de prédio que dá para entrar** (portas de aço no térreo de quem não entra) | Legibilidade; o jogador não testa porta por porta (3.4) | Médio | `mundo/cidade.gd`/`fachadas.gd` |
+| 4 ✅ | **Sinal visual de prédio que dá para entrar** (portas de aço no térreo de quem não entra) · 1.17: os prédios fechados saíram da cidade, então TODO prédio inteiro dá para entrar (o sinal fica só como código, desligado) | Legibilidade; o jogador não testa porta por porta (3.4) | Médio | `mundo/cidade.gd`/`fachadas.gd` |
 | 5 ✅ | **Orçamento de infectados em ms** (menos reais quando o quadro pesa) | Estabilidade no celular (2.4) | Médio | `inimigos/vagos.gd` |
 | 6 ✅ | **Validar no host** (feito como validação do DANO: distância, dano máximo, pedidos por segundo) | Anti-trapaça básica (5) | Baixo | `rede/sessao_rede.gd` |
 | 7 ✅ | **Teste automático de desempenho** a cada versão | Não piorar sem perceber (1.1) | Baixo | `ferramentas/testes/` |
