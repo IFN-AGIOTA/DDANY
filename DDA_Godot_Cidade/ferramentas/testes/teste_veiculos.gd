@@ -83,8 +83,23 @@ func _r():
 	var p0: Vector3 = veic.global_position
 	var inicio: Transform3D = veic.global_transform          # a reta do começo (o atropelamento é feito aqui)
 	var c0: float = veic.combustivel
-	m.controles.mover = Vector2(0, 1)
-	await seg(3.0)                        # 1.15: o Duke '69 acelera mais (em 4 s já chegava no poste da calçada)
+	# 1.15: acelera GUIANDO pela rua (o carro sai da vaga meio torto: em linha reta subia na calçada e batia no poste)
+	var rua := _rua_perto(m, Vector2(p0.x, p0.z))
+	var fr0: Vector3 = veic.global_basis.z
+	var dr: Vector2 = (rua[1] - rua[0]).normalized()
+	if dr.dot(Vector2(fr0.x, fr0.z)) < 0.0:
+		dr = -dr
+	var nr := Vector2(-dr.y, dr.x)
+	var lat0: float = (Vector2(p0.x, p0.z) - rua[0]).dot(nr)
+	var lat_alvo: float = signf(lat0) * maxf(absf(lat0) - 2.5, 2.0)
+	for f in int(3.0 * Engine.physics_ticks_per_second):
+		var pv := Vector2(veic.global_position.x, veic.global_position.z)
+		var ao_longo: float = (pv - rua[0]).dot(dr)
+		var alvo: Vector2 = rua[0] + dr * (ao_longo + 22.0) + nr * lat_alvo
+		var fr: Vector3 = veic.global_basis.z
+		var erro: float = Vector2(fr.x, fr.z).normalized().angle_to((alvo - pv).normalized())
+		m.controles.mover = Vector2(clampf(erro * 2.5, -1.0, 1.0), 1.0)
+		await physics_frame
 	var kmh: float = veic.velocidade_kmh()
 	print("depois de 3 s acelerando: %.0f km/h, andou %.1f m, gasolina %.3f -> %.3f" % [kmh, veic.global_position.distance_to(p0), c0, veic.combustivel])
 	ok(kmh > 20.0, "acelerou (%.0f km/h)" % kmh)
@@ -151,3 +166,23 @@ func _r():
 	await q(10)
 	print("falhas: ", falhas)
 	quit()
+
+# o trecho de rua mais perto de p: [a, b]
+func _rua_perto(m, p: Vector2) -> Array:
+	var melhor := INF
+	var r: Array = [p, p + Vector2(1, 0)]
+	for rd in m.cidade.dados_cidade["roads"]:
+		var f: Array = rd[1]
+		for k in range(0, f.size() - 3, 2):
+			var a := Vector2(f[k], f[k + 1])
+			var b := Vector2(f[k + 2], f[k + 3])
+			var ab := b - a
+			var l2 := ab.length_squared()
+			if l2 < 1.0:
+				continue
+			var t := clampf((p - a).dot(ab) / l2, 0.0, 1.0)
+			var d := p.distance_to(a + ab * t)
+			if d < melhor:
+				melhor = d
+				r = [a, b]
+	return r
