@@ -76,6 +76,8 @@ ATUALIZAÇÃO 1.15 · PONTES DE NOVA YORK, A CIDADE SEM ENERGIA E O DUKE '69
     mais forte e mais rápido (até ~120 km/h). Os do Exército (humvee e caminhão) continuam como eram. Carro mexido
     num jogo salvo antes também vira Duke. O ATROPELAMENTO agora vale a partir do para-choque de cada carro (antes
     era a 3 m do centro: um carro comprido como o Duke só empurrava o infectado).
+  · CONSERTO NO MULTIJOGADOR: com um amigo no jogo, o boneco dele dava um erro a cada quadro (desde a 1.14.x, ao
+    ver se ele estava recarregando); não aparecia na tela, mas enchia o registro e gastava processamento.
   · GPS: agora acha caminho de Manhattan para o Brooklyn, o Queens, a ilha do norte e Nova Jersey. No MAPA, o nome de
     cada ponte aparece com zoom.
   · DESEMPENHO: cada ponte é desenhada em pedaços de 320 m; de longe (mais de ~950 m) vira a versão simples (sem
@@ -110,6 +112,7 @@ ATUALIZAÇÃO 1.15 · PONTES DE NOVA YORK, A CIDADE SEM ENERGIA E O DUKE '69
                                      alcance do atropelamento pelo comprimento do carro
     mundo/veiculos.gd .............. os Dukes PARADOS na rua (MultiMesh por bloco, versão simples de longe)
     historia/historia.gd ........... o modo história esconde os Dukes parados junto com os carros largados
+    jogador/modelo_sobrevivente.gd . o boneco do amigo (multijogador) sem o erro do "recarregando" a cada quadro
     menu/creditos.gd ............... crédito do Duke '69 (Daniel Zhabotinsky, CC-BY)
     ferramentas/testes/teste_veiculos.gd ... confere que é o Duke (com interior); arranca guiando pela rua
     mundo/materiais_cidade.gd ...... PREDIO: velas = 0 (sem velas/lampiões nas janelas dos prédios comuns)

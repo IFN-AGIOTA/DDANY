@@ -807,7 +807,9 @@ func _process(dt: float) -> void:
 	_ik.camera = j.camera if j != null and j.get("camera") != null else null
 	# 1.14.2: modo do IK: "fuzil" (fuzis; pistola em 1ª pessoa) · "mao" (arma branca e pistola em 3ª pessoa: onde a
 	# animação manda, com a pegada certa) · "" (sem arma)
-	var recarregando: bool = j != null and j.get("armas") != null and float(j.armas.get("rel")) > 0.0
+	# 1.15: o jogador remoto (amigo) não tem "rel": sem isso dava erro a cada quadro no multijogador
+	var rel_v = j.armas.get("rel") if j != null and j.get("armas") != null else null
+	var recarregando: bool = rel_v != null and float(rel_v) > 0.0
 	_ik.usar_esquerda = not recarregando
 	if arma == null:
 		_ik.modo = ""
