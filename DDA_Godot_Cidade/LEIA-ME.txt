@@ -52,7 +52,10 @@ ATUALIZAÇÃO 1.17 · SÓ FICAM OS PRÉDIOS QUE DÁ PARA ENTRAR
   · JOGO SALVO: os números dos prédios mudaram; o save da 1.15/1.16 é convertido sozinho (remapa_v7, mapa dos prédios
     8), inclusive o mundo salvo do multijogador. O loot dos prédios que ficaram vai junto; os fechados nunca tiveram
     loot dentro.
-  · Mais leve: 4 mil prédios a menos para desenhar, com colisão, escadas de incêndio e oclusão.
+  · DESEMPENHO quase igual: são 4 mil prédios a menos (colisão, escadas de incêndio, caixas d'água, oclusão), mas onde
+    eles tapavam a vista agora aparece o que está atrás e os terrenos vazios têm mato. Medido (triângulos na tela):
+    centro da cidade 208 mil -> 237 mil (+14%); avenida 279 -> 275 mil; Ponte do Brooklyn igual; chamadas de desenho
+    iguais ou menores.
   · MODO HISTÓRIA: os terrenos vazios perto da câmera continuam ganhando os prédios de "preenchimento" da 1.14 (a cidade
     cheia do Dia -5); no modo livre não.
   ARQUIVOS (testado: compilar_tudo, montagem da cidade com o código antigo e o novo (mapa de cima: só os fechados
@@ -71,6 +74,7 @@ ATUALIZAÇÃO 1.17 · SÓ FICAM OS PRÉDIOS QUE DÁ PARA ENTRAR
     ferramentas/testes/teste_pontes.gd ..... remapa_v6 conta os fechados que saíram
     ferramentas/testes/teste_escadas_incendio.gd ... a subida de perna quebrada vai num outro prédio aberto (não há
                                              mais fechado) e confere que nenhum prédio inteiro ficou sem entrada
+    ferramentas/testes/desempenho_base.json .. referência nova (cidade sem os prédios fechados)
     ferramentas/testes/teste_ia_101.gd ..... "andando agachado": aceita a animação agachada parada no 1º quadro (a
                                              física acelera antes de a animação trocar; falhava às vezes, por tempo);
                                              continua falhando se aparecer animação DE PÉ

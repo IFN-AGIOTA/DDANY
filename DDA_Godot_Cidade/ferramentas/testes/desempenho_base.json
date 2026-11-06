@@ -1,34 +1,34 @@
 {
 	"base militar (início)": {
-		"chamadas": 198,
-		"nos": 10994,
-		"objetos": 236,
+		"chamadas": 177,
+		"nos": 11155,
+		"objetos": 215,
 		"processando": 51,
-		"quadro_ms": 195,
-		"triangulos": 183986
+		"quadro_ms": 113.5,
+		"triangulos": 174727
 	},
 	"centro da cidade": {
-		"chamadas": 178,
-		"nos": 20351,
-		"objetos": 219,
+		"chamadas": 195,
+		"nos": 20636,
+		"objetos": 236,
 		"processando": 50,
-		"quadro_ms": 171.4,
-		"triangulos": 208199
+		"quadro_ms": 118.3,
+		"triangulos": 236952
 	},
 	"centro olhando a avenida": {
-		"chamadas": 295,
-		"nos": 20351,
-		"objetos": 337,
+		"chamadas": 291,
+		"nos": 20636,
+		"objetos": 333,
 		"processando": 50,
-		"quadro_ms": 187.9,
-		"triangulos": 279304
+		"quadro_ms": 127.8,
+		"triangulos": 274727
 	},
 	"olhando a Ponte do Brooklyn": {
 		"chamadas": 202,
-		"nos": 17252,
+		"nos": 17493,
 		"objetos": 243,
 		"processando": 50,
-		"quadro_ms": 152.2,
-		"triangulos": 265967
+		"quadro_ms": 106.8,
+		"triangulos": 264809
 	}
 }
