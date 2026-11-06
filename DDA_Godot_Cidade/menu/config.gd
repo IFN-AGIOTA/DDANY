@@ -5,7 +5,7 @@ extends Node
 
 signal mudou(chave: String)          # "gfx" quando os gráficos foram aplicados; "hud" quando a HUD foi editada
 
-const VERSAO := "1.17"
+const VERSAO := "1.18"
 const ARQUIVO := "user://opcoes.cfg"
 
 const PADRAO := {

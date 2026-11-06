@@ -41,6 +41,16 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.18 · COMANDO /mutado (MODO DESENVOLVEDOR)
+  · Novo comando do chat no modo desenvolvedor: /mutado vira MUTADO na hora (os infectados te ignoram, garras, mais
+    resistente, sem arma de fogo), sem precisar morrer pelos infectados (a chance de 1% continua igual no jogo normal).
+    /mutado de novo volta HUMANO; /mutado 2 = CONTROLADO; /mutado 0 = humano. A aparência troca na hora.
+  ARQUIVOS (testado: no jogo, humano -> mutado -> controlado -> humano, com a aparência; compilar_tudo; teste_chat):
+    dev/modo_dev.gd ................ comando "mutado" (_c_mutado) na lista COMANDOS
+    menu/config.gd ................. VERSAO "1.18"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + lista de comandos (seção 11)
+
 ATUALIZAÇÃO 1.17 · SÓ FICAM OS PRÉDIOS QUE DÁ PARA ENTRAR
   · A pedido, saíram da cidade TODOS OS PRÉDIOS FECHADOS (os inteiros que não dava para entrar, com o térreo de portas
     de aço): 4.049 de 18.030. Ficam 13.981: os 12.791 com entrada (TODOS os prédios inteiros da cidade agora abrem) e
@@ -4716,6 +4726,8 @@ COMANDOS:
   /curar ............................. vida, sangue, fome, sede, temperatura, infecção, doenças, perna e sangramentos
   /deus .............................. imortal liga/desliga
   /perna ............................. quebra/conserta a perna (para testar o mancar)
+  /mutado [0|1|2] .................... 1.18: vira MUTADO na hora (sem precisar morrer); sem número alterna humano <->
+                                       mutado; 2 = controlado; 0 = humano
   /tp <x> <z> ........................ teleporta para um ponto do mapa (a altura do chão é achada sozinha)
   /tp <tipo de local> [nº] ........... teleporta para a frente de um local (igreja, porto, hangar, guarita, bunker,
                                        hospital, quartel...) · ex.: /tp porto 2

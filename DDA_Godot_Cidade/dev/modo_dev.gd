@@ -32,6 +32,7 @@ const COMANDOS := [
 	["curar", "/curar", "vida, sangue, fome, sede, frio, doenças, perna e sangramentos", false],
 	["deus", "/deus", "imortal liga/desliga", false],
 	["perna", "/perna", "quebra/conserta a perna (para testar)", false],
+	["mutado", "/mutado [0|1|2]", "vira mutado / volta humano (sem nº: alterna · 2 = controlado)", false],
 	["tp", "/tp <x> <z> · /tp <tipo de local> [nº] · /tp comboio [nº]", "teleporta", false],
 	["locais", "/locais [tipo]", "lista os locais especiais com o número de cada", false],
 	["comboio", "/comboio [nº]", "vai até um comboio do Exército (sem nº: o mais perto)", false],
@@ -305,6 +306,17 @@ func _c_perna(_a: Array) -> void:
 	var s = main.jogador.sobrevivencia
 	s.perna_quebrada = not s.perna_quebrada
 	_diz("Perna quebrada: %s" % ("SIM" if s.perna_quebrada else "não"))
+
+# 1.18: vira mutado (1), controlado (2) ou volta humano (0) na hora, sem precisar morrer (jogador/mutacao.gd)
+func _c_mutado(a: Array) -> void:
+	var s = main.jogador.sobrevivencia
+	var n: int = (0 if int(s.mutacao) != 0 else 1) if a.is_empty() else clampi(int(a[0]), 0, 2)
+	s.mutacao = n
+	if n != 0:
+		s.infeccao = 0.0
+		s.virus = -1.0
+		s.sangramentos = 0
+	_diz(["Agora você é HUMANO.", "Agora você é MUTADO: os infectados te ignoram, garras, sem arma de fogo.", "Agora você é CONTROLADO."][n])
 
 func _c_tp(a: Array) -> void:
 	if a.is_empty():
