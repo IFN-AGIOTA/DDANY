@@ -222,7 +222,10 @@ func _r():
 		if j.vel_horizontal > 1.4:
 			anims[j.animador._ap.current_animation] = true
 	j.controles.mover = Vector2.ZERO
-	ok(anims.keys() == ["andar_agachado"], "andando agachado rápido a animação continua agachada (%s)" % str(anims.keys()))
+	# 1.17: o defeito era trocar por uma animação DE PÉ; no 1º quadro andando ela ainda pode ser a "agachado" parada
+	# (a física acelera antes de a animação trocar): qualquer animação agachada vale
+	var de_pe: Array = anims.keys().filter(func(nm): return not ("agachado" in str(nm)))
+	ok(anims.has("andar_agachado") and de_pe.is_empty(), "andando agachado rápido a animação continua agachada (%s)" % str(anims.keys()))
 	j.alternar_agachar()
 	await q(10)
 

@@ -71,6 +71,9 @@ ATUALIZAÇÃO 1.17 · SÓ FICAM OS PRÉDIOS QUE DÁ PARA ENTRAR
     ferramentas/testes/teste_pontes.gd ..... remapa_v6 conta os fechados que saíram
     ferramentas/testes/teste_escadas_incendio.gd ... a subida de perna quebrada vai num outro prédio aberto (não há
                                              mais fechado) e confere que nenhum prédio inteiro ficou sem entrada
+    ferramentas/testes/teste_ia_101.gd ..... "andando agachado": aceita a animação agachada parada no 1º quadro (a
+                                             física acelera antes de a animação trocar; falhava às vezes, por tempo);
+                                             continua falhando se aparecer animação DE PÉ
     LEIA-ME.txt .................... este bloco + seções 2/10 + mapa "QUERO MEXER EM..."
 
 ATUALIZAÇÃO 1.16 · OTIMIZAÇÃO (MODELOS LEVES, PONTES EM 3 NÍVEIS, DUKES COM LOD) E SEM OS FIOS DE POSTE
