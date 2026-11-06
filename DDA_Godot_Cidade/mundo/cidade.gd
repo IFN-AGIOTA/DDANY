@@ -959,7 +959,7 @@ func _marcar_lote(lr: int, lc: int) -> void:
 		_lote_idx.append(lr * W + lc + o)
 
 # 1.15: depois dos prédios, as RUAS NOVAS das pontes entram na máscara (árvores, lotes) e no filtro de "prédio em cima
-# da rua" (o modo história não põe prédio de preenchimento nelas: historia/preenchimento.gd)
+# da rua"
 func _ruas_novas() -> void:
 	var ruas: Array = dados_cidade["roads"]
 	for ri in range(n_ruas_antigas, ruas.size()):

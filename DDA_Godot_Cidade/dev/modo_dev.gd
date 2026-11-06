@@ -52,7 +52,6 @@ const COMANDOS := [
 	["spawn", "/spawn [quantos] [lento|rapido|corredor|rastejante|mutado|soldado]", "cria infectados na sua frente", true],
 	["horda", "/horda", "o Diretor solta uma horda agora", true],
 	["diretor", "/diretor", "mostra o estado do Diretor de IA", false],
-	["historia", "/historia", "modo história: liberado com o modo desenvolvedor (botão HISTÓRIA no menu)", false],
 	["limpar", "/limpar", "limpa o chat", false],
 	["devoff", "/devoff", "desliga o modo desenvolvedor", false],
 ]
@@ -87,7 +86,7 @@ func tratar(t: String) -> bool:
 	if t.strip_edges().to_upper() == SENHA:
 		ativo = true
 		_gravar()
-		_diz("MODO DESENVOLVEDOR LIGADO. Escreva / para ver os comandos (/devoff desliga). O MODO HISTÓRIA fica liberado no menu principal.")
+		_diz("MODO DESENVOLVEDOR LIGADO. Escreva / para ver os comandos (/devoff desliga).")
 		return true
 	if not ativo or not t.begins_with("/"):
 		return false
@@ -484,14 +483,6 @@ func _c_horda(_a: Array) -> void:
 func _c_diretor(_a: Array) -> void:
 	var d = main.vagos.get("diretor")
 	_diz("Diretor: " + (d.estado_texto() if d != null else "(sem Diretor)"))
-
-# 1.14.4: o modo história é bloqueado para quem não está no modo desenvolvedor (historia/historia.gd liberado())
-func _c_historia(_a: Array) -> void:
-	var lib: bool = load("res://historia/historia.gd").liberado()
-	if lib:
-		_diz("MODO HISTÓRIA LIBERADO neste aparelho (modo desenvolvedor ligado). Volte ao menu principal: o botão HISTÓRIA aparece lá. /devoff bloqueia de novo.")
-	else:
-		_erro("Modo história bloqueado (o modo desenvolvedor não está gravado).")
 
 func _c_limpar(_a: Array) -> void:
 	chat.limpar()

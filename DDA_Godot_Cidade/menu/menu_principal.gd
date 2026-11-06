@@ -6,7 +6,6 @@ extends CanvasLayer
 
 signal jogar
 signal continuar
-signal historia                          # 1.13: modo história (historia/historia.gd)
 signal opcoes
 signal multijogador
 signal perfil                            # ícone de perfil no canto (menu/tela_perfil.gd)
@@ -106,10 +105,10 @@ func _montar() -> void:
 	var nav := VBoxContainer.new()
 	nav.add_theme_constant_override("separation", int(1.4 * v))
 	nav.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	# 1.13: MODO HISTÓRIA (Ato 1 · Nova York): Prólogo e Missão 1 · o progresso fica em user://historia.json
-	var res_hist: String = preload("res://historia/historia.gd").resumo()
-	var b1 := UI.BotaoMenu.new("História", res_hist if res_hist != "" else "Ato 1 · Nova York · Prólogo e Missão 1", false, 3.8)
-	b1.apertado.connect(func(): historia.emit())
+	# 1.19: o MODO HISTÓRIA foi apagado: o botão fica no menu, BLOQUEADO (apagado e com cadeado; tocar só avisa)
+	var b1 := UI.BotaoMenu.new("História  🔒", "Bloqueado", false, 3.8)
+	b1.modulate = Color(1, 1, 1, 0.45)
+	b1.apertado.connect(func(): avisar("O modo história está bloqueado."))
 	var salvo: String = Salvamento.resumo()
 	var b2 := UI.BotaoMenu.new("Novo jogo" if salvo != "" else "Jogar", "Mundo livre", false, 3.8)
 	b2.apertado.connect(func():
@@ -128,10 +127,6 @@ func _montar() -> void:
 	var b4 := UI.BotaoMenu.new("Créditos", "", false, 3.0, 26.0)
 	b4.apertado.connect(_abrir_creditos)
 	var botoes: Array = [b2, b1, bm, b3, b4]
-	# 1.14.4: o modo história só aparece com o MODO DESENVOLVEDOR ligado (historia/historia.gd liberado())
-	if not preload("res://historia/historia.gd").liberado():
-		botoes.erase(b1)
-		b1.queue_free()
 	if salvo != "":
 		var b0 := UI.BotaoMenu.new("Continuar", salvo, true, 3.8)
 		b0.apertado.connect(func(): continuar.emit())

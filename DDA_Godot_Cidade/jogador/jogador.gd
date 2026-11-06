@@ -129,10 +129,6 @@ var _fundo := 0.0                   # da superfície até o chão, aqui
 var _tela_agua: ColorRect = null    # câmera embaixo d'água: tela azul-esverdeada
 var veiculo = null                  # 0.76: carro que está dirigindo (mundo/veiculo.gd) · null = a pé
 var veiculos_mgr = null             # 0.76: mundo/veiculos.gd (main.gd liga)
-var prender_no_carro := false       # 1.13: modo história (corrida): o botão SAIR não tira do carro
-var piloto_externo := false         # 1.13: outro script dirige o carro (cenas roteirizadas e testes)
-var texto_interacao := ""           # 1.14: modo história: o botão PEGAR vira esta ação ("ENTRAR NO BAR"...)
-var interacao_historia := Callable()  # 1.14: o que acontece ao apertar
 var _t_olhou := 0.0                 # 0.76: segundos desde que olhou em volta (a câmera volta para a frente do carro)
 var fator_agachado := 0.0           # 0 em pé · 1 agachado (suavizado, para a câmera)
 var fator_mira := 0.0
@@ -313,13 +309,9 @@ func _usar_atalho(i: int) -> void:
 func _pegar_do_chao() -> void:
 	if not ativo or morto:
 		return
-	# 1.14: interação do modo história (historia/historia.gd interacao())
-	if texto_interacao != "" and interacao_historia.is_valid():
-		interacao_historia.call()
-		return
 	# 0.76: dentro do carro, PEGAR = sair
 	if veiculo != null:
-		if veiculos_mgr != null and not prender_no_carro:
+		if veiculos_mgr != null:
 			veiculos_mgr.sair()
 		return
 	# 0.91: sobrevivente do hospital (Mônica: loja · Lucas: trocas · os outros falam): vale o que estiver mais perto,
@@ -543,8 +535,7 @@ func _dirigir(delta: float) -> void:
 		iy = m.y
 		freio = controles.pulando()
 		armas.gatilho = false
-	if not piloto_externo:
-		v.controlar(iy, ix, freio)
+	v.controlar(iy, ix, freio)
 	# o boneco (invisível) vai junto: a câmera, o chão de física, os prédios abertos e os infectados seguem ele
 	global_position = v.global_position + Vector3(0, 1.0, 0)
 	velocity = v.linear_velocity

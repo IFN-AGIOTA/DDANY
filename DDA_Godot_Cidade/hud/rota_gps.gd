@@ -3,7 +3,7 @@ extends RefCounted
 # mapa (hud/mapa.gd definir_rota). As ruas de data/city.json viram um GRAFO (nós = pontos das ruas e cruzamentos,
 # arestas = trechos de rua) e o caminho mais curto sai do A* da Godot (AStar2D, em C++: leva menos de 1 ms).
 #   · os encontros em "T" (a ponta de uma rua encostando no meio de outra) também ligam;
-#   · ÁREA LIBERADA (modo história, historia/area_liberada.gd): limitar_area(polígono) desliga tudo fora dela, então a
+#   · ÁREA LIBERADA (era do modo história, que saiu na 1.19; continua disponível): limitar_area(polígono) desliga tudo fora dela, então a
 #     linha nunca manda o jogador para um bloqueio; limitar_area([]) libera tudo de novo;
 #   · rota(de, ate): lista de pontos (x, z) do lugar do jogador até o destino, sempre pela rua.
 # O grafo é montado uma vez por jogo (static) e serve a todos.

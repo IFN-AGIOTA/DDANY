@@ -21,19 +21,9 @@ const EQUIPE := [
 ]
 # [o quê, autor, licença, endereço]
 const RECURSOS := [
-	["Carros do modo história com interior: Kiri '86 (Dominic) e JDM Sport '99 (Greg)",
-		"Daniel Zhabotinsky · \"Kiri '86 - Low poly model\" e \"JDM Sport '99 - Low Poly model\" (Sketchfab)",
-		"CC BY 4.0 (Creative Commons Atribuição 4.0)", "sketchfab.com/DanielZhabotinsky (licença em historia/carros/LICENCA.txt)"],
 	["Carro que funciona no modo livre (1.15): Duke '69, com interior",
 		"Daniel Zhabotinsky · \"Duke '69 - Low Poly Model\" (Sketchfab; pintura com a cor de cada carro)",
 		"CC BY 4.0 (Creative Commons Atribuição 4.0)", "sketchfab.com/3d-models/46fed79f600c4fc69e060991f9e3e4f9 (licença em mundo/carros/LICENCA.txt)"],
-	["Modo história (1.14.1): móveis do bar e dos apartamentos (banquetas, cadeiras, luminárias, plantas, caixas de som, cabideiro, cama, sofá, cozinha...)",
-		"Kenney · \"Furniture Kit\" (cores ajustadas para o jogo)",
-		"CC0 1.0 (domínio público)", "kenney.nl/assets/furniture-kit (licença em historia/modelos/moveis/LICENCA.txt)"],
-	["Modo história (1.14.1): garrafas, copos, canecas e latas", "Kenney · \"Food Kit\"",
-		"CC0 1.0 (domínio público)", "kenney.nl/assets/food-kit (licença em historia/modelos/comida/LICENCA.txt)"],
-	["Modo história (1.14.1): viatura de polícia, ambulância, táxi e cones", "Kenney · \"Car Kit\"",
-		"CC0 1.0 (domínio público)", "kenney.nl/assets/car-kit (licença em historia/modelos/veiculos/LICENCA.txt)"],
 	["Cartão de acesso dos bunkers (modelo 3D; textura repintada)", "codeinfernogames (Code Inferno Games) · \"3D Keycard\"",
 		"CC0 1.0 (domínio público)", "opengameart.org/content/3d-keycard"],
 	["Roupas 3D do personagem (1.11): camisas, camisetas, suéteres, jaquetas, macacões, calças, bermudas, calçados, luvas, chapéus, capacetes, máscaras e coletes (lista peça por peça em jogador/roupas/LICENCA.txt)",

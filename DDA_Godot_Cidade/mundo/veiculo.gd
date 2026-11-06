@@ -6,10 +6,9 @@ extends VehicleBody3D
 #     sem gasolina o motor morre. Bater forte estraga o MOTOR (estado 0..1: menos força; 0 = não liga) e machuca.
 #   - atropelar infectados (e jogadores no PvP) com velocidade machuca/derruba; o motor faz barulho (os infectados
 #     perto ouvem) e tem som próprio (feito por código, mais agudo com a velocidade).
-# 1.13 · CARROS DO MODO HISTÓRIA ("kiri86" do Dominic, "jdm99" do Greg): o desenho é o MODELO BAIXADO
-#   (historia/carros/*.glb, Daniel Zhabotinsky, CC-BY), com INTERIOR: as rodas do modelo giram e esterçam (vão dentro
-#   das rodas da física), o volante gira com a direção e, em 1ª PESSOA, a câmera fica no banco do motorista (painel,
-#   volante e retrovisor à vista). Mais rápidos que os carros largados (VEL_MAX própria). MODELOS diz onde fica cada peça.
+# 1.13 · CARROS COM MODELO BAIXADO e INTERIOR (MODELOS): as rodas do modelo giram e esterçam (vão dentro das rodas da
+#   física), o volante gira com a direção e, em 1ª PESSOA, a câmera fica no banco do motorista (painel, volante e
+#   retrovisor à vista). (1.19: os da história, Kiri '86 e JDM '99, saíram com o modo história.)
 # 1.15 · DUKE '69: os carros que FUNCIONAM no modo livre (os sedãs, táxis e vans de antes, VIRA_DUKE) são o Duke '69
 #   (mundo/carros/duke69.glb, Daniel Zhabotinsky, CC-BY), com o mesmo interior e as rodas/volante que giram; a
 #   pintura é a cor do carro largado que ele substitui (o resto do modelo fica como veio).
@@ -39,21 +38,14 @@ const TIPOS := {
 	"van": [0.9, 1.6, -1.6, 0.36, Vector3(2.0, 1.8, 4.9), 1900.0, 1.0],
 	"humvee": [1.0, 1.6, -1.6, 0.45, Vector3(2.2, 1.9, 4.9), 2400.0, 1.9],
 	"caminhao_exercito": [1.05, 2.8, -2.1, 0.55, Vector3(2.5, 3.2, 8.0), 4500.0, 2.9],
-	# 1.13: os carros da história (medidas tiradas do modelo; [7] = velocidade máxima em m/s)
-	"kiri86": [0.71, 1.32, -1.14, 0.285, Vector3(1.7, 1.25, 4.3), 1100.0, 1.55, 40.0],
-	"jdm99": [0.76, 1.32, -1.40, 0.325, Vector3(1.9, 1.3, 4.6), 1300.0, 1.85, 42.0],
+	# 1.13: carros com modelo baixado (medidas tiradas do modelo; [7] = velocidade máxima em m/s)
 	# 1.15: o Duke '69 (muscle car pesado, motor forte)
 	"duke69": [0.78, 1.63, -1.30, 0.315, Vector3(1.9, 1.3, 5.2), 1550.0, 1.75, 34.0],
 }
 const VIRA_DUKE := ["sedan", "taxi", "van"]     # 1.15: estes, quando funcionam, são o Duke '69
-# 1.13: modelo baixado de cada carro da história · frente do arquivo = +X (gira -90° em Y) · rodas e volante (nomes dos
+# 1.13: modelo baixado de cada carro com interior · frente do arquivo = +X (gira -90° em Y) · rodas e volante (nomes dos
 # nós no .glb) · olho = onde fica a cabeça do motorista (no sistema do carro: frente +Z, esquerda +X)
 const MODELOS := {
-	"kiri86": {"arquivo": "res://historia/carros/kiri86.glb", "rodas": ["kiri86_Wheel_FL", "kiri86_Wheel_FR", "kiri86_Wheel_RL", "kiri86_Wheel_RR"],
-		"volante": "kiri86_Steering_Wheel", "olho": Vector3(0.33, 1.13, -0.16)},
-	"jdm99": {"arquivo": "res://historia/carros/jdm99.glb", "rodas": ["Gallo99_WheelStock_FL", "Gallo99_WheelStock_FR", "Gallo99_WheelStock_RL", "Gallo99_WheelStock_RR"],
-		"volante": "Gallo99_Steering_Wheel", "olho": Vector3(0.35, 1.12, -0.24),
-		"pincas": ["Gallo99_CaliperStock_FL", "Gallo99_CaliperStock_FR", "Gallo99_CaliperStock_RL", "Gallo99_CaliperStock_RR"]},
 	# 1.15: "pintura" = o material da lataria (pintado com a cor do carro)
 	"duke69": {"arquivo": "res://mundo/carros/duke69.glb", "rodas": ["Duke69_WhellStock_FL", "Duke69_WhellStock_FR", "Duke69_WhellStock_RL", "Duke69_WhellStock_RR"],
 		"volante": "Duke69_Steering_Wheel", "olho": Vector3(0.36, 1.14, -0.12), "pintura": "Duke69_bodymat"},
@@ -83,17 +75,14 @@ var _alcance_atropelo := 3.0            # 1.15: do centro do carro até 0,9 m al
 var _vel_ant := Vector3.ZERO
 var _corpo: CollisionShape3D
 var _forca_x := 1.0                     # 1.08: força do motor deste tipo
-var _vel_max := VEL_MAX                 # 1.13: carros da história são mais rápidos
+var _vel_max := VEL_MAX                 # 1.13: velocidade máxima própria de cada tipo (TIPOS)
 var _rodas: Array = []                  # VehicleWheel3D (frente esq, frente dir, trás esq, trás dir)
 var _volante: Node3D = null             # 1.13: volante do modelo (gira com a direção)
 var _volante_base := Basis()
 var _eixo_volante := Vector3.BACK
 var cam_interior: Camera3D = null       # 1.13: câmera no banco do motorista (1ª pessoa)
-var historia := false                   # 1.13: carro do modo história (sem combustível, sem dano no motor)
 
 func _ready() -> void:
-	if historia:
-		add_to_group("historia_ocupa")         # 1.14: não nasce prédio de preenchimento em cima (historia/preenchimento.gd)
 	if tipo in VIRA_DUKE:
 		tipo = "duke69"                        # 1.15 (também os salvos antes e a cópia de um amigo dirigindo)
 	var d: Array = TIPOS.get(tipo, TIPOS["sedan"])
@@ -330,8 +319,6 @@ func _physics_process(dt: float) -> void:
 		var lim := GIRO_MAX * lerpf(1.0, 0.22, clampf(absf(v_frente) / _vel_max, 0.0, 1.0))
 		steering = move_toward(steering, -_giro * lim, dt * 2.5)
 		# combustível
-		if historia:
-			combustivel = TANQUE
 		combustivel = maxf(0.0, combustivel - (absf(v_frente) * dt / 1000.0) * LITROS_POR_KM - dt * LITROS_MINUTO / 60.0)
 		if combustivel <= 0.0:
 			desligar_motor()
@@ -353,8 +340,7 @@ func _physics_process(dt: float) -> void:
 		_volante.basis = _volante_base * Basis(_eixo_volante, steering * 3.2)
 	if dv > 7.0 and dt > 0.0:
 		var forca := (dv - 7.0)
-		if not historia:
-			motor = maxf(0.0, motor - forca * 0.04)
+		motor = maxf(0.0, motor - forca * 0.04)
 		Sons.em("impactos/bala_metal", global_position + Vector3(0, 0.8, 0), clampf(-10.0 + forca * 2.0, -10.0, 6.0), 60.0, 0.5)
 		if ao_bater.is_valid():
 			ao_bater.call(forca * 3.0)
