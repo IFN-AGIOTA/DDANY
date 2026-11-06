@@ -80,8 +80,10 @@ ATUALIZAÇÃO 1.16 · OTIMIZAÇÃO (MODELOS LEVES, PONTES EM 3 NÍVEIS, DUKES CO
     menu/config.gd ................. predefinições sem "wire"; VERSAO "1.16"
     menu/aplicar_opcoes.gd ......... sem os fios (só os halos)
     menu/novidades_lista.gd ........ refeita
-    ferramentas/testes/teste_desempenho.gd ... vista da Ponte do Brooklyn + conferências da 1.16
-    ferramentas/testes/desempenho_base.json .. referência nova (mais leve)
+    ferramentas/testes/teste_desempenho.gd ... vista da Ponte do Brooklyn + conferências da 1.16; o início espera os
+                                               prédios em volta abrirem antes de medir (a 1ª medida variava muito)
+    ferramentas/testes/desempenho_base.json .. referência nova (com a vista da Ponte do Brooklyn; a antiga era de antes
+                                               das pontes e do Duke)
     ferramentas/testes/teste_graficos.gd ..... confere que não há fios nem a opção
     ferramentas/testes/teste_menu_leve.gd .... sem os fios
     estudos/ESTUDO_AAA.md (fora do jogo) ..... raio-x novo e o que foi feito
