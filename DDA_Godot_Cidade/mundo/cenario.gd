@@ -113,6 +113,7 @@ static func simplificar(am: ArrayMesh, fracao: float, angulo: float, nome := "")
 		antes += _tris(am.surface_get_arrays(s))
 	if antes < 600:
 		return am
+	var t0 := Time.get_ticks_msec()
 	var im = _importer(am, angulo)
 	if im == null:
 		return am
@@ -133,7 +134,7 @@ static func simplificar(am: ArrayMesh, fracao: float, angulo: float, nome := "")
 	if depois <= 0 or depois >= antes or out.get_surface_count() != am.get_surface_count():
 		return am
 	leves[nome] = [antes, depois]
-	print("Cenário leve: %s %d -> %d triângulos" % [nome, antes, depois])
+	print("Cenário leve: %s %d -> %d triângulos (%d ms)" % [nome, antes, depois, Time.get_ticks_msec() - t0])
 	return out
 
 # 1.16: a mesma malha com os NÍVEIS DE DETALHE automáticos da Godot (de perto, a inteira; quanto menor na tela, mais

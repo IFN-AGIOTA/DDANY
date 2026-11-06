@@ -34,6 +34,7 @@ const PERTO := 950.0                   # até aqui o desenho completo ou o médi
 const PERTO_DETALHE := 380.0           # 1.16: até aqui o desenho completo; daí até PERTO, o médio (sem as peças finas)
 const FINO := 0.2                      # 1.16: no médio saem os triângulos com um lado menor que isto (m)
 static var triangulos := [0, 0]        # 1.16: triângulos da estrutura [completo, médio] de todas as pontes (testes)
+static var _us_medio := 0              # 1.16: tempo gasto montando a versão média (console)
 const ALCANCE_LUZ := 2600.0
 const LUZES := false                   # 1.15: a cidade está sem energia: as pontes ficam apagadas
 
@@ -569,6 +570,7 @@ static func _arco(c, t: Transform3D, x0: float, x1: float, y0: float, y1: float,
 static func montar(cid) -> Array:
 	preparar()
 	triangulos = [0, 0]
+	_us_medio = 0
 	var nos: Array = []
 	for pt in lista:
 		var o := Obra.new(pt, cid)
@@ -587,12 +589,13 @@ static func montar(cid) -> Array:
 		nos.append_array(_nos(o, cid))
 		if cid != null and cid.has_method("pausa"):
 			await cid.pausa()
-	print("Pontes: estrutura com %d triângulos de perto e %d na versão média" % triangulos)
+	print("Pontes: estrutura com %d triângulos de perto e %d na versão média (%d ms para montar a média)" % [triangulos[0], triangulos[1], _us_medio / 1000])
 	return nos
 
 # 1.16: cópia da estrutura sem os triângulos finos (um lado menor que FINO: cabos de pendurar, grades, postes,
 # rebites). Os cabos principais (raio 0,32 a 0,5 m) e as vigas ficam. Escreve por índice (mais rápido que append).
 static func _sem_finos(k, mat: Material) -> ArrayMesh:
+	var t0 := Time.get_ticks_usec()
 	var v: PackedVector3Array = k.v
 	var n: PackedVector3Array = k.n
 	var c: PackedColorArray = k.c
@@ -626,6 +629,7 @@ static func _sem_finos(k, mat: Material) -> ArrayMesh:
 	triangulos[0] += v.size() / 3
 	triangulos[1] += j / 3
 	var am := ArrayMesh.new()
+	_us_medio += Time.get_ticks_usec() - t0
 	if j == 0:
 		return am
 	var arr := []
