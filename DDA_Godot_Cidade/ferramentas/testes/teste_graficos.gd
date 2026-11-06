@@ -121,8 +121,8 @@ func _r():
 		tirados += int(ab.tirados_na_rua[nome])
 	ok(no_asf == 0 and tirados > 500, "1.19: nada em pé no asfalto (%d) · saíram do meio da rua %d" % [no_asf, tirados])
 	var nos_arvore := 0
-	for no in cid.find_children("*", "GeometryInstance3D", true, false):
-		var nm := str(no.name)
+	for nd in cid.find_children("*", "GeometryInstance3D", true, false):
+		var nm := str(nd.name)
 		if nm.begins_with("Arvores") or nm.begins_with("arvore") or nm.begins_with("Veg_arvore") or nm.begins_with("Veg_pinheiro"):
 			nos_arvore += 1
 	var lug: Array = cid.lugares_das_arvores()
