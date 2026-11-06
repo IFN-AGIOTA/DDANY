@@ -41,6 +41,52 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.16 · OTIMIZAÇÃO (MODELOS LEVES, PONTES EM 3 NÍVEIS, DUKES COM LOD) E SEM OS FIOS DE POSTE
+  · MEDIDO ANTES DE MEXER (o "raio-x" do estudos/ESTUDO_AAA.md, seção 1.1): em 6 lugares fixos, escondendo cada
+    sistema e vendo quanto custa (chamadas de desenho e triângulos, que valem para qualquer aparelho), e o processador
+    com o desenho desligado. Resultado: o PROCESSADOR está folgado (1,2 ms por quadro sem infectados e 2,5 ms com 22
+    infectados no PC de teste; a IA deles é a maior parte e já tem orçamento próprio); o peso está no DESENHO. Os
+    campeões: a árvore da rua (4 mil triângulos cada; a árvore seca, 6,5 mil), o poste duplo (2,5 mil, 19 por
+    quarteirão), a Ponte do Brooklyn (75 mil triângulos completos até 950 m) e o Duke '69 parado (18,5 mil cada).
+  · MODELOS LEVES: as árvores (da rua e dos parques), os pinheiros, a árvore grande e os postes passam pelo
+    simplificador da própria Godot (meshoptimizer) ao carregar: 30 a 65% menos triângulos, quase sem diferença na
+    tela (poste duplo 2.486 -> 1.172; árvore seca 6.557 -> 2.389; pinheiro 3.947 -> 2.111; árvore 6.265 -> 3.733).
+  · PONTES EM 3 NÍVEIS: completo até 380 m; daí até 950 m a versão MÉDIA (a mesma estrutura sem as peças finas que
+    de longe nem chegam a 1 pixel e só piscavam: pendurais, grades, postes, rebites — os cabos principais e as
+    treliças ficam); depois, a simples de antes. A estrutura média tem 32% menos triângulos.
+  · DUKES PARADOS com níveis de detalhe automáticos: de perto o modelo inteiro; a uns 20 m já cai para a metade.
+  · CONSERTO: a troca perto/longe dos objetos da rua era medida até o CENTRO do bloco de 250 m, então uma árvore a
+    15 m do jogador podia aparecer na versão de longe (um "abajur" marrom). Agora as árvores e os postes da rua
+    trocam pelo PONTO MAIS PERTO das peças do bloco (5 vezes por segundo): perto, sempre o modelo inteiro.
+  · SEM OS FIOS DE POSTE (pedido): os fios caídos entre os postes saíram da cidade, e a opção "Fios de poste" saiu
+    de Opções › Gráficos (e das predefinições). Bônus: era a etapa mais demorada da montagem da cidade ("Fios e
+    luzes da rua"), então o carregamento ficou mais curto.
+  · RESULTADO (triângulos na tela, antes -> agora): olhando a Ponte do Brooklyn 309 mil -> 273 mil (-12%); no meio
+    da ponte 266 -> 237 mil (-11%); centro velho (Downtown, cheio de árvores) 284 -> 256 mil (-10%); avenida 289 ->
+    282 mil; base militar e centro iguais (quase sem árvore/poste à vista). Chamadas de desenho iguais ou menores.
+  ARQUIVOS (testado: medição antes/depois, fotos antes/depois, compilar_tudo, teste_desempenho (com 2 conferências
+  novas e a vista da Ponte do Brooklyn na referência), teste_graficos, teste_menu_leve, teste_pontes, teste_veiculos,
+  teste_chunks, teste_jogo, teste_carregamento):
+    mundo/cenario.gd ............... LEVE (quanto simplificar cada modelo), simplificar(), com_lods(), _importer()
+    mundo/pontes.gd ................ PERTO_DETALHE, FINO, _sem_finos() (versão média de cada pedaço), triangulos
+    mundo/veiculo.gd ............... malha_duke_parado() (a malha dos Dukes parados com níveis de detalhe)
+    mundo/veiculos.gd .............. os Dukes parados usam malha_duke_parado()
+    mundo/abandono.gd .............. PERTO_PONTO e atualizar_perto() (troca pelo ponto mais perto); sem os fios
+                                     (fios, nos_fios, montar_fios); etapa "Luzes da rua" no lugar de "Fios e luzes da
+                                     rua"; aplicar_luzes() só com os halos
+    mundo/cidade.gd ................ _process: chama abandono.atualizar_perto 5x por segundo
+    mundo/luzes_rua.gd ............. sem montar_fios (fica só o halo, que segue apagado: SEM_ENERGIA)
+    menu/opcoes.gd ................. sem a linha "Fios de poste"
+    menu/config.gd ................. predefinições sem "wire"; VERSAO "1.16"
+    menu/aplicar_opcoes.gd ......... sem os fios (só os halos)
+    menu/novidades_lista.gd ........ refeita
+    ferramentas/testes/teste_desempenho.gd ... vista da Ponte do Brooklyn + conferências da 1.16
+    ferramentas/testes/desempenho_base.json .. referência nova (mais leve)
+    ferramentas/testes/teste_graficos.gd ..... confere que não há fios nem a opção
+    ferramentas/testes/teste_menu_leve.gd .... sem os fios
+    estudos/ESTUDO_AAA.md (fora do jogo) ..... raio-x novo e o que foi feito
+    LEIA-ME.txt .................... este bloco + seção 3 + mapa "QUERO MEXER EM..." + seção 10
+
 ATUALIZAÇÃO 1.15.1 · VIDROS DOS CARROS BEM TRANSPARENTES
   · Os vidros dos carros com interior — o DUKE '69 (os carros que funcionam no modo livre) e os da história (Kiri do
     Dominic e JDM do Greg) — estavam escuros (70 a 80% de opacidade): atrapalhavam ver a rua dirigindo em 1ª pessoa
@@ -118,7 +164,7 @@ ATUALIZAÇÃO 1.15 · PONTES DE NOVA YORK, A CIDADE SEM ENERGIA E O DUKE '69
     mundo/comboios.gd .............. comboios sorteados só nas ruas antigas (continuam no mesmo lugar)
     menu/salvamento.gd ............. MAPA_PREDIOS 7: save da 1.07..1.14 convertido com cidade.remapa_v6
     hud/mapa.gd .................... nome das pontes no mapa (com zoom)
-    mundo/luzes_rua.gd ............. SEM_ENERGIA: postes e semáforos não acendem (os fios continuam)
+    mundo/luzes_rua.gd ............. SEM_ENERGIA: postes e semáforos não acendem (os fios continuavam; 1.16: saíram)
     mundo/carros/ .................. NOVO · duke69.glb (+ as texturas dele) e LICENCA.txt
     mundo/veiculo.gd ............... tipo "duke69" (rodas, peso, motor, interior, pintura com a cor do carro);
                                      sedã/táxi/van viram Duke (VIRA_DUKE); malha_duke() para os parados;
@@ -3358,7 +3404,7 @@ OPÇÕES (iguais às do HTML; salvas no aparelho em user://opcoes.cfg)
   cheia, sombras, distância de visão, neblina, resolução (+ dinâmica), anti-aliasing, limite de FPS, brilho,
   contraste, saturação, vinheta e as predefinições (automático/baixo/médio/alto/ultra).
 - Gráficos (0.84: todas funcionam): detalhes dos shaders, das texturas, dos modelos e dos efeitos, distância dos
-  detalhes, sombras, densidade do cenário (quando a cidade é montada), água, fios de poste (1.15: sem "halos de luz"),
+  detalhes, sombras, densidade do cenário (quando a cidade é montada), água (1.15: sem "halos de luz"; 1.16: sem "fios de poste"),
   distância de visão, raio de chunks, ocultar o que está atrás, neblina, resolução, anti-aliasing, anisotrópica,
   limite de FPS e as cores.
 
@@ -4154,7 +4200,17 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
                                           caixa_dagua_fisica (montada com a das escadas, a até 30 m)
 - oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd
 - chunks de 500 m (o que fica na cena, raio) ....... mundo/chunks.gd (+ Opções › Gráficos › Raio de chunks)
-- fios de poste e halos de luz (0.84) ............. mundo/luzes_rua.gd (onde ficam: mundo/abandono.gd _poste_luzes)
+- halos de luz (0.84; 1.16: os fios saíram) ...... mundo/luzes_rua.gd (onde ficam: mundo/abandono.gd _poste_luzes)
+- 1.16 · versão LEVE dos modelos pesados (árvores,
+  pinheiros, postes: quanto simplificar) ............ mundo/cenario.gd (LEVE, simplificar, com_lods)
+- 1.16 · troca perto/longe das árvores e postes da
+  rua pelo ponto mais perto (não pelo centro) ....... mundo/abandono.gd (PERTO_PONTO, atualizar_perto) · quem chama:
+                                                      mundo/cidade.gd _process
+- 1.16 · versão MÉDIA das pontes (até onde vai o
+  completo, o que sai no médio) ..................... mundo/pontes.gd (PERTO_DETALHE, FINO, _sem_finos)
+- 1.16 · níveis de detalhe dos Dukes parados ....... mundo/veiculo.gd (malha_duke_parado)
+- 1.16 · MEDIR o desempenho (chamadas, triângulos,
+  vista das pontes, conferências das otimizações) ... ferramentas/testes/teste_desempenho.gd (+ desempenho_base.json)
   · cidade SEM ENERGIA (1.15: postes, semáforos,
     pontes e velas apagados) ......................... mundo/luzes_rua.gd SEM_ENERGIA · mundo/pontes.gd LUZES ·
                                                       mundo/materiais_cidade.gd (PREDIO, velas)
@@ -4436,6 +4492,10 @@ MÚSICA (pasta audio/)
   pelas rampas das pontas; o engarrafamento das pontes não volta depois de mexido (como os outros carros); a ponte
   de pedestres das torres do Brooklyn é só a passagem do passeio (não dá para subir na torre); os cabos e as treliças
   não têm colisão (só o tabuleiro, as grades, as torres e as ancoragens).
+- 1.16: os modelos leves usam o simplificador da Godot ao carregar (se um aparelho não tiver, fica o modelo inteiro,
+  só mais pesado). A troca pelo ponto mais perto vale para as árvores e os postes da rua; carros, lixo e o resto
+  ainda trocam pelo centro do bloco (300 m, longe o bastante para não aparecer). As árvores dos PARQUES ainda trocam
+  do modelo baixado para a árvore simples pelo centro do bloco (mundo/cidade.gd PERTO_MODELO_ARVORE).
 - Ao FECHAR o jogo pelos testes automáticos aparece "double free or corruption" (desde a 0.98, no desligamento da
   Godot, depois de tudo salvo); durante o jogo não acontece. Investigar quando sobrar tempo.
 - 1.08: o TANQUE e o BLINDADO não andam (só o humvee e o caminhão de lona); nenhum veículo do comboio tem interior

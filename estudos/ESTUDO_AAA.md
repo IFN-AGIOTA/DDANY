@@ -36,6 +36,14 @@ Medido com os contadores da Godot (`Performance`) no computador de teste. Ele de
   de nós. Os chunks já tiram da árvore o que está longe ✅, mas estamos no limite citado.
 - **Quem roda todo quadro:** só 55–59 nós (16 deles são infectados). Bom.
 
+**Raio-x 2 (1.16, depois das pontes e do Duke):** escondendo cada sistema e medindo de novo. O processador está
+folgado (1,2 ms por quadro sem infectados e 2,5 ms com 22, no PC de teste; a IA é a maior parte e já tem orçamento).
+O peso está nos triângulos de poucos modelos: árvore da rua 4–6,5 mil cada, poste duplo 2,5 mil, Ponte do Brooklyn
+75 mil completos até 950 m, Duke parado 18,5 mil. ✅ 1.16: modelos leves (meshoptimizer), ponte em 3 níveis, LOD
+automático dos Dukes e troca perto/longe pelo ponto mais perto (ver a terceira leva na seção 7). Achado: a Godot mede
+o alcance de visibilidade até o **centro** do nó; num MultiMesh de bloco de 250 m a troca perto/longe erra por até
+177 m (árvore "de longe" a 15 m do jogador).
+
 ---
 
 ## 1. Otimização (Godot Compatibility + celular)
@@ -616,6 +624,17 @@ Impacto e esforço estimados por mim; cada item cita a seção acima. **Todos os
 | 25 ✅ | **Motion matching + inércia + orientação das pernas** (6) | Pé de apoio escorrega ~12–16% menos; troca continua o passo; diagonais com os passos na direção certa | `jogador/base_movimento.gd`, `jogador/camada_inercia.gd`, `jogador/camada_orientacao.gd`, `jogador/animador_modelo.gd` |
 | — | Conferidos sem mudança: transparências (capim/folhas já em recorte), sombras (só o sol) | | |
 | — | Ficam para depois: validar a POSIÇÃO no host (falsos positivos com carro/teleporte do jogo), compressão dos pacotes dos infectados (a banda não é problema hoje), predição + reconciliação | | |
+
+**Terceira leva (1.16)**: medida com o raio-x 2 (seção 0).
+
+| # | O quê | Resultado | Onde |
+|---|---|---|---|
+| 26 ✅ | **Versão leve** dos modelos baixados mais pesados (1.3) | Árvores, pinheiros e postes com 30–65% menos triângulos (simplificador da Godot ao carregar) | `mundo/cenario.gd` (LEVE) |
+| 27 ✅ | **HLOD em 3 níveis** nas pontes (1.3, 1.13) | Completo até 380 m, médio sem as peças finas até 950 m (−32% na estrutura), simples depois | `mundo/pontes.gd` |
+| 28 ✅ | **Mesh LOD automático** nos Dukes parados (1.3) | MultiMesh pequeno (1–3 carros): a Godot escolhe o nível pela distância de verdade | `mundo/veiculo.gd` |
+| 29 ✅ | Troca perto/longe **pelo ponto mais perto** do bloco (1.3) | Árvores e postes da rua; acabou o "abajur" perto do jogador | `mundo/abandono.gd`, `mundo/cidade.gd` |
+| 30 ✅ | Fios de poste **removidos** (pedido) | A etapa mais lenta da montagem da cidade saiu | `mundo/luzes_rua.gd`, `mundo/abandono.gd` |
+| — | Resultado | Triângulos: ponte −11/−12%, Downtown −10%, avenida −2%; chamadas iguais ou menores | `ferramentas/testes/teste_desempenho.gd` |
 
 ---
 
