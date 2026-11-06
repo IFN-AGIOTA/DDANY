@@ -300,8 +300,31 @@ static func modelo_longe(nome: String) -> ArrayMesh:
 	return c.malha()
 
 # ---------- colocação ----------
+# 1.19: o que NÃO pode ficar em pé em cima do asfalto (os bueiros ficam: são da rua; os postes caídos atravessados
+# também: são entulho de propósito)
+const FORA_DO_ASFALTO := ["poste", "poste_duplo", "semaforo", "hidrante", "lixeira", "caixa_energia", "banco",
+	"placa_pare", "placa_proibido", "placa_atencao"]
+var _tirados_rua := {}                   # posição (dm) dos que saíram do asfalto (o obstáculo deles sai junto)
+var tirados_na_rua := {}                 # nome -> quantos saíram (console e testes)
+var arvores_lugares: Array = []          # 1.19: onde ficavam as árvores da rua (mundo/cidade.gd lugar_arvore)
+static func _chave_rua(p: Vector3) -> Vector2i:
+	return Vector2i(roundi(p.x * 10.0), roundi(p.z * 10.0))
+
 # cor_longe: cor da versão simples de longe (árvore: a de perto já tem textura colorida, a de longe é verde)
 func _por(nome: String, t: Transform3D, cor: Color, cor_longe := Color(0, 0, 0, 0)) -> void:
+	# 1.19: nada EM PÉ no meio do asfalto (o poste de uma rua caía na pista da outra nos cruzamentos e curvas); o
+	# obstáculo dele sai junto (_obstaculo). Os sorteios já foram feitos: o resto da cidade não muda.
+	# 1.19: AS ÁRVORES SAÍRAM (vão ser refeitas): fica só o lugar (e o tronco não vira obstáculo)
+	if nome.begins_with("arvore"):
+		_tirados_rua[_chave_rua(t.origin)] = true
+		if cid != null:
+			arvores_lugares.append(cid.lugar_arvore("rua", String(BAIXADOS.get(nome, nome)), t, cor))
+		return
+	if nome in FORA_DO_ASFALTO and t.basis.y.normalized().y > 0.9 and cid != null and cid.has_method("no_asfalto") \
+			and cid.no_asfalto(t.origin.x, t.origin.z):
+		_tirados_rua[_chave_rua(t.origin)] = true
+		tirados_na_rua[nome] = int(tirados_na_rua.get(nome, 0)) + 1
+		return
 	if not _inst.has(nome):
 		_inst[nome] = {}
 	var bl := BLOCO_ESPARSO if nome in ESPARSOS else BLOCO
@@ -320,6 +343,8 @@ func _tem_baixado(nome: String) -> bool:
 	return baixados and BAIXADOS.has(nome) and Cenario.tem(BAIXADOS[nome])
 
 func _obstaculo(p: Vector3, giro: float, tam: Vector3) -> void:
+	if not _tirados_rua.is_empty() and _tirados_rua.has(_chave_rua(p)):
+		return                                   # 1.19: o objeto daqui saiu do meio da rua
 	obstaculos.append_array(PackedFloat32Array([p.x, p.z, giro, tam.x, tam.y, tam.z, p.y + tam.y * 0.5]))
 
 static func _giro(dir: Vector2) -> float:

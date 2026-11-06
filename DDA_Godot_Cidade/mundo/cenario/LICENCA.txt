@@ -10,8 +10,9 @@ natureza/ .... Quaternius · "Stylized Nature MegaKit" (versão Standard, gratui
                https://opengameart.org/content/stylized-nature-megakit · https://quaternius.com
                (licença em natureza/LICENSE_Quaternius.txt). Texturas reduzidas para 512/256 px; a das folhas do
                arbusto e da árvore grande (Leaves_TwistedTree_C.png) foi recolorida de vermelho para verde.
-               CommonTree_1/3/4, DeadTree_1/2, Pine_1/2, TwistedTree_1, Bush_Common, Bush_Common_Flowers, Fern_1,
-               Plant_1_Big, Flower_3_Group, Grass_Common_Tall, Grass_Wispy_Tall, Rock_Medium_1/3.
+               Bush_Common, Bush_Common_Flowers, Fern_1, Plant_1_Big, Flower_3_Group, Grass_Common_Tall,
+               Grass_Wispy_Tall, Rock_Medium_1/3. (1.19: as ÁRVORES deste pacote — CommonTree_1/3/4, DeadTree_1/2,
+               Pine_1/2, TwistedTree_1 — e as texturas só delas saíram do jogo; vão ser trocadas por outras.)
 
 *.glb ........ Poly Haven (https://polyhaven.com) · CC0 · simplificados por ferramentas/preparar_cenario.py
                (menos triângulos, texturas 512/256 px, origem embaixo no meio, tamanho real)

@@ -1059,6 +1059,20 @@ func _preparar_filtro(data) -> void:
 					tmp[key] = s
 	_f_ruas = tmp
 
+# 1.19: o ponto (x, z) está EM CIMA DO ASFALTO de alguma rua (mais de "dentro" m para dentro da beira)? Usa o mesmo
+# filtro das ruas dos prédios (_f_ruas: todas as ruas, com as novas das pontes); mundo/abandono.gd tira o que caiu ali
+func no_asfalto(x: float, z: float, dentro := 0.3) -> bool:
+	var p := Vector2(x, z)
+	var s: PackedFloat32Array = _f_ruas.get(Vector2i(floori(x / CEL_FILTRO), floori(z / CEL_FILTRO)), PackedFloat32Array())
+	for i in range(0, s.size(), 5):
+		var a := Vector2(s[i], s[i + 1])
+		var ab := Vector2(s[i + 2], s[i + 3]) - a
+		var l2 := ab.length_squared()
+		var t := clampf((p - a).dot(ab) / l2, 0.0, 1.0) if l2 > 0.0 else 0.0
+		if p.distance_to(a + ab * t) < s[i + 4] - CALCADA - MARGEM_RUA - dentro:
+			return true
+	return false
+
 # "" = pode ficar · "agua" · "rua"
 func _predio_ruim(x: float, z: float, sx: float, sz: float) -> String:
 	var hx := sx * 0.5
@@ -1322,7 +1336,7 @@ func _abandono_fim() -> void:
 	for no in abandono.nos:
 		_adopt(no)
 		detalhes_abandono.append(no)
-	print("Carros: ", abandono.carros.size(), " · obstáculos: ", abandono.obstaculos.size() / 7)
+	print("Carros: ", abandono.carros.size(), " · obstáculos: ", abandono.obstaculos.size() / 7, " · tirados do meio da rua: ", abandono.tirados_na_rua)
 
 # junta várias malhas prontas (cilindro, cone...) numa só, deslocadas, cada uma com seu material
 # uma = true (0.79): tudo numa superfície só, a cor de cada material nos vértices (1 desenho em vez de um por parte)
@@ -1381,11 +1395,36 @@ func _malha_caixa_dagua() -> ArrayMesh:
 	base.size = Vector3(3.6, 2.0, 3.6)
 	return _juntar([[base, Vector3(0, 1.0, 0), ferro], [corpo, Vector3(0, 4.0, 0), madeira], [teto, Vector3(0, 6.7, 0), ferro]], true)
 
-# ---------- árvores nos parques ----------
+# ---------- árvores ----------
+# 1.19 · AS ÁRVORES SAÍRAM (pedido: vão ser refeitas com outros modelos; os arquivos 3D delas foram apagados). Os
+# sorteios continuam todos iguais e cada árvore que seria plantada vira um LUGAR guardado em arvores_lugares (parques
+# e terrenos vazios aqui; as da rua em mundo/abandono.gd, juntas em lugares_das_arvores()). A lista é a mesma em todo
+# carregamento (e em todo aparelho); ferramentas/exportar_arvores.gd grava em data/arvores_lugares.json.
+# Cada lugar: [origem ("rua" | "parque" | "terreno"), modelo antigo, x, y, z, giro (rad), escala, escala em altura, cor]
+var arvores_lugares: Array = []
+
+static func eh_arvore(nome: String) -> bool:
+	return nome.begins_with("arvore") or nome.begins_with("pinheiro")
+
+static func lugar_arvore(origem: String, modelo: String, t: Transform3D, cor: Color) -> Array:
+	var bx := t.basis.x
+	return [origem, modelo, snappedf(t.origin.x, 0.01), snappedf(t.origin.y, 0.01), snappedf(t.origin.z, 0.01),
+		snappedf(atan2(-bx.z, bx.x), 0.001), snappedf(bx.length(), 0.001), snappedf(t.basis.y.length(), 0.001),
+		cor.to_html(false)]
+
+# todas: parques, terrenos e rua
+func lugares_das_arvores() -> Array:
+	var r: Array = arvores_lugares.duplicate()
+	if abandono != null:
+		r.append_array(abandono.arvores_lugares)
+	return r
+
+# ---------- árvores nos parques (1.19: só os lugares) ----------
 const MAX_ARVORES := 9000
 const PERTO_ARVORE := 320.0                 # até aqui a árvore completa; depois, a versão simples (LOD)
 
 func _arvores() -> void:
+	arvores_lugares.clear()
 	var celulas := PackedInt32Array()
 	for i in W * H:
 		if i % 16384 == 0:
@@ -1400,7 +1439,6 @@ func _arvores() -> void:
 	rv.seed = 6901
 	var veg := {}                                   # modelo -> {bloco: [[Transform3D, Color], ...]}
 	var chance := minf(0.6, float(MAX_ARVORES) / celulas.size())
-	var blocos := {}
 	var n_cel := 0
 	for i in celulas:
 		n_cel += 1
@@ -1416,14 +1454,9 @@ func _arvores() -> void:
 		if rng.randf() < 0.15:
 			verde = Color(0.55, 0.40, 0.15) * rng.randf_range(0.8, 1.1)    # algumas já amareladas (outono)
 		verde.a = 1.0
-		var chave := Vector2i(floori(x / BLOCO_ARVORE), floori(z / BLOCO_ARVORE))
 		# 1.08: nada de árvore no terreno dos locais especiais (as guaritas ficam no meio dos parques); os sorteios
 		# continuam iguais, então as outras árvores não mudam de lugar
 		var no_local := LocaisCls.em(Vector2(x, z), 3.5) >= 0
-		if not no_local:
-			if not blocos.has(chave):
-				blocos[chave] = []
-			blocos[chave].append([t, verde])
 		# 0.69: de perto, um modelo baixado (sorteio à parte: as posições continuam as mesmas)
 		var tipo := _tipo_arvore(rv, verde)
 		var tom := Color(1, 1, 1) * rv.randf_range(0.78, 1.0)
@@ -1431,60 +1464,8 @@ func _arvores() -> void:
 			tom = Color(1.0, 0.7, 0.4)                                    # outono
 		tom.a = 1.0
 		if not no_local:
-			_veg(veg, tipo, t, tom)
-	var tronco := CylinderMesh.new()
-	tronco.top_radius = 0.18
-	tronco.bottom_radius = 0.3
-	tronco.height = 3.0
-	tronco.radial_segments = 5
-	tronco.rings = 1
-	var copa := SphereMesh.new()
-	copa.radius = 2.6
-	copa.height = 4.6
-	copa.radial_segments = 7
-	copa.rings = 4
-	var malha := _juntar([[tronco, Vector3(0, 1.5, 0), _mat_simples(Color(0.30, 0.22, 0.15))], [copa, Vector3(0, 4.4, 0), _mat_simples(Color.WHITE, 1.0, true)]])
-	# LOD: de longe a árvore vira uma copa de 5 lados sem tronco (~6x menos triângulos; no meio da neblina ninguém vê)
-	var copa_longe := SphereMesh.new()
-	copa_longe.radius = 2.6
-	copa_longe.height = 4.6
-	copa_longe.radial_segments = 5
-	copa_longe.rings = 2
-	var malha_longe := _juntar([[copa_longe, Vector3(0, 4.2, 0), _mat_simples(Color.WHITE, 1.0, true)]])
-	var total := 0
-	var n_bl := 0
-	for chave in blocos:
-		n_bl += 1
-		await respirar(blocos.size() + n_bl, blocos.size() * 2)
-		var lista: Array = blocos[chave]
-		var mm := MultiMesh.new()
-		mm.transform_format = MultiMesh.TRANSFORM_3D
-		mm.use_colors = true
-		mm.mesh = malha
-		mm.instance_count = lista.size()
-		for i in lista.size():
-			mm.set_instance_transform(i, lista[i][0])
-			mm.set_instance_color(i, lista[i][1])
-		total += lista.size()
-		var mi := MultiMeshInstance3D.new()
-		mi.name = "Arvores_%d_%d" % [chave.x, chave.y]
-		mi.multimesh = mm
-		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		mi.visibility_range_end = PERTO_ARVORE
-		if not veg.is_empty():
-			mi.visibility_range_begin = PERTO_MODELO_ARVORE           # de perto fica o modelo baixado
-		_adopt(mi)
-		var mm_l := mm.duplicate() as MultiMesh
-		mm_l.mesh = malha_longe
-		var ml := MultiMeshInstance3D.new()
-		ml.name = "ArvoresLonge_%d_%d" % [chave.x, chave.y]
-		ml.multimesh = mm_l
-		ml.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		ml.visibility_range_begin = PERTO_ARVORE
-		ml.visibility_range_end = 1500.0
-		_adopt(ml)
-		detalhes.append(ml)
-	print("Árvores: ", total)
+			_veg(veg, tipo, t, tom, "parque")       # 1.19: a árvore não é plantada: só o LUGAR fica guardado
+	print("Árvores: nenhuma (1.19) · lugares guardados: ", arvores_lugares.size())
 	await _plantas(celulas, rv, veg)
 	await _montar_veg(veg)
 
@@ -1511,7 +1492,10 @@ func _tipo_arvore(r: RandomNumberGenerator, verde: Color) -> String:
 		return "arvore_seca_%d" % (r.randi() % 2 + 1)
 	return "arvore_grande"
 
-func _veg(veg: Dictionary, nome: String, t: Transform3D, cor: Color) -> void:
+func _veg(veg: Dictionary, nome: String, t: Transform3D, cor: Color, origem := "terreno") -> void:
+	if eh_arvore(nome):
+		arvores_lugares.append(lugar_arvore(origem, nome, t, cor))      # 1.19: só o lugar (as árvores vão ser refeitas)
+		return
 	if not Cenario.tem(nome):
 		return
 	if not veg.has(nome):

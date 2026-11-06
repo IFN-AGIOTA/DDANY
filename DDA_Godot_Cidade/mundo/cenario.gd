@@ -38,14 +38,8 @@ const MODELOS := {
 	"carro_coberto": ["carro_coberto.glb", 0.0, 0.0, false],
 	"caixa_papelao": ["caixa_papelao.glb", 0.0, 0.0, false],
 	# ---- natureza (Quaternius) ----
-	"arvore_1": ["natureza/CommonTree_1.gltf", 7.0, 0.0, false],
-	"arvore_3": ["natureza/CommonTree_3.gltf", 8.5, 0.0, false],
-	"arvore_4": ["natureza/CommonTree_4.gltf", 8.5, 0.0, false],
-	"arvore_seca_1": ["natureza/DeadTree_1.gltf", 7.0, 0.0, false],
-	"arvore_seca_2": ["natureza/DeadTree_2.gltf", 8.0, 0.0, false],
-	"pinheiro_1": ["natureza/Pine_1.gltf", 8.0, 0.0, false],
-	"pinheiro_2": ["natureza/Pine_2.gltf", 8.0, 0.0, false],
-	"arvore_grande": ["natureza/TwistedTree_1.gltf", 13.0, 0.0, false],
+	# 1.19: as ÁRVORES saíram (arvore_1/3/4, arvore_seca_1/2, pinheiro_1/2, arvore_grande: os arquivos foram apagados;
+	# os lugares ficaram guardados em mundo/cidade.gd arvores_lugares para as árvores novas)
 	"arbusto": ["natureza/Bush_Common.gltf", 1.3, 0.0, false],
 	"arbusto_leve": ["natureza/Bush_Leve.gltf", 1.3, 0.0, false],          # 240 triângulos: o mato em volta do jogador
 	"arbusto_flores": ["natureza/Bush_Common_Flowers.gltf", 1.3, 0.0, false],
@@ -85,9 +79,7 @@ static func malha(nome: String) -> ArrayMesh:
 # nome: [fração mínima que fica, ângulo para juntar as normais (maior = junta mais; nos galhos secos não aparece)].
 # Se a plataforma não tiver o simplificador, fica a malha inteira (o jogo só fica mais pesado, nada some).
 const LEVE := {"poste_duplo": [0.4, 60.0], "poste_jardim": [0.4, 60.0], "semaforo_braco": [0.45, 60.0],
-	"arvore_1": [0.4, 60.0], "arvore_3": [0.4, 60.0], "arvore_4": [0.4, 60.0],
-	"arvore_seca_1": [0.3, 120.0], "arvore_seca_2": [0.3, 120.0],
-	"pinheiro_1": [0.45, 60.0], "pinheiro_2": [0.45, 60.0], "arvore_grande": [0.4, 60.0]}
+}
 static var leves := {}                 # nome -> [triângulos antes, depois] (testes e console)
 
 static func _importer(am: ArrayMesh, angulo: float):

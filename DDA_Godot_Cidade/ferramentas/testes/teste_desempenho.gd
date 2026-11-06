@@ -93,7 +93,7 @@ func _r():
 	var Cen = load("res://mundo/cenario.gd")
 	var lv: Dictionary = Cen.leves
 	ok(lv.has("poste_duplo") and float(lv["poste_duplo"][1]) < 0.6 * float(lv["poste_duplo"][0]), "poste duplo leve: %s" % str(lv.get("poste_duplo")))
-	ok(lv.has("arvore_seca_2") and float(lv["arvore_seca_2"][1]) < 0.6 * float(lv["arvore_seca_2"][0]), "árvore seca leve: %s" % str(lv.get("arvore_seca_2")))
+	ok(lv.has("poste_jardim") and float(lv["poste_jardim"][1]) < 0.7 * float(lv["poste_jardim"][0]), "poste do jardim leve: %s" % str(lv.get("poste_jardim")))
 	var tp: Array = Pontes.triangulos
 	ok(tp[1] > 0 and tp[1] < tp[0] * 0.8, "pontes: versão média com menos triângulos (%d de %d)" % [tp[1], tp[0]])
 	var V = load("res://mundo/veiculo.gd")

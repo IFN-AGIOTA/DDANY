@@ -104,7 +104,7 @@ const RECURSOS := [
 		"CC BY 3.0", "game-icons.net"],
 	["Postes, semáforo e placas de trânsito", "Quaternius · \"LowPoly Modular Street Pack\"",
 		"CC0 1.0 (domínio público)", "opengameart.org/content/lowpoly-modular-street-pack"],
-	["Árvores, arbustos, samambaias, flores, capim e pedras", "Quaternius · \"Stylized Nature MegaKit\" (Standard)",
+	["Arbustos, samambaias, flores, capim e pedras", "Quaternius · \"Stylized Nature MegaKit\" (Standard)",
 		"CC0 1.0 (domínio público)", "opengameart.org/content/stylized-nature-megakit · quaternius.com"],
 	["Hidrante, barreira de concreto, lixeira, caixa de energia, bueiro, saco de lixo, barril, pneu, caixote, carro coberto e caixa de papelão",
 		"Poly Haven · Gonçalo Felício, Amal Kumar, GurJas Studios, James Ray Cock, Raunox, Benny Weimer, Jorge Camacho, MP, Jurita Burger, Rahul Chaudhary",
