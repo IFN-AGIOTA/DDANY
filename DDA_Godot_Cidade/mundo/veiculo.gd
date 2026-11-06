@@ -119,6 +119,7 @@ func _ready() -> void:
 		modelo.name = "Modelo"
 		modelo.rotation.y = -PI * 0.5       # o arquivo tem a frente em +X; aqui a frente é +Z
 		add_child(modelo)
+		_vidros_claros(modelo)
 		if MODELOS[tipo].has("pintura"):
 			_pintar(modelo, str(MODELOS[tipo]["pintura"]), cor_pintura(cor))
 	else:
@@ -422,6 +423,38 @@ func estado() -> Dictionary:
 		"g": snappedf(rotation.y, 0.001), "c": snappedf(combustivel, 0.01), "m": snappedf(motor, 0.01)}
 
 
+# ---------- 1.15.1: VIDROS BEM TRANSPARENTES (Duke, Kiri e JDM) ----------
+# o vidro dos modelos baixados vinha com 70-80% de opacidade (escuro: atrapalhava ver a rua em 1ª pessoa e o
+# interior de fora). Fica com OPACIDADE_VIDRO, liso e refletindo um pouco (continua parecendo vidro).
+const VIDRO := "UCB_Lights_and_Glass_Transperent"
+const OPACIDADE_VIDRO := 0.12
+static var _vidros := {}                    # material original -> material claro (um só para todos os carros)
+
+static func vidro_claro(mat: Material) -> Material:
+	var b := mat as BaseMaterial3D
+	if b == null or b.resource_name != VIDRO:
+		return mat
+	if not _vidros.has(mat):
+		var v := b.duplicate() as BaseMaterial3D
+		v.albedo_color = Color(0.92, 0.96, 1.0, OPACIDADE_VIDRO)
+		v.roughness = 0.04
+		v.metallic = 0.0
+		v.metallic_specular = 0.7
+		v.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		_vidros[mat] = v
+	return _vidros[mat]
+
+func _vidros_claros(modelo: Node3D) -> void:
+	for mi in modelo.find_children("*", "MeshInstance3D", true, false):
+		var m: Mesh = (mi as MeshInstance3D).mesh
+		if m == null:
+			continue
+		for k in m.get_surface_count():
+			var mat: Material = m.surface_get_material(k)
+			var v := vidro_claro(mat) if mat != null else null
+			if v != null and v != mat:
+				(mi as MeshInstance3D).set_surface_override_material(k, v)
+
 # ---------- 1.15: DUKE '69 ----------
 # a cor da lataria (a do carro largado que ele substitui; sem transparência)
 static func cor_pintura(c: Color) -> Color:
@@ -467,7 +500,7 @@ static func malha_duke() -> ArrayMesh:
 	var am := ArrayMesh.new()
 	for mat in ordem:
 		(grupos[mat] as SurfaceTool).commit(am)
-		var usar: Material = mat
+		var usar: Material = vidro_claro(mat) if mat != null else mat
 		if mat is BaseMaterial3D and (mat as BaseMaterial3D).resource_name == str(info["pintura"]):
 			var p := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
 			p.albedo_color = Color.WHITE

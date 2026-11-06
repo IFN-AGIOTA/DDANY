@@ -41,6 +41,19 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.15.1 · VIDROS DOS CARROS BEM TRANSPARENTES
+  · Os vidros dos carros com interior — o DUKE '69 (os carros que funcionam no modo livre) e os da história (Kiri do
+    Dominic e JDM do Greg) — estavam escuros (70 a 80% de opacidade): atrapalhavam ver a rua dirigindo em 1ª pessoa
+    e não deixavam ver o interior de fora. Agora ficam BEM TRANSPARENTES (12%), lisos e com um reflexo leve (ainda
+    parecem vidro): o para-brisa não escurece mais a rua e dá para ver os bancos e o painel de fora. Vale também
+    para os Dukes parados na rua.
+  ARQUIVOS (testado: fotos antes/depois — parado, 1ª e 3ª pessoa — + compilar_tudo e teste_veiculos):
+    mundo/veiculo.gd ............... vidro_claro() e OPACIDADE_VIDRO (o material de vidro dos modelos baixados fica
+                                     claro, para o carro dirigido e para a malha dos Dukes parados)
+    menu/config.gd ................. VERSAO "1.15.1"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..."
+
 ATUALIZAÇÃO 1.15 · PONTES DE NOVA YORK, A CIDADE SEM ENERGIA E O DUKE '69
   · ANTES: as ruas que atravessavam o mar eram uma faixa de asfalto rente à água, e o lado leste (Brooklyn/Queens) não
     se ligava às ruas de Manhattan (o GPS não achava caminho). AGORA são PONTES DE VERDADE, feitas do zero em código
@@ -3875,6 +3888,8 @@ QUERO MEXER EM...                         ARQUIVO
 - carro que funciona no modo livre (Duke
   '69): modelo, pintura, parados na rua mundo/veiculo.gd (VIRA_DUKE, MODELOS "duke69", malha_duke) ·
                                         mundo/veiculos.gd (_desenhar_dukes, PERTO_DUKE) · mundo/carros/
+- quanto os vidros dos carros com
+  interior deixam ver (Duke, Kiri, JDM) mundo/veiculo.gd (OPACIDADE_VIDRO, vidro_claro)
 - onde o jogador nasce / ordem do jogo,
   morte/renascer, autosave ............ main.gd (só liga as partes: menu -> jogo -> pausa)
 
