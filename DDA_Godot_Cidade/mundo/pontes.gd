@@ -15,8 +15,9 @@ extends RefCounted
 #   · altura(x, z): a altura do tabuleiro (ou -INF): mundo/colisao_mundo.gd (o "chão" de quem está na ponte), os
 #     carros largados em cima (mundo/abandono.gd) e quem nasce/cai ali;
 #   · recortar(rua): tira das ruas o pedaço que virou ponte (o asfalto rente ao mar e o chão de física dele);
-#   · montar(cidade): o desenho (pedaços de PEDACO m, com a versão simples de longe), a COLISÃO (tabuleiro, grades,
-#     torres) e as LUZES (colar de lâmpadas nos cabos e a luz vermelha no alto das torres, só à noite).
+#   · montar(cidade): o desenho (pedaços de PEDACO m, com a versão simples de longe) e a COLISÃO (tabuleiro, grades,
+#     torres). As LUZES (colar de lâmpadas nos cabos, luz vermelha no alto das torres, postes do passeio) estão
+#     prontas mas APAGADAS (LUZES = false): a cidade está sem energia, só os locais especiais com gerador acendem.
 # Mexa AQUI para: onde ficam e a altura das pontes, o desenho de cada uma, as cores e as luzes.
 
 const Malhas := preload("res://mundo/malhas.gd")
@@ -31,6 +32,7 @@ const SUAVE := 30.0                    # m: as duas médias móveis que arredond
 const PEDACO := 320.0                  # o desenho vai em pedaços deste comprimento (chunks de 500 m)
 const PERTO := 950.0                   # até aqui o desenho completo; depois, o simples
 const ALCANCE_LUZ := 2600.0
+const LUZES := false                   # 1.15: a cidade está sem energia: as pontes ficam apagadas
 
 # RUAS NOVAS (no FIM da lista de ruas: os números das outras não mudam). Os prédios em cima delas saem (os jogos
 # salvos são convertidos: cidade.remapa_v6, menu/salvamento.gd MAPA_PREDIOS 7).
@@ -646,7 +648,8 @@ static func _nos(o: Obra, cid) -> Array:
 		corpo.add_child(cb)
 	corpo.set_meta("ponte", pt.nome)
 	r.append(corpo)
-	r.append_array(_halos(o.luzes, pt.idx))
+	if LUZES:
+		r.append_array(_halos(o.luzes, pt.idx))
 	return r
 
 # luzes (halos de mundo/luzes_rua.gd: só aparecem à noite; cor.a > 0,5 pisca)
@@ -1107,7 +1110,7 @@ static func _passeio(o: Obra, sp0: float, sp1: float, torres: Array) -> void:
 			var c = o.c(s)
 			c.cilindro(pe + Vector3(0, 2.0, 0), 0.09, 4.0, 6, ferro, Basis.IDENTITY, 0.06)
 			c.cilindro(pe + Vector3(0, 0.25, 0), 0.18, 0.5, 6, ferro)
-			c.caixa(pe + Vector3(0, 4.25, 0), Vector3(0.42, 0.55, 0.42), Color(0.9, 0.85, 0.6, A_ACO))
+			c.caixa(pe + Vector3(0, 4.25, 0), Vector3(0.42, 0.55, 0.42), Color(0.32, 0.31, 0.27, A_ACO))   # lanterna apagada
 			c.cilindro(pe + Vector3(0, 4.6, 0), 0.32, 0.18, 6, ferro, Basis.IDENTITY, 0.05)
 			o.caixas.append([Transform3D(Basis.IDENTITY, pe + Vector3(0, 2.0, 0)), Vector3(0.25, 4.0, 0.25)])
 			var lz := pe + Vector3(0, 4.25, 0)

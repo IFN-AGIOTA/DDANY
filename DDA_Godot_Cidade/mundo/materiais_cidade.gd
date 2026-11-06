@@ -435,6 +435,7 @@ shader_type spatial;
 uniform float detalhe = 1.0;               // 0 = sem janelas (leve) · 1 = completo
 global uniform float molhado;              // chuva (mundo/clima.gd): paredes escurecem
 global uniform float noite;                // 0 dia · 1 noite (mundo/clima.gd): luzes de sobreviventes nas janelas
+uniform float velas = 0.0;                 // 1.15: 0 = sem velas nas janelas (só os locais especiais com gerador têm luz)
 // 0.92: TEXTURAS das paredes e do telhado (Poly Haven, CC0), postas por material(): tijolo (tipo 1), concreto
 // (0, 3, 4), pedra (2). De perto têm detalhe; de longe (TEX_LONGE) viram a cor lisa de antes (sem chiado e mais leve)
 uniform float com_textura = 1.0;
@@ -614,7 +615,7 @@ void fragment() {
 		ROUGHNESS = mix(0.9, 0.25, janela);
 		SPECULAR = mix(0.3, 0.7, janela);
 		float tremula = 0.75 + 0.25 * sin(TIME * (5.0 + 6.0 * h) + h * 40.0) * sin(TIME * 2.3 + sem * 9.0);
-		EMISSION = vec3(1.0, 0.55, 0.2) * 2.6 * tremula * luz * janela * noite;
+		EMISSION = vec3(1.0, 0.55, 0.2) * 2.6 * tremula * luz * janela * noite * velas;
 	}
 }
 """

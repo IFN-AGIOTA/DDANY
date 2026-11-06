@@ -6,10 +6,13 @@ extends RefCounted
 #     dos postes que ainda têm energia (CHANCE_ACESO, sempre os mesmos) e nos SEMÁFOROS, que piscam em amarelo.
 #     Só aparecem à noite: mundo/clima.gd chama noite() com a escuridão do céu (de dia os nós nem são desenhados).
 #     Um MultiMesh por bloco de 500 m.
+# 1.15 · A CIDADE ESTÁ SEM ENERGIA: nenhum poste nem semáforo acende (SEM_ENERGIA); só os locais especiais com
+# gerador têm luz (mundo/ambiente_local.gd). Os fios continuam. Para voltar a acender: SEM_ENERGIA = false.
 # Mexa AQUI para: cor/tamanho dos halos, quantos postes acesos, quanto o fio cai e até onde aparecem.
 
 
 const BLOCO := 500.0                     # blocos grandes: poucos desenhos
+const SEM_ENERGIA := true                # 1.15: postes e semáforos apagados (a cidade sem energia)
 const CHANCE_ACESO := 0.3
 const FIO_ALCANCE := 320.0
 const HALO_ALCANCE := 1100.0
@@ -141,6 +144,8 @@ static func _tubo(v: PackedVector3Array, n: PackedVector3Array, s: Vector3, e: V
 
 # halos: [[posição, é semáforo], ...] · devolve os nós (um MultiMesh por bloco)
 static func montar_halos(halos: Array) -> Array:
+	if SEM_ENERGIA:
+		return []
 	var por_bloco := {}
 	for h in halos:
 		var k := _bloco(h[0])

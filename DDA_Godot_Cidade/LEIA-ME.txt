@@ -41,7 +41,7 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
-ATUALIZAÇÃO 1.15 · PONTES DE NOVA YORK (BROOKLYN, MANHATTAN, GEORGE WASHINGTON, QUEENSBORO E MAIS DUAS)
+ATUALIZAÇÃO 1.15 · PONTES DE NOVA YORK E A CIDADE SEM ENERGIA
   · ANTES: as ruas que atravessavam o mar eram uma faixa de asfalto rente à água, e o lado leste (Brooklyn/Queens) não
     se ligava às ruas de Manhattan (o GPS não achava caminho). AGORA são PONTES DE VERDADE, feitas do zero em código
     no estilo das de Nova York, com o tabuleiro subindo em rampa (no máximo 6 a 7,5%) até 9 a 24 m acima da água:
@@ -59,8 +59,12 @@ ATUALIZAÇÃO 1.15 · PONTES DE NOVA YORK (BROOKLYN, MANHATTAN, GEORGE WASHINGTO
       os pináculos;
     - PONTE MACOMBS (Nova Jersey -> Manhattan) e PONTE WILLIS (ilha do meio -> Brooklyn): treliças de aço menores
       (verde e vermelha), com pilares de concreto.
-  · À NOITE: COLAR DE LUZES nos cabos (algumas queimadas), luzes no alto das treliças e a luz vermelha piscando no alto
-    das torres (Opções › Gráficos › Halos de luz).
+  · A CIDADE ESTÁ SEM ENERGIA: à noite NENHUM poste de rua nem semáforo acende, os prédios comuns não têm mais velas
+    nas janelas e as pontes ficam APAGADAS (as luzes delas — colar nos cabos, luz vermelha nas torres, postes do
+    passeio — estão prontas no código, desligadas). Só os LOCAIS ESPECIAIS com gerador (hospitais, prefeitura,
+    igrejas, delegacias, quartéis, bunkers…) têm luz. Continuam a lanterna, a fogueira, o farol do carro, o fogo dos
+    eventos e o sinalizador das missões. A opção "Halos de luz" saiu de Opções › Gráficos (não tinha mais o que
+    acender). O modo história (Dia -5, antes do caos) continua com a iluminação própria dele.
   · DÁ PARA: andar e DIRIGIR de uma ilha à outra (a colisão é a do tabuleiro, das grades, das torres e das
     ancoragens); subir no passeio do Brooklyn; pular da ponte e cair na água (embaixo dela é o mar: dá para nadar).
     Os carros largados que estavam nessas ruas ficam EM CIMA do tabuleiro, e as pontes têm o ENGARRAFAMENTO da fuga
@@ -68,7 +72,8 @@ ATUALIZAÇÃO 1.15 · PONTES DE NOVA YORK (BROOKLYN, MANHATTAN, GEORGE WASHINGTO
   · GPS: agora acha caminho de Manhattan para o Brooklyn, o Queens, a ilha do norte e Nova Jersey. No MAPA, o nome de
     cada ponte aparece com zoom.
   · DESEMPENHO: cada ponte é desenhada em pedaços de 320 m; de longe (mais de ~950 m) vira a versão simples (sem
-    pendurais nem treliças). A colisão das pontes fica sempre ligada (é leve).
+    pendurais nem treliças). A colisão das pontes fica sempre ligada (é leve). teste_desempenho e teste_chunks
+    continuam dentro do limite.
   · RUAS NOVAS (3): a Ponte de Manhattan, a avenida até a entrada da Ponte do Brooklyn e uma emenda de 60 m na ilha
     do meio (as ruas do norte e do sul dela não se ligavam). Saíram 15 PRÉDIOS que ficavam em cima delas; os jogos
     salvos são convertidos sozinhos (o loot dos outros prédios continua no lugar; o desses 15 some).
@@ -77,7 +82,8 @@ ATUALIZAÇÃO 1.15 · PONTES DE NOVA YORK (BROOKLYN, MANHATTAN, GEORGE WASHINGTO
   pela Ponte de Manhattan — + fotos de todas as pontes de dia e de noite + bateria):
     mundo/pontes.gd ................ NOVO · as pontes: dados (onde, altura, rampas, torres, âncoras, pilares), perfil,
                                      altura(x, z) do tabuleiro, recortar() (tira das ruas o pedaço que virou ponte),
-                                     desenho de cada estilo (perto e longe), colisão e luzes · RUAS_NOVAS
+                                     desenho de cada estilo (perto e longe), colisão · luzes desligadas (LUZES) ·
+                                     RUAS_NOVAS
     mundo/cidade.gd ................ ruas novas no fim da lista (n_ruas_antigas, ruas_antigas()); o asfalto rente ao
                                      mar sai (recortar); prédios em cima das ruas novas saem (remapa_v6); etapas
                                      "Ruas novas das pontes" e "As pontes de Nova York"
@@ -90,7 +96,12 @@ ATUALIZAÇÃO 1.15 · PONTES DE NOVA YORK (BROOKLYN, MANHATTAN, GEORGE WASHINGTO
     mundo/comboios.gd .............. comboios sorteados só nas ruas antigas (continuam no mesmo lugar)
     menu/salvamento.gd ............. MAPA_PREDIOS 7: save da 1.07..1.14 convertido com cidade.remapa_v6
     hud/mapa.gd .................... nome das pontes no mapa (com zoom)
+    mundo/luzes_rua.gd ............. SEM_ENERGIA: postes e semáforos não acendem (os fios continuam)
+    mundo/materiais_cidade.gd ...... PREDIO: velas = 0 (sem velas/lampiões nas janelas dos prédios comuns)
+    menu/opcoes.gd ................. sai a opção "Halos de luz"
+    ferramentas/testes/teste_graficos.gd ... confere a cidade sem energia (sem halos, sem velas)
     ferramentas/testes/teste_pontes.gd ... NOVO
+    ferramentas/testes/rodar.sh .... roda o teste_pontes junto com os outros
     menu/config.gd ................. VERSAO "1.15"
     menu/novidades_lista.gd ........ refeita
     LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..." + seção 10
@@ -3316,7 +3327,7 @@ OPÇÕES (iguais às do HTML; salvas no aparelho em user://opcoes.cfg)
   cheia, sombras, distância de visão, neblina, resolução (+ dinâmica), anti-aliasing, limite de FPS, brilho,
   contraste, saturação, vinheta e as predefinições (automático/baixo/médio/alto/ultra).
 - Gráficos (0.84: todas funcionam): detalhes dos shaders, das texturas, dos modelos e dos efeitos, distância dos
-  detalhes, sombras, densidade do cenário (quando a cidade é montada), água, fios de poste, halos de luz,
+  detalhes, sombras, densidade do cenário (quando a cidade é montada), água, fios de poste (1.15: sem "halos de luz"),
   distância de visão, raio de chunks, ocultar o que está atrás, neblina, resolução, anti-aliasing, anisotrópica,
   limite de FPS e as cores.
 
@@ -3377,7 +3388,8 @@ FACHADAS DE NOVA YORK (0.14)
 - LOJAS: cada loja do térreo tem toldo, PLACA com letreiro (algumas quebradas) ou nada.
 - PICHAÇÕES no térreo (paredes e vitrines tapadas), de perto (até ~110 m).
 - JANELAS com cortinas, persianas meio baixadas ou tapadas com jornal/papelão.
-- À NOITE, poucas janelas acesas (vela/lampião de sobreviventes, tremendo) em alguns prédios.
+- À NOITE a cidade fica ESCURA (1.15: sem energia, sem velas nas janelas, postes e semáforos apagados); só os
+  locais especiais com gerador têm luz.
 
 O SOBREVIVENTE (personagem do MODO LIVRE, 0.18)
 - Corpo de proporção humana (manequim low poly da Universal Animation Library do Quaternius, CC0), SEM
@@ -4107,6 +4119,9 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd
 - chunks de 500 m (o que fica na cena, raio) ....... mundo/chunks.gd (+ Opções › Gráficos › Raio de chunks)
 - fios de poste e halos de luz (0.84) ............. mundo/luzes_rua.gd (onde ficam: mundo/abandono.gd _poste_luzes)
+  · cidade SEM ENERGIA (1.15: postes, semáforos,
+    pontes e velas apagados) ......................... mundo/luzes_rua.gd SEM_ENERGIA · mundo/pontes.gd LUZES ·
+                                                      mundo/materiais_cidade.gd (PREDIO, velas)
 - o que cada opção de Gráficos faz ................ menu/aplicar_opcoes.gd (textos: menu/opcoes.gd · predefinições:
                                                     menu/config.gd GFX_PRESETS) · 1.02: o som tem caminho próprio
                                                     (SO_SOM, _aplicar_som) e as partes pesadas só rodam quando o

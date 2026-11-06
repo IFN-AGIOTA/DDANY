@@ -1,7 +1,7 @@
 extends SceneTree
 # TESTE: OPÇÕES DE GRÁFICOS QUE ESTAVAM "EM BREVE" (0.84) — cada uma muda alguma coisa de verdade no jogo:
 #   texturas e filtragem anisotrópica (shader do chão), modelos (alcance dos objetos da rua), efeitos (fumaça no
-#   horizonte e poeira/marcas dos tiros), fios de poste e halos de luz (só à noite)
+#   horizonte e poeira/marcas dos tiros), fios de poste e (1.15) a cidade sem energia: nenhum halo de luz
 var falhas := 0
 func ok(c: bool, msg: String) -> void:
 	if c: print("  ok   ", msg)
@@ -77,26 +77,21 @@ func _r():
 	var fios: Array = get_nodes_in_group("fios_poste")
 	var halos: Array = get_nodes_in_group("halos_luz")
 	print("  blocos com fios %d · com halos %d · fios %d · halos %d" % [ab.nos_fios.size(), ab.nos_halos.size(), ab.fios.size(), ab.halos.size()])
-	ok(ab.fios.size() > 500 and ab.halos.size() > 300, "a cidade tem fios entre os postes e halos")
-	await _aplicar(m, {"wire": false, "halo": false})
+	ok(ab.fios.size() > 500, "a cidade tem fios entre os postes")
+	# 1.15: a cidade está sem energia: nenhum poste, semáforo ou ponte acende; nem velas nas janelas dos prédios
+	ok(ab.nos_halos.is_empty() and halos.is_empty(), "sem energia: nenhum halo de poste, semáforo ou ponte (%d)" % halos.size())
+	var velas = m.cidade.mat_predio.get_shader_parameter("velas")
+	ok(velas == null or float(velas) == 0.0, "sem velas nas janelas dos prédios comuns")
+	await _aplicar(m, {"wire": false})
 	await q(2)
 	var algum := false
-	for n in ab.nos_fios + ab.nos_halos:
+	for n in ab.nos_fios:
 		if n.visible:
 			algum = true
-	ok(not algum, "fios e halos desligados somem")
-	await _aplicar(m, {"wire": true, "halo": true})
+	ok(not algum, "fios desligados somem")
+	await _aplicar(m, {"wire": true})
 	await q(2)
-	ok(ab.nos_fios[0].visible and bool(LR.opcao_halos), "fios e halos ligados aparecem")
-	m.clima.definir_hora(13.0)
-	await q(70)
-	var dia: float = LR.material().get_shader_parameter("noite")
-	var vis_dia: bool = ab.nos_halos[0].visible
-	m.clima.definir_hora(23.5)
-	await q(70)
-	var noite: float = LR.material().get_shader_parameter("noite")
-	var vis_noite: bool = ab.nos_halos[0].visible
-	ok(dia < 0.05 and noite > 0.6 and not vis_dia and vis_noite, "halos só à noite (dia %.2f · noite %.2f · desenhados de dia: %s)" % [dia, noite, vis_dia])
+	ok(ab.nos_fios[0].visible, "fios ligados aparecem")
 	# ---- efeitos ----
 	var fu = m.jogo.get_node("Fumaca")
 	await _aplicar(m, {"fx": 0})

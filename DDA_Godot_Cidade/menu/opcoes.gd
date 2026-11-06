@@ -610,7 +610,6 @@ func _pagina_graficos(v: float) -> Control:
 	_gfx_seg(lista, "den", "Densidade do cenário abandonado", "quantidade de carros largados, entulho e capim", [[0, "BAIXA"], [1, "MÉDIA"], [2, "ALTA"]], v)
 	_gfx_seg(lista, "wtr", "Água", "ondas, espuma na praia e brilho do sol", [[false, "SIMPLES"], [true, "COMPLETA"]], v)
 	_gfx_seg(lista, "wire", "Fios de poste", "fios caídos entre os postes das ruas", [[false, "DESLIGADOS"], [true, "LIGADOS"]], v)
-	_gfx_seg(lista, "halo", "Halos de luz", "brilho dos postes que ainda acendem e dos semáforos piscando, à noite", [[false, "DESLIGADOS"], [true, "LIGADOS"]], v)
 	_gfx_seg(lista, "dist", "Distância de visão", "quanto da cidade é desenhado", NIVEIS, v)
 	_gfx_passo(lista, "chk", "Raio de chunks", "pedaços de 500 m da cidade em volta da câmera (menor = mais leve; AUTO segue a distância de visão)",
 		[[0, "AUTO"], [1, "1 (±500 m)"], [2, "2 (±1 km)"], [3, "3 (±1,5 km)"], [4, "4 (±2 km)"], [6, "6 (±3 km)"], [8, "8 (±4 km)"], [10, "10 (±5 km)"]], v)

@@ -87,7 +87,7 @@ func _r():
 		if n is MultiMeshInstance3D:
 			luzes += (n as MultiMeshInstance3D).multimesh.instance_count
 	ok(corpos == 6, "colisão das 6 pontes (%d)" % corpos)
-	ok(luzes > 300, "luzes das pontes (colar nos cabos, torres): %d" % luzes)
+	ok(luzes == 0, "pontes apagadas (a cidade está sem energia): %d luzes" % luzes)
 	var ruas: Array = C.dados_cidade["roads"]
 	ok(ruas.size() == C.n_ruas_antigas + P.RUAS_NOVAS.size(), "ruas novas no fim da lista (%d + %d)" % [C.n_ruas_antigas, ruas.size() - C.n_ruas_antigas])
 	ok(int(C.removidos.get("ponte", -1)) == 15, "prédios que saíram para as ruas novas: %d (15)" % int(C.removidos.get("ponte", -1)))
