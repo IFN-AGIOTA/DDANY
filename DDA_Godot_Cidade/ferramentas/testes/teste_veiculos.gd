@@ -84,9 +84,9 @@ func _r():
 	var inicio: Transform3D = veic.global_transform          # a reta do começo (o atropelamento é feito aqui)
 	var c0: float = veic.combustivel
 	m.controles.mover = Vector2(0, 1)
-	await seg(4.0)
+	await seg(3.0)                        # 1.15: o Duke '69 acelera mais (em 4 s já chegava no poste da calçada)
 	var kmh: float = veic.velocidade_kmh()
-	print("depois de 4 s acelerando: %.0f km/h, andou %.1f m, gasolina %.3f -> %.3f" % [kmh, veic.global_position.distance_to(p0), c0, veic.combustivel])
+	print("depois de 3 s acelerando: %.0f km/h, andou %.1f m, gasolina %.3f -> %.3f" % [kmh, veic.global_position.distance_to(p0), c0, veic.combustivel])
 	ok(kmh > 20.0, "acelerou (%.0f km/h)" % kmh)
 	ok(veic.global_position.distance_to(p0) > 15.0, "andou")
 	ok(veic.combustivel < c0, "gastou gasolina")
