@@ -30,7 +30,10 @@ const MEIA := 23.0                     # + calçadas de 5 m = tabuleiro de 46 m
 const PASSO := 2.0                     # m entre as amostras do perfil
 const SUAVE := 30.0                    # m: as duas médias móveis que arredondam o começo e o topo da rampa
 const PEDACO := 320.0                  # o desenho vai em pedaços deste comprimento (chunks de 500 m)
-const PERTO := 950.0                   # até aqui o desenho completo; depois, o simples
+const PERTO := 950.0                   # até aqui o desenho completo ou o médio; depois, o simples
+const PERTO_DETALHE := 380.0           # 1.16: até aqui o desenho completo; daí até PERTO, o médio (sem as peças finas)
+const FINO := 0.2                      # 1.16: no médio saem os triângulos com um lado menor que isto (m)
+static var triangulos := [0, 0]        # 1.16: triângulos da estrutura [completo, médio] de todas as pontes (testes)
 const ALCANCE_LUZ := 2600.0
 const LUZES := false                   # 1.15: a cidade está sem energia: as pontes ficam apagadas
 
@@ -565,6 +568,7 @@ static func _arco(c, t: Transform3D, x0: float, x1: float, y0: float, y1: float,
 # devolve os nós (desenho por pedaço, colisão e luzes) para mundo/cidade.gd pôr na cena
 static func montar(cid) -> Array:
 	preparar()
+	triangulos = [0, 0]
 	var nos: Array = []
 	for pt in lista:
 		var o := Obra.new(pt, cid)
@@ -583,7 +587,56 @@ static func montar(cid) -> Array:
 		nos.append_array(_nos(o, cid))
 		if cid != null and cid.has_method("pausa"):
 			await cid.pausa()
+	print("Pontes: estrutura com %d triângulos de perto e %d na versão média" % triangulos)
 	return nos
+
+# 1.16: cópia da estrutura sem os triângulos finos (um lado menor que FINO: cabos de pendurar, grades, postes,
+# rebites). Os cabos principais (raio 0,32 a 0,5 m) e as vigas ficam. Escreve por índice (mais rápido que append).
+static func _sem_finos(k, mat: Material) -> ArrayMesh:
+	var v: PackedVector3Array = k.v
+	var n: PackedVector3Array = k.n
+	var c: PackedColorArray = k.c
+	var uv: PackedVector2Array = k.uv
+	var ov := PackedVector3Array()
+	var on := PackedVector3Array()
+	var oc := PackedColorArray()
+	var ou := PackedVector2Array()
+	ov.resize(v.size())
+	on.resize(v.size())
+	oc.resize(v.size())
+	ou.resize(v.size())
+	var lim := FINO * FINO
+	var j := 0
+	for t in range(0, v.size(), 3):
+		var a := v[t]
+		var b := v[t + 1]
+		var d := v[t + 2]
+		if a.distance_squared_to(b) < lim or b.distance_squared_to(d) < lim or d.distance_squared_to(a) < lim:
+			continue
+		for q in 3:
+			ov[j + q] = v[t + q]
+			on[j + q] = n[t + q]
+			oc[j + q] = c[t + q]
+			ou[j + q] = uv[t + q]
+		j += 3
+	ov.resize(j)
+	on.resize(j)
+	oc.resize(j)
+	ou.resize(j)
+	triangulos[0] += v.size() / 3
+	triangulos[1] += j / 3
+	var am := ArrayMesh.new()
+	if j == 0:
+		return am
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = ov
+	arr[Mesh.ARRAY_NORMAL] = on
+	arr[Mesh.ARRAY_COLOR] = oc
+	arr[Mesh.ARRAY_TEX_UV] = ou
+	am.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	am.surface_set_material(0, mat)
+	return am
 
 static func _nos(o: Obra, cid) -> Array:
 	var r: Array = []
@@ -600,6 +653,11 @@ static func _nos(o: Obra, cid) -> Array:
 	var m_fx := Mat.material(Mat.FAIXA, {"camada": 5.0})
 	for i in o.n:
 		var am: ArrayMesh = o.perto[i].malha(mat)
+		# 1.16: a versão MÉDIA (de PERTO_DETALHE a PERTO): a mesma estrutura sem as peças finas (pendurais, grades,
+		# postes, rebites), que dali para longe nem chegam a um pixel e só piscam. Sem as faixas pintadas.
+		var amd := _sem_finos(o.perto[i], mat)
+		o.asfalto[i].malha(m_asf, amd)
+		o.calcada[i].malha(m_calc, amd)
 		o.asfalto[i].malha(m_asf, am)
 		o.calcada[i].malha(m_calc, am)
 		var v: PackedVector3Array = o.fx_v[i]
@@ -617,9 +675,17 @@ static func _nos(o: Obra, cid) -> Array:
 		var mi := MeshInstance3D.new()
 		mi.name = "Ponte%d_perto_%d" % [pt.idx, i]
 		mi.mesh = am
-		mi.visibility_range_end = PERTO
-		mi.visibility_range_end_margin = 40.0
+		mi.visibility_range_end = PERTO_DETALHE
+		mi.visibility_range_end_margin = 30.0
 		r.append(mi)
+		var mdi := MeshInstance3D.new()
+		mdi.name = "Ponte%d_medio_%d" % [pt.idx, i]
+		mdi.mesh = amd
+		mdi.visibility_range_begin = PERTO_DETALHE - 30.0
+		mdi.visibility_range_begin_margin = 30.0
+		mdi.visibility_range_end = PERTO
+		mdi.visibility_range_end_margin = 40.0
+		r.append(mdi)
 		var ml: ArrayMesh = o.longe[i].malha(mat)
 		var ml_i := MeshInstance3D.new()
 		ml_i.name = "Ponte%d_longe_%d" % [pt.idx, i]

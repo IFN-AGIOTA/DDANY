@@ -14,6 +14,7 @@ const LUGARES := [
 	["base militar (início)", Vector2.INF, PI * 0.75, 0.0],
 	["centro da cidade", Vector2(436, 1500), 0.0, 0.0],
 	["centro olhando a avenida", Vector2(436, 1500), 1.2, -0.15],
+	["olhando a Ponte do Brooklyn", Vector2.ZERO, 0.0, -0.05],     # 1.16 (o lugar sai de mundo/pontes.gd)
 ]
 var falhas := 0
 func ok(c: bool, msg: String) -> void:
@@ -67,17 +68,56 @@ func _r():
 	m.clima.hora = 12.0
 	m.clima.forcar_tempo("limpo", true)
 	var medidas := {}
+	var Pontes = load("res://mundo/pontes.gd")
 	for l in LUGARES:
 		var c: Vector2 = l[1]
+		var giro := float(l[2])
+		if c == Vector2.ZERO:                    # 150 m antes da Ponte do Brooklyn, olhando para ela
+			var br = Pontes.ponte(0)
+			c = br.ponto(maxf(br.ini - 150.0, 1.0))
+			var db: Vector2 = br.direcao(br.ini)
+			giro = atan2(-db.x, -db.y)
 		if c != Vector2.INF:
 			m.mundo.forcar(c)
 			j.teleportar(Vector3(c.x, m.mundo.altura(c.x, c.y) + 0.1, c.y), 0.0)
 			await q(120)
-		j.cam_yaw = float(l[2])
+		j.cam_yaw = giro
 		j.cam_pit = float(l[3])
 		await q(60)
 		medidas[l[0]] = await _medir()
 		print("  %s: %s" % [l[0], medidas[l[0]]])
+	# 1.16: as otimizações continuam valendo
+	var Cen = load("res://mundo/cenario.gd")
+	var lv: Dictionary = Cen.leves
+	ok(lv.has("poste_duplo") and float(lv["poste_duplo"][1]) < 0.6 * float(lv["poste_duplo"][0]), "poste duplo leve: %s" % str(lv.get("poste_duplo")))
+	ok(lv.has("arvore_seca_2") and float(lv["arvore_seca_2"][1]) < 0.6 * float(lv["arvore_seca_2"][0]), "árvore seca leve: %s" % str(lv.get("arvore_seca_2")))
+	var tp: Array = Pontes.triangulos
+	ok(tp[1] > 0 and tp[1] < tp[0] * 0.8, "pontes: versão média com menos triângulos (%d de %d)" % [tp[1], tp[0]])
+	var V = load("res://mundo/veiculo.gd")
+	ok(V.malha_duke_parado() != V.malha_duke(), "Dukes parados com níveis de detalhe")
+	# árvore/poste perto pelo ponto mais perto: num canto do bloco (longe do centro) o modelo inteiro aparece
+	var ab = m.cidade.abandono
+	var par: Array = []
+	for k in ab._troca:
+		for pp in ab._troca[k]:
+			if (pp[2] as Rect2).size.length() > 160.0:
+				par = pp
+				break
+		if not par.is_empty():
+			break
+	if par.is_empty():
+		ok(false, "achei um bloco grande de árvores/postes para testar a troca perto/longe")
+	else:
+		var r: Rect2 = par[2]
+		var canto := r.position + Vector2(2.0, 2.0)
+		m.mundo.forcar(canto)
+		j.teleportar(Vector3(canto.x, m.mundo.altura(canto.x, canto.y) + 0.1, canto.y), 0.0)
+		await q(60)
+		var cam_d := Vector2(j.get_viewport().get_camera_3d().global_position.x, j.get_viewport().get_camera_3d().global_position.z).distance_to(r.get_center())
+		ok(par[0].visible and not par[1].visible, "%s no canto do bloco (centro a %.0f m): modelo inteiro, sem o de longe" % [str(par[0].name), cam_d])
+		var longe := r.get_center() + Vector2(600, 0)
+		ab.atualizar_perto(Vector3(longe.x, 0, longe.y))
+		ok(not par[0].visible and par[1].visible, "de longe volta para a versão simples")
 	# custo dos infectados (só mostra: depende da máquina)
 	m.vagos.ativo = true
 	m.vagos.max_ativos = 0

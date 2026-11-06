@@ -84,6 +84,19 @@ func respirar(feito: int, total: int) -> void:
 	progresso = maxf(progresso, clampf(float(feito) / float(maxi(total, 1)), 0.0, 1.0))
 	await pausa()
 
+# 1.16: as árvores e os postes da rua trocam perto/longe pelo ponto mais perto do bloco (mundo/abandono.gd
+# atualizar_perto), 5x por segundo, com a posição da câmera
+var _t_perto := 0.0
+func _process(dt: float) -> void:
+	_t_perto -= dt
+	if _t_perto > 0.0 or abandono == null:
+		return
+	_t_perto = 0.2
+	var vp := get_viewport()
+	var cam := vp.get_camera_3d() if vp != null else null
+	if cam != null:
+		abandono.atualizar_perto(cam.global_position)
+
 # só a parada (sem mexer no progresso)
 func pausa() -> void:
 	if fatiar and Time.get_ticks_msec() - t_fatia > FATIA_MS and is_inside_tree():

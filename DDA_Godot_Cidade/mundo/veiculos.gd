@@ -409,7 +409,7 @@ func _desenhar_dukes() -> void:
 		if not por_bloco.has(k):
 			por_bloco[k] = []
 		por_bloco[k].append(vid)
-	var malhas := [VeiculoCls.malha_duke(), VeiculoCls.malha_duke_longe()]
+	var malhas := [VeiculoCls.malha_duke_parado(), VeiculoCls.malha_duke_longe()]
 	for k in por_bloco:
 		var lista: Array = por_bloco[k]
 		var mms: Array = []

@@ -74,8 +74,84 @@ static func malha(nome: String) -> ArrayMesh:
 	if _cache.has(nome):
 		return _cache[nome]
 	var m := _montar(nome)
+	if LEVE.has(nome):
+		m = simplificar(m, float(LEVE[nome][0]), float(LEVE[nome][1]), nome)
 	_cache[nome] = m
 	return m
+
+# 1.16 · VERSÃO LEVE dos modelos pesados. Medido na 1.15.1: a árvore da rua tinha 4 mil triângulos, a árvore seca 6,5
+# mil e o poste duplo 2,5 mil, e aparecem às dezenas por quarteirão (e nos parques). O simplificador da Godot
+# (meshoptimizer, o mesmo do LOD da importação) tira os triângulos que menos mudam a forma, até sobrar a fração pedida.
+# nome: [fração mínima que fica, ângulo para juntar as normais (maior = junta mais; nos galhos secos não aparece)].
+# Se a plataforma não tiver o simplificador, fica a malha inteira (o jogo só fica mais pesado, nada some).
+const LEVE := {"poste_duplo": [0.4, 60.0], "poste_jardim": [0.4, 60.0], "semaforo_braco": [0.45, 60.0],
+	"arvore_1": [0.4, 60.0], "arvore_3": [0.4, 60.0], "arvore_4": [0.4, 60.0],
+	"arvore_seca_1": [0.3, 120.0], "arvore_seca_2": [0.3, 120.0],
+	"pinheiro_1": [0.45, 60.0], "pinheiro_2": [0.45, 60.0], "arvore_grande": [0.4, 60.0]}
+static var leves := {}                 # nome -> [triângulos antes, depois] (testes e console)
+
+static func _importer(am: ArrayMesh, angulo: float):
+	if not ClassDB.class_exists("ImporterMesh"):
+		return null
+	var im := ImporterMesh.new()
+	for s in am.get_surface_count():
+		var a := am.surface_get_arrays(s)
+		for k in [Mesh.ARRAY_TANGENT, Mesh.ARRAY_BONES, Mesh.ARRAY_WEIGHTS, Mesh.ARRAY_CUSTOM0, Mesh.ARRAY_CUSTOM1, Mesh.ARRAY_CUSTOM2, Mesh.ARRAY_CUSTOM3]:
+			a[k] = null                                # (formatos que o ImporterMesh não devolve iguais)
+		if a[Mesh.ARRAY_INDEX] == null or (a[Mesh.ARRAY_INDEX] as PackedInt32Array).is_empty():
+			var st := SurfaceTool.new()
+			st.create_from_arrays(a)
+			st.index()
+			a = st.commit_to_arrays()
+		im.add_surface(Mesh.PRIMITIVE_TRIANGLES, a, [], {}, am.surface_get_material(s))
+	im.generate_lods(angulo, 25.0, [])
+	return im
+
+static func simplificar(am: ArrayMesh, fracao: float, angulo: float, nome := "") -> ArrayMesh:
+	var antes := 0
+	for s in am.get_surface_count():
+		antes += _tris(am.surface_get_arrays(s))
+	if antes < 600:
+		return am
+	var im = _importer(am, angulo)
+	if im == null:
+		return am
+	var out := ArrayMesh.new()
+	var depois := 0
+	for s in im.get_surface_count():
+		var arr: Array = im.get_surface_arrays(s)
+		var idx: PackedInt32Array = arr[Mesh.ARRAY_INDEX]
+		var melhor := idx
+		for l in im.get_surface_lod_count(s):           # do mais fiel ao mais simples: fica o mais simples que ainda tem a fração
+			var li: PackedInt32Array = im.get_surface_lod_indices(s, l)
+			if li.size() >= 3 and li.size() >= idx.size() * fracao:
+				melhor = li
+		arr[Mesh.ARRAY_INDEX] = melhor
+		depois += melhor.size() / 3
+		out.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+		out.surface_set_material(out.get_surface_count() - 1, im.get_surface_material(s))
+	if depois <= 0 or depois >= antes or out.get_surface_count() != am.get_surface_count():
+		return am
+	leves[nome] = [antes, depois]
+	print("Cenário leve: %s %d -> %d triângulos" % [nome, antes, depois])
+	return out
+
+# 1.16: a mesma malha com os NÍVEIS DE DETALHE automáticos da Godot (de perto, a inteira; quanto menor na tela, mais
+# simples). Bom para o que fica sozinho ou em grupinhos (os Dukes parados): a Godot escolhe o nível pela distância.
+static func com_lods(am: ArrayMesh, angulo := 60.0) -> ArrayMesh:
+	var im = _importer(am, angulo)
+	if im == null:
+		return am
+	var out: ArrayMesh = im.get_mesh()
+	if out == null or out.get_surface_count() != am.get_surface_count():
+		return am
+	return out
+
+static func _tris(a: Array) -> int:
+	var idx = a[Mesh.ARRAY_INDEX]
+	if idx != null and (idx as PackedInt32Array).size() > 0:
+		return (idx as PackedInt32Array).size() / 3
+	return (a[Mesh.ARRAY_VERTEX] as PackedVector3Array).size() / 3
 
 static func _montar(nome: String) -> ArrayMesh:
 	var e: Array = MODELOS[nome]

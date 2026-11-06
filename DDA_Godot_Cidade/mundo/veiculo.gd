@@ -16,6 +16,7 @@ extends VehicleBody3D
 # Mexa AQUI para: força, velocidade, direção, tanque, consumo, dano das batidas e do atropelamento.
 
 const Abandono := preload("res://mundo/abandono.gd")
+const Cenario := preload("res://mundo/cenario.gd")      # 1.16: níveis de detalhe dos Dukes parados
 const Sons := preload("res://audio/sons.gd")
 
 const TANQUE := 30.0                    # litros
@@ -512,6 +513,15 @@ static func malha_duke() -> ArrayMesh:
 	cena.free()
 	_malha_duke = am
 	return am
+
+# 1.16: a dos Dukes PARADOS, com os níveis de detalhe automáticos da Godot (de perto a inteira, ~18,5 mil triângulos
+# com o interior; a uns 20 m já cai para a metade, e assim por diante). Os parados ficam em grupinhos de 1 a 3 por
+# bloco, então a distância que a Godot usa para escolher o nível é a de verdade.
+static var _malha_duke_parado: ArrayMesh = null
+static func malha_duke_parado() -> ArrayMesh:
+	if _malha_duke_parado == null:
+		_malha_duke_parado = Cenario.com_lods(malha_duke())
+	return _malha_duke_parado
 
 # versão simples de longe (a caixa do sedã esticada no tamanho do Duke, pintada pela instância)
 static var _malha_duke_longe: ArrayMesh = null

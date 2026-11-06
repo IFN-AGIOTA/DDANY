@@ -30,6 +30,12 @@ const ESPARSOS := ["placa_pare", "placa_proibido", "placa_atencao", "lixeira", "
 const BLOCO_ESPARSO := 500.0
 # até onde vai o modelo baixado (depois, a versão simples de código; os pesados ficam mais perto)
 const PERTO_BAIXADO := {"arvore_rua": 110.0, "poste_duplo": 180.0, "carro_coberto": 250.0}
+# 1.16 · TROCA PELO PONTO MAIS PERTO: a Godot mede o alcance de visibilidade até o CENTRO do bloco de 250 m, então uma
+# árvore a 15 m do jogador num bloco com o centro a 120 m aparecia na versão de longe (um "abajur"). Para estes, quem
+# troca perto/longe é atualizar_perto() (mundo/cidade.gd chama 5x por segundo): o modelo inteiro aparece quando o
+# jogador está a menos de PERTO_PONTO m do retângulo onde estão as peças do bloco (com o modelo leve de
+# mundo/cenario.gd LEVE, pesa o mesmo que antes).
+const PERTO_PONTO := {"arvore_rua": 90.0, "poste_duplo": 120.0}
 const BLOCO := 250.0
 const Y := 0.6                       # altura do asfalto
 
@@ -49,6 +55,9 @@ var _mm_bloco := {}                       # 0.76: tipo -> bloco -> [MultiMesh pe
 var _inst := {}                          # nome do modelo -> {Vector2i: [[Transform3D, Color, cor de longe], ...]}
 var baixados := true                     # usar os modelos baixados (falso = só os de código, para comparar)
 var nos: Array[GeometryInstance3D] = []
+var _troca := {}                         # 1.16: Vector2i (bloco de 250 m) -> [[nó perto, nó longe, Rect2 das peças, alcance], ...]
+var _troca_perto := {}                   # 1.16: nó perto -> par, dos que estão mostrando o modelo inteiro agora
+var _fator := 1.0                        # 1.16: Opções › "Detalhes dos modelos" (aplicar_modelos)
 # 0.84: fios entre os postes e halos das lâmpadas/semáforos (mundo/luzes_rua.gd) · Opções › Gráficos
 const LuzesRua := preload("res://mundo/luzes_rua.gd")
 var fios: Array = []                     # [[a, b], ...] topo de dois postes seguidos
@@ -94,6 +103,7 @@ func _fios_e_halos() -> void:
 const FATOR_MODELOS := [0.55, 0.75, 1.0, 1.3]
 func aplicar_modelos(nivel: int) -> void:
 	var f: float = FATOR_MODELOS[clampi(nivel, 0, 3)]
+	_fator = f
 	# 1.02: fios e halos num dicionário (antes "n in nos_fios" procurava na lista inteira para cada objeto: ~0,55 s)
 	var fora := {}
 	for n in nos_fios + nos_halos:
@@ -106,6 +116,38 @@ func aplicar_modelos(nivel: int) -> void:
 		var a: Vector2 = n.get_meta("alc")
 		n.visibility_range_begin = a.x * f
 		n.visibility_range_end = a.y * f
+
+# 1.16: troca perto/longe das árvores e postes da rua pelo ponto mais perto de cada bloco (mundo/cidade.gd chama
+# 5x por segundo com a posição da câmera). Só olha os blocos em volta (5 x 5); quem sai de perto volta para o longe.
+func atualizar_perto(cam: Vector3) -> void:
+	if _troca.is_empty():
+		return
+	var p := Vector2(cam.x, cam.z)
+	var c := Vector2i(floori(p.x / BLOCO), floori(p.y / BLOCO))
+	var agora := {}
+	for dz in range(-2, 3):
+		for dx in range(-2, 3):
+			var lista = _troca.get(c + Vector2i(dx, dz))
+			if lista == null:
+				continue
+			for par in lista:
+				var r: Rect2 = par[2]
+				var q := Vector2(clampf(p.x, r.position.x, r.end.x), clampf(p.y, r.position.y, r.end.y))
+				if q.distance_to(p) < float(par[3]) * _fator:
+					agora[par[0]] = par
+	for no in _troca_perto:
+		if not agora.has(no):
+			_mostrar_perto(_troca_perto[no], false)
+	for no in agora:
+		if not _troca_perto.has(no):
+			_mostrar_perto(agora[no], true)
+	_troca_perto = agora
+
+func _mostrar_perto(par: Array, perto: bool) -> void:
+	if is_instance_valid(par[0]):
+		par[0].visible = perto
+	if is_instance_valid(par[1]):
+		par[1].visible = not perto
 
 # 0.84: fios de poste e halos de luz ligados/desligados
 func aplicar_luzes(com_fios: bool, com_halos: bool) -> void:
@@ -725,6 +767,17 @@ func _montar() -> void:
 				ml.visibility_range_end = alcance.get(base, 600.0)
 				ml.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF      # sombra de longe nem aparece
 				nos.append(ml)
+				if _tem_baixado(nome) and PERTO_PONTO.has(base) and not (nome in ESPARSOS):
+					# 1.16: perto/longe pelo ponto mais perto (atualizar_perto), não pelo centro do bloco
+					var r := Rect2(Vector2(lista[0][0].origin.x, lista[0][0].origin.z), Vector2.ZERO)
+					for e in lista:
+						r = r.expand(Vector2(e[0].origin.x, e[0].origin.z))
+					mi.visibility_range_end = 0.0
+					ml.visibility_range_begin = 0.0
+					mi.visible = false
+					if not _troca.has(k):
+						_troca[k] = []
+					_troca[k].append([mi, ml, r.grow(4.0), float(PERTO_PONTO[base])])
 
 static func _material(ferrugem: float) -> ShaderMaterial:
 	var m := ShaderMaterial.new()
