@@ -10,6 +10,9 @@ extends VehicleBody3D
 #   (historia/carros/*.glb, Daniel Zhabotinsky, CC-BY), com INTERIOR: as rodas do modelo giram e esterçam (vão dentro
 #   das rodas da física), o volante gira com a direção e, em 1ª PESSOA, a câmera fica no banco do motorista (painel,
 #   volante e retrovisor à vista). Mais rápidos que os carros largados (VEL_MAX própria). MODELOS diz onde fica cada peça.
+# 1.15 · DUKE '69: os carros que FUNCIONAM no modo livre (os sedãs, táxis e vans de antes, VIRA_DUKE) são o Duke '69
+#   (mundo/carros/duke69.glb, Daniel Zhabotinsky, CC-BY), com o mesmo interior e as rodas/volante que giram; a
+#   pintura é a cor do carro largado que ele substitui (o resto do modelo fica como veio).
 # Mexa AQUI para: força, velocidade, direção, tanque, consumo, dano das batidas e do atropelamento.
 
 const Abandono := preload("res://mundo/abandono.gd")
@@ -38,7 +41,10 @@ const TIPOS := {
 	# 1.13: os carros da história (medidas tiradas do modelo; [7] = velocidade máxima em m/s)
 	"kiri86": [0.71, 1.32, -1.14, 0.285, Vector3(1.7, 1.25, 4.3), 1100.0, 1.55, 40.0],
 	"jdm99": [0.76, 1.32, -1.40, 0.325, Vector3(1.9, 1.3, 4.6), 1300.0, 1.85, 42.0],
+	# 1.15: o Duke '69 (muscle car pesado, motor forte)
+	"duke69": [0.78, 1.63, -1.30, 0.315, Vector3(1.9, 1.3, 5.2), 1550.0, 1.75, 34.0],
 }
+const VIRA_DUKE := ["sedan", "taxi", "van"]     # 1.15: estes, quando funcionam, são o Duke '69
 # 1.13: modelo baixado de cada carro da história · frente do arquivo = +X (gira -90° em Y) · rodas e volante (nomes dos
 # nós no .glb) · olho = onde fica a cabeça do motorista (no sistema do carro: frente +Z, esquerda +X)
 const MODELOS := {
@@ -47,8 +53,12 @@ const MODELOS := {
 	"jdm99": {"arquivo": "res://historia/carros/jdm99.glb", "rodas": ["Gallo99_WheelStock_FL", "Gallo99_WheelStock_FR", "Gallo99_WheelStock_RL", "Gallo99_WheelStock_RR"],
 		"volante": "Gallo99_Steering_Wheel", "olho": Vector3(0.35, 1.12, -0.24),
 		"pincas": ["Gallo99_CaliperStock_FL", "Gallo99_CaliperStock_FR", "Gallo99_CaliperStock_RL", "Gallo99_CaliperStock_RR"]},
+	# 1.15: "pintura" = o material da lataria (pintado com a cor do carro)
+	"duke69": {"arquivo": "res://mundo/carros/duke69.glb", "rodas": ["Duke69_WhellStock_FL", "Duke69_WhellStock_FR", "Duke69_WhellStock_RL", "Duke69_WhellStock_RR"],
+		"volante": "Duke69_Steering_Wheel", "olho": Vector3(0.36, 1.14, -0.12), "pintura": "Duke69_bodymat"},
 }
-const NOMES := {"sedan": "CARRO", "taxi": "TÁXI", "van": "VAN", "humvee": "HUMVEE", "caminhao_exercito": "CAMINHÃO DO EXÉRCITO"}
+const NOMES := {"sedan": "CARRO", "taxi": "TÁXI", "van": "VAN", "humvee": "HUMVEE", "caminhao_exercito": "CAMINHÃO DO EXÉRCITO",
+	"duke69": "DUKE '69"}
 
 var id := ""                            # mundo/veiculos.gd ("v123_-456": posição de onde estava largado)
 var tipo := "sedan"
@@ -82,6 +92,8 @@ var historia := false                   # 1.13: carro do modo história (sem com
 func _ready() -> void:
 	if historia:
 		add_to_group("historia_ocupa")         # 1.14: não nasce prédio de preenchimento em cima (historia/preenchimento.gd)
+	if tipo in VIRA_DUKE:
+		tipo = "duke69"                        # 1.15 (também os salvos antes e a cópia de um amigo dirigindo)
 	var d: Array = TIPOS.get(tipo, TIPOS["sedan"])
 	mass = float(d[5])
 	_forca_x = float(d[6])
@@ -105,6 +117,8 @@ func _ready() -> void:
 		modelo.name = "Modelo"
 		modelo.rotation.y = -PI * 0.5       # o arquivo tem a frente em +X; aqui a frente é +Z
 		add_child(modelo)
+		if MODELOS[tipo].has("pintura"):
+			_pintar(modelo, str(MODELOS[tipo]["pintura"]), cor_pintura(cor))
 	else:
 		var mi := MeshInstance3D.new()
 		mi.mesh = Abandono.modelo(tipo)
@@ -404,3 +418,90 @@ func estado() -> Dictionary:
 	var p := global_position
 	return {"t": tipo, "cor": cor.to_html(false), "p": [snappedf(p.x, 0.01), snappedf(p.y, 0.01), snappedf(p.z, 0.01)],
 		"g": snappedf(rotation.y, 0.001), "c": snappedf(combustivel, 0.01), "m": snappedf(motor, 0.01)}
+
+
+# ---------- 1.15: DUKE '69 ----------
+# a cor da lataria (a do carro largado que ele substitui; sem transparência)
+static func cor_pintura(c: Color) -> Color:
+	return Color(c.r, c.g, c.b, 1.0)
+
+func _pintar(modelo: Node3D, material: String, c: Color) -> void:
+	for mi in modelo.find_children("*", "MeshInstance3D", true, false):
+		var m: Mesh = (mi as MeshInstance3D).mesh
+		if m == null:
+			continue
+		for k in m.get_surface_count():
+			var mat := m.surface_get_material(k) as BaseMaterial3D
+			if mat != null and mat.resource_name == material:
+				var nova := mat.duplicate() as BaseMaterial3D
+				nova.albedo_color = c
+				nova.metallic = maxf(nova.metallic, 0.35)
+				nova.roughness = minf(nova.roughness, 0.45)
+				(mi as MeshInstance3D).set_surface_override_material(k, nova)
+
+# o modelo inteiro numa malha só (as peças juntas, uma superfície por material), frente em +X como os carros
+# largados: os Dukes PARADOS na rua (mundo/veiculos.gd, MultiMesh). A lataria pega a cor de cada instância.
+static var _malha_duke: ArrayMesh = null
+static func malha_duke() -> ArrayMesh:
+	if _malha_duke != null:
+		return _malha_duke
+	var info: Dictionary = MODELOS["duke69"]
+	var cena: Node3D = (load(info["arquivo"]) as PackedScene).instantiate()
+	var grupos := {}                           # material -> SurfaceTool
+	var ordem: Array = []
+	for mi in cena.find_children("*", "MeshInstance3D", true, false):
+		var m: Mesh = (mi as MeshInstance3D).mesh
+		if m == null:
+			continue
+		var tr := _ate(cena, mi as Node3D)
+		for k in m.get_surface_count():
+			var mat: Material = m.surface_get_material(k)
+			if not grupos.has(mat):
+				var st := SurfaceTool.new()
+				st.begin(Mesh.PRIMITIVE_TRIANGLES)
+				grupos[mat] = st
+				ordem.append(mat)
+			(grupos[mat] as SurfaceTool).append_from(m, k, tr)
+	var am := ArrayMesh.new()
+	for mat in ordem:
+		(grupos[mat] as SurfaceTool).commit(am)
+		var usar: Material = mat
+		if mat is BaseMaterial3D and (mat as BaseMaterial3D).resource_name == str(info["pintura"]):
+			var p := (mat as BaseMaterial3D).duplicate() as BaseMaterial3D
+			p.albedo_color = Color.WHITE
+			p.vertex_color_use_as_albedo = true        # a cor da instância (MultiMesh) pinta a lataria
+			p.metallic = maxf(p.metallic, 0.35)
+			p.roughness = minf(p.roughness, 0.45)
+			usar = p
+		am.surface_set_material(am.get_surface_count() - 1, usar)
+	cena.free()
+	_malha_duke = am
+	return am
+
+# versão simples de longe (a caixa do sedã esticada no tamanho do Duke, pintada pela instância)
+static var _malha_duke_longe: ArrayMesh = null
+static func malha_duke_longe() -> ArrayMesh:
+	if _malha_duke_longe != null:
+		return _malha_duke_longe
+	var base: ArrayMesh = Abandono.modelo_longe("sedan")
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for k in base.get_surface_count():
+		st.append_from(base, k, Transform3D(Basis.from_scale(Vector3(5.2 / 4.4, 1.3 / 1.6, 1.96 / 1.85)), Vector3.ZERO))
+	var am := st.commit()
+	var mat := StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 0.5
+	am.surface_set_material(0, mat)
+	_malha_duke_longe = am
+	return am
+
+# transformação de "de" até o nó "no" (a cena não está na árvore)
+static func _ate(de: Node3D, no: Node3D) -> Transform3D:
+	var t := Transform3D.IDENTITY
+	var n: Node = no
+	while n != null and n != de:
+		if n is Node3D:
+			t = (n as Node3D).transform * t
+		n = n.get_parent()
+	return t

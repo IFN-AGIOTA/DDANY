@@ -10,6 +10,8 @@ extends Node
 #   - Painel embaixo da tela enquanto dirige: velocidade, gasolina e estado do motor.
 #   - Multijogador (rede/sessao_rede.gd): quem dirige manda a posição do carro junto com a dele; os outros veem o carro
 #     andando ("dirigindo" no estado); ao sair, "veiculo" manda o carro estacionado para todos. Carro ocupado não abre.
+# 1.15 · DUKE '69: os que funcionam (sedã, táxi e van) são desenhados como o Duke '69 também PARADOS na rua (um
+#   MultiMesh por bloco de 250 m, com a versão simples de longe; a cor é a do carro largado); o largado de antes some.
 # Mexa AQUI para: quantos carros funcionam, gasolina inicial, distâncias, painel.
 
 const VeiculoCls := preload("res://mundo/veiculo.gd")
@@ -72,7 +74,8 @@ func ligar(cid, mun, jog: Node3D, lm, vg) -> void:
 	# carros já mexidos (jogo salvo / rede): o largado original some
 	for vid in loot.veiculos:
 		tirar_original(vid)
-	print("Veículos que funcionam: ", _ids.size())
+	_desenhar_dukes()
+	print("Veículos que funcionam: ", _ids.size(), " (", _dukes.size(), " Dukes parados)")
 
 # os carros mexidos mudaram de fora (jogo salvo carregado): some os largados originais deles
 func sincronizar() -> void:
@@ -102,6 +105,7 @@ func tirar_original(vid: String) -> void:
 	tirados[vid] = true
 	var i: int = _ids[vid]
 	ab.esconder_carro(i)
+	_esconder_duke(vid)
 	if mundo != null:
 		mundo.desligar_obstaculo(int(ab.carros[i][5]))
 
@@ -382,3 +386,65 @@ func remoto_saiu(vid: String, e: Dictionary) -> void:
 	if nos.has(vid) and is_instance_valid(nos[vid]) and nos[vid] != dirigindo:
 		nos[vid].queue_free()
 		nos.erase(vid)
+
+
+# ---------- 1.15: os DUKES '69 parados na rua ----------
+const BLOCO_DUKE := 250.0
+const PERTO_DUKE := 170.0                # até aqui o modelo inteiro; depois, a caixa simples
+const LONGE_DUKE := 900.0
+var _dukes := {}                         # id -> [MultiMesh perto, MultiMesh longe, índice]
+var nos_dukes: Array = []                # MultiMeshInstance3D (testes; o modo história esconde)
+
+func _desenhar_dukes() -> void:
+	var por_bloco := {}
+	for vid in _ids:
+		if tirados.has(vid):
+			continue
+		var i: int = _ids[vid]
+		var c: Array = ab.carros[i]
+		if not (str(c[2]) in VeiculoCls.VIRA_DUKE):
+			continue
+		ab.esconder_carro(i)                     # some o sedã/táxi/van de antes; o obstáculo de colisão fica
+		var k := Vector2i(floori(c[0].x / BLOCO_DUKE), floori(c[0].z / BLOCO_DUKE))
+		if not por_bloco.has(k):
+			por_bloco[k] = []
+		por_bloco[k].append(vid)
+	var malhas := [VeiculoCls.malha_duke(), VeiculoCls.malha_duke_longe()]
+	for k in por_bloco:
+		var lista: Array = por_bloco[k]
+		var mms: Array = []
+		for qual in 2:
+			var mm := MultiMesh.new()
+			mm.transform_format = MultiMesh.TRANSFORM_3D
+			mm.use_colors = true
+			mm.mesh = malhas[qual]
+			mm.instance_count = lista.size()
+			for j in lista.size():
+				var c: Array = ab.carros[_ids[lista[j]]]
+				mm.set_instance_transform(j, Transform3D(Basis(Vector3.UP, float(c[1])), c[0]))
+				mm.set_instance_color(j, VeiculoCls.cor_pintura(c[3]))
+			var mi := MultiMeshInstance3D.new()
+			mi.name = ("duke69_%d_%d" if qual == 0 else "duke69longe_%d_%d") % [k.x, k.y]
+			mi.multimesh = mm
+			if qual == 0:
+				mi.visibility_range_end = PERTO_DUKE
+				mi.visibility_range_end_margin = 10.0
+			else:
+				mi.visibility_range_begin = PERTO_DUKE - 10.0
+				mi.visibility_range_end = LONGE_DUKE
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			add_child(mi)
+			nos_dukes.append(mi)
+			if cidade != null and cidade.get("detalhes_abandono") != null:
+				cidade.detalhes_abandono.append(mi)      # o modo história esconde junto com os carros largados
+			mms.append(mm)
+		for j in lista.size():
+			_dukes[lista[j]] = [mms[0], mms[1], j]
+
+func _esconder_duke(vid: String) -> void:
+	if not _dukes.has(vid):
+		return
+	var e: Array = _dukes[vid]
+	for q in 2:
+		(e[q] as MultiMesh).set_instance_transform(int(e[2]), Transform3D(Basis.from_scale(Vector3.ONE * 0.001), Vector3(0, -500.0, 0)))
+	_dukes.erase(vid)

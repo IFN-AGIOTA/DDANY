@@ -74,6 +74,11 @@ func _r():
 	j._pegar_do_chao()
 	await q(10)
 	ok(j.veiculo == veic and veic.ligado, "entrou e o motor ligou")
+	# 1.15: os carros que funcionam (sedã, táxi, van) são o Duke '69, pintado com a cor do carro largado
+	if str(car[2]) in ["sedan", "taxi", "van"]:
+		var mdl = veic.get_node_or_null("Modelo")
+		ok(veic.tipo == "duke69" and mdl != null and veic.cam_interior != null, "é o DUKE '69 (modelo com interior) · %s" % veic.tipo)
+	ok(vm.nos_dukes.size() > 20, "Dukes parados na rua desenhados (%d blocos)" % vm.nos_dukes.size())
 	ok(not j._slot.visible and m.controles.ocultos.get("ATIRAR", false), "boneco some e botões de arma somem")
 	var p0: Vector3 = veic.global_position
 	var inicio: Transform3D = veic.global_transform          # a reta do começo (o atropelamento é feito aqui)

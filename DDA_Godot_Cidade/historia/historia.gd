@@ -24,7 +24,7 @@ const PROXIMA_EM_BREVE := "MISSÃO 3 · A MANHÃ SEM SOL"
 # peças do abandono que somem antes do caos (nomes dos MultiMesh de mundo/abandono.gd: "<modelo>_<x>_<z>")
 const ESCONDER := ["sedan", "taxi", "van", "onibus", "barreira", "barril", "cacamba", "lixo", "entulho", "cacos", "pneu",
 	"caixote", "caixa_papelao", "carro_coberto", "humvee", "mrap", "caminhao_exercito", "caminhao_tanque", "tanque",
-	"sacos_areia", "saco_lixo"]
+	"sacos_areia", "saco_lixo", "duke69", "duke69longe"]
 
 signal acabou(ok: bool)
 
