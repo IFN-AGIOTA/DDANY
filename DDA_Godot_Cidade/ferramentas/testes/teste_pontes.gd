@@ -261,12 +261,13 @@ func _r():
 	print("== dirigindo pela Ponte de Manhattan")
 	var pm = P.ponte(1)
 	var vm = m.veiculos
-	# a pista da direita (lat -8) sem os carros do engarrafamento (aqui só interessa o tabuleiro aguentar o carro)
+	# a metade direita sem os carros do engarrafamento (um ônibus atravessado fecha várias faixas; aqui só interessa
+	# o tabuleiro aguentar o carro)
 	var ob: PackedFloat32Array = m.cidade.abandono.obstaculos
 	var tirados := 0
 	for k in range(0, ob.size(), 7):
 		var pr0: Vector2 = pm.projetar(Vector2(ob[k], ob[k + 1]))
-		if pr0.x > -5.0 and pr0.x < pm.comp + 5.0 and absf(pr0.y + 8.0) < 4.5 and pm.ponto(pr0.x).distance_to(Vector2(ob[k], ob[k + 1])) < 13.0:
+		if pr0.x > -5.0 and pr0.x < pm.comp + 5.0 and pr0.y < 1.0 and pm.ponto(pr0.x).distance_to(Vector2(ob[k], ob[k + 1])) < 26.0:
 			m.mundo.desligar_obstaculo(k / 7)
 			tirados += 1
 	print("    obstáculos tirados da pista: ", tirados)
