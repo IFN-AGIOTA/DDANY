@@ -94,6 +94,19 @@ func _r():
 	ok(r7.size() == cid.predio_info.size() + fechados_fora and menos7 == fechados_fora and cresce7 and ult7 == cid.predio_info.size() - 1,
 		"remapa_v7: %d prédios da 1.16 -> %d agora (%d saíram), em ordem e sem buraco" % [r7.size(), cid.predio_info.size(), menos7])
 	ok(load("res://menu/salvamento.gd").MAPA_PREDIOS == 8, "MAPA_PREDIOS = 8 (save da 1.15/1.16 é convertido)")
+	# um save da 1.16 com loot num prédio que ficou e num fechado que saiu: o primeiro muda de número, o segundo some
+	var Sv = load("res://menu/salvamento.gd")
+	var ficou := -1
+	var saiu := -1
+	for k in r7.size():
+		if r7[k] >= 0 and r7[k] != k and ficou < 0:
+			ficou = k
+		if r7[k] < 0 and saiu < 0:
+			saiu = k
+	var velho_save := {"grades": {"p%d_0" % ficou: {"itens": []}, "p%d_1" % saiu: {"itens": []}}, "portas": {"p%d:0" % ficou: 1}}
+	var conv: Dictionary = Sv._remapear_loot(velho_save, Sv._remapa_de(m, 7))
+	ok(ficou >= 0 and saiu >= 0 and conv["grades"].has("p%d_0" % r7[ficou]) and conv["grades"].size() == 1 and conv["portas"].has("p%d:0" % r7[ficou]),
+		"save da 1.16: loot do prédio %d vai para o %d; o do fechado %d some" % [ficou, r7[ficou] if ficou >= 0 else -1, saiu])
 	# ---- halos (1.16: os fios de poste saíram, e a opção também) ----
 	var halos: Array = get_nodes_in_group("halos_luz")
 	print("  blocos com halos %d · halos %d" % [ab.nos_halos.size(), ab.halos.size()])

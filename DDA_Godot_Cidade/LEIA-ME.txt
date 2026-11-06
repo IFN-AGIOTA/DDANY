@@ -41,6 +41,36 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.17 · SÓ FICAM OS PRÉDIOS QUE DÁ PARA ENTRAR
+  · A pedido, saíram da cidade TODOS OS PRÉDIOS FECHADOS (os inteiros que não dava para entrar, com o térreo de portas
+    de aço): 4.049 de 18.030. Ficam 13.981: os 12.791 com entrada (TODOS os prédios inteiros da cidade agora abrem) e
+    as 1.190 ruínas (prédios destruídos, que continuam como cenário). Os locais especiais, os bunkers, as pontes, as
+    ruas, os carros e o loot continuam iguais e no mesmo lugar (os sorteios da cidade são os mesmos; só deixam de ser
+    guardados os prédios fechados).
+  · O terreno de cada prédio que saiu virou TERRENO VAZIO (terra, capim, arbustos, pedras e árvores secas, como os
+    outros terrenos da cidade): 2.663 plantas a mais. A escada de incêndio e a caixa d'água deles saíram junto.
+  · JOGO SALVO: os números dos prédios mudaram; o save da 1.15/1.16 é convertido sozinho (remapa_v7, mapa dos prédios
+    8), inclusive o mundo salvo do multijogador. O loot dos prédios que ficaram vai junto; os fechados nunca tiveram
+    loot dentro.
+  · Mais leve: 4 mil prédios a menos para desenhar, com colisão, escadas de incêndio e oclusão.
+  · MODO HISTÓRIA: os terrenos vazios perto da câmera continuam ganhando os prédios de "preenchimento" da 1.14 (a cidade
+    cheia do Dia -5); no modo livre não.
+  ARQUIVOS (testado: compilar_tudo, montagem da cidade com o código antigo e o novo (mapa de cima: só os fechados
+  saíram), teste_graficos (com conversão de save da 1.16), teste_pontes, teste_loot_volta, teste_jogo,
+  teste_carregamento, teste_chunks, teste_desempenho, teste_bunkers, teste_locais_106, teste_locais_novos,
+  teste_escadas_incendio, teste_interior_fatias, teste_ia_101, teste_agua, rede_save, teste_historia):
+    mundo/cidade.gd ................ SO_COM_ENTRADA: o prédio fechado não entra em predio_info/predios/blocos/caixas
+                                     d'água/topos nem marca o lote; remapa_v7 (número da 1.15..1.16 -> agora) e os
+                                     fechados viram -1 nas tabelas antigas (_desmarcar); _marcar_lote; bloco sem
+                                     prédio não vira nó; removidos["fechado"]
+    menu/salvamento.gd ............. MAPA_PREDIOS 8; save com mapa 7 é convertido com remapa_v7
+    menu/config.gd ................. VERSAO "1.17"
+    menu/novidades_lista.gd ........ refeita
+    ferramentas/testes/teste_graficos.gd ... nenhum prédio inteiro sem entrada; remapa_v7 em ordem; save da 1.16
+                                             convertido (loot vai para o número novo; o do fechado some)
+    ferramentas/testes/teste_pontes.gd ..... remapa_v6 conta os fechados que saíram
+    LEIA-ME.txt .................... este bloco + seções 2/10 + mapa "QUERO MEXER EM..."
+
 ATUALIZAÇÃO 1.16 · OTIMIZAÇÃO (MODELOS LEVES, PONTES EM 3 NÍVEIS, DUKES COM LOD) E SEM OS FIOS DE POSTE
   · MEDIDO ANTES DE MEXER (o "raio-x" do estudos/ESTUDO_AAA.md, seção 1.1): em 6 lugares fixos, escondendo cada
     sistema e vendo quanto custa (chamadas de desenho e triângulos, que valem para qualquer aparelho), e o processador
@@ -4047,7 +4077,9 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
                                           · 1.01: item na mão mirando: jogador/modelo_sobrevivente.gd manter_item
 - pré-aquecer shaders no carregamento  menu/pre_aquecer.gd (o que entra na lista)
 - térreo com portas de aço (prédio sem
-  entrada) ............................ mundo/materiais_cidade.gd (PREDIO) + mundo/cidade.gd (dado_predio)
+  entrada) ............................ mundo/materiais_cidade.gd (PREDIO) + mundo/cidade.gd (dado_predio) · 1.17: os
+                                          prédios fechados saíram (mundo/cidade.gd SO_COM_ENTRADA = true); com false
+                                          eles voltam (e o save precisa de outra tabela)
 - abrir prédio aos poucos, móveis só
   de perto ............................ mundo/interiores.gd (FATIA_US) + mundo/interior.gd (DETALHES_ALCANCE)
 - validar dano dos amigos no host .... rede/sessao_rede.gd (dano_valido, ALCANCE_*, DANO_MAX_*, MAX_PEDIDOS_S)
@@ -4139,7 +4171,8 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - juntar partes dos modelos do cenário
   (menos draw calls) .................... mundo/cenario.gd (_juntar_iguais)
 - converter jogo salvo antigo (números
-  dos prédios mudaram) ................. menu/salvamento.gd (MAPA_PREDIOS) e mundo/cidade.gd (remapa_v2/v3)
+  dos prédios mudaram) ................. menu/salvamento.gd (MAPA_PREDIOS, _remapa_de) e mundo/cidade.gd (remapa_v2
+                                          .. remapa_v7; 1.17: v7 = saíram os prédios fechados)
 - prédios por dentro (cômodos, portas,
   escadas, andares de cima, telhado) . mundo/interior.gd (1.02: corrimão da escada com barra e colisão na
                                           borda entre os lances: _construir_escada)
@@ -4494,6 +4527,9 @@ MÚSICA (pasta audio/)
   pelas rampas das pontas; o engarrafamento das pontes não volta depois de mexido (como os outros carros); a ponte
   de pedestres das torres do Brooklyn é só a passagem do passeio (não dá para subir na torre); os cabos e as treliças
   não têm colisão (só o tabuleiro, as grades, as torres e as ancoragens).
+- 1.17: só ficam os prédios que dá para entrar (os fechados saíram). Os 4 mil terrenos vazios novos são terra e mato
+  (sem loot nem infectados próprios); as ruínas continuam (não dá para entrar nelas: são cenário). No modo história os
+  terrenos vazios perto da câmera ganham prédios de preenchimento (não dá para entrar neles), como antes.
 - 1.16: os modelos leves usam o simplificador da Godot ao carregar (se um aparelho não tiver, fica o modelo inteiro,
   só mais pesado). A troca pelo ponto mais perto vale para as árvores e os postes da rua; carros, lixo e o resto
   ainda trocam pelo centro do bloco (300 m, longe o bastante para não aparecer). As árvores dos PARQUES ainda trocam
