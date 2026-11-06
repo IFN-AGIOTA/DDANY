@@ -673,7 +673,7 @@ static func _halos(luzes: Array, idx: int) -> Array:
 		mm.instance_count = lista_b.size()
 		for i in lista_b.size():
 			var cor: Color = lista_b[i][1]
-			var tam := 3.6 if cor.a > 0.5 else 2.4
+			var tam := 4.4 if cor.a > 0.5 else 3.4
 			mm.set_instance_transform(i, Transform3D(Basis.from_scale(Vector3.ONE * tam), lista_b[i][0]))
 			if cor.a > 0.5:
 				cor.a = 0.51 + fposmod((lista_b[i][0] as Vector3).x * 0.013, 0.48)
