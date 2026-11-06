@@ -81,6 +81,9 @@ func _r():
 			m.mundo.forcar(c)
 			j.teleportar(Vector3(c.x, m.mundo.altura(c.x, c.y) + 0.1, c.y), 0.0)
 			await q(120)
+		else:
+			await q(120)                         # 1.16: o início também espera os prédios em volta "abrirem" (interiores
+			                                     # montados um por vez): sem isso a 1ª medida variava de 179 a 224 chamadas
 		j.cam_yaw = giro
 		j.cam_pit = float(l[3])
 		await q(60)
