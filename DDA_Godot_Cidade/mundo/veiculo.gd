@@ -78,6 +78,7 @@ var _freio_mao := false
 var _som: AudioStreamPlayer3D
 var _t_barulho := 0.0
 var _t_atropelo := 0.0
+var _alcance_atropelo := 3.0            # 1.15: do centro do carro até 0,9 m além do para-choque (o Duke é mais comprido)
 var _vel_ant := Vector3.ZERO
 var _corpo: CollisionShape3D
 var _forca_x := 1.0                     # 1.08: força do motor deste tipo
@@ -104,6 +105,7 @@ func _ready() -> void:
 	center_of_mass_mode = RigidBody3D.CENTER_OF_MASS_MODE_CUSTOM
 	center_of_mass = Vector3(0, 0.2, 0.1)      # baixo: não capota fácil nas curvas
 	var caixa: Vector3 = d[4]
+	_alcance_atropelo = maxf(3.0, caixa.z * 0.5 + 0.9)
 	_corpo = CollisionShape3D.new()
 	var bs := BoxShape3D.new()
 	bs.size = Vector3(caixa.x, caixa.y * 0.75, caixa.z)
@@ -372,7 +374,7 @@ func _atropelar(vel: Vector3) -> void:
 			continue
 		var d: Vector3 = v.global_position - p
 		d.y = 0.0
-		if d.length() > 3.0 or d.normalized().dot(frente) < 0.3:
+		if d.length() > _alcance_atropelo or d.normalized().dot(frente) < 0.3:
 			continue
 		var dano := vel.length() * DANO_ATROPELAR
 		if v.has_method("receber_golpe"):
