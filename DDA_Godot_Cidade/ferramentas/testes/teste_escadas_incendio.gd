@@ -2,7 +2,8 @@ extends SceneTree
 # TESTE: ESCADAS DE INCÊNDIO (1.04, mundo/escadas_incendio.gd). Com o jogo de verdade:
 #   · quase todo prédio tem 2 escadas (só fica com menos quem tem os lados colados em outros prédios)
 #   · SOBE ANDANDO (sem pular) da calçada até o TELHADO e anda em cima dele, e DESCE de volta, em prédios de cada tipo:
-#     baixo aberto (telhado com mureta: ela abre onde a escada chega), alto aberto ("casca") e fechado (caixa);
+#     baixo aberto (telhado com mureta: ela abre onde a escada chega), alto aberto ("casca") e (1.17: os fechados
+#     saíram) outro aberto de perna quebrada;
 #     um deles de PERNA QUEBRADA
 #   · o telhado do corpo das torres escalonadas tem chão (antes a caixa ia até o alto do topo estreito)
 #   · o desenho aparece perto da câmera (pedaços montados aos poucos)
@@ -148,15 +149,18 @@ func _r():
 	var I = load("res://mundo/interior.gd")
 	var baixo: int = achar.call(func(inf, i): return bool(inf["entra"]) and I.altura_telhado(inf) > 0.0)
 	var alto_aberto: int = achar.call(func(inf, i): return bool(inf["entra"]) and I.altura_telhado(inf) < 0.0 and float(inf["h"]) > 20.0 and float(inf["h"]) < 40.0)
-	var fechado: int = achar.call(func(inf, i): return not bool(inf["entra"]) and float(inf["h"]) > 15.0 and float(inf["h"]) < 30.0)
-	ok(baixo >= 0 and alto_aberto >= 0 and fechado >= 0, "achou prédios de cada tipo (baixo aberto %d, alto aberto %d, fechado %d)" % [baixo, alto_aberto, fechado])
+	# 1.17: os prédios FECHADOS saíram da cidade (todo prédio inteiro dá para entrar); a subida de perna quebrada vai
+	# num outro prédio aberto de 15 a 30 m
+	var fechado: int = achar.call(func(inf, i): return bool(inf["entra"]) and float(inf["h"]) > 15.0 and float(inf["h"]) < 30.0 and i != baixo and i != alto_aberto)
+	var sem_entrada: int = achar.call(func(inf, i): return not bool(inf["entra"]))
+	ok(baixo >= 0 and alto_aberto >= 0 and fechado >= 0 and sem_entrada < 0, "achou prédios de cada tipo (baixo aberto %d, alto aberto %d, outro aberto %d) e nenhum fechado (%d)" % [baixo, alto_aberto, fechado, sem_entrada])
 	if baixo >= 0:
 		await _subir_e_descer(baixo, "prédio baixo aberto (telhado com mureta)")
 	if alto_aberto >= 0:
 		await _subir_e_descer(alto_aberto, "prédio alto aberto (casca)")
 	if fechado >= 0:
 		j.sobrevivencia.perna_quebrada = true
-		await _subir_e_descer(fechado, "prédio fechado, DE PERNA QUEBRADA")
+		await _subir_e_descer(fechado, "outro prédio aberto, DE PERNA QUEBRADA")
 		j.sobrevivencia.perna_quebrada = false
 	# ---- torre escalonada: o telhado do corpo tem chão ----
 	if not cid.predio_topos.is_empty():

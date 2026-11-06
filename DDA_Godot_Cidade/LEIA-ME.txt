@@ -69,6 +69,8 @@ ATUALIZAÇÃO 1.17 · SÓ FICAM OS PRÉDIOS QUE DÁ PARA ENTRAR
     ferramentas/testes/teste_graficos.gd ... nenhum prédio inteiro sem entrada; remapa_v7 em ordem; save da 1.16
                                              convertido (loot vai para o número novo; o do fechado some)
     ferramentas/testes/teste_pontes.gd ..... remapa_v6 conta os fechados que saíram
+    ferramentas/testes/teste_escadas_incendio.gd ... a subida de perna quebrada vai num outro prédio aberto (não há
+                                             mais fechado) e confere que nenhum prédio inteiro ficou sem entrada
     LEIA-ME.txt .................... este bloco + seções 2/10 + mapa "QUERO MEXER EM..."
 
 ATUALIZAÇÃO 1.16 · OTIMIZAÇÃO (MODELOS LEVES, PONTES EM 3 NÍVEIS, DUKES COM LOD) E SEM OS FIOS DE POSTE
