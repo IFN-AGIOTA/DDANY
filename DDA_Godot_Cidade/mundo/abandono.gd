@@ -9,7 +9,7 @@ extends RefCounted
 # caixas de energia, bueiros, pneus, caixotes, caixas de papelão, carros cobertos, poste antigo e árvores de calçada.
 # De longe continuam as versões simples feitas por código (LOD). Se faltar o arquivo, usa o modelo de código.
 # 1.08: + os COMBOIOS DO EXÉRCITO (mundo/comboios.gd: humvee, blindado, caminhões e tanque), na etapa própria.
-# 1.15: PONTES (mundo/pontes.gd): o que caiu em cima delas SOBE até o tabuleiro (carros, lixo, postes e fios); árvores,
+# 1.15: PONTES (mundo/pontes.gd): o que caiu em cima delas SOBE até o tabuleiro (carros, lixo e postes); árvores,
 # hidrantes, placas e semáforos não ficam em ponte. Depois de tudo (sorteio próprio): o ENGARRAFAMENTO da fuga em
 # cima das pontes, o BLOQUEIO DO EXÉRCITO na entrada da Ponte do Brooklyn e um comboio parado na Ponte de Manhattan.
 # Mexa AQUI para: quantos carros/obstáculos por rua, modelos dos carros, cores.
@@ -58,11 +58,9 @@ var nos: Array[GeometryInstance3D] = []
 var _troca := {}                         # 1.16: Vector2i (bloco de 250 m) -> [[nó perto, nó longe, Rect2 das peças, alcance], ...]
 var _troca_perto := {}                   # 1.16: nó perto -> par, dos que estão mostrando o modelo inteiro agora
 var _fator := 1.0                        # 1.16: Opções › "Detalhes dos modelos" (aplicar_modelos)
-# 0.84: fios entre os postes e halos das lâmpadas/semáforos (mundo/luzes_rua.gd) · Opções › Gráficos
+# 0.84: halos das lâmpadas/semáforos (mundo/luzes_rua.gd) · Opções › Gráficos (1.16: os fios entre os postes saíram)
 const LuzesRua := preload("res://mundo/luzes_rua.gd")
-var fios: Array = []                     # [[a, b], ...] topo de dois postes seguidos
 var halos: Array = []                    # [[posição, semáforo], ...]
-var nos_fios: Array = []
 var nos_halos: Array = []
 
 func construir(cidade, ruinas: Array, dens: float) -> void:
@@ -89,13 +87,12 @@ func etapas() -> Array:
 		["Engarrafamento nas pontes", 0.4, _pontes_extras],       # 1.15 (depois de tudo: os números de antes não mudam)
 		["Subindo o que ficou nas pontes", 0.6, _subir_pontes],   # 1.15
 		["Juntando os objetos da rua", 11.5, _montar],
-		["Fios e luzes da rua", 16.0, _fios_e_halos],
+		["Luzes da rua", 0.2, _halos_rua],
 	]
 
-func _fios_e_halos() -> void:
-	nos_fios = await LuzesRua.montar_fios(fios, cid.respirar)
+func _halos_rua() -> void:
 	nos_halos = LuzesRua.montar_halos(halos)
-	for n in nos_fios + nos_halos:
+	for n in nos_halos:
 		nos.append(n)
 
 # 0.84: Opções › Gráficos "Detalhes dos modelos": até onde carros, postes, árvores e objetos da rua aparecem (e onde
@@ -104,9 +101,9 @@ const FATOR_MODELOS := [0.55, 0.75, 1.0, 1.3]
 func aplicar_modelos(nivel: int) -> void:
 	var f: float = FATOR_MODELOS[clampi(nivel, 0, 3)]
 	_fator = f
-	# 1.02: fios e halos num dicionário (antes "n in nos_fios" procurava na lista inteira para cada objeto: ~0,55 s)
+	# 1.02: halos num dicionário (antes "n in lista" procurava na lista inteira para cada objeto: ~0,55 s)
 	var fora := {}
-	for n in nos_fios + nos_halos:
+	for n in nos_halos:
 		fora[n] = true
 	for n in nos:
 		if not is_instance_valid(n) or fora.has(n):
@@ -149,11 +146,8 @@ func _mostrar_perto(par: Array, perto: bool) -> void:
 	if is_instance_valid(par[1]):
 		par[1].visible = not perto
 
-# 0.84: fios de poste e halos de luz ligados/desligados
-func aplicar_luzes(com_fios: bool, com_halos: bool) -> void:
-	for n in nos_fios:
-		if is_instance_valid(n):
-			n.visible = com_fios
+# 0.84: halos de luz ligados/desligados (1.16: os fios de poste saíram)
+func aplicar_luzes(com_halos: bool) -> void:
 	LuzesRua.ligar_halos(com_halos)          # de dia ficam escondidos de qualquer jeito
 
 # ---------- modelos ----------
@@ -555,7 +549,6 @@ func _mobiliario_urbano() -> void:
 				var t := (ra + 6.0 if ra >= 0.0 else 6.0) + rng.randf_range(0.0, 8.0)
 				var fim := l - (rb + 6.0 if rb >= 0.0 else 6.0)
 				var k := 0
-				var anterior := Vector3.INF          # 0.84: topo do poste anterior deste lado (fios)
 				while t < fim:
 					var p: Vector2 = a + dir * t + nrm * lado * (hw + 1.0)
 					var giro := _giro(-nrm * lado)          # braço do poste por cima da rua
@@ -564,17 +557,16 @@ func _mobiliario_urbano() -> void:
 							# poste caído atravessado na rua
 							var bb := Basis(Vector3.UP, giro) * Basis(Vector3.FORWARD, -PI * 0.47)
 							_por("poste", Transform3D(bb, Vector3(p.x, Y + 0.1, p.y)), Color.WHITE)
-							anterior = Vector3.INF
 						elif poste_antigo:
 							var tp := Transform3D(Basis(Vector3.UP, giro + PI * 0.5) * Basis(Vector3.FORWARD, rng.randf_range(-0.03, 0.03)), Vector3(p.x, Y - 0.05, p.y))
 							_por("poste_duplo", tp, Color.WHITE * rng.randf_range(0.8, 1.0))
 							_obstaculo(Vector3(p.x, Y, p.y), giro, Vector3(0.45, 7.5, 0.45))
-							anterior = _poste_luzes(p, tp, anterior, [Vector3(0, 6.6, 0.95), Vector3(0, 6.6, -0.95)], 6.9)
+							_poste_luzes(p, tp, [Vector3(0, 6.6, 0.95), Vector3(0, 6.6, -0.95)])
 						else:
 							var tp := Transform3D(Basis(Vector3.UP, giro) * Basis(Vector3.FORWARD, rng.randf_range(-0.04, 0.04)), Vector3(p.x, Y - 0.05, p.y))
 							_por("poste", tp, Color.WHITE)
 							_obstaculo(Vector3(p.x, Y, p.y), giro, Vector3(0.35, 8.0, 0.35))
-							anterior = _poste_luzes(p, tp, anterior, [Vector3(1.75, 7.55, 0)], 7.3)
+							_poste_luzes(p, tp, [Vector3(1.75, 7.55, 0)])
 					elif com_arvores:
 						var q: Vector2 = a + dir * t + nrm * lado * (hw + 3.2)
 						var verde := Color(0.24, 0.36, 0.15) * rng.randf_range(0.7, 1.2)
@@ -663,16 +655,12 @@ func _mobiliario_urbano() -> void:
 			for lx in [2.2, 4.6]:                        # 0.84: halo amarelo piscando nas duas caixas de luz
 				halos.append([ts * Vector3(lx, 5.3, 0.3), true])
 
-# 0.84: fio do poste anterior até este (se perto) e halo nas lâmpadas dos postes que ainda acendem (sempre os
-# mesmos: sorteio pela posição, sem mexer no sorteio do resto da cidade). Devolve o topo deste poste.
-func _poste_luzes(p: Vector2, tp: Transform3D, anterior: Vector3, lampadas: Array, topo: float) -> Vector3:
-	var ponta := Vector3(p.x, Y + topo, p.y)
-	if anterior != Vector3.INF and anterior.distance_to(ponta) < 60.0:
-		fios.append([anterior, ponta])
+# 0.84: halo nas lâmpadas dos postes que ainda acendem (sempre os mesmos: sorteio pela posição, sem mexer no sorteio
+# do resto da cidade). 1.16: os fios entre os postes saíram.
+func _poste_luzes(p: Vector2, tp: Transform3D, lampadas: Array) -> void:
 	if absi(hash(Vector2i(roundi(p.x * 4.0), roundi(p.y * 4.0)))) % 1000 < int(LuzesRua.CHANCE_ACESO * 1000.0):
 		for lp in lampadas:
 			halos.append([tp * (lp as Vector3), false])
-	return ponta
 
 func _entulho(ruinas: Array) -> void:
 	for r in ruinas:
@@ -953,13 +941,7 @@ func _subir_pontes() -> void:
 			if tam.is_equal_approx(o):
 				some = true
 		obstaculos[j + 6] = -1000.0 if some else obstaculos[j + 6] + h - Y
-	# fios dos postes e halos (os dos semáforos saem)
-	for f in fios:
-		for i in 2:
-			var a: Vector3 = f[i]
-			var h := _em_ponte(a.x, a.z)
-			if h > -INF:
-				f[i] = a + Vector3(0, h - Y, 0)
+	# halos (os dos semáforos saem)
 	var halos_novos: Array = []
 	for hl in halos:
 		var a: Vector3 = hl[0]

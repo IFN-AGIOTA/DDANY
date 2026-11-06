@@ -73,25 +73,15 @@ func _r():
 		if conferidos >= 4000:
 			break
 	ok(conferidos > 1000 and certos == conferidos and n_fechados > conferidos / 10, "prédio sem entrada = portas de aço no térreo (%d de %d certos, %d fechados)" % [certos, conferidos, n_fechados])
-	# ---- fios e halos ----
-	var fios: Array = get_nodes_in_group("fios_poste")
+	# ---- halos (1.16: os fios de poste saíram, e a opção também) ----
 	var halos: Array = get_nodes_in_group("halos_luz")
-	print("  blocos com fios %d · com halos %d · fios %d · halos %d" % [ab.nos_fios.size(), ab.nos_halos.size(), ab.fios.size(), ab.halos.size()])
-	ok(ab.fios.size() > 500, "a cidade tem fios entre os postes")
+	print("  blocos com halos %d · halos %d" % [ab.nos_halos.size(), ab.halos.size()])
+	ok(get_nodes_in_group("fios_poste").is_empty() and ab.get("fios") == null and ab.get("nos_fios") == null, "1.16: sem fios entre os postes")
+	ok(not ("wire" in load("res://menu/config.gd").GFX_PRESETS["auto"]), "1.16: a opção \"Fios de poste\" saiu dos presets")
 	# 1.15: a cidade está sem energia: nenhum poste, semáforo ou ponte acende; nem velas nas janelas dos prédios
 	ok(ab.nos_halos.is_empty() and halos.is_empty(), "sem energia: nenhum halo de poste, semáforo ou ponte (%d)" % halos.size())
 	var velas = m.cidade.mat_predio.get_shader_parameter("velas")
 	ok(velas == null or float(velas) == 0.0, "sem velas nas janelas dos prédios comuns")
-	await _aplicar(m, {"wire": false})
-	await q(2)
-	var algum := false
-	for n in ab.nos_fios:
-		if n.visible:
-			algum = true
-	ok(not algum, "fios desligados somem")
-	await _aplicar(m, {"wire": true})
-	await q(2)
-	ok(ab.nos_fios[0].visible, "fios ligados aparecem")
 	# ---- efeitos ----
 	var fu = m.jogo.get_node("Fumaca")
 	await _aplicar(m, {"fx": 0})

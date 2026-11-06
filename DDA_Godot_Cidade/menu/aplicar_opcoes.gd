@@ -1,7 +1,7 @@
 extends Node
 # APLICA AS OPÇÕES (menu/config.gd) no jogo: câmera, sensibilidade, vibração, HUD, som, tela,
 # resolução (com resolução dinâmica), anti-aliasing, limite de FPS, sombras, neblina, distância de visão,
-# brilho/contraste/saturação e vinheta; 0.84: texturas, filtragem anisotrópica, modelos, efeitos, fios e halos. Roda de novo sempre que uma opção muda.
+# brilho/contraste/saturação e vinheta; 0.84: texturas, filtragem anisotrópica, modelos, efeitos e halos (1.16: sem os fios de poste). Roda de novo sempre que uma opção muda.
 # Mexa AQUI para: o que cada opção faz de verdade no jogo (números de distância, neblina etc.).
 
 const FiltroCls := preload("res://menu/filtro_tela.gd")
@@ -233,11 +233,11 @@ func _aplicar_resto(o: Dictionary, g: Dictionary, j) -> void:
 			cid.aplicar_texturas(int(g.get("tex", 3)), aniso_efetivo(int(g.get("aniso", 1))))   # texturas e filtragem anisotrópica do chão
 		var ab = cid.get("abandono")
 		if ab != null:
-			var qual_ab: Array = [ab.get_instance_id(), ab.nos.size(), ab.nos_fios.size()]
+			var qual_ab: Array = [ab.get_instance_id(), ab.nos.size(), ab.nos_halos.size()]
 			if _mudou("modelos", qual_ab + [int(g.get("models", 2))]):
 				ab.aplicar_modelos(int(g.get("models", 2)))                       # até onde os objetos da rua aparecem
-			if _mudou("luzes", qual_ab + [bool(g.get("wire", true)), bool(g.get("halo", true))]):
-				ab.aplicar_luzes(bool(g.get("wire", true)), bool(g.get("halo", true)))   # fios de poste · halos de luz
+			if _mudou("luzes", qual_ab + [bool(g.get("halo", true))]):
+				ab.aplicar_luzes(bool(g.get("halo", true)))     # halos de luz (1.16: os fios de poste saíram)
 		_efeitos_ultra(cid)
 		if cid.ambiente != null:
 			# raio de chunks menor que a distância de visão: mais neblina, para a borda do mundo carregado não aparecer

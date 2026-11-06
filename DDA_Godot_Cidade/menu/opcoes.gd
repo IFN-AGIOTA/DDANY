@@ -6,7 +6,7 @@ extends CanvasLayer
 # Tudo é salvo na hora em Config (menu/config.gd) e aplicado no jogo por menu/aplicar_opcoes.gd.
 # Na aba Gráficos as mudanças só valem ao tocar APLICAR (como no HTML).
 # Opções marcadas "(em breve)" ficam salvas, mas ainda não têm efeito na versão Godot (não existe carro,
-# câmera cockpit, fachadas com shader, fios, halos etc. ainda).
+# câmera cockpit, fachadas com shader, halos etc. ainda; 1.16: a opção "Fios de poste" saiu, junto com os fios).
 # Mexa AQUI para: o que aparece em cada aba e os textos da Ajuda.
 
 signal fechar
@@ -609,7 +609,6 @@ func _pagina_graficos(v: float) -> Control:
 		[[0, "DESLIGADAS"], [1, "SIMPLES"], [2, "ALTA"]], v)
 	_gfx_seg(lista, "den", "Densidade do cenário abandonado", "quantidade de carros largados, entulho e capim", [[0, "BAIXA"], [1, "MÉDIA"], [2, "ALTA"]], v)
 	_gfx_seg(lista, "wtr", "Água", "ondas, espuma na praia e brilho do sol", [[false, "SIMPLES"], [true, "COMPLETA"]], v)
-	_gfx_seg(lista, "wire", "Fios de poste", "fios caídos entre os postes das ruas", [[false, "DESLIGADOS"], [true, "LIGADOS"]], v)
 	_gfx_seg(lista, "dist", "Distância de visão", "quanto da cidade é desenhado", NIVEIS, v)
 	_gfx_passo(lista, "chk", "Raio de chunks", "pedaços de 500 m da cidade em volta da câmera (menor = mais leve; AUTO segue a distância de visão)",
 		[[0, "AUTO"], [1, "1 (±500 m)"], [2, "2 (±1 km)"], [3, "3 (±1,5 km)"], [4, "4 (±2 km)"], [6, "6 (±3 km)"], [8, "8 (±4 km)"], [10, "10 (±5 km)"]], v)

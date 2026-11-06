@@ -116,7 +116,7 @@ func _r():
 	g2["models"] = (nivel + 1) % 4
 	var algum = null
 	for n in ab.nos:
-		if is_instance_valid(n) and not (n in ab.nos_fios) and not (n in ab.nos_halos) and n.has_meta("alc"):
+		if is_instance_valid(n) and not (n in ab.nos_halos) and n.has_meta("alc") and (n.get_meta("alc") as Vector2).y > 0.0:
 			algum = n
 			break
 	var antes: float = algum.visibility_range_end if algum != null else 0.0
