@@ -120,14 +120,19 @@ func _r():
 	for nome in ab.tirados_na_rua:
 		tirados += int(ab.tirados_na_rua[nome])
 	ok(no_asf == 0 and tirados > 500, "1.19: nada em pé no asfalto (%d) · saíram do meio da rua %d" % [no_asf, tirados])
-	var nos_arvore := 0
+	# 1.20: as árvores voltaram (EZ-Tree, mundo/arvores.gd) nos lugares guardados; as antigas (Quaternius) não
+	var nos_antigos := 0
+	var longe := 0
 	for nd in cid.find_children("*", "GeometryInstance3D", true, false):
 		var nm := str(nd.name)
-		if nm.begins_with("Arvores") or nm.begins_with("arvore") or nm.begins_with("Veg_arvore") or nm.begins_with("Veg_pinheiro"):
-			nos_arvore += 1
+		if nm.begins_with("arvore") or nm.begins_with("Veg_arvore") or nm.begins_with("Veg_pinheiro"):
+			nos_antigos += 1
+		elif nm.begins_with("ArvoresLonge_"):
+			longe += 1
 	var lug: Array = cid.lugares_das_arvores()
-	ok(nos_arvore == 0 and lug.size() > 10000 and ResourceLoader.exists("res://data/arvores_lugares.json"),
-		"1.19: nenhuma árvore na cena (%d nós) · %d lugares guardados (e o arquivo)" % [nos_arvore, lug.size()])
+	ok(nos_antigos == 0 and longe > 50 and cid.arvores != null and cid.arvores.quantas() > lug.size() and lug.size() > 10000
+		and ResourceLoader.exists("res://data/arvores_lugares.json"),
+		"1.20: árvores novas plantadas (%d; %d lugares guardados; %d blocos de longe) e nenhuma das antigas" % [cid.arvores.quantas() if cid.arvores != null else 0, lug.size(), longe])
 	ok(not ResourceLoader.exists("res://mundo/cenario/natureza/CommonTree_1.gltf") and not ResourceLoader.exists("res://historia/historia.gd"),
 		"1.19: arquivos das árvores e do modo história apagados")
 	# ---- halos (1.16: os fios de poste saíram, e a opção também) ----

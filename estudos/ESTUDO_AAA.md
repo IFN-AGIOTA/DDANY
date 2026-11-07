@@ -215,7 +215,10 @@ World of Horizon Zero Dawn* (GDC 2017; só a página da palestra pôde ser lida)
 - **Objetos que dependem um do outro vão juntos** (uma porta e o prédio dela, um interruptor e a luz): a célula
   carrega o grupo inteiro, para nunca aparecer metade. *(Epic)*
 - **HLOD em camadas** (*Hierarchical LOD*): de longe, muitos objetos viram **uma malha só**.
-  - *Instancing*: a vegetação de longe vira instâncias no LOD mais baixo.
+  - *Instancing*: a vegetação de longe vira instâncias no LOD mais baixo. ✅ 1.20: as árvores (EZ-Tree) de longe são
+    IMPOSTORES (foto da árvore em 3 planos + 1 deitado, 8 triângulos) num MultiMesh por bloco de 250 m, todas as 24
+    variações juntas num atlas (1 chamada de desenho por bloco); perto, a árvore de verdade num MultiMesh por modelo,
+    escolhida pela CPU num raio, e a troca acontece no shader na mesma distância (`mundo/arvores.gd`).
   - *Merged Mesh*: junta várias malhas numa, mantendo o visual.
   - *Simplified Mesh*: refaz a forma por fora. Usa um *Merge Distance* que **fecha portas e janelas**, porque de longe
     não se vê o interior.

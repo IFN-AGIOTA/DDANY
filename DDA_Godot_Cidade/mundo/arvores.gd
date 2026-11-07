@@ -20,9 +20,9 @@ extends Node3D
 const DIR := "res://mundo/arvores/"
 const BLOCO := 250.0                     # impostores: um MultiMesh por bloco
 const CEL := 32.0                        # grade para achar as árvores perto
-const MOVER := 7.0                       # a lista de perto é refeita quando a câmera anda isso
-const FOLGA := 10.0                      # a lista de perto pega até raio_perto + FOLGA (cobre o andar até refazer)
-const RAIO_PERTO := [26.0, 36.0, 48.0, 64.0]          # por "Distância dos detalhes" (0..3)
+const MOVER := 5.0                       # a lista de perto é refeita quando a câmera anda isso
+const FOLGA := 6.0                       # a lista de perto pega até raio_perto + FOLGA (cobre o andar até refazer)
+const RAIO_PERTO := [22.0, 30.0, 40.0, 56.0]          # por "Distância dos detalhes" (0..3): depois disso, o impostor
 const ALCANCE_IMPOSTOR := [650.0, 1000.0, 1500.0, 2200.0]
 # atlas dos impostores (mundo/arvores/impostores.png): em cima, as fotos de lado (CEL_LADO px, COLS por linha);
 # embaixo, as de cima (CEL_TOPO px, COLS_TOPO por linha)

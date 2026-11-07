@@ -15,6 +15,8 @@ const LUGARES := [
 	["centro da cidade", Vector2(436, 1500), 0.0, 0.0],
 	["centro olhando a avenida", Vector2(436, 1500), 1.2, -0.15],
 	["olhando a Ponte do Brooklyn", Vector2.ZERO, 0.0, -0.05],     # 1.16 (o lugar sai de mundo/pontes.gd)
+	["Central Park (The Mall)", Vector2(-1642, -790), -0.05, 0.0],    # 1.20: a alameda dos olmos (mata densa em volta)
+	["Central Park (Bethesda)", Vector2(-1612, -1392), PI, 0.08], # 1.20: a praça, a fonte e o terraço
 ]
 var falhas := 0
 func ok(c: bool, msg: String) -> void:

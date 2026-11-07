@@ -41,6 +41,81 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.20 · CENTRAL PARK DE VERDADE E ÁRVORES REALISTAS (EZ-TREE)
+  · ÁRVORES NOVAS (escolhidas pelo dono: a opção 6, todas): 24 variações REALISTAS geradas pelo programa EZ-Tree
+    (MIT; cascas de foto CC0 do Poly Haven e do TextureCan) — carvalhos (5), freixos (4), olmos (4, os de copa em
+    "taça" das alamedas), álamos (3, um amarelo de outono), pinheiros (3) e secas (5) — com 1,4 a 5,2 mil triângulos
+    cada e as folhas balançando com o vento. Voltaram para os 13 mil lugares guardados na 1.19 (rua: olmos e freixos
+    de 9 a 14 m; parques: de tudo; terrenos: secas) e encheram o Central Park: são ~24 mil árvores na cidade.
+    DESENHO EM 2 NÍVEIS: perto da câmera (até 40 m no "alto"; 22/30/40/56 m conforme "Distância dos detalhes") a
+    árvore de verdade; depois, o IMPOSTOR (a "foto" da árvore em 3 planos cruzados + 1 deitado no alto da copa, 8
+    triângulos), num atlas tirado da própria árvore. Um passa para o outro na mesma distância (sem buraco e sem
+    árvore dobrada). Os troncos têm colisão (você, os carros e as balas batem neles).
+  · CENTRAL PARK (pedido: "bem denso", parecido com as fotos do parque de verdade): o parque grande do centro foi
+    redesenhado com mais de 60 fotos de referência. Do sul para o norte:
+      - THE POND (laguinho do canto sudeste) com a GAPSTOW BRIDGE (ponte de pedra de um arco), o WOLLMAN RINK (pista
+        oval com as muretas e o prédio com o letreiro), o CARROSSEL (casa octogonal de tijolo com os cavalinhos), 2
+        campos de beisebol com alambrado e o SHEEP MEADOW (o gramadão aberto, com o skyline atrás);
+      - THE MALL / LITERARY WALK: a alameda reta de 12 m com 4 fileiras de olmos grandes (as copas se encontram por
+        cima), bancos encostados dos dois lados, postes e as 4 estátuas (Shakespeare, Colombo, Burns e Scott);
+        no fim, o NAUMBURG BANDSHELL (a concha de pedra clara sobre o palco);
+      - atravessando a rua do meio: a BETHESDA TERRACE — terraço alto de arenito (92 x 24 m) com balaustradas, a
+        ARCADA por baixo (7 arcos para o lago, 3 para a rua, colunas e o teto de azulejos coloridos), 2 escadarias
+        largas descendo até a PRAÇA DE TIJOLO vermelho em espinha de peixe com as faixas claras e, no meio, a FONTE DO
+        ANJO (bacia redonda, 2 bacias de bronze e o anjo de asas abertas no alto); na beira do lago, a balaustrada
+        e o cais; escadas dos lados sobem da rua até o terraço;
+      - THE LAKE (o lago do mapa, que ficava ESCONDIDO embaixo da grama, refeito no formato do de verdade) com a BOW
+        BRIDGE (ponte de ferro creme em arco, guarda-corpo de círculos entrelaçados e vasos) no estreito, a LOEB
+        BOATHOUSE (casa comprida de telhado verde, varanda, cais e barcos, alguns virados), o CHERRY HILL com a
+        fontezinha, o STRAWBERRY FIELDS com o mosaico IMAGINE (e flores deixadas) e o CONSERVATORY WATER (laguinho
+        dos barquinhos) com a casinha e a ALICE NO PAÍS DAS MARAVILHAS;
+      - THE RAMBLE (mata bem fechada), o BELVEDERE CASTLE em cima da VISTA ROCK (torre com ameias, torrinha de telhado
+        cônico com a bandeira rasgada, pavilhão de madeira e o terraço: dá para subir pela escada da rocha), o TURTLE
+        POND, o DELACORTE THEATER (arquibancada em meia-lua), o GREAT LAWN com 2 campos e o CLEOPATRA'S NEEDLE
+        (obelisco de granito vermelho de 21 m com os caranguejos de bronze).
+    Em volta e no meio: as pistas do parque (West/East Drive), ~30 caminhos curvos, ~500 postes no modelo do Central
+    Park (o vidro acende à noite), ~560 bancos de ripas verdes, rochas de xisto aflorando, o muro baixo de pedra no
+    contorno (abre onde cada caminho entra) e ~12.900 árvores (mata densa em todo o resto). Tudo com colisão; nos
+    caminhos, lagos e construções não nasce planta nem capim. As 2 guaritas que já ficavam ali continuam.
+  · LAGOS: os 4 lagos do parque são água de verdade (dá para nadar; a ponte passa por cima). A água dos lagos ficou
+    de LAGO (parada, escura, sem a espuma de praia que deixava os lagos pequenos brancos), em toda a cidade.
+  · No MAPA: os lagos que ficavam embaixo dos parques aparecem, e o Central Park mostra gramados, praças e caminhos.
+  ARQUIVOS (testado: compilar_tudo, teste_central_park NOVO (lagos, construções, árvores, nadar, SUBIR ANDANDO a
+  escadaria da Bethesda e a do castelo e atravessar a Bow Bridge), teste_graficos, teste_desempenho (referência
+  regravada com 2 vistas do Central Park), teste_agua, teste_jogo, teste_veiculos, teste_chunks, teste_carregamento,
+  teste_void, teste_locais_108, teste_infectados_colisao, teste_menu_leve, teste_pontes, teste_novidades e fotos):
+    mundo/arvores.gd ............... NOVO · as árvores (modelos, materiais com vento, lista de perto, impostores,
+                                     colisão dos troncos)
+    mundo/arvores/ ................. NOVA · modelos/<nome>.res (24), arvores.json, impostores.png (atlas) e
+                                     texturas/ (cascas e folhas, com a LICENCA.txt)
+    mundo/central_park.gd .......... NOVO · o parque: lagos (aplicar_dados), recorte da grama em volta dos lagos,
+                                     chão (gramados, praças, tijolo da Bethesda, pistas, caminhos), muro, rochas,
+                                     postes, bancos, colisão, mapa e as árvores do desenho
+    mundo/central_park_obras.gd .... NOVO · as construções (Bethesda e a fonte, Bow Bridge, Gapstow, Belvedere,
+                                     Boathouse, Bandshell, obelisco, Wollman, carrossel, IMAGINE, Delacorte, Alice,
+                                     Cherry Hill, estátuas, beisebol)
+    data/central_park.json ......... NOVO · o desenho do parque (gravado pelo script abaixo)
+    ferramentas/central_park/desenho.py ...... NOVO · desenha o parque (lugares, caminhos, árvores) e grava o json
+    ferramentas/arvores_ez/ ........ NOVA · gerar.mjs/gerar.html (gera as árvores no EZ-Tree), variantes.json (as 24),
+                                     sangrar.py (borda do atlas), LICENCA_EZ-TREE.txt
+    ferramentas/preparar_arvores.gd  NOVO · prepara os modelos e tira as fotos dos impostores
+    mundo/cidade.gd ................ os lagos do parque entram no lugar do antigo (_comecar), a grama do parque é
+                                     recortada em volta dos lagos, etapa "O Central Park", _plantar_arvores (modelo
+                                     novo de cada lugar guardado), planta não nasce em caminho/lago, água de lago
+    mundo/colisao_mundo.gd ......... o lago vem antes do parque (dá para nadar no lago dentro do parque); 72 obstáculos
+                                     perto do jogador (antes 40: + troncos, postes e bancos)
+    mundo/materiais_cidade.gd ...... água: "lago" (parada, sem espuma de praia)
+    mundo/mato.gd .................. sem capim nos caminhos/lagos/construções do Central Park
+    hud/mapa.gd .................... lagos por cima dos parques e o desenho do Central Park
+    menu/creditos.gd ............... EZ-Tree (MIT), Poly Haven "Bark Brown 02" e TextureCan (CC0)
+    ferramentas/testes/teste_central_park.gd . NOVO
+    ferramentas/testes/teste_graficos.gd ..... confere as árvores novas (no lugar de "nenhuma árvore")
+    ferramentas/testes/teste_desempenho.gd ... + 2 vistas do Central Park · desempenho_base.json regravado
+    ferramentas/testes/rodar.sh .... + teste_central_park
+    menu/config.gd ................. VERSAO "1.20"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..." + seção 10
+
 ATUALIZAÇÃO 1.19 · SEM O MODO HISTÓRIA, SEM ÁRVORES E NADA EM PÉ NO MEIO DA RUA
   · MODO HISTÓRIA APAGADO (pedido): a pasta historia/ inteira saiu (missões, cutscenes, cenário do bar, prédios de
     preenchimento, vozes, os carros Kiri '86 e JDM '99 e os modelos do bar), junto com o teste dela e o comando
@@ -4280,10 +4355,21 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd
 - chunks de 500 m (o que fica na cena, raio) ....... mundo/chunks.gd (+ Opções › Gráficos › Raio de chunks)
 - halos de luz (0.84; 1.16: os fios saíram) ...... mundo/luzes_rua.gd (onde ficam: mundo/abandono.gd _poste_luzes)
-- 1.19 · ÁRVORES: saíram (vão ser refeitas);
-  onde ficavam ......................... mundo/cidade.gd (arvores_lugares, lugar_arvore, lugares_das_arvores) ·
-                                          mundo/abandono.gd (as da rua) · data/arvores_lugares.json (gravado por
-                                          ferramentas/exportar_arvores.gd)
+- 1.20 · ÁRVORES (EZ-Tree): distâncias perto/
+  longe, vento, cor, colisão do tronco ..... mundo/arvores.gd (RAIO_PERTO, ALCANCE_IMPOSTOR, SHADER_FOLHA)
+- 1.20 · qual modelo vai em cada lugar
+  guardado (rua, parque, terreno) ......... mundo/cidade.gd (_plantar_arvores, SORTEIO_*) · lugares: data/arvores_lugares.json
+- 1.20 · fazer/mudar as 24 árvores .......... ferramentas/arvores_ez/ (variantes.json, gerar.mjs) e depois
+                                          ferramentas/preparar_arvores.gd + ferramentas/arvores_ez/sangrar.py
+- 1.20 · CENTRAL PARK: onde fica cada coisa
+  (lagos, gramados, caminhos, árvores,
+  postes, bancos) ......................... ferramentas/central_park/desenho.py (grava data/central_park.json)
+- 1.20 · Central Park: chão, muro, postes,
+  bancos, rochas, lagos no mapa ........... mundo/central_park.gd
+- 1.20 · Central Park: as construções
+  (Bethesda, Bow Bridge, castelo...) ...... mundo/central_park_obras.gd
+- 1.19 · onde ficavam as árvores antigas ... mundo/cidade.gd (lugares_das_arvores) · mundo/abandono.gd (as da rua) ·
+                                          data/arvores_lugares.json (gravado por ferramentas/exportar_arvores.gd)
 - 1.19 · nada EM PÉ no meio do asfalto
   (postes, semáforos, placas, hidrantes) mundo/abandono.gd (FORA_DO_ASFALTO, _por) · mundo/cidade.gd (no_asfalto)
 - 1.16 · versão LEVE dos modelos pesados (árvores,
@@ -4561,9 +4647,15 @@ MÚSICA (pasta audio/)
 -----------------------------------------------------------------------------------------------------
 10. LIMITAÇÕES CONHECIDAS E PRÓXIMOS PASSOS
 -----------------------------------------------------------------------------------------------------
+- 1.20: o Central Park é PLANO (o de verdade tem morros e a rua da 72nd passa por baixo da arcada; aqui o terraço
+  alto da Bethesda fica em cima e a arcada passa no chão). Ele é menor que o de verdade (950 x 1730 m): o Reservoir,
+  o zoológico, o Great Hill e o norte do parque não couberam. Dentro das construções só a arcada da Bethesda, o
+  terraço do castelo e as pontes são de andar (o castelo, o Boathouse, o carrossel e as casinhas não abrem). O
+  impostor das árvores é a mesma foto para todos os lados (de muito perto da troca dá para notar). No meio da mata
+  densa o desenho pesa mais que na cidade (~580 mil triângulos na Mall no "alto"): no celular, "Distância dos
+  detalhes" em médio ou baixo deixa leve.
 - 1.19: o MODO HISTÓRIA foi apagado (botão bloqueado no menu); a lore continua em lore/ e o roteiro em
-  estudos/ROTEIRO_MODO_HISTORIA.md, para quando ele for refeito. As ÁRVORES saíram e vão ser refeitas com outros
-  modelos (os lugares estão guardados; os da rua mudam com a "Densidade do cenário", veja ferramentas/exportar_arvores.gd).
+  estudos/ROTEIRO_MODO_HISTORIA.md, para quando ele for refeito. (1.20: as árvores voltaram, com os modelos novos.)
 - 1.15: as pontes não têm escadas para descer até a margem (só pulando na água); o passeio do Brooklyn só se sobe
   pelas rampas das pontas; o engarrafamento das pontes não volta depois de mexido (como os outros carros); a ponte
   de pedestres das torres do Brooklyn é só a passagem do passeio (não dá para subir na torre); os cabos e as treliças
