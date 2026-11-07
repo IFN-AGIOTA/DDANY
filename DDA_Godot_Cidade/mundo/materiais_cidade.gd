@@ -51,6 +51,7 @@ uniform vec3 cor_funda : source_color = vec3(0.035, 0.11, 0.15);
 uniform vec3 cor_rasa : source_color = vec3(0.10, 0.34, 0.36);
 uniform vec3 cor_ceu : source_color = vec3(0.95, 0.68, 0.48);
 uniform float completa = 1.0;            // Opções › Água: 0 = simples (sem ondas e espuma)
+uniform float lago = 0.0;                // 1.20: lago (água parada: sem espuma de praia, ondinha pequena, cor de lago)
 """ + COMUM + VERTICE_CAMADA + """
 void fragment() {
 	vec2 uv = (wp.xz + mundo) / (2.0 * mundo);
@@ -66,13 +67,15 @@ void fragment() {
 	// espuma batendo na costa (vai e volta)
 	float onda = 0.5 + 0.5 * sin(TIME * 1.3 - costa * 18.0 + na.x * 5.0);
 	float espuma = smoothstep(0.22, 0.48, costa) * onda * (0.6 + 0.4 * ruido(wp.xz * 0.15 + TIME * 0.2));
-	espuma *= (1.0 - smoothstep(600.0, 1800.0, dist)) * completa;
+	espuma *= (1.0 - smoothstep(600.0, 1800.0, dist)) * completa * (1.0 - lago);
+	NORMAL_MAP_DEPTH *= mix(1.0, 0.4, lago);
+	cor = mix(cor, mix(vec3(0.04, 0.075, 0.06), vec3(0.09, 0.13, 0.09), smoothstep(0.3, 0.9, costa)), lago);
 	// reflexo do céu nas bordas (fresnel)
 	float fr = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 3.0);
-	cor = mix(cor, cor_ceu * 0.85, fr * 0.65);
+	cor = mix(cor, cor_ceu * 0.85, fr * 0.65 * (1.0 - 0.7 * lago));
 	ALBEDO = mix(cor, vec3(0.9, 0.88, 0.82), clamp(espuma, 0.0, 1.0) * 0.75);
-	ROUGHNESS = 0.06 + espuma * 0.7;
-	SPECULAR = 0.65;
+	ROUGHNESS = mix(0.06 + espuma * 0.7, 0.24, lago);
+	SPECULAR = mix(0.65, 0.3, lago);
 	METALLIC = 0.0;
 }
 """

@@ -39,7 +39,7 @@ const CEL_PARQUE := 128.0
 const CEL_PREDIO := 100.0
 const RAIO_PREDIOS := 40.0
 const POOL := 48
-const POOL_OBST := 40
+const POOL_OBST := 72                 # 1.20: + troncos das árvores, postes e bancos do Central Park
 const CEL_OBST := 50.0
 const RAIO_OBST := 30.0
 
@@ -482,14 +482,15 @@ func altura_sem_rua(x: float, z: float) -> float:
 			break
 	if not terra:
 		return ALT_MAR
+	# 1.20: o lago vem antes do parque (os lagos do Central Park ficam dentro dele)
+	for i in _l_box.size():
+		if _l_box[i].has_point(p) and Geometry2D.is_point_in_polygon(p, _l_pts[i]):
+			return ALT_LAGO
 	var pk := Vector2i(floori(x / CEL_PARQUE), floori(z / CEL_PARQUE))
 	if _p_hash.has(pk):
 		for i in _p_hash[pk]:
 			if _p_box[i].has_point(p) and Geometry2D.is_point_in_polygon(p, _p_pts[i]):
 				return ALT_PARQUE
-	for i in _l_box.size():
-		if _l_box[i].has_point(p) and Geometry2D.is_point_in_polygon(p, _l_pts[i]):
-			return ALT_LAGO
 	return ALT_TERRA
 
 # calcula tudo de uma vez (usar ao nascer/teleportar)

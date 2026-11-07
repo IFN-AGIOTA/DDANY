@@ -20,6 +20,8 @@ const OclusaoCls := preload("res://mundo/oclusao.gd")
 const LocaisCls := preload("res://mundo/locais.gd")
 const PontesCls := preload("res://mundo/pontes.gd")      # 1.15: pontes de Nova York (e as ruas novas delas)
 const Cenario := preload("res://mundo/cenario.gd")
+const ArvoresCls := preload("res://mundo/arvores.gd")    # 1.20: as árvores novas (EZ-Tree) nos lugares guardados
+const CentralParkCls := preload("res://mundo/central_park.gd")   # 1.20: o Central Park (lagos, caminhos, construções, mata)
 
 const CELL := 20.0                          # resolução das máscaras (m)
 const WORLD := Vector2(11000.0, 8600.0)     # metade do mundo (m)
@@ -126,6 +128,7 @@ func etapas() -> Array:
 	r.append(["Espalhando o abandono", 0.5, func(): _abandono_comecar(ab)])
 	r.append_array(ab.etapas())
 	r.append(["Juntando o abandono", 1.3, _abandono_fim])
+	r.append(["O Central Park", 2.0, func(): await _central_park()])
 	r.append(["Árvores e canteiros", 8.0, _arvores])
 	r.append(["Escondendo o que a câmera não vê", 3.0, _oclusao])
 	return r
@@ -135,6 +138,7 @@ func _comecar() -> void:
 	W = int(WORLD.x * 2.0 / CELL)
 	H = int(WORLD.y * 2.0 / CELL)
 	var data = JSON.parse_string(FileAccess.get_file_as_string("res://data/city.json"))
+	CentralParkCls.aplicar_dados(data)            # 1.20: os lagos do Central Park no lugar do lago antigo (escondido)
 	_ligar_pontas(data)
 	# 1.15: as RUAS NOVAS das pontes vão no fim da lista (depois de ligar as pontas: as contas das ruas antigas, os
 	# carros largados e os comboios continuam iguais; os prédios em cima delas saem em _buildings)
@@ -161,6 +165,12 @@ func limpar() -> void:
 	detalhes_abandono.clear()
 	detalhes_veg.clear()
 	oclusao = null
+	if arvores != null and is_instance_valid(arvores):
+		arvores.queue_free()
+	arvores = null
+	if central_park != null and is_instance_valid(central_park):
+		central_park.queue_free()
+	central_park = null
 	is_built = false
 
 # grava res://cidade.scn: a cidade vira uma cena de verdade, editável com as ferramentas da Godot
@@ -194,6 +204,8 @@ func aplicar_detalhes(nivel_shaders: int, nivel_distancia: int, agua_completa :=
 	_nivel_distancia = nivel_distancia
 	if escadas_incendio != null and is_instance_valid(escadas_incendio):
 		escadas_incendio.aplicar_alcance(EscadasIncendioCls.ALCANCES[clampi(nivel_distancia, 0, 3)])
+	if arvores != null and is_instance_valid(arvores):
+		arvores.aplicar_alcance(nivel_distancia)          # 1.20
 	var fator: float = [0.6, 0.8, 1.0, 1.3][clampi(nivel_distancia, 0, 3)]
 	for d in detalhes_veg:
 		if is_instance_valid(d):
@@ -441,10 +453,28 @@ func _ground(data) -> void:
 	_poly(v, lakes, Y_LAGO)
 	var agua_lago: ShaderMaterial = agua.duplicate()
 	agua_lago.set_shader_parameter("camada", CAMADA["lago"])
+	agua_lago.set_shader_parameter("lago", 1.0)      # 1.20: água parada (sem espuma de praia)
 	await _malha(v, agua_lago, PackedColorArray(), "Lagos")
 	mats_agua = [agua, agua_lago]
 	v = PackedVector3Array()
-	_poly(v, parks, Y_PARQUE)
+	# 1.20: o chão do parque é recortado em volta dos lagos que ficam dentro dele (antes a grama cobria o lago)
+	var parks_desenho: Array = []
+	for p in parks:
+		var dentro: Array = []
+		var rp := Rect2(p[0], Vector2.ZERO)
+		for q in p:
+			rp = rp.expand(q)
+		for lg in lakes:
+			var rl := Rect2(lg[0], Vector2.ZERO)
+			for q in lg:
+				rl = rl.expand(q)
+			if rp.encloses(rl):
+				dentro.append(lg)
+		if dentro.is_empty():
+			parks_desenho.append(p)
+		else:
+			parks_desenho.append_array(CentralParkCls.recortar_lagos(p, dentro))
+	_poly(v, parks_desenho, Y_PARQUE)
 	var mp := Mat.material(Mat.PARQUE, {"camada": CAMADA["parque"]})
 	await _malha(v, mp, PackedColorArray(), "Parques")
 	mats_chao = [mt, mp]
@@ -1465,9 +1495,99 @@ func _arvores() -> void:
 		tom.a = 1.0
 		if not no_local:
 			_veg(veg, tipo, t, tom, "parque")       # 1.19: a árvore não é plantada: só o LUGAR fica guardado
-	print("Árvores: nenhuma (1.19) · lugares guardados: ", arvores_lugares.size())
+	print("Árvores: lugares guardados: ", arvores_lugares.size())
 	await _plantas(celulas, rv, veg)
 	await _montar_veg(veg)
+	await _plantar_arvores()
+
+# ---------- 1.20: O CENTRAL PARK (mundo/central_park.gd): chão, muro, postes, bancos, rochas e construções ----------
+var central_park: Node3D = null
+
+func _central_park() -> void:
+	if central_park != null and is_instance_valid(central_park):
+		central_park.queue_free()
+	central_park = CentralParkCls.new()
+	central_park.name = "CentralPark"
+	add_child(central_park)                        # a colisão fica sempre na cena; os desenhos vão para os chunks
+	await central_park.montar(self)
+	for n in central_park.visuais:
+		_adopt(n)
+	if abandono != null:
+		abandono.obstaculos.append_array(central_park.obstaculos)
+
+# ---------- 1.20: AS ÁRVORES NOVAS (mundo/arvores.gd) nos lugares guardados ----------
+# Cada lugar antigo (1.19) ganha um modelo novo pelo tipo de antes (árvore viva, pinheiro, seca, grande), sorteado pela
+# posição (o mesmo em todo aparelho e todo carregamento). A rua fica com olmos/freixos menores; os parques com de tudo.
+var arvores: Node3D = null
+
+const SORTEIO_VIVA := [["carvalho_p", 4], ["carvalho_m", 8], ["carvalho_m2", 8], ["carvalho_g", 3], ["freixo_p", 4], ["freixo_m", 7],
+	["freixo_m2", 7], ["freixo_g", 3], ["olmo_1", 4], ["olmo_2", 3], ["olmo_3", 5], ["olmo_4", 5], ["alamo_p", 4], ["alamo_m", 5], ["alamo_g", 2]]
+const SORTEIO_RUA := [["olmo_1", 10], ["olmo_2", 8], ["olmo_3", 12], ["olmo_4", 12], ["freixo_m", 8], ["freixo_m2", 8], ["carvalho_m", 6],
+	["carvalho_m2", 6], ["alamo_m", 4]]
+const SORTEIO_SECA := [["seca_carvalho", 6], ["seca_carvalho_g", 3], ["seca_freixo", 4], ["seca_olmo", 5], ["seca_alamo", 4]]
+const SORTEIO_PINHEIRO := [["pinheiro_p", 4], ["pinheiro_m", 6], ["pinheiro_g", 3]]
+const SORTEIO_GRANDE := [["carvalho_g", 4], ["carvalho_g2", 4], ["freixo_g", 3], ["olmo_2", 2]]
+
+static func _sortear_peso(r: RandomNumberGenerator, tabela: Array) -> String:
+	var total := 0
+	for e in tabela:
+		total += int(e[1])
+	var x := r.randi() % total
+	for e in tabela:
+		x -= int(e[1])
+		if x < 0:
+			return String(e[0])
+	return String(tabela[0][0])
+
+func _plantar_arvores() -> void:
+	if arvores != null and is_instance_valid(arvores):
+		arvores.queue_free()
+	arvores = ArvoresCls.new()
+	arvores.name = "Arvores"
+	add_child(arvores)                              # sempre na cena (as de perto); os impostores vão para os chunks
+	var r := RandomNumberGenerator.new()
+	var n := 0
+	for l in lugares_das_arvores():
+		n += 1
+		if n % 2048 == 0:
+			await pausa()
+		var origem := String(l[0])
+		var modelo := String(l[1])
+		var p := Vector3(float(l[2]), float(l[3]), float(l[4]))
+		if CentralParkCls.dentro(Vector2(p.x, p.z)):
+			continue                                # 1.20: o Central Park tem as árvores dele (mundo/central_park.gd)
+		r.seed = hash(Vector2i(roundi(p.x * 10.0), roundi(p.z * 10.0)))
+		var nome := ""
+		var s := 1.0
+		var sh := float(l[7]) / maxf(float(l[6]), 0.01)
+		if modelo.begins_with("arvore_seca"):
+			nome = _sortear_peso(r, SORTEIO_SECA)
+			s = 0.7 + (float(l[6]) - 0.6) * 0.5
+		elif modelo.begins_with("pinheiro"):
+			nome = _sortear_peso(r, SORTEIO_PINHEIRO)
+			s = 0.75 + (float(l[6]) - 0.7) * 0.5
+		elif modelo == "arvore_grande":
+			nome = _sortear_peso(r, SORTEIO_GRANDE)
+			s = 0.9 + (float(l[6]) - 0.7) * 0.3
+		elif origem == "rua":
+			nome = _sortear_peso(r, SORTEIO_RUA)
+			s = 0.62 + (float(l[6]) - 0.6) * 0.6       # na calçada: 9 a 14 m
+		else:
+			nome = _sortear_peso(r, SORTEIO_VIVA)
+			s = 0.75 + (float(l[6]) - 0.7) * 0.55
+		var cor := Color.html(String(l[8]))
+		var tom := Color(1, 1, 1) * r.randf_range(0.82, 1.08)
+		if cor.r > cor.g * 1.05:
+			tom = Color(1.0, 0.72, 0.42) * r.randf_range(0.85, 1.05)    # outono (as de antes já amareladas)
+		tom.a = 1.0
+		arvores.plantar(nome, p, float(l[5]), s, clampf(sh, 0.85, 1.2), tom)
+	await CentralParkCls.plantar_arvores(self, arvores)
+	for mi in arvores.montar():
+		_adopt(mi)
+	if abandono != null:
+		abandono.obstaculos.append_array(arvores.obstaculos)
+	arvores.aplicar_alcance(_nivel_distancia)
+	print("Árvores (1.20): %d plantadas · %s" % [arvores.quantas(), str(arvores.contagem)])
 
 # ---------- 0.69: VEGETAÇÃO BAIXADA (mundo/cenario.gd: Quaternius "Stylized Nature MegaKit") ----------
 const PERTO_MODELO_ARVORE := 110.0          # árvore baixada até aqui; depois, a árvore simples de código
@@ -1545,6 +1665,8 @@ func _planta(veg: Dictionary, e: Array, celula: int, r: RandomNumberGenerator, y
 	var s := r.randf_range(float(e[2]), float(e[3]))
 	var b := Basis(Vector3.UP, r.randf() * TAU).scaled(Vector3(s, s * r.randf_range(0.85, 1.15), s))
 	var nome: String = e[0]
+	if CentralParkCls.bloqueia_planta(x, z, nome.begins_with("arbusto") or nome.begins_with("samambaia")):
+		return                                        # 1.20: nada de planta em caminho, lago ou construção do Central Park
 	var afunda := 0.15 * s if nome.begins_with("pedra") else 0.0
 	if nome == "poste_jardim":
 		b = Basis(Vector3.UP, r.randf() * TAU)                     # poste em pé, sem esticar

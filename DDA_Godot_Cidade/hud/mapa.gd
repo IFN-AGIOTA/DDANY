@@ -28,6 +28,7 @@ const UI := preload("res://menu/ui.gd")
 const Teclas := preload("res://jogador/teclas.gd")
 const Locais := preload("res://mundo/locais.gd")
 const Pontes := preload("res://mundo/pontes.gd")     # 1.15: o nome das pontes no mapa
+const CentralParkCls := preload("res://mundo/central_park.gd")   # 1.20: gramados, caminhos e lagos do Central Park
 
 const RAIO_MINI := 250.0            # metros do centro até a borda do minimapa
 const TAM_MINI := 22.0              # diâmetro do minimapa (vh = 1% da altura da tela)
@@ -348,6 +349,11 @@ func _desenhar_cidade(ci: CanvasItem, dados) -> void:
 		_poligono(rid, _pts(l[1]), COR_AGUA if int(l[0]) == 1 else COR_TERRA)
 	for f in dados["parks"]:
 		_poligono(rid, _pts(f), COR_PARQUE)
+	# 1.20: os lagos que ficam dentro de parques (Central Park) por cima da grama, e os caminhos/gramados do parque
+	for l in dados["lands"]:
+		if int(l[0]) == 1:
+			_poligono(rid, _pts(l[1]), COR_AGUA)
+	CentralParkCls.desenhar_mapa(ci, COR_PARQUE, COR_CALCADA)
 	var ruas: Array = dados["roads"]
 	for passo in 2:
 		var cor := COR_CALCADA if passo == 0 else COR_RUA

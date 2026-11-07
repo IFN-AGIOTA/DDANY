@@ -15,6 +15,7 @@ const Locais := preload("res://mundo/locais.gd")
 const Cenario := preload("res://mundo/cenario.gd")
 const Col := preload("res://mundo/colisao_mundo.gd")
 const Cid := preload("res://mundo/cidade.gd")
+const CentralParkCls := preload("res://mundo/central_park.gd")   # 1.20
 const TAM := 64.0                                   # tamanho de cada pedaço (m) · 0.79: 64 (antes 32): ~metade dos desenhos
 const RAIOS := [40.0, 56.0, 72.0, 90.0]             # alcance por "Distância dos detalhes" (0..3)
 const DENSIDADES := [0.45, 0.75, 1.0]               # por "Densidade do cenário" (0..2)
@@ -279,8 +280,8 @@ func _criar(k: Vector2i) -> Node3D:
 						continue
 			else:
 				continue                             # mar, lago
-		if mundo.dentro_de_obstaculo(x, z, 0.1) or _no_local(x, z):
-			continue
+		if mundo.dentro_de_obstaculo(x, z, 0.1) or _no_local(x, z) or CentralParkCls.bloqueia_planta(x, z):
+			continue                                 # 1.20: nem nos caminhos/lagos/construções do Central Park
 		var t := Color(1, 1, 1)
 		var cor := r.randf()
 		if cor < 0.3:
