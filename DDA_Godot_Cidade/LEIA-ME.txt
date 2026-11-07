@@ -77,6 +77,8 @@ ATUALIZAÇÃO 1.21 · PONTOS TURÍSTICOS DE NOVA YORK E ÁRVORES NO JEITO DA UNR
       - UNISPHERE (Queens): o globo de aço inclinado com os continentes em placas, os 3 anéis das órbitas, o tripé e o
         espelho d'água redondo com os jatos.
     Ao chegar perto aparece o aviso com o nome e o bairro. No MAPA cada um tem a estrela dourada e o nome (com zoom).
+    De longe (a partir de ~350 m) cada ponto vira uma malha só com um material (o HLOD: 1 chamada de desenho em vez
+    de 5 a 12; as fachadas continuam com as janelas), para o skyline não pesar.
   · O TERRENO de cada ponto: os prédios que ficavam ali saíram (88 dos que existiam na 1.20; 126 contando os fechados
     que já tinham saído) e os terrenos baldios em volta (até 30 m) viraram calçada. O resto da cidade é igual
     (conferido prédio por prédio). Os JOGOS SALVOS continuam valendo: o loot guardado num prédio que saiu some, os
@@ -115,7 +117,7 @@ ATUALIZAÇÃO 1.21 · PONTOS TURÍSTICOS DE NOVA YORK E ÁRVORES NO JEITO DA UNR
                                      Grand Central, a piscina do Memorial, areia), colisão, postes/bancos, aviso, mapa
     mundo/pontos_obras.gd .......... NOVO · as construções de Manhattan (Empire, Chrysler, WTC e Memorial, Rockefeller,
                                      St. Patrick, Grand Central, Times Square, Flatiron, Wall Street, Vessel, ONU,
-                                     Guggenheim)
+                                     Guggenheim) e o HLOD de cada ponto (de longe: uma malha e um material só)
     mundo/pontos_obras_fora.gd ..... NOVO · Estátua da Liberdade, Washington Square, Coney Island, Yankee Stadium e
                                      Unisphere
     mundo/cidade.gd ................ os prédios nos terrenos saem (_buildings: "ponto", remapa_v8), os terrenos e o
@@ -136,6 +138,8 @@ ATUALIZAÇÃO 1.21 · PONTOS TURÍSTICOS DE NOVA YORK E ÁRVORES NO JEITO DA UNR
     ferramentas/arvores_ez/sangrar.py ........ APAGADO (era a borda do atlas dos impostores)
     ferramentas/testes/teste_pontos_turisticos.gd . NOVO
     ferramentas/testes/teste_central_park.gd . confere os blocos de voxels (no lugar dos impostores)
+    ferramentas/testes/teste_graficos.gd ..... remapa_v7 conta também os prédios dos pontos turísticos; MAPA_PREDIOS 9
+    ferramentas/testes/teste_pontes.gd ....... remapa_v6 conta também os prédios dos pontos turísticos
     ferramentas/testes/rodar.sh .... + teste_pontos_turisticos
     estudos/ESTUDO_AAA.md .......... seção 1.14 NOVA (árvores na Unreal 5) + itens 31-35 do plano (✅)
     menu/config.gd ................. VERSAO "1.21"

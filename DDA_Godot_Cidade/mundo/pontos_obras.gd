@@ -66,15 +66,44 @@ func _montar_tipo(tipo: String) -> void:
 		"un": _un()
 		"guggenheim": _guggenheim()
 
+# HLOD dos pontos turísticos (como o da Unreal): de perto, a malha com um material por parte (5 a 10 chamadas); de
+# longe (depois de "dist"), TUDO numa malha só com um material (1 chamada), sem o chão e o que não aparece de longe;
+# as fachadas continuam com as janelas desenhadas (pontos_turisticos.gd SHADER_LONGE)
+const SEM_LONGE := ["pedra_chao", "gramado", "areia", "terra", "piscina_memorial", "ceu_gc", "caminho", "asfalto", "mall"]
 func _fim(nome: String) -> void:
 	var am: ArrayMesh = null
+	var lg := Malhas.Construtor.new()
 	for m in cs:
 		var c: Malhas.Construtor = cs[m]
 		if c.vazio():
 			continue
 		am = c.malha(PT.mat(m), am)
-	if am != null:
+		if String(m) in SEM_LONGE:
+			continue
+		var fach := 1.0 if String(m).begins_with("fachada_") else 0.0
+		var cores := c.c.duplicate()
+		for k in cores.size():
+			var cor: Color = cores[k]
+			if m == "telao":
+				cor = Color.from_hsv(fmod(cor.r * 7.0, 1.0), 0.6, 0.9)
+			elif m == "agua_fonte":
+				cor = Color(0.2, 0.26, 0.28)
+			cor.a = fach
+			cores[k] = cor
+		lg.v.append_array(c.v)
+		lg.n.append_array(c.n)
+		lg.uv.append_array(c.uv)
+		lg.c.append_array(cores)
+	if am == null:
+		return
+	var dist := maxf(DIST_HLOD, am.get_aabb().size.length() * 0.5 + 250.0)
+	if alcance > 0.0 and alcance <= dist or lg.vazio():
 		parque.por_malha(nome, am, T, alcance)
+		return
+	parque.por_malha(nome, am, T, dist)
+	var mi = parque.por_malha(nome + "_longe", lg.malha(PT.mat("longe")), T, alcance, false)
+	mi.visibility_range_begin = dist
+const DIST_HLOD := 350.0
 
 # ---------------------------------------------------------------------------------------------------------------
 # PEÇAS A MAIS

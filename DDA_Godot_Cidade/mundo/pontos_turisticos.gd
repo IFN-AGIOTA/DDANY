@@ -229,6 +229,32 @@ void fragment() {
 }
 """
 
+# o HLOD (de longe): a cor de cada vértice e, onde era fachada (COLOR.a = 1), as janelas do mesmo jeito da FACHADA
+const SHADER_LONGE := """
+shader_type spatial;
+global uniform float noite;
+varying vec3 wp;
+varying vec3 nw;
+void vertex() {
+	wp = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	nw = normalize((MODEL_MATRIX * vec4(NORMAL, 0.0)).xyz);
+}
+float hash(vec2 p) { p = mod(p, 4096.0); vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+void fragment() {
+	float vert = 1.0 - step(0.6, abs(nw.y));
+	vec2 u = vec2(UV.x, wp.y - 6.0);
+	vec2 cel = floor(u / vec2(2.5, 3.8));
+	vec2 g = fract(u / vec2(2.5, 3.8)) * vec2(2.5, 3.8) - vec2(1.25, 1.9);
+	float jan = step(abs(g.x), 0.68) * step(abs(g.y), 1.05) * vert * step(0.5, COLOR.a) * step(0.0, u.y);
+	float h = hash(cel + vec2(floor(wp.x * 0.07), floor(wp.z * 0.07)) * 17.0);
+	vec3 c = mix(COLOR.rgb, vec3(0.13, 0.16, 0.19) * (0.7 + 0.6 * h), jan);
+	ALBEDO = c;
+	ROUGHNESS = mix(0.85, 0.2, jan);
+	METALLIC = jan * 0.4;
+	EMISSION = vec3(1.0, 0.78, 0.45) * jan * step(0.988, h) * noite * 2.2;
+}
+"""
+
 static var _mats := {}
 
 static func mat(nome: String) -> Material:
@@ -257,6 +283,10 @@ static func mat(nome: String) -> Material:
 		var sm2 := ShaderMaterial.new()
 		sm2.shader = Mat.shader(SHADER_TELA)
 		m = sm2
+	elif nome == "longe":
+		var sm9 := ShaderMaterial.new()
+		sm9.shader = Mat.shader(SHADER_LONGE)
+		m = sm9
 	elif nome == "piscina_memorial":
 		var sm7 := ShaderMaterial.new()
 		sm7.shader = Mat.shader(SHADER_PISCINA)

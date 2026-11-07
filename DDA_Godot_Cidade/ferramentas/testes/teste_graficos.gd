@@ -91,9 +91,10 @@ func _r():
 		else:
 			cresce7 = cresce7 and v == ult7 + 1
 			ult7 = v
-	ok(r7.size() == cid.predio_info.size() + fechados_fora and menos7 == fechados_fora and cresce7 and ult7 == cid.predio_info.size() - 1,
-		"remapa_v7: %d prédios da 1.16 -> %d agora (%d saíram), em ordem e sem buraco" % [r7.size(), cid.predio_info.size(), menos7])
-	ok(load("res://menu/salvamento.gd").MAPA_PREDIOS == 8, "MAPA_PREDIOS = 8 (save da 1.15/1.16 é convertido)")
+	var pontos_fora := int(cid.removidos.get("ponto", 0))          # 1.21: os dos pontos turísticos também saem
+	ok(r7.size() == cid.predio_info.size() + fechados_fora + pontos_fora and menos7 == fechados_fora + pontos_fora and cresce7 and ult7 == cid.predio_info.size() - 1,
+		"remapa_v7: %d prédios da 1.16 -> %d agora (%d saíram: %d fechados + %d dos pontos turísticos), em ordem e sem buraco" % [r7.size(), cid.predio_info.size(), menos7, fechados_fora, pontos_fora])
+	ok(load("res://menu/salvamento.gd").MAPA_PREDIOS == 9, "MAPA_PREDIOS = 9 (saves da 1.15/1.16 e da 1.17..1.20 são convertidos)")
 	# um save da 1.16 com loot num prédio que ficou e num fechado que saiu: o primeiro muda de número, o segundo some
 	var Sv = load("res://menu/salvamento.gd")
 	var ficou := -1
