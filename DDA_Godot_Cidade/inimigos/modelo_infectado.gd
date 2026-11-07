@@ -1,0 +1,396 @@
+extends Node3D
+# MODELO DO INFECTADO: manequim de proporção humana (low poly) da "Universal Animation Library" 1 e 2 do
+# QUATERNIUS (CC0), convertido para o jogo por ferramentas/preparar_infectados.gd:
+#   - homens e mulheres pintados por região (cor por vértice): pele de infectado, camisa (manga curta ou
+#     comprida), calça ou bermuda, sapato, cabelo (ou careca), olhos fundos, boca suja, roupa rasgada e sangue;
+#   - malha simplificada (~4.700 vértices, 1 chamada de desenho por infectado), 4 ossos por vértice.
+# Ficam em inimigos/infectados/homem_*.scn e mulher_*.scn; as animações (o esqueleto é o mesmo para todos)
+# em inimigos/infectados/animacoes.res:
+#   andar / parado / ataque (arranhar) = animações de ZUMBI da biblioteca 2 · correr / morte / golpe = da 1.
+# Por cima da animação: cabeça torta e, correndo, braços para a frente (jeito de infectado).
+# Mesma interface do modelo antigo (o antigo inimigos/modelo_vago.gd, apagado na 0.63):
+#   montar(semente) · atualizar(dt, vel) · atacar() · levar_golpe(forca, lado) · morrer(para_tras) · pos_cabeca()
+# 0.89 (estilo Project Zomboid): cair() (derrubado: cai e fica no chão) · deitado() (fingindo de morto, já no chão)
+#   levantar() (LayToIdle da UAL2: levanta do chão) · rastejante = true (anda de bruços: Swim_Fwd da UAL1 no chão)
+# A frente é -Z (igual à Godot). Altura ~1,75 m.
+# 1.00 · MUTADO (lore, Bíblia 2.7: "braços longos demais, articulações no lugar errado, pele rachada como barro
+#   seco, veios negros que pulsam, unhas como garras"): virar_mutado() troca o material pelo SHADER_MUTADO (pele
+#   cinza de barro rachada e veios escuros pulsando, desenhados na posição de descanso de cada vértice: não
+#   "escorrem" com a animação), alonga os antebraços, entorta a cabeça e deixa os braços sempre meio à frente.
+# 1.08 · SOLDADO INFECTADO: farda camuflada, coturno e capacete (inimigos/infectados/soldado_*.scn, feitos por
+#   ferramentas/preparar_soldados.gd a partir de 3 homens; o capacete faz parte da malha: 1 chamada de desenho). Sai quando a SEMENTE é de soldado (>= SOLDADO_BASE:
+#   semente_soldado()), então a rede não precisa mandar mais nada (a semente já vai no pacote do infectado).
+# Mexa AQUI para: quais tipos aparecem e quanto (TIPOS), altura e velocidade das animações.
+
+const PASTA := "res://inimigos/infectados/"
+# [arquivo, peso no sorteio]
+const TIPOS := [["homem_0", 1.0], ["homem_1", 1.0], ["homem_2", 1.0], ["homem_3", 1.0], ["homem_4", 1.0],
+	["homem_5", 1.0], ["homem_6", 1.0], ["homem_7", 1.0], ["mulher_0", 1.0], ["mulher_1", 1.0],
+	["mulher_2", 1.0], ["mulher_3", 1.0]]
+const SOLDADOS := ["soldado_0", "soldado_1", "soldado_2"]      # 1.08
+const SOLDADO_BASE := 16000000         # sementes daqui até 16.777.215 = soldado (cabem exatas no float da rede)
+const ALTURA_ORIGINAL := 1.83          # altura do manequim (m)
+const ALTURA := 1.75
+const VEL_ANDAR_ANIM := 0.9            # m/s em que a animação de andar (zumbi) não "patina"
+const VEL_CORRER_ANIM := 5.0           # idem para a de correr
+const DUR_ATAQUE := 0.95
+const VEL_RASTEJAR_ANIM := 0.3         # 0.89: m/s em que o rastejar casa com o chão
+const DUR_LEVANTAR := 1.5              # 0.89: duração da animação de levantar do chão
+# 0.61 · JEITO DE ANDAR de cada infectado (captura real da CMU, ferramentas/retarget_cmu.gd ALVO=infectados):
+# [animação, velocidade em que os pés casam com o chão (m/s), peso no sorteio]. O infectado anda à toa mais devagar
+# ou mais depressa conforme o jeito dele (fator_vel(), usado em inimigos/vago.gd).
+const ESTILOS := [["andar", VEL_ANDAR_ANIM, 2.0], ["andar_zumbi", 0.42, 1.5], ["andar_zumbi_b", 0.57, 1.5],
+	["andar_marcha", 0.87, 1.0], ["andar_frank", 0.5, 1.0], ["andar_ferido", 0.52, 1.0], ["andar_velho", 0.38, 0.7]]
+
+static var _cenas := {}
+static var _anims: AnimationLibrary = null
+static var _mat: StandardMaterial3D = null
+static var _sombra_malha: PlaneMesh = null
+
+var sombra: MeshInstance3D
+var morto := false
+var corpo: Node3D                      # o personagem (cena convertida)
+var esqueleto: Skeleton3D
+var anim: AnimationPlayer
+var _osso := {}                        # nome -> índice
+var _atual := ""
+var _t := 0.0
+var _at := -1.0
+var _fl := 0.0
+var _corr := 0.0
+var _cab_incl := 0.0
+var _mt := 0.0
+var caido := false                     # 0.89: no chão (derrubado ou fingindo de morto)
+var levantando := 0.0                  # 0.89: > 0 = levantando do chão (segundos que faltam)
+var rastejante := false                # 0.89: rastejante (perna ruim): anda de bruços
+var _y_rastejar := 0.0                 # quanto o corpo desce para o rastejar (a animação é de nado, no ar)
+var _andar := "andar"                  # animação de andar deste infectado (ESTILOS)
+var _ref_andar := VEL_ANDAR_ANIM
+var mutado := false                    # 1.00: mutado (virar_mutado)
+static var _mat_mutado: ShaderMaterial = null
+static var _malhas_mutado := {}         # malha original -> cópia com a posição de descanso no UV/UV2
+const SHADER_MUTADO := """
+shader_type spatial;
+uniform vec3 tinta : source_color = vec3(0.6, 0.53, 0.48);
+float hash3(vec3 p) {
+	p = fract(p * 0.3183099 + 0.1);
+	p *= 17.0;
+	return fract(p.x * p.y * p.z * (p.x + p.y + p.z));
+}
+float ruido(vec3 x) {
+	vec3 i = floor(x);
+	vec3 f = fract(x);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(mix(hash3(i), hash3(i + vec3(1, 0, 0)), f.x), mix(hash3(i + vec3(0, 1, 0)), hash3(i + vec3(1, 1, 0)), f.x), f.y),
+		mix(mix(hash3(i + vec3(0, 0, 1)), hash3(i + vec3(1, 0, 1)), f.x), mix(hash3(i + vec3(0, 1, 1)), hash3(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+}
+void fragment() {
+	vec3 p = vec3(UV.x, UV.y, UV2.x);       // posição de descanso do vértice
+	float rach = 1.0 - smoothstep(0.0, 0.07, abs(ruido(p * 16.0) - 0.5));      // barro seco rachado
+	float veia = 1.0 - smoothstep(0.0, 0.04, abs(ruido(p * 6.0 + 3.1) - 0.5)); // veios
+	float pulsa = 0.55 + 0.45 * sin(TIME * 3.5 + p.y * 6.0);
+	vec3 c = COLOR.rgb * tinta * (1.0 - 0.45 * rach);
+	ALBEDO = mix(c, vec3(0.015, 0.01, 0.012), veia * pulsa * 0.85);
+	ROUGHNESS = 0.95;
+}
+"""
+
+static func material_mutado() -> ShaderMaterial:
+	if _mat_mutado == null:
+		var sh := Shader.new()
+		sh.code = SHADER_MUTADO
+		_mat_mutado = ShaderMaterial.new()
+		_mat_mutado.shader = sh
+	return _mat_mutado
+
+# cópia da malha com a posição de descanso no UV (x, y) e no UV2 (z) (uma vez por malha)
+static func _malha_mutado(m: Mesh) -> Mesh:
+	if _malhas_mutado.has(m):
+		return _malhas_mutado[m]
+	var nova := ArrayMesh.new()
+	for s in m.get_surface_count():
+		var a := m.surface_get_arrays(s)
+		var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+		var uv := PackedVector2Array()
+		var uv2 := PackedVector2Array()
+		uv.resize(vs.size())
+		uv2.resize(vs.size())
+		for k in vs.size():
+			uv[k] = Vector2(vs[k].x, vs[k].y)
+			uv2[k] = Vector2(vs[k].z, 0.0)
+		a[Mesh.ARRAY_TEX_UV] = uv
+		a[Mesh.ARRAY_TEX_UV2] = uv2
+		nova.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, a)
+	_malhas_mutado[m] = nova
+	return nova
+
+func virar_mutado() -> void:
+	if mutado or corpo == null:
+		return
+	mutado = true
+	for mi in corpo.find_children("*", "MeshInstance3D", true, false):
+		(mi as MeshInstance3D).mesh = _malha_mutado((mi as MeshInstance3D).mesh)
+		mi.material_override = material_mutado()
+	corpo.scale *= 1.07
+	_cab_incl = 0.55 if _cab_incl >= 0.0 else -0.55
+	for nome in ["lowerarm_l", "lowerarm_r"]:
+		_osso[nome] = esqueleto.find_bone(nome)
+
+# 1.08: uma semente de SOLDADO (farda e capacete) · e se esta semente é de soldado
+static func semente_soldado() -> int:
+	return SOLDADO_BASE + randi() % 700000
+
+static func eh_soldado(semente: int) -> bool:
+	return semente >= SOLDADO_BASE
+
+func montar(semente: int) -> void:
+	var r := RandomNumberGenerator.new()
+	r.seed = semente
+	if _anims == null:
+		_anims = load(PASTA + "animacoes.res")
+		_mat = StandardMaterial3D.new()
+		_mat.vertex_color_use_as_albedo = true
+		_mat.roughness = 0.9
+	var total := 0.0
+	for t in TIPOS:
+		total += float(t[1])
+	var s := r.randf() * total
+	var arquivo: String = TIPOS[0][0]
+	for t in TIPOS:
+		s -= float(t[1])
+		if s <= 0.0:
+			arquivo = t[0]
+			break
+	if eh_soldado(semente):
+		arquivo = SOLDADOS[r.randi() % SOLDADOS.size()]          # 1.08
+	if not _cenas.has(arquivo):
+		_cenas[arquivo] = load(PASTA + arquivo + ".scn")
+	corpo = _cenas[arquivo].instantiate()
+	corpo.rotation.y = PI                                   # o manequim olha para +Z
+	corpo.scale = Vector3.ONE * (ALTURA / ALTURA_ORIGINAL) * r.randf_range(0.93, 1.06)
+	add_child(corpo)
+	esqueleto = corpo.find_child("Skeleton3D", true, false)
+	for mi in corpo.find_children("*", "MeshInstance3D", true, false):
+		mi.material_override = _mat
+		mi.visibility_range_end = 140.0
+	for nome in ["Head", "upperarm_l", "upperarm_r"]:
+		_osso[nome] = esqueleto.find_bone(nome)
+	anim = AnimationPlayer.new()
+	corpo.add_child(anim)
+	anim.root_node = NodePath("..")
+	anim.add_animation_library("", _anims)
+	anim.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+	_cab_incl = r.randf_range(-0.3, 0.3)
+	var tot := 0.0
+	for e in ESTILOS:
+		if _anims.has_animation(e[0]):
+			tot += float(e[2])
+	var sorteio := r.randf() * tot
+	for e in ESTILOS:
+		if not _anims.has_animation(e[0]):
+			continue
+		sorteio -= float(e[2])
+		if sorteio <= 0.0:
+			_andar = e[0]
+			_ref_andar = float(e[1])
+			break
+	_tocar("parado", 0.0)
+	anim.seek(r.randf() * 3.0, true)
+	# sombra falsa (barata, ajuda a "assentar" o corpo no chão)
+	if _sombra_malha == null:
+		_sombra_malha = PlaneMesh.new()
+		_sombra_malha.size = Vector2(1.1, 1.1)
+		var sm := StandardMaterial3D.new()
+		var gt := GradientTexture2D.new()
+		var gr := Gradient.new()
+		gr.set_color(0, Color(0, 0, 0, 0.5))
+		gr.set_color(1, Color(0, 0, 0, 0))
+		gt.gradient = gr
+		gt.fill = GradientTexture2D.FILL_RADIAL
+		gt.fill_from = Vector2(0.5, 0.5)
+		gt.fill_to = Vector2(1.0, 0.5)
+		gt.width = 64
+		gt.height = 64
+		sm.albedo_texture = gt
+		sm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		sm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		sm.depth_draw_mode = BaseMaterial3D.DEPTH_DRAW_DISABLED
+		_sombra_malha.material = sm
+	sombra = MeshInstance3D.new()
+	sombra.mesh = _sombra_malha
+	sombra.position.y = 0.04
+	sombra.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	sombra.visibility_range_end = 60.0
+	add_child(sombra)
+	atualizar(0.0, 0.0)
+
+# quanto este infectado anda à toa em relação ao normal (jeito de andar mais lento ou mais rápido)
+func fator_vel() -> float:
+	return clampf(_ref_andar / 0.7, 0.6, 1.2)
+
+# posição (global) do centro da cabeça: a colisão da cabeça (tiro x3) acompanha a animação
+func pos_cabeca() -> Vector3:
+	var i: int = _osso.get("Head", -1)
+	if i < 0:
+		return global_position + Vector3(0, 1.6, 0)
+	if _cabeca_ok:                                      # já calculada na postura (sem recalcular o esqueleto)
+		return esqueleto.global_transform * _cabeca_g.origin + (esqueleto.global_transform.basis * _cabeca_g.basis.y).normalized() * 0.1
+	# o osso "Head" fica na base do crânio; o centro fica ~0,1 m acima (na direção do osso)
+	var g := esqueleto.global_transform * esqueleto.get_bone_global_pose(i)
+	return g.origin + g.basis.y.normalized() * 0.1
+
+# ---------- comandos da animação ----------
+func atacar() -> void:
+	_at = 0.0
+	_tocar("ataque", 0.08, true)
+
+func levar_golpe(forca: float, _lado: float = 0.0) -> void:
+	if morto:
+		return
+	_fl = clampf(_fl + forca, 0.0, 1.3)
+	if _at < 0.0:
+		_tocar("golpe", 0.05, true)
+
+# 0.89 · DERRUBADO: cai (mesma queda da morte) e fica no chão até levantar()
+func cair() -> void:
+	if morto:
+		return
+	caido = true
+	levantando = 0.0
+	_at = -1.0
+	_tocar("morte", 0.1, true)
+
+# 0.89 · FINGINDO DE MORTO: já deitado no chão (último quadro da queda), sem animar a queda
+func deitado() -> void:
+	caido = true
+	levantando = 0.0
+	_tocar("morte", 0.0, true)
+	anim.seek(anim.current_animation_length - 0.01, true)
+
+# 0.89: levanta do chão (deitado de costas, como a queda termina); devolve quanto tempo leva
+func levantar() -> float:
+	if morto or not caido:
+		return 0.0
+	caido = false
+	levantando = DUR_LEVANTAR
+	_tocar("levantar", 0.25, true)
+	return DUR_LEVANTAR
+
+func morrer(_para_tras: bool) -> void:
+	if morto:
+		return
+	morto = true
+	_mt = 0.0
+	_tocar("morte", 0.1, true)
+
+func _tocar(nome: String, mistura: float, do_inicio := false) -> void:
+	if nome == _atual and not do_inicio:
+		return
+	_atual = nome
+	anim.play(nome, mistura)
+	if do_inicio:
+		anim.seek(0.0, false)
+
+# ---------- animação (chamar todo quadro, ou a cada poucos quadros de longe) ----------
+func atualizar(dt: float, vel: float) -> void:
+	_t += dt
+	if morto:
+		_mt += dt
+		if _mt < 4.0:                                   # depois fica parado no chão (a animação acabou)
+			anim.speed_scale = 1.0
+			anim.advance(dt)
+		return
+	# 0.89: no chão (derrubado / fingindo de morto): a queda termina e fica parado ali
+	if caido:
+		anim.speed_scale = 1.0
+		if anim.is_playing():
+			anim.advance(dt)
+		return
+	if levantando > 0.0:
+		levantando -= dt
+		anim.speed_scale = 1.0
+		anim.advance(dt)
+		return
+	if rastejante:
+		_rastejar(dt, vel)
+		return
+	_corr = lerpf(_corr, clampf((vel - 2.2) / 2.0, 0.0, 1.0), minf(1.0, dt * 5.0))
+	if _at >= 0.0:
+		_at += dt
+		if _at > DUR_ATAQUE:
+			_at = -1.0
+	_fl = maxf(0.0, _fl - dt * 2.0)
+	if _at < 0.0 and not (_atual == "golpe" and anim.is_playing()):
+		if vel > 2.2:
+			_tocar("correr", 0.25)
+		elif vel > 0.15:
+			_tocar(_andar, 0.3)
+		else:
+			_tocar("parado", 0.35)
+	if _atual == _andar:
+		anim.speed_scale = clampf(vel / _ref_andar, 0.5, 3.0)       # 0.89: o "rápido" arrasta os pés depressa
+	elif _atual == "correr":
+		anim.speed_scale = clampf(vel / VEL_CORRER_ANIM, 0.75, 1.3)
+	else:
+		anim.speed_scale = 1.0
+	_cabeca_ok = false
+	anim.advance(dt)
+	_postura()
+
+# 0.89 · RASTEJANTE: de bruços no chão. A animação (nado da UAL1) fica no ar: o corpo desce até o peito
+# encostar no chão (medido uma vez pelo osso da bacia).
+func _rastejar(dt: float, vel: float) -> void:
+	if _atual != "rastejar":
+		_tocar("rastejar", 0.0)
+		anim.seek(0.0, true)
+		anim.advance(0.0)
+		var i: int = _osso.get("pelvis", -1)
+		if i >= 0:
+			var bacia := (esqueleto.global_transform * esqueleto.get_bone_global_pose(i)).origin
+			_y_rastejar = maxf(0.0, (bacia - global_position).y - 0.16)
+	corpo.position.y = lerpf(corpo.position.y, -_y_rastejar, minf(1.0, dt * 6.0))
+	anim.speed_scale = clampf(vel / VEL_RASTEJAR_ANIM, 0.15, 1.6)
+	anim.advance(dt)
+
+# jeito de infectado por cima da animação: cabeça torta e, correndo, braços esticados para a frente.
+# OTIMIZADO: lê primeiro as poses globais dos PAIS (o esqueleto é recalculado uma vez só) e depois grava as
+# rotações locais (cabeça e braços não são pais uns dos outros, então a ordem não muda o resultado).
+# A pose global da cabeça fica guardada para pos_cabeca() (antes recalculava o esqueleto de novo).
+var _cabeca_ok := false
+var _cabeca_g := Transform3D.IDENTITY
+
+func _postura() -> void:
+	var lista := [["Head", Vector3(0, 0, 1), _cab_incl]]
+	if mutado and _at < 0.0:
+		# 1.00: mutado: braços sempre meio à frente (garras prontas), mais ainda correndo
+		lista.append(["upperarm_l", Vector3.RIGHT, -0.55 - 0.7 * _corr])
+		lista.append(["upperarm_r", Vector3.RIGHT, -0.5 - 0.7 * _corr])
+	elif _corr > 0.05 and _at < 0.0:
+		lista.append(["upperarm_l", Vector3.RIGHT, -1.0 * _corr])
+		lista.append(["upperarm_r", Vector3.RIGHT, -0.9 * _corr])
+	if mutado:
+		for nome in ["lowerarm_l", "lowerarm_r"]:          # braços longos demais
+			var b: int = _osso.get(nome, -1)
+			if b >= 0:
+				esqueleto.set_bone_pose_scale(b, Vector3(1.0, 1.35, 1.0))
+	var feitos := []
+	for x in lista:                                     # 1) só leituras
+		var i: int = _osso.get(x[0], -1)
+		if i < 0:
+			continue
+		var pai := esqueleto.get_bone_parent(i)
+		var gp := esqueleto.get_bone_global_pose(pai) if pai >= 0 else Transform3D.IDENTITY
+		feitos.append([i, gp, x[1], x[2]])
+	for f in feitos:                                    # 2) só escritas
+		var i: int = f[0]
+		var gp: Transform3D = f[1]
+		var ang: float = f[3]
+		var local := Transform3D(Basis(esqueleto.get_bone_pose_rotation(i)), esqueleto.get_bone_pose_position(i))
+		if absf(ang) >= 0.001:
+			# girar em volta de um eixo do espaço do esqueleto = girar em volta do mesmo eixo visto pelo pai
+			var eixo_pai: Vector3 = (gp.basis.orthonormalized().inverse() * (f[2] as Vector3)).normalized()
+			local.basis = Basis(eixo_pai, ang) * local.basis
+			esqueleto.set_bone_pose_rotation(i, local.basis.get_rotation_quaternion())
+		if i == int(_osso.get("Head", -1)):
+			_cabeca_g = gp * local
+			_cabeca_ok = true

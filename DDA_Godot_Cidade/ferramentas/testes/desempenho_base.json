@@ -1,0 +1,50 @@
+{
+	"Central Park (Bethesda)": {
+		"chamadas": 277,
+		"nos": 19079,
+		"objetos": 316,
+		"processando": 51,
+		"quadro_ms": 139.5,
+		"triangulos": 295766
+	},
+	"Central Park (The Mall)": {
+		"chamadas": 306,
+		"nos": 19711,
+		"objetos": 346,
+		"processando": 52,
+		"quadro_ms": 198.2,
+		"triangulos": 582971
+	},
+	"base militar (início)": {
+		"chamadas": 219,
+		"nos": 10301,
+		"objetos": 257,
+		"processando": 52,
+		"quadro_ms": 109.1,
+		"triangulos": 174590
+	},
+	"centro da cidade": {
+		"chamadas": 222,
+		"nos": 17485,
+		"objetos": 263,
+		"processando": 51,
+		"quadro_ms": 112.9,
+		"triangulos": 192209
+	},
+	"centro olhando a avenida": {
+		"chamadas": 267,
+		"nos": 17485,
+		"objetos": 309,
+		"processando": 51,
+		"quadro_ms": 112.8,
+		"triangulos": 242160
+	},
+	"olhando a Ponte do Brooklyn": {
+		"chamadas": 209,
+		"nos": 15341,
+		"objetos": 250,
+		"processando": 51,
+		"quadro_ms": 104.8,
+		"triangulos": 230486
+	}
+}

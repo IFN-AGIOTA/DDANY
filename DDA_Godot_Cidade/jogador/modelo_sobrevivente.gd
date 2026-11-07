@@ -1,0 +1,972 @@
+extends Node3D
+# SOBREVIVENTE: o personagem do jogador.
+# Corpo: homem dos "Universal Base Characters" do Quaternius (CC0): pele com textura, olhos, sobrancelhas, cabelos e
+# barba, preparado por ferramentas/preparar_personagem.gd para jogador/sobrevivente/corpo.scn (as animações também
+# foram convertidas para o esqueleto dele).
+# Animações (jogador/sobrevivente/animacoes.res, mesmo esqueleto): parado, andar, correr, pular, cair, mirar,
+# atirar, morrer, agachado, andar agachado (+ soco, golpe, rolar, pegar... para usar depois).
+# O jogador/animador_modelo.gd escolhe a animação pelo estado (nomes exatos em NOMES_ANIM).
+#
+# 1.11 · ROUPAS 3D DE VERDADE: as roupas do MakeHuman, ajustadas fora do jogo ao corpo masculino e ao feminino
+# (ferramentas/roupas_mh/ + ferramentas/preparar_roupas.gd -> jogador/roupas/<peça>_<m|f>.res; qual item usa qual
+# peça: jogador/roupas_tabela.gd). Cada peça é uma malha presa ao mesmo esqueleto (acompanha as animações) e traz a
+# lista dos vértices do corpo que ela cobre: essa pele some (textura "mascara" lida pelo VERTEX_ID no shader), então
+# o corpo não atravessa a roupa e nada fica "cortado" à vista. A calça entra na bota (jogador/roupa.gdshader corte_y).
+# Encaixes com roupa 3D: calça, calçado, camisa (macacão = corpo inteiro), colete, luvas, rosto e cabeça.
+# (1.10: as "cascas" antigas continuam DESLIGADAS, ver ROUPA_NO_CORPO; o texto abaixo é de como elas funcionavam.)
+# ROUPA DE VERDADE: cada vértice do corpo sabe a que PARTE pertence (rosto, pescoço, tronco, braço, antebraço, mão,
+# quadril, coxa, canela, pé). Cada roupa é uma "casca" feita dessas partes, um pouco por fora do corpo (acompanha a
+# animação), com a cor do item; a pele que fica embaixo é escondida (não atravessa a roupa).
+# vestir(inventario) lê o que está equipado (cabeça, camisa, colete, calça, mochila):
+#   camisa -> camiseta (manga curta), moletom (manga comprida), jaqueta/capa (manga comprida, mais grossa)
+#   calça -> calça (quadril até o tornozelo) · sem camisa: regata · sem calça: short · botas sempre
+#   cabeça -> topo da cabeça (cabelo coberto) + o MODELO 3D do capacete/boné/gorro/lanterna
+#   colete -> "casca" feita do próprio tronco do corpo, um pouco maior (acompanha a animação), com bolsos
+#   mochila/pochete -> MODELO 3D nas costas/cintura (equipamentos/modelos_equip.gd)
+#   arma do OMBRO (fuzil, espingarda...) aparece pendurada nas costas e a do COLDRE na cintura, quando
+#   não estão na mão
+# Sem nada: regata clara, short escuro e botas. Para um item novo aparecer, coloque a cor dele nas tabelas.
+# Chapéu/capacete/gorro escondem o cabelo (a barba fica). O penteado e a barba vêm da aparência (1.10).
+# A arma da mão fica presa ao osso da MÃO DIREITA (acompanha as animações).
+# MUTADO (0.94, definir_mutacao): pele escura e acinzentada com VEIOS VERMELHOS que pulsam, olhos amarelados e o
+# corpo CURVADO (jogador/camada_mutado.gd). Vale para o jogador e para a cópia dos amigos (rede/jogador_remoto.gd).
+# 1.10 · HOMEM OU MULHER (aparencia, escolhida no PERFIL: menu/tela_personagem.gd; guardada em Config "aparencia"):
+# o corpo de MULHER é do mesmo pack (preparado por ferramentas/preparar_personagem_f.gd: corpo_f.scn + animacoes_f.res,
+# mesmo esqueleto e as mesmas partes do corpo, então a roupa, o colete e as peças funcionam igual). Também escolhe o
+# TOM DA PELE (PELES), o CABELO (os 5 penteados do pack ou careca), a BARBA (só homem) e a COR DO CABELO.
+# Quem cria o modelo põe a aparência ANTES de add_child (m.aparencia = {...}); vazio = o homem de sempre.
+# Na rede a aparência vai junto no "olá" (rede/rede.gd), e a cópia do amigo (rede/jogador_remoto.gd) fica igual.
+# Mexa AQUI para: cores da pele/cabelo/roupas, tabelas de roupas e onde a arma fica.
+
+const Malhas := preload("res://mundo/malhas.gd")
+const Equip := preload("res://equipamentos/modelos_equip.gd")
+const ModelosArmas := preload("res://armas/modelos_armas.gd")
+const IkFuzil := preload("res://jogador/ik_fuzil.gd")
+const CamadaAcao := preload("res://jogador/camada_acao.gd")
+const CamadaPostura := preload("res://jogador/camada_postura.gd")
+const CamadaMira := preload("res://jogador/camada_mira.gd")
+const CamadaMutado := preload("res://jogador/camada_mutado.gd")
+const CamadaInercia := preload("res://jogador/camada_inercia.gd")          # 1.12
+const CamadaOrientacao := preload("res://jogador/camada_orientacao.gd")    # 1.12
+const MiraFerro := preload("res://armas/mira_ferro.gd")
+const CabecaOculta := preload("res://jogador/cabeca_oculta.gd")
+const Pegada := preload("res://jogador/pegada.gd")            # 1.14.2: como cada mão segura cada arma
+const CamadaDedos := preload("res://jogador/camada_dedos.gd")  # 1.14.2: a mão fecha em volta do que segura
+const EmendarAnimacoes := preload("res://jogador/emendar_animacoes.gd")   # 1.14.5: animações em ciclo sem pulo
+const ModelosItens := preload("res://inventario/modelos_itens.gd")
+const RoupasTabela := preload("res://jogador/roupas_tabela.gd")
+const Itens := preload("res://inventario/itens.gd")
+const PASTA_ROUPAS := "res://jogador/roupas/"
+# 1.11: onde cada roupa 3D fica (ordem = de dentro para fora)
+const SLOTS_VISUAIS := ["calca", "pes", "camisa", "colete", "luvas", "rosto", "cabeca"]
+const PASTA := "res://jogador/sobrevivente/"
+const NOMES_ANIM := {"parado": "parado", "andar": "andar", "correr": "correr", "pular": "pular", "cair": "cair",
+	"mirar": "mirar", "atirar": "atirar", "morrer": "morrer", "agachado": "agachado", "andar_agachado": "andar_agachado"}
+
+enum { ROSTO, CABELO, PESCOCO, TRONCO, BRACO, ANTEBRACO, MAO, QUADRIL, COXA, CANELA, PE, OLHOS }
+# roupa -> [partes do corpo, grossura (m)]
+const ROUPAS := {"regata": [[TRONCO], 0.006], "camiseta": [[TRONCO, BRACO], 0.007], "manga_longa": [[TRONCO, BRACO, ANTEBRACO], 0.009],
+	"jaqueta": [[TRONCO, BRACO, ANTEBRACO], 0.022], "short": [[QUADRIL, COXA], 0.011], "calca": [[QUADRIL, COXA, CANELA], 0.013],
+	"botas": [[PE, CANELA], 0.011]}
+const TIPO_CAMISA := {"camiseta": "camiseta", "moletom": "manga_longa", "jaqueta": "jaqueta", "capa_chuva": "jaqueta"}
+# 1.10: ROUPA NO CORPO DESLIGADA (pedido): o personagem fica com o corpo ORIGINAL do pack (com a roupa de baixo da
+# textura), sem as "cascas" de camisa/calça/botas/colete (cortavam o corpo). Chapéu/capacete/gorro, mochila, pochete e
+# as armas continuam (são modelos 3D à parte). true = volta o sistema de roupas antigo (o código continua aqui).
+const ROUPA_NO_CORPO := false
+const PENTEADOS := ["Hair_SimpleParted", "Hair_Buzzed", "Hair_Beard", "Hair_Buns", "Hair_BuzzedFemale", "Hair_Long"]
+# 1.10 · APARÊNCIA
+const SEXOS := {"m": ["corpo.scn", "animacoes.res"], "f": ["corpo_f.scn", "animacoes_f.res"]}
+const CABELOS_ORDEM := ["Hair_Buzzed", "Hair_SimpleParted", "Hair_BuzzedFemale", "Hair_Buns", "Hair_Long", ""]
+const CABELOS_NOMES := {"Hair_Buzzed": "Raspado", "Hair_SimpleParted": "Repartido", "Hair_BuzzedFemale": "Curtinho",
+	"Hair_Buns": "Coque", "Hair_Long": "Comprido", "": "Careca"}
+# tom da pele: multiplica a textura (que é morena)
+const PELES := [["Clara", Color(1.26, 1.38, 1.52)], ["Morena clara", Color(1.14, 1.22, 1.30)], ["Morena", Color(1, 1, 1)],
+	["Parda", Color(0.78, 0.74, 0.72)], ["Negra", Color(0.52, 0.48, 0.47)]]
+# cor do cabelo, da barba e das sobrancelhas (multiplica a textura cinza)
+const CORES_CABELO := [["Castanho escuro", Color(0.32, 0.22, 0.15)], ["Preto", Color(0.10, 0.09, 0.085)],
+	["Castanho", Color(0.55, 0.37, 0.22)], ["Loiro", Color(1.15, 0.92, 0.55)], ["Ruivo", Color(0.85, 0.36, 0.15)],
+	["Grisalho", Color(0.86, 0.85, 0.83)], ["Branco", Color(1.9, 1.9, 1.95)]]     # 1.13: o Dominic (cabelo branco de nascença)
+const APARENCIA_PADRAO := {"sexo": "m", "pele": 2, "cabelo": "Hair_Buzzed", "barba": true, "cor": 0}
+const APARENCIA_PADRAO_F := {"sexo": "f", "pele": 2, "cabelo": "Hair_Long", "barba": false, "cor": 0}
+
+const PELE := Color(0.72, 0.55, 0.43)
+const CABELO_COR := Color(0.32, 0.22, 0.15)            # multiplica a textura cinza do cabelo (castanho escuro)
+const REGATA := Color(0.78, 0.76, 0.70)
+const SHORT := Color(0.18, 0.18, 0.20)
+const BOTAS := Color(0.16, 0.12, 0.09)
+# item -> [cor, manga comprida?]
+const CAMISAS := {"camiseta": [Color(0.32, 0.36, 0.30), false], "moletom": [Color(0.30, 0.30, 0.33), true],
+	"jaqueta": [Color(0.27, 0.31, 0.23), true], "capa_chuva": [Color(0.74, 0.60, 0.14), true]}
+const CALCAS := {"calca": Color(0.31, 0.33, 0.25), "jeans": Color(0.20, 0.26, 0.40)}
+const COLETES := {"colete": Color(0.27, 0.29, 0.22), "colete_policia": Color(0.11, 0.12, 0.15)}
+const CABECA := {"capacete": Color(0.25, 0.27, 0.22), "gorro": Color(0.14, 0.14, 0.17), "bone": Color(0.18, 0.24, 0.44)}
+
+# pele com textura; as partes cobertas pela roupa somem (esconde[parte] = 1)
+const SHADER := """
+shader_type spatial;
+uniform sampler2D pele : source_color, filter_linear_mipmap;
+uniform sampler2D normal_pele : hint_normal, filter_linear_mipmap;
+uniform sampler2D rugosidade : hint_default_white, filter_linear_mipmap;
+uniform float esconde[12];
+uniform sampler2D mascara : filter_nearest;   // 1.11: pele coberta pela roupa (1 texel por vértice do corpo)
+uniform bool usa_mascara = false;
+varying float coberto;
+uniform vec3 tom = vec3(1.0);       // 1.10: tom da pele (multiplica a textura)
+uniform float mutado = 0.0;         // 0.94: 0 = humano · 1 = mutado completo
+uniform vec3 cor_veio : source_color = vec3(0.55, 0.03, 0.03);
+varying flat float regiao;          // flat: cada triângulo pega UMA parte (sem faixas misturadas na divisa)
+void vertex() {
+	regiao = COLOR.r;
+	coberto = usa_mascara ? texelFetch(mascara, ivec2(VERTEX_ID % 256, VERTEX_ID / 256), 0).r : 0.0;
+}
+float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float ruido(vec2 p) {
+	vec2 i = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+void fragment() {
+	int r = clamp(int(regiao * 15.0 + 0.5), 0, 11);
+	if (esconde[r] > 0.5 || coberto > 0.5) { discard; }
+	vec3 c = clamp(texture(pele, UV).rgb * tom, 0.0, 1.0);
+	ROUGHNESS = texture(rugosidade, UV).r;
+	if (mutado > 0.001) {
+		// pele escura e sem vida + VEIOS (linhas finas onde o ruído passa pelo meio) que pulsam devagar
+		vec3 escura = c * vec3(0.36, 0.33, 0.34) + vec3(0.025, 0.02, 0.022);
+		float n = ruido(UV * 34.0) * 0.65 + ruido(UV * 90.0) * 0.35;
+		float veio = 1.0 - smoothstep(0.0, 0.035, abs(n - 0.5));
+		float pulso = 0.55 + 0.45 * sin(TIME * 2.2 + n * 9.0);
+		c = mix(c, escura, mutado);
+		c = mix(c, cor_veio * 0.6, veio * mutado * 0.9);
+		EMISSION = cor_veio * veio * mutado * pulso * 0.45;
+		ROUGHNESS = mix(ROUGHNESS, 0.55, mutado);
+	}
+	ALBEDO = c;
+	NORMAL_MAP = texture(normal_pele, UV).rgb;
+}
+"""
+
+static var _cenas := {}                 # sexo -> PackedScene
+static var _anims := {}                 # sexo -> AnimationLibrary
+static var _shader: Shader = null
+
+var aparencia := {}                     # 1.10: {"sexo", "pele", "cabelo", "barba", "cor"} (ponha antes de add_child)
+var _ap := {}                           # a aparência já conferida (normalizar)
+var _cobre_cabeca := false
+
+var corpo: Node3D
+var esqueleto: Skeleton3D
+var anim: AnimationPlayer
+var _mat: ShaderMaterial
+var _cores: Array = []
+var _ponto_arma: Node3D
+# FUZIS (m4, ak, espingarda, rifle de caça) são segurados com as DUAS mãos: o fuzil fica preso ao peito e
+# as mãos vão até ele por IK (cinemática inversa, jogador/ik_fuzil.gd). Arma baixa (diagonal na frente do corpo) ou no ombro mirando.
+const FUZIS := ["mp5", "m4", "ak", "espingarda", "rifle_caca"]
+var _ponto_fuzil: Node3D
+var camada                             # jogador/camada_acao.gd: ações só na parte de cima (recarregar andando...)
+var postura                            # jogador/camada_postura.gd: como segura a arma (pistola, faca, taco...)
+var mira_camada                        # jogador/camada_mira.gd: tronco inclina com a câmera ao mirar
+var mutado_camada                      # 0.94: jogador/camada_mutado.gd (corpo curvado do mutado)
+var inercia                            # 1.12: jogador/camada_inercia.gd (trocas de animação sem tranco)
+var orientacao                         # 1.12: jogador/camada_orientacao.gd (pernas na diagonal, inclinar na curva)
+var cabeca_oculta                      # 0.65: jogador/cabeca_oculta.gd (1ª pessoa: esconde a cabeça)
+var dedos                              # 1.14.2: jogador/camada_dedos.gd (dedos fechados na arma/item)
+var _osso_cabeca := -1
+var _ik: IkFuzil
+var _mira := 0.0
+var _item_mao: Node3D = null            # 0.61: item na mão durante comer/beber/remédio/curativo (segurar_item)
+var _t_item := 0.0
+var _id_item := ""                       # 1.01: qual item está na mão (manter_item não recria o mesmo)
+var _pecas := {}                       # chave ("cabeca", "mochila", "cinto", "ombro", "coldre") -> [id, nó]
+var _colete: MeshInstance3D
+var _colete_id := ""
+var _corpo_mi: MeshInstance3D
+var _roupas := {}                      # tipo -> MeshInstance3D (casca da roupa)
+static var _malhas_roupa := {}
+static var _mats_roupa := {}
+
+# 1.10: confere uma aparência que veio do Config ou da rede (valores fora da lista voltam ao padrão)
+static func normalizar(ap) -> Dictionary:
+	var d: Dictionary = ap if ap is Dictionary else {}
+	var sexo := str(d.get("sexo", "m"))
+	if not SEXOS.has(sexo):
+		sexo = "m"
+	var base: Dictionary = APARENCIA_PADRAO if sexo == "m" else APARENCIA_PADRAO_F
+	var cab := str(d.get("cabelo", base["cabelo"]))
+	if not CABELOS_NOMES.has(cab):
+		cab = base["cabelo"]
+	return {"sexo": sexo, "pele": clampi(int(d.get("pele", base["pele"])), 0, PELES.size() - 1), "cabelo": cab,
+		"barba": sexo == "m" and bool(d.get("barba", base["barba"])), "cor": clampi(int(d.get("cor", 0)), 0, CORES_CABELO.size() - 1)}
+
+func _ready() -> void:
+	_ap = normalizar(aparencia)
+	var sexo: String = _ap["sexo"]
+	if not _cenas.has(sexo):
+		_cenas[sexo] = load(PASTA + SEXOS[sexo][0])
+		_anims[sexo] = load(PASTA + SEXOS[sexo][1])
+		EmendarAnimacoes.consertar(_anims[sexo])      # 1.14.5: ciclos sem pulo (a mira com fuzil tremia)
+	if _shader == null:
+		_shader = Shader.new()
+		_shader.code = SHADER
+	corpo = _cenas[sexo].instantiate()
+	add_child(corpo)
+	esqueleto = corpo.find_child("Skeleton3D", true, false)
+	_mat = ShaderMaterial.new()
+	_mat.shader = _shader
+	_corpo_mi = esqueleto.get_node("Corpo") as MeshInstance3D
+	var mp: StandardMaterial3D = _corpo_mi.mesh.surface_get_material(0)
+	_mat.set_shader_parameter("pele", mp.albedo_texture)
+	_mat.set_shader_parameter("normal_pele", mp.normal_texture)
+	_mat.set_shader_parameter("rugosidade", mp.roughness_texture)
+	_corpo_mi.material_override = _mat
+	# cabelo, barba e sobrancelhas: a textura é cinza, a cor vem daqui
+	for c in PENTEADOS + ["Eyebrows"]:
+		var h := esqueleto.get_node_or_null(c) as MeshInstance3D
+		if h != null:
+			h.material_override = (h.mesh.surface_get_material(0) as StandardMaterial3D).duplicate()
+	_aplicar_aparencia()
+	for mi in corpo.find_children("*", "MeshInstance3D", true, false):
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	anim = AnimationPlayer.new()
+	anim.name = "AnimationPlayer"
+	corpo.add_child(anim)
+	anim.root_node = NodePath("..")
+	anim.add_animation_library("", _anims[sexo])
+	anim.play("parado")
+	_criar_ponto_arma()
+	_criar_ponto_fuzil()
+	vestir(null)
+
+# ---------- roupa ----------
+func vestir(inventario) -> void:
+	var slots: Dictionary = inventario.slots if inventario != null else {}
+	if ROUPA_NO_CORPO:
+		_vestir_roupas(slots)
+	# 1.11: roupas 3D de verdade (MakeHuman ajustado ao corpo) + a pele que elas cobrem some
+	var com_3d := _vestir_3d(slots)
+	# chapéu, capacete e gorro escondem o cabelo (a barba fica)
+	var cab = slots.get("cabeca")
+	_cobre_cabeca = cab != null and (cab.id in ["capacete", "gorro", "bone"] or bool(cab.def().get("cobre_cabelo", false)))
+	_mostrar_cabelo()
+	# peças 3D
+	_peca("cabeca", null if com_3d.has("cabeca") else slots.get("cabeca"))
+	_peca("mochila", slots.get("mochila"))
+	_peca("cinto", slots.get("cinto"))
+	var na_mao = slots.get("maos")
+	var ombro = slots.get("ombro")
+	var coldre = slots.get("coldre")
+	_arma_no_corpo("ombro", ombro if ombro != null and ombro != na_mao and ombro.eh_arma() else null, slots.get("mochila") != null)
+	_arma_no_corpo("coldre", coldre if coldre != null and coldre != na_mao and coldre.eh_arma() else null, false)
+
+# ---------- 1.11 · ROUPAS 3D ----------
+static var _malhas_3d := {}               # "peça_sexo" -> ArrayMesh (ou null se não existe)
+var _roupas_3d := {}                     # slot -> [peça, MeshInstance3D]
+var _mascara_img: Image
+var _mascara_tex: ImageTexture
+var _mascara_chave := ""
+
+static func malha_roupa(peca: String, sx: String) -> ArrayMesh:
+	var k := peca + "_" + sx
+	if not _malhas_3d.has(k):
+		var p := PASTA_ROUPAS + k + ".res"
+		_malhas_3d[k] = load(p) if ResourceLoader.exists(p) else null
+	return _malhas_3d[k]
+
+# devolve os slots que ganharam roupa 3D
+func _vestir_3d(slots: Dictionary) -> Dictionary:
+	var usar := {}
+	var cam = slots.get("camisa")
+	var inteira: bool = cam != null and bool(cam.def().get("corpo_inteiro", false)) and RoupasTabela.peca(cam.id, sexo()) != ""
+	for s in SLOTS_VISUAIS:
+		var it = slots.get(s)
+		if it == null or (s == "calca" and inteira):
+			continue
+		var p := RoupasTabela.peca(it.id, sexo())
+		if p != "" and malha_roupa(p, sexo()) != null:
+			usar[s] = p
+	var chave := ""
+	for s in SLOTS_VISUAIS:
+		var atual: Array = _roupas_3d.get(s, ["", null])
+		var quer: String = usar.get(s, "")
+		chave += quer + "|"
+		if atual[0] == quer:
+			continue
+		if atual[1] != null and is_instance_valid(atual[1]):
+			atual[1].queue_free()
+		_roupas_3d.erase(s)
+		if quer == "":
+			continue
+		var mi := MeshInstance3D.new()
+		mi.name = "Roupa3D_" + s
+		mi.mesh = malha_roupa(quer, sexo())
+		mi.skin = _corpo_mi.skin
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		esqueleto.add_child(mi)
+		mi.skeleton = NodePath("..")
+		_roupas_3d[s] = [quer, mi]
+	if chave != _mascara_chave:
+		_mascara_chave = chave
+		_atualizar_mascara(usar)
+		_materiais_3d(usar, inteira)
+	return usar
+
+# CAMADAS e CORTE (jogador/roupa.gdshader): cada peça ganha o material dela com
+#   corte_y: a calça (e as pernas do macacão) somem abaixo da boca do calçado (entram na bota)
+#   baixo:   a espessura das peças que estão POR BAIXO dela (camisa sobre a calça; colete sobre camisa e calça): ela
+#            se afasta da pele o necessário para ficar por fora (nada da de baixo atravessa)
+const DE_BAIXO := {"camisa": ["calca"], "colete": ["camisa", "calca"]}
+func _materiais_3d(usar: Dictionary, inteira: bool) -> void:
+	var corte := -10.0
+	if usar.has("pes"):
+		var mp := malha_roupa(usar["pes"], sexo())
+		if mp != null and mp.has_meta("y"):
+			corte = (mp.get_meta("y") as Vector2).y - 0.03
+	for s in _roupas_3d:
+		var mi: MeshInstance3D = _roupas_3d[s][1]
+		var params := {}
+		if corte > -5.0 and (s == "calca" or (s == "camisa" and inteira)):
+			params["corte_y"] = corte
+		var embaixo: Array = []
+		for b in DE_BAIXO.get(s, []):
+			if usar.has(b) and not (b == "calca" and inteira):
+				embaixo.append(usar[b])
+		if not embaixo.is_empty():
+			var t := _textura_camadas(embaixo)
+			if t != null:
+				params["baixo"] = t
+				params["usa_baixo"] = true
+		var base_m := mi.mesh.surface_get_material(0)
+		if params.is_empty() or not (base_m is ShaderMaterial):
+			mi.material_override = null
+			continue
+		var m: ShaderMaterial = base_m.duplicate()
+		for k in params:
+			m.set_shader_parameter(k, params[k])
+		mi.material_override = m
+
+# espessura das peças de baixo (o maior valor em cada vértice do corpo), 1 texel R8 por vértice
+static var _camadas_tex := {}
+func _textura_camadas(pecas: Array) -> ImageTexture:
+	var k := sexo() + ":" + ",".join(pecas)
+	if _camadas_tex.has(k):
+		return _camadas_tex[k]
+	var nv: int = _num_vertices_corpo()
+	var alt := int(ceil(nv / 256.0))
+	var dados := PackedByteArray()
+	dados.resize(256 * alt)
+	var tem := false
+	for p in pecas:
+		var m := malha_roupa(p, sexo())
+		if m == null or not m.has_meta("esp"):
+			continue
+		var e: PackedByteArray = m.get_meta("esp")
+		for i in mini(e.size(), dados.size()):
+			if e[i] > dados[i]:
+				dados[i] = e[i]
+				tem = true
+	var t: ImageTexture = ImageTexture.create_from_image(Image.create_from_data(256, alt, false, Image.FORMAT_R8, dados)) if tem else null
+	_camadas_tex[k] = t
+	return t
+
+func _num_vertices_corpo() -> int:
+	if _nv_corpo < 0:
+		_nv_corpo = (_corpo_mi.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array).size()
+	return _nv_corpo
+
+# pele coberta: 1 texel (R8) por vértice do corpo, 256 por linha (o shader lê pelo VERTEX_ID)
+func _atualizar_mascara(usar: Dictionary) -> void:
+	if usar.is_empty():
+		_mat.set_shader_parameter("usa_mascara", false)
+		return
+	var nv: int = _num_vertices_corpo()
+	var alt := int(ceil(nv / 256.0))
+	var dados := PackedByteArray()
+	dados.resize(256 * alt)
+	for s in usar:
+		var m := malha_roupa(usar[s], sexo())
+		if m != null and m.has_meta("esconde"):
+			for i in (m.get_meta("esconde") as PackedInt32Array):
+				if i < dados.size():
+					dados[i] = 255
+	_mascara_img = Image.create_from_data(256, alt, false, Image.FORMAT_R8, dados)
+	if _mascara_tex == null or _mascara_tex.get_size() != Vector2(256, alt):
+		_mascara_tex = ImageTexture.create_from_image(_mascara_img)
+	else:
+		_mascara_tex.update(_mascara_img)
+	_mat.set_shader_parameter("mascara", _mascara_tex)
+	_mat.set_shader_parameter("usa_mascara", true)
+var _nv_corpo := -1
+
+# (desligado na 1.10: ROUPA_NO_CORPO) camisa, calça e botas como cascas do corpo + o colete
+func _vestir_roupas(slots: Dictionary) -> void:
+	var usar := {}                                            # tipo de roupa -> cor
+	var it = slots.get("camisa")
+	if it != null and CAMISAS.has(it.id):
+		usar[TIPO_CAMISA.get(it.id, "camiseta")] = CAMISAS[it.id][0]
+	else:
+		usar["regata"] = REGATA
+	it = slots.get("calca")
+	if it != null and CALCAS.has(it.id):
+		usar["calca"] = CALCAS[it.id]
+	else:
+		usar["short"] = SHORT
+	usar["botas"] = BOTAS
+	var esconde: Array = []
+	esconde.resize(12)
+	esconde.fill(0.0)
+	for tipo in ROUPAS:
+		var vai: bool = usar.has(tipo)
+		if vai and not _roupas.has(tipo):
+			_roupas[tipo] = _criar_roupa(tipo)
+		if _roupas.has(tipo):
+			var mi: MeshInstance3D = _roupas[tipo]
+			mi.visible = vai
+			if vai:
+				mi.material_override = _mat_roupa(usar[tipo])
+				for reg in ROUPAS[tipo][0]:
+					esconde[reg] = 1.0
+	esconde[CANELA] = 1.0 if usar.has("calca") else 0.0   # com short a canela aparece (a bota cobre só embaixo)
+	_mat.set_shader_parameter("esconde", PackedFloat32Array(esconde))
+	var colete = slots.get("colete")
+	_vestir_colete(colete.id if colete != null and COLETES.has(colete.id) else "")
+
+# ---------- 1.10 · aparência ----------
+func cor_cabelo() -> Color:
+	return CORES_CABELO[int(_ap.get("cor", 0))][1]
+
+func _aplicar_aparencia() -> void:
+	_mat.set_shader_parameter("tom", PELES[int(_ap["pele"])][1])
+	for c in PENTEADOS + ["Eyebrows"]:
+		var h := esqueleto.get_node_or_null(c) as MeshInstance3D
+		if h != null and h.material_override is StandardMaterial3D:
+			(h.material_override as StandardMaterial3D).albedo_color = cor_cabelo()
+	_mostrar_cabelo()
+
+func _mostrar_cabelo() -> void:
+	for c in PENTEADOS:
+		var h := esqueleto.get_node_or_null(c) as Node3D
+		if h != null:
+			if c == "Hair_Beard":
+				h.visible = bool(_ap.get("barba", false))
+			else:
+				h.visible = c == _ap.get("cabelo", "") and not _cobre_cabeca
+
+# troca pele/cabelo/barba/cor na hora. Trocar o SEXO não dá (é outro corpo): devolve false e quem chamou cria outro
+func definir_aparencia(ap) -> bool:
+	var n := normalizar(ap)
+	if n["sexo"] != _ap.get("sexo", "m"):
+		return false
+	_ap = n
+	aparencia = n
+	_aplicar_aparencia()
+	return true
+
+func sexo() -> String:
+	return str(_ap.get("sexo", "m"))
+
+func _mat_roupa(c: Color) -> StandardMaterial3D:
+	var k := c.to_html()
+	if not _mats_roupa.has(k):
+		var m := StandardMaterial3D.new()
+		m.vertex_color_use_as_albedo = true
+		m.albedo_color = c
+		m.roughness = 0.92
+		m.cull_mode = BaseMaterial3D.CULL_DISABLED
+		_mats_roupa[k] = m
+	return _mats_roupa[k]
+
+# casca de uma roupa: as faces das partes do corpo, empurradas um pouco para fora, presas aos mesmos ossos
+func _criar_roupa(tipo: String) -> MeshInstance3D:
+	var k := sexo() + tipo                                   # 1.10: cada corpo tem a sua casca
+	if not _malhas_roupa.has(k):
+		_malhas_roupa[k] = _malha_roupa(tipo)
+	var mi := MeshInstance3D.new()
+	mi.name = "Roupa_" + tipo
+	mi.mesh = _malhas_roupa[k]
+	mi.skin = _corpo_mi.skin
+	esqueleto.add_child(mi)
+	mi.skeleton = NodePath("..")
+	return mi
+
+func _malha_roupa(tipo: String) -> ArrayMesh:
+	var a: Array = _corpo_mi.mesh.surface_get_arrays(0)
+	var V: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+	var N: PackedVector3Array = a[Mesh.ARRAY_NORMAL]
+	var C: PackedColorArray = a[Mesh.ARRAY_COLOR]
+	var B: PackedInt32Array = a[Mesh.ARRAY_BONES]
+	var W: PackedFloat32Array = a[Mesh.ARRAY_WEIGHTS]
+	var I: PackedInt32Array = a[Mesh.ARRAY_INDEX]
+	var nb := W.size() / V.size()
+	var regs: Array = ROUPAS[tipo][0]
+	var grosso: float = ROUPAS[tipo][1]
+	# botas: o pé e só a parte de baixo da canela
+	var y_tornozelo := -1e9
+	if tipo == "botas":
+		for i in V.size():
+			if int(C[i].r * 15.0 + 0.5) == PE:
+				y_tornozelo = maxf(y_tornozelo, V[i].y)
+	var novo := {}
+	var V2 := PackedVector3Array()
+	var N2 := PackedVector3Array()
+	var C2 := PackedColorArray()
+	var B2 := PackedInt32Array()
+	var W2 := PackedFloat32Array()
+	var I2 := PackedInt32Array()
+	for t in range(0, I.size(), 3):
+		var ok := true
+		for j in 3:
+			var vi: int = I[t + j]
+			var rg := int(C[vi].r * 15.0 + 0.5)
+			if not regs.has(rg):
+				ok = false
+			elif tipo == "botas" and rg == CANELA and V[vi].y > y_tornozelo + 0.1:
+				ok = false
+		if not ok:
+			continue
+		for j in 3:
+			var vi: int = I[t + j]
+			if not novo.has(vi):
+				novo[vi] = V2.size()
+				var g := grosso * (1.4 if tipo == "botas" and V[vi].y < 0.04 else 1.0)
+				V2.append(V[vi] + N[vi] * g)
+				N2.append(N[vi])
+				var v := 0.86 + 0.28 * C[vi].g
+				C2.append(Color(v, v, v))
+				for k in nb:
+					B2.append(B[vi * nb + k])
+					W2.append(W[vi * nb + k])
+			I2.append(novo[vi])
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = V2
+	arr[Mesh.ARRAY_NORMAL] = N2
+	arr[Mesh.ARRAY_COLOR] = C2
+	arr[Mesh.ARRAY_BONES] = B2
+	arr[Mesh.ARRAY_WEIGHTS] = W2
+	arr[Mesh.ARRAY_INDEX] = I2
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS if nb == 8 else 0)
+	return m
+
+# ---------- peças 3D presas aos ossos ----------
+func _peca(chave: String, item) -> void:
+	var id: String = item.id if item != null else ""
+	var atual: Array = _pecas.get(chave, ["", null])
+	if atual[0] == id:
+		return
+	if atual[1] != null and is_instance_valid(atual[1]):
+		atual[1].queue_free()
+	_pecas[chave] = ["", null]
+	if id == "" or not Equip.tem(id):
+		return
+	var mi := Equip.instancia(id)
+	if mi == null:
+		return
+	var enc: Array = Equip.ENCAIXE[id]
+	_anexo(enc[0]).add_child(mi)
+	mi.transform = _no_osso(enc[0], Transform3D(Basis.from_euler(enc[2] * PI / 180.0).scaled(Vector3.ONE * enc[3]), enc[1]))
+	_pecas[chave] = [id, mi]
+
+# arma pendurada: ombro = nas costas, na diagonal (por cima da mochila) · coldre = na cintura, cano para baixo
+func _arma_no_corpo(chave: String, item, com_mochila: bool) -> void:
+	var id: String = item.def().get("arma", "") if item != null else ""
+	var atual: Array = _pecas.get(chave, ["", null])
+	if atual[0] == id + str(com_mochila):
+		return
+	if atual[1] != null and is_instance_valid(atual[1]):
+		atual[1].queue_free()
+	_pecas[chave] = ["", null]
+	if id == "":
+		return
+	var n := ModelosArmas.construir(id)
+	for nome in ["Cano", "Acc_cano", "Acc_mira"]:
+		var x := n.get_node_or_null(nome)
+		if x != null:
+			x.visible = nome == "Cano"
+	var dir := 1.0 if esqueleto.get_bone_global_rest(esqueleto.find_bone("upperarm_r")).origin.x > 0.0 else -1.0
+	var osso := "spine_03" if chave == "ombro" else "pelvis"
+	var t: Transform3D
+	if chave == "ombro":
+		var z := Vector3(-0.45 * dir, 1.0, 0.0).normalized()        # cano para cima, na diagonal
+		var x := Vector3(0, 0, -1)                                  # o lado da arma virado para trás
+		t = Transform3D(Basis(x, z.cross(x), z), Vector3(0.0, -0.12, -0.3 if com_mochila else -0.16))
+	else:
+		var z := Vector3(0, -1, 0.1).normalized()                   # cano para baixo
+		var x := Vector3(dir, 0, 0)
+		t = Transform3D(Basis(x, z.cross(x), z), Vector3(dir * 0.19, 0.0, 0.03))
+	_anexo(osso).add_child(n)
+	n.transform = _no_osso(osso, t)
+	_pecas[chave] = [id + str(com_mochila), n]
+
+# COLETE: "casca" do tronco do próprio corpo, empurrada para fora, presa aos mesmos ossos (deforma junto)
+static var _cascas := {}
+func _vestir_colete(id: String) -> void:
+	if id == _colete_id:
+		return
+	_colete_id = id
+	if _colete != null:
+		_colete.queue_free()
+		_colete = null
+	if id == "":
+		return
+	var k := sexo() + id
+	if not _cascas.has(k):
+		_cascas[k] = _fazer_casca(id)
+	var corpo_mi: MeshInstance3D = _corpo_mi
+	_colete = MeshInstance3D.new()
+	_colete.name = "Colete"
+	_colete.mesh = _cascas[k]
+	_colete.skin = corpo_mi.skin
+	esqueleto.add_child(_colete)
+	_colete.skeleton = NodePath("..")
+
+func _fazer_casca(id: String) -> ArrayMesh:
+	var corpo_mi: MeshInstance3D = _corpo_mi
+	var a: Array = corpo_mi.mesh.surface_get_arrays(0)
+	var V: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+	var N: PackedVector3Array = a[Mesh.ARRAY_NORMAL]
+	var C: PackedColorArray = a[Mesh.ARRAY_COLOR]
+	var B: PackedInt32Array = a[Mesh.ARRAY_BONES]
+	var W: PackedFloat32Array = a[Mesh.ARRAY_WEIGHTS]
+	var I: PackedInt32Array = a[Mesh.ARRAY_INDEX]
+	var nb := W.size() / V.size()
+	var base: Color = COLETES[id]
+	var grosso := 0.03 if id == "colete_policia" else 0.026
+	var novo := {}
+	var V2 := PackedVector3Array()
+	var N2 := PackedVector3Array()
+	var C2 := PackedColorArray()
+	var B2 := PackedInt32Array()
+	var W2 := PackedFloat32Array()
+	var I2 := PackedInt32Array()
+	var regiao := func(i: int) -> int: return int(C[i].r * 15.0 + 0.5)
+	# altura do peito (para os bolsos do colete tático)
+	var y_min := 1e9
+	var y_max := -1e9
+	for i in V.size():
+		if regiao.call(i) == TRONCO:
+			y_min = minf(y_min, V[i].y)
+			y_max = maxf(y_max, V[i].y)
+	for t in range(0, I.size(), 3):
+		var ok := true
+		for j in 3:
+			var rg: int = regiao.call(I[t + j])
+			if rg != TRONCO and rg != QUADRIL:
+				ok = false
+		if not ok:
+			continue
+		# do quadril, só a parte de cima (cintura)
+		var cy := (V[I[t]].y + V[I[t + 1]].y + V[I[t + 2]].y) / 3.0
+		if cy < y_min + (y_max - y_min) * 0.05:
+			continue
+		for j in 3:
+			var vi: int = I[t + j]
+			if not novo.has(vi):
+				novo[vi] = V2.size()
+				var p: Vector3 = V[vi] + N[vi] * grosso
+				V2.append(p)
+				N2.append(N[vi])
+				var f := (p.y - y_min) / maxf(y_max - y_min, 0.001)
+				# 0.92: o vértice leva só o claro/escuro e a COR vai no material (no modo ULTRA a cor do vértice saía cinza)
+				var sombra := 0.9 + 0.2 * C[vi].g
+				if id == "colete" and p.z > 0.05 and f > 0.25 and f < 0.55 and absf(p.x) < 0.14:
+					sombra = 0.75                                      # fileira de bolsos na frente
+				C2.append(Color(sombra, sombra, sombra))
+				for k in nb:
+					B2.append(B[vi * nb + k])
+					W2.append(W[vi * nb + k])
+			I2.append(novo[vi])
+	var arr := []
+	arr.resize(Mesh.ARRAY_MAX)
+	arr[Mesh.ARRAY_VERTEX] = V2
+	arr[Mesh.ARRAY_NORMAL] = N2
+	arr[Mesh.ARRAY_COLOR] = C2
+	arr[Mesh.ARRAY_BONES] = B2
+	arr[Mesh.ARRAY_WEIGHTS] = W2
+	arr[Mesh.ARRAY_INDEX] = I2
+	var m := ArrayMesh.new()
+	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, Mesh.ARRAY_FLAG_USE_8_BONE_WEIGHTS if nb == 8 else 0)
+	var mat := Malhas.mat_cores(0.8)
+	mat.albedo_color = base
+	m.surface_set_material(0, mat)
+	return m
+
+# ---------- armas (jogador/armas: armas.anexar chama segurar_arma) ----------
+func _criar_ponto_arma() -> void:
+	# a arma fica NA MÃO DIREITA (acompanha as animações). O encaixe é medido na pose de MIRAR: nela o cano
+	# aponta para a frente do corpo (+Z do esqueleto) e a empunhadura fica na palma.
+	var ba := _anexo("hand_r")
+	_ponto_arma = Node3D.new()
+	_ponto_arma.name = "PontoArma"
+	ba.add_child(_ponto_arma)
+	var i := esqueleto.find_bone("hand_r")
+	anim.play("mirar")
+	anim.seek(0.4, true)
+	var gh := esqueleto.get_bone_global_pose(i)
+	var palma := gh.origin + gh.basis.y.normalized() * 0.07 - gh.basis.z.normalized() * 0.01
+	_ponto_arma.transform = gh.affine_inverse() * Transform3D(Basis.IDENTITY, palma)
+	anim.play("parado")
+
+# 1.14.2: TODAS as armas ficam no encaixe que o IK posiciona (jogador/ik_fuzil.gd): fuzis (e a pistola em 1ª pessoa)
+# pelo corpo/câmera; arma branca e pistola em 3ª pessoa onde a ANIMAÇÃO manda (mão da animação x encaixe antigo). A
+# mão vai para a PEGADA certa (jogador/pegada.gd). Antes a arma branca e a pistola ficavam presas ao osso da mão.
+func segurar_arma(_tipo: String, no: Node3D) -> void:
+	_ponto_fuzil.add_child(no)
+	no.transform = Transform3D.IDENTITY
+
+func _criar_ponto_fuzil() -> void:
+	# 1.12: inércia (trocas) e orientação das pernas/inclinação primeiro: trabalham na animação, antes das outras
+	inercia = CamadaInercia.new()
+	inercia.name = "CamadaInercia"
+	esqueleto.add_child(inercia)
+	inercia.preparar(esqueleto)
+	orientacao = CamadaOrientacao.new()
+	orientacao.name = "CamadaOrientacao"
+	esqueleto.add_child(orientacao)
+	orientacao.preparar(esqueleto)
+	# postura da arma, depois camada de ação, depois IK do fuzil (os modificadores rodam na ordem dos filhos)
+	postura = CamadaPostura.new()
+	postura.name = "CamadaPostura"
+	esqueleto.add_child(postura)
+	postura.preparar(esqueleto, anim)
+	camada = CamadaAcao.new()
+	camada.name = "CamadaAcao"
+	esqueleto.add_child(camada)
+	camada.preparar(esqueleto)
+	mira_camada = CamadaMira.new()
+	mira_camada.name = "CamadaMira"
+	esqueleto.add_child(mira_camada)
+	mira_camada.preparar(esqueleto)
+	mutado_camada = CamadaMutado.new()
+	mutado_camada.name = "CamadaMutado"
+	esqueleto.add_child(mutado_camada)
+	mutado_camada.preparar(esqueleto)
+	# preso ao ESQUELETO (sempre de frente), não ao peito: a animação de mirar (de pistola) gira o tronco para o
+	# lado e o fuzil ficaria atravessado. jogador/ik_fuzil.gd põe o fuzil no lugar e leva as mãos até ele.
+	_ponto_fuzil = Node3D.new()
+	_ponto_fuzil.name = "PontoFuzil"
+	esqueleto.add_child(_ponto_fuzil)
+	_ik = IkFuzil.new()
+	_ik.name = "IkFuzil"
+	_ik.ponto = _ponto_fuzil
+	esqueleto.add_child(_ik)
+	_ik.preparar(esqueleto, anim)
+	_ik.active = false
+	_ik.ponto_antigo = _ponto_arma.transform
+	cabeca_oculta = CabecaOculta.new()
+	cabeca_oculta.name = "CabecaOculta"
+	esqueleto.add_child(cabeca_oculta)
+	cabeca_oculta.preparar(esqueleto)
+	_osso_cabeca = esqueleto.find_bone("Head")
+	# 1.14.2: os dedos por ÚLTIMO (depois de animação, posturas e IK): a mão fecha em volta do que segura
+	dedos = CamadaDedos.new()
+	dedos.name = "CamadaDedos"
+	esqueleto.add_child(dedos)
+	dedos.preparar(esqueleto)
+
+func _process(dt: float) -> void:
+	var j = get_parent().get_parent() if get_parent() != null else null
+	# mira para cima/baixo junto com a câmera (jogador/camada_mira.gd): só com arma de fogo erguida
+	var arma_fogo := false
+	var erguida := false
+	if j != null and j.get("armas") != null:
+		arma_fogo = not (j.armas.eh_corpo() if j.armas.has_method("eh_corpo") else true) and str(j.armas.atual) != ""
+		erguida = bool(j.get("mirando")) or float(j.armas.aim) > 0.6
+	var pitch = j.get("mira_pitch") if j != null else null
+	mira_camada.ligado = arma_fogo and erguida and pitch != null and not bool(j.get("morto"))
+	mira_camada.angulo = float(pitch) if pitch != null else 0.0
+	if _t_item > 0.0:
+		_t_item -= dt
+		if _t_item <= 0.0:
+			_soltar_item()
+	# 0.98 · 1ª PESSOA: a arma fica presa à câmera (quadril / mira de ferro); a pistola vai para as duas mãos
+	var fp_jog: float = float(j.get("_fp")) if j != null and j.get("_fp") != null else 0.0
+	var luneta: bool = j != null and j.has_method("mirando_com_luneta") and j.mirando_com_luneta()
+	_fp_arma = move_toward(_fp_arma, 0.0 if luneta else fp_jog, dt * 6.0)
+	# IK só com um fuzil visível na mão (e não segurando um item)
+	var arma: Node3D = null
+	for c in _ponto_fuzil.get_children():
+		if c is Node3D and c.visible:
+			arma = c
+	if _t_item > 0.0:
+		arma = null
+	var tipo_a := str(arma.name).trim_prefix("Arma_") if arma != null else ""
+	var branca := arma != null and not Pegada.eh_fogo(tipo_a)
+	# 0.98: GUARDA em 1ª pessoa sem arma de fogo (punhos / arma branca); no golpe ela sai (a animação aparece)
+	var guarda_alvo := 0.0
+	if (arma == null or branca) and _t_item <= 0.0 and j != null and j.get("armas") != null and fp_jog > 0.5 \
+			and not bool(j.get("nadando")) and j.get("veiculo") == null and not bool(j.get("morto")):
+		var at := str(j.armas.atual)
+		if at != "" and j.armas.eh_corpo():
+			guarda_alvo = 0.0 if float(j.armas.since) < 0.55 else 1.0
+			_ik.guarda_punhos = at == "punhos"
+	_guarda = move_toward(_guarda, guarda_alvo, dt * (10.0 if guarda_alvo < _guarda else 4.0))
+	_ik.guarda = _guarda if (arma == null or branca) else 0.0
+	_ik.camera = j.camera if j != null and j.get("camera") != null else null
+	# 1.14.2: modo do IK: "fuzil" (fuzis; pistola em 1ª pessoa) · "mao" (arma branca e pistola em 3ª pessoa: onde a
+	# animação manda, com a pegada certa) · "" (sem arma)
+	# 1.15: o jogador remoto (amigo) não tem "rel": sem isso dava erro a cada quadro no multijogador
+	var rel_v = j.armas.get("rel") if j != null and j.get("armas") != null else null
+	var recarregando: bool = rel_v != null and float(rel_v) > 0.0
+	_ik.usar_esquerda = not recarregando
+	if arma == null:
+		_ik.modo = ""
+	elif tipo_a in FUZIS or (tipo_a == "pistola" and _fp_arma > 0.02):
+		_ik.modo = "fuzil"
+	else:
+		_ik.modo = "mao"
+	_ik.tipo = tipo_a
+	_ik.active = arma != null or _guarda > 0.001
+	_pegada_dedos(j, tipo_a, recarregando)
+	# a arma erguida (0..1): o IK alinha o cano com a mira da tela em 3ª pessoa (fuzil e pistola)
+	var alvo_mira := 0.0
+	if j != null and j.get("armas") != null and arma != null and Pegada.eh_fogo(tipo_a):
+		alvo_mira = clampf(float(j.armas.aim), 0.0, 1.0)
+	_mira = move_toward(_mira, alvo_mira, dt * 5.0)
+	_ik.mira = _mira
+	if _ik.modo != "fuzil":
+		return
+	# a mão esquerda segura mais ou menos no meio do caminho entre a empunhadura e a boca do cano
+	var cano := arma.get_node_or_null("Cano") as Node3D
+	_ik.mao_esq_z = clampf(cano.position.z * 0.5, 0.22, 0.38) if cano != null else 0.25
+	if _fp_arma > 0.5 and cano != null:
+		_ik.mao_esq_z = clampf(cano.position.z * 0.4, 0.15, 0.28)    # 0.98: 1ª pessoa: a mão esquerda mais perto (alcança)
+	_ik.pitch = mira_camada.aplicado
+	# 0.98: 1ª pessoa / mira de ferro
+	var tipo := str(arma.name).trim_prefix("Arma_")
+	_ik.tipo = tipo
+	_ik.luneta = j.luneta_montada() if j != null and j.has_method("luneta_montada") else ""
+	_ik.pistola = tipo == "pistola"
+	if _ik.pistola:
+		_ik.mao_esq_z = 0.0
+	_ik.camera = j.camera if j != null and j.get("camera") != null else null
+	_ik.fp = _fp_arma if MiraFerro.tem(tipo) else 0.0
+	var ads_alvo := 1.0 if j != null and j.has_method("em_mira_ferro") and j.em_mira_ferro() else 0.0
+	_ads = move_toward(_ads, ads_alvo, dt * 7.0)
+	_ik.ads = _ads
+
+var _fp_arma := 0.0                     # 0.98: 1ª pessoa (suavizado; 0 mirando com luneta)
+var _guarda := 0.0                      # 0.98: guarda em 1ª pessoa (punhos / arma branca)
+var _ads := 0.0                         # 0.98: mira de ferro (suavizado)
+
+# 1.14.2: como cada mão fecha (jogador/camada_dedos.gd): pistola/fuzil (indicador no gatilho), apoio da esquerda,
+# punho fechado no cabo das armas brancas, concha no item, soco com os punhos
+func _pegada_dedos(j, tipo: String, recarregando: bool) -> void:
+	if dedos == null:
+		return
+	var pd := ""
+	var pe := ""
+	if _t_item > 0.0:
+		pd = "item"
+	elif tipo != "" and Pegada.eh_fogo(tipo):
+		pd = "pistola" if tipo == "pistola" else "fuzil"
+		pe = "" if recarregando else ("apoio_pistola" if tipo == "pistola" else "apoio")
+	elif tipo != "":
+		pd = "punho"
+		pe = "punho" if Pegada.duas_maos(tipo) else ""
+	elif j != null and j.get("armas") != null and str(j.armas.atual) == "punhos" and (_guarda > 0.1 or float(j.armas.since) < 0.6):
+		pd = "soco"
+		pe = "soco"
+	dedos.pegada_d = pd
+	dedos.pegada_e = pe
+
+# ---------- MUTADO (0.94) ----------
+# nível 0 = humano · 1 = mutado (pele escura, veios, olhos, curvado) · 2 = controlado (só os veios, mais fracos)
+func definir_mutacao(nivel: int) -> void:
+	var f := 1.0 if nivel == 1 else (0.45 if nivel == 2 else 0.0)
+	_mat.set_shader_parameter("mutado", f)
+	if mutado_camada != null:
+		mutado_camada.ligado = nivel == 1
+	# olhos (malha separada "Eyes"): amarelados e brilhando de leve
+	var olhos := esqueleto.get_node_or_null("Eyes") as MeshInstance3D
+	if olhos != null:
+		if f <= 0.0:
+			olhos.material_override = null
+		else:
+			var mo := (olhos.mesh.surface_get_material(0) as StandardMaterial3D).duplicate() as StandardMaterial3D
+			mo.albedo_color = Color(1.0, 1.0, 1.0).lerp(Color(1.0, 0.78, 0.25), f)
+			mo.emission_enabled = true
+			mo.emission = Color(0.55, 0.36, 0.04)
+			mo.emission_energy_multiplier = 0.5 * f
+			olhos.material_override = mo
+	# cabelo e sobrancelhas mais escuros e sem cor
+	for c in PENTEADOS + ["Eyebrows"]:
+		var h := esqueleto.get_node_or_null(c) as MeshInstance3D
+		if h != null and h.material_override is StandardMaterial3D:
+			(h.material_override as StandardMaterial3D).albedo_color = cor_cabelo().lerp(Color(0.08, 0.075, 0.07), f)
+
+# ---------- 1ª PESSOA (0.65) ----------
+# esconde a cabeça (jogador/cabeca_oculta.gd); o resto do corpo continua visível
+func primeira_pessoa(sim: bool) -> void:
+	if cabeca_oculta != null:
+		cabeca_oculta.ligado = sim
+
+# posição dos OLHOS no mundo (segue a animação: balanço ao andar, agachar, mirar)
+func pos_olhos() -> Vector3:
+	if esqueleto == null or _osso_cabeca < 0:
+		return global_position + Vector3(0, 1.65, 0)
+	var t := esqueleto.global_transform * esqueleto.get_bone_global_pose(_osso_cabeca)
+	# 0.98: 4 cm à frente (era 11): a câmera fica nos olhos, mais perto dos ombros; assim os braços alcançam a arma
+	# na mira de ferro e aparecem mais na tela (a cabeça some em 1ª pessoa, não atrapalha)
+	return t.origin + esqueleto.global_basis * Vector3(0.0, 0.09, 0.04)
+
+# ITEM NA MÃO direita (lata, garrafa, remédio, atadura) por "duracao" segundos; a arma some enquanto isso
+func segurar_item(id: String, duracao: float) -> void:
+	if _item_mao != null and is_instance_valid(_item_mao):
+		_item_mao.queue_free()
+	_item_mao = null
+	var n := ModelosItens.instancia(id, false)
+	if n != null:
+		# origem embaixo: o meio do item fica na palma (no lugar da empunhadura da arma)
+		var ab: AABB = ModelosItens._aabb(n)
+		var suporte := Node3D.new()
+		suporte.name = "ItemNaMao"
+		_ponto_arma.get_parent().add_child(suporte)
+		# 1.14.2: o meio do item no vão da mão fechada (antes ficava na superfície da palma, com a mão aberta)
+		suporte.transform = Transform3D(_ponto_arma.transform.basis, Pegada.CANAL)
+		suporte.add_child(n)
+		n.position = Vector3(0, -minf(ab.size.y * 0.5, 0.12), 0)
+		_item_mao = suporte
+	_id_item = id
+	_t_item = duracao
+	_ponto_arma.visible = false
+	_ponto_fuzil.visible = false
+
+# 1.01: deixa o item na mão enquanto alguém continua pedindo (mirando o arremesso: armas/arremesso.gd), renovando o
+# tempo em vez de criar o modelo de novo a cada quadro
+func manter_item(id: String, duracao: float) -> void:
+	if _item_mao != null and is_instance_valid(_item_mao) and _id_item == id:
+		_t_item = maxf(_t_item, duracao)
+		return
+	segurar_item(id, duracao)
+
+func _soltar_item() -> void:
+	if _item_mao != null and is_instance_valid(_item_mao):
+		_item_mao.queue_free()
+	_item_mao = null
+	_t_item = 0.0
+	_ponto_arma.visible = true
+	_ponto_fuzil.visible = true
+
+func pegar_ponto_arma() -> Node3D:
+	return _ponto_arma
+
+# BoneAttachment3D num osso (um só por osso)
+func _anexo(osso: String) -> BoneAttachment3D:
+	var nome := "Anexo_" + osso
+	var ba := esqueleto.get_node_or_null(nome) as BoneAttachment3D
+	if ba == null:
+		ba = BoneAttachment3D.new()
+		ba.name = nome
+		esqueleto.add_child(ba)
+		ba.bone_name = osso
+	return ba
+
+# transforma uma posição "do corpo" (espaço do esqueleto, relativa ao osso, sem a rotação dele) para o
+# espaço local do osso em repouso
+func _no_osso(osso: String, t: Transform3D) -> Transform3D:
+	var g := esqueleto.get_bone_global_rest(esqueleto.find_bone(osso))
+	var alvo := Transform3D(t.basis, g.origin + t.origin)
+	return g.affine_inverse() * alvo

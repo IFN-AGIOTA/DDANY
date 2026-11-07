@@ -1,0 +1,61 @@
+<!doctype html><html><head><meta charset="utf-8">
+<!-- 1.20 · página que o gerar.mjs abre num navegador sem tela: o EZ-Tree monta cada árvore e o GLTFExporter devolve o .glb
+     (só a geometria: casca e folhas com materiais vazios; as texturas ficam em mundo/arvores/texturas/) -->
+<script type="importmap">{"imports":{"three":"/node_modules/three/build/three.module.js","three/addons/":"/node_modules/three/examples/jsm/","ez":"/node_modules/@dgreenheck/ez-tree/build/ez-tree.es.js"}}</script>
+</head><body><script type="module">
+import * as THREE from 'three';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
+import { Tree } from 'ez';
+
+function ajustar(o, k, v) {
+  const partes = k.split('.'); let alvo = o;
+  for (let i = 0; i < partes.length - 1; i++) alvo = alvo[partes[i]];
+  alvo[partes[partes.length - 1]] = v;
+}
+
+window.gerar = async (preset, ajuste, leve, seca) => {
+  const t = new Tree();
+  t.loadPreset(preset);
+  const o = t.options;
+  if (leve) {                                     // versão leve: menos fatias nos galhos e menos folhas (maiores)
+    for (const n in o.branch.sections) o.branch.sections[n] = Math.max(n === '3' ? 1 : 2, Math.round(o.branch.sections[n] * leve.secoes));
+    const seg = { 0: 6, 1: 4, 2: 3, 3: 3 };
+    for (const n in o.branch.segments) o.branch.segments[n] = Math.min(o.branch.segments[n], seg[n]);
+    o.leaves.count = Math.max(2, Math.round(o.leaves.count * leve.folhas));
+    o.leaves.size *= leve.tamanho_folha;
+    o.leaves.billboard = leve.billboard;
+  }
+  for (const k in (ajuste || {})) ajustar(o, k, ajuste[k]);
+  t.generate();
+  // teto de triângulos: tira folhas (e, se precisar, fatias dos galhos) até caber em "alvo"
+  const contar = m => m.geometry.index ? m.geometry.index.count / 3 : m.geometry.attributes.position.count / 3;
+  const alvo = (leve && leve.alvo) || 1e9;
+  for (let i = 0; i < 6; i++) {
+    const tg = contar(t.branchesMesh), tf = seca ? 0 : contar(t.leavesMesh);
+    if (tg + tf <= alvo) break;
+    if (tf > 0 && tf > (alvo - tg) * 0.6 && o.leaves.count > 2) {
+      const novo = Math.max(2, Math.floor(o.leaves.count * Math.max(0.35, (alvo - tg) * 0.97 / tf)));
+      o.leaves.size *= Math.sqrt(o.leaves.count / novo) * 0.92 + 0.08;       // menos folhas, um pouco maiores
+      o.leaves.count = novo;
+    }
+    if (tg > alvo * 0.45) {
+      for (const n in o.branch.sections) o.branch.sections[n] = Math.max(n === '3' ? 1 : 2, Math.round(o.branch.sections[n] * 0.8));
+      for (const n in o.branch.segments) o.branch.segments[n] = Math.max(3, o.branch.segments[n] - 1);
+    }
+    t.generate();
+  }
+  const info = { casca: o.bark.type, casca_tint: o.bark.tint, escala_tex: o.bark.textureScale, folha: o.leaves.type,
+    folha_tint: o.leaves.tint, alpha: o.leaves.alphaTest };
+  if (seca) t.leavesMesh.visible = false;
+  t.branchesMesh.material = new THREE.MeshStandardMaterial({ name: 'casca' });
+  t.leavesMesh.material = new THREE.MeshStandardMaterial({ name: 'folhas', side: THREE.DoubleSide });
+  let tris = 0;
+  t.traverse(m => { if (m.isMesh && m.visible) tris += (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3; });
+  const glb = await new GLTFExporter().parseAsync(t, { binary: true, onlyVisible: true });
+  const b = new Uint8Array(glb); let s = '';
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+  info.tris = tris;
+  return { info, glb: btoa(s) };
+};
+window.pronto = true;
+</script></body></html>

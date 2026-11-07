@@ -1,0 +1,60 @@
+DIAS DE UM APOCALIPSE · SEU RETRANSMISSOR PRÓPRIO NA ORACLE CLOUD (GRÁTIS, SEM LIMITE DE 500 MB)
+=================================================================================================
+
+PARA QUE SERVE
+  O multijogador pela internet tenta primeiro a LIGAÇÃO DIRETA entre os celulares. Quando a rede não deixa
+  (comum no 4G), os dados passam por um RETRANSMISSOR. Hoje ele é o da Metered (500 MB grátis por mês, umas
+  10-20 horas de jogo a dois). Com uma máquina grátis da Oracle, o retransmissor passa a ser SEU: a Oracle dá
+  10 TB por mês de graça, que na prática é sem limite para o jogo. A Metered continua de reserva: se a sua máquina
+  cair, o jogo usa a Metered sozinho.
+
+O QUE VOCÊ PRECISA
+  · Uma conta na Oracle Cloud (pede cartão só para confirmar que você é uma pessoa; o plano "Always Free" não
+    cobra nada enquanto você usar só o que é grátis).
+  · O arquivo instalar_turn.sh que recebeu (a SENHA do retransmissor já está dentro dele: guarde esse arquivo).
+
+PASSO A PASSO (uns 20 minutos; os nomes podem estar em inglês)
+  1. CRIAR A CONTA
+     · Entre em cloud.oracle.com e toque em "Sign Up" / "Comece gratuitamente".
+     · REGIÃO (Home Region): escolha "Brazil East (São Paulo)" ou "Brazil Southeast (Vinhedo)" — perto de vocês,
+       menos atraso. Ela NÃO dá para trocar depois.
+     · Preencha os dados e o cartão (verificação; plano grátis).
+
+  2. CRIAR A MÁQUINA
+     · Menu ☰ > Compute > Instances > "Create instance".
+     · Name: dda-retransmissor
+     · Image and shape > "Edit":
+         - Image: "Canonical Ubuntu" (22.04 ou 24.04);
+         - Shape: "VM.Standard.E2.1.Micro" (AMD, "Always Free-eligible") — ou "VM.Standard.A1.Flex"
+           (Ampere, 1 OCPU e 6 GB, também grátis). Qualquer um serve.
+     · Networking: deixe criar a rede nova (VCN) e marque "Assign a public IPv4 address".
+     · Add SSH keys: "Generate a key pair for me" e BAIXE a chave privada (guarde; só para emergência).
+     · Show advanced options > aba "Management" > "Initialization script" > "Paste cloud-init script":
+       abra o instalar_turn.sh num bloco de notas, copie TUDO e cole aqui.
+     · "Create". A máquina liga em 1-2 minutos e o script instala o retransmissor sozinho (mais uns 3 minutos).
+
+  3. ABRIR AS PORTAS NA REDE DA ORACLE (sem isso nada chega na máquina)
+     · Na página da máquina: "Primary VNIC" > clique no nome da "Subnet" > "Security Lists" >
+       "Default Security List for ..." > "Add Ingress Rules". Adicione estas 2 regras:
+         - Source CIDR: 0.0.0.0/0 · IP Protocol: UDP · Destination Port Range: 3478
+         - Source CIDR: 0.0.0.0/0 · IP Protocol: UDP · Destination Port Range: 49152-65535
+     · "Add Ingress Rules" para salvar.
+
+  4. ME MANDAR O IP
+     · Na página da máquina, copie o "Public IP address" (algo como 152.67.x.x) e me mande.
+     · Eu coloco em rede/turn.cfg ([turn_proprio]) e publico a atualização: o jogo passa a usar o seu servidor.
+     · NÃO precisa me mandar a senha (ela já está no script e eu já tenho).
+
+CONFERIR SE ESTÁ FUNCIONANDO (opcional)
+  · No navegador do PC: https://webrtc.github.io/samples/src/content/peerconnection/trickle-ice/
+    STUN or TURN URI: turn:SEU_IP:3478 · username: dda · password: (a senha do script) > "Add Server" >
+    "Gather candidates". Se aparecer uma linha "relay", o retransmissor está no ar.
+
+BOM SABER
+  · A Oracle pode desligar máquinas "Always Free" que ficam paradas (quase sem uso) por muitos dias. Se isso
+    acontecer, o jogo continua funcionando pela Metered; é só criar a máquina de novo com o mesmo script (o IP
+    muda: me mande o novo). Passar a conta para "Pay As You Go" evita isso e continua grátis dentro dos limites.
+  · A senha fica dentro do jogo (como a da Metered): qualquer um que desmontar o APK poderia usar o seu
+    retransmissor. Os limites no script (60 sessões) e a rede da Oracle seguram isso; se quiser, troque a senha
+    (crie a máquina de novo com outra senha no script e me mande).
+  · O retransmissor só leva dados para a internet (bloqueia a rede interna da Oracle).
