@@ -86,7 +86,7 @@ ATUALIZAÇÃO 1.20 · CENTRAL PARK DE VERDADE E ÁRVORES REALISTAS (EZ-TREE)
   ARQUIVOS (testado: compilar_tudo, cidade igual à da 1.19, teste_central_park NOVO (lagos, construções, árvores, nadar, SUBIR ANDANDO a
   escadaria da Bethesda e a do castelo e atravessar a Bow Bridge), teste_graficos, teste_desempenho (referência
   regravada com 2 vistas do Central Park), teste_agua, teste_jogo, teste_veiculos, teste_chunks, teste_carregamento,
-  teste_void, teste_locais_108, teste_infectados_colisao, teste_menu_leve, teste_pontes, teste_novidades e fotos):
+  teste_void, teste_locais_108, teste_bunkers, teste_infectados_colisao, teste_menu_leve, teste_pontes, teste_novidades e fotos):
     mundo/arvores.gd ............... NOVO · as árvores (modelos, materiais com vento, lista de perto, impostores,
                                      colisão dos troncos)
     mundo/arvores/ ................. NOVA · modelos/<nome>.res (24), arvores.json, impostores.png (atlas) e
@@ -115,6 +115,8 @@ ATUALIZAÇÃO 1.20 · CENTRAL PARK DE VERDADE E ÁRVORES REALISTAS (EZ-TREE)
     ferramentas/testes/teste_graficos.gd ..... confere as árvores novas (no lugar de "nenhuma árvore")
     ferramentas/testes/teste_desempenho.gd ... + 2 vistas do Central Park · desempenho_base.json regravado
     ferramentas/testes/rodar.sh .... + teste_central_park
+    ferramentas/testes/teste_locais_108.gd ... a conferência da ordem dos veículos do Exército aceita o engarrafamento
+                                     e o bloqueio das pontes (que vêm depois deles desde a 1.15)
     menu/config.gd ................. VERSAO "1.20"
     menu/novidades_lista.gd ........ refeita
     LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..." + seção 10

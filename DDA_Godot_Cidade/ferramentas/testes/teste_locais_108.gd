@@ -144,7 +144,15 @@ func _r():
 				tanques.append(k)
 		else:
 			ult_civil = k
-	ok(n_mil >= 100 and prim > ult_civil, "%d veículos do Exército, todos no fim da lista de carros (o 1º é o %d; o último carro comum, %d)" % [n_mil, prim, ult_civil])
+	# 1.15: depois dos comboios vem o engarrafamento das pontes (de propósito: os números de antes não mudam); o que
+	# importa é o Exército num bloco só, logo depois dos carros da cidade
+	# (o bloqueio da Ponte do Brooklyn, também da 1.15, põe uns poucos veículos do Exército depois do engarrafamento)
+	var bloco := 0
+	while prim >= 0 and prim + bloco < ab.carros.size() and Comboios.TAM.has(String(ab.carros[prim + bloco][2])):
+		bloco += 1
+	var depois := n_mil - bloco
+	print("    Exército: bloco %d..%d (%d) · depois do engarrafamento: %d" % [prim, prim + bloco - 1, bloco, depois])
+	ok(bloco >= 100 and prim > 0 and depois <= 8, "%d veículos do Exército: %d num bloco só logo depois dos carros da cidade (do %d) e %d no bloqueio do Brooklyn (1.15)" % [n_mil, bloco, prim, depois])
 	ok(tanques.size() >= 5, "tanques: %d" % tanques.size())
 	# o porta-malas de um veículo do comboio é a carga militar
 	var cv: Array = ab.carros[prim]
