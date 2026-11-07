@@ -56,8 +56,10 @@ ATUALIZAÇÃO 1.19 · SEM O MODO HISTÓRIA, SEM ÁRVORES E NADA EM PÉ NO MEIO D
     cidade.lugares_das_arvores() e no arquivo data/arvores_lugares.json (13.207 lugares: 8.027 na rua, 4.696 nos
     parques, 484 nos terrenos; com o modelo de antes, o giro, o tamanho e o tom de cada uma). As da rua mudam com a
     "Densidade do cenário" (o arquivo é o da média).
-  ARQUIVOS (testado: compilar_tudo, conferência de que nada ficou em pé no asfalto e nenhuma árvore na cena, fotos,
-  e a bateria (lista na seção 9 do bloco 1.19 de testes abaixo)):
+  ARQUIVOS (testado: compilar_tudo, conferência de que nada ficou em pé no asfalto e nenhuma árvore na cena, fotos
+  da rua e do parque, teste_graficos, teste_veiculos, teste_menus_rolagem, teste_menu_leve, teste_novidades,
+  teste_chat, teste_pontes, teste_loot_volta, teste_jogo, teste_carregamento, teste_chunks, teste_desempenho,
+  teste_agua e rede_carro):
     main.gd ........................ sem o modo história (_jogar_historia e o resto)
     menu/menu_principal.gd ......... botão HISTÓRIA bloqueado
     mundo/veiculo.gd ............... sem os carros Kiri/JDM e o "carro da história"
