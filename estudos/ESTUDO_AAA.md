@@ -285,22 +285,33 @@ NoobFeed); fóruns da Epic sobre o HISM (*Hierarchical Instanced Static Mesh*) e
 
 **O que foi feito (1.21)** ➜ `mundo/arvores.gd` + `ferramentas/preparar_arvores_lod.gd`
 1. ✅ **Detalhe pelo tamanho na tela**: cada árvore mede a altura dela em pixels (altura × escala da câmera ÷
-   distância; a escala vem da resolução e do campo de visão, então a **luneta** traz o detalhe). 4 níveis:
-   completa ≥ 300 px · simplificada 110–300 · voxels 32–110 · voxels grossos < 32 (× a "Distância dos detalhes").
-2. ✅ **Voxels** no lugar dos impostores: cada árvore vira 40 bolhas (e 12 no grosso) achadas por k-means nas folhas
+   distância; a escala vem da resolução e do campo de visão, então a **luneta** traz o detalhe). Níveis:
+   completa ≥ 520 px · simplificada 220–520 · voxels 64–220 · voxels grossos < 64 (× a "Distância dos detalhes").
+2. ✅ **Voxels** no lugar dos impostores: cada árvore vira 24 bolhas (8 no grosso) achadas por k-means nas folhas
    (e nos galhos das secas), com a cor da textura e o miolo/baixo da copa mais escuros; cada bolha é um quadrado
-   virado para a câmera com a normal de uma esfera (a luz fica de volume) e a borda recortada com ruído. Os dados
-   ficam numa textura (`texelFetch`): uma malha só serve para os 24 modelos (1 chamada por bloco).
+   virado para a câmera com a normal de uma esfera, recortado em "folhinhas" por ruído; o tronco é uma faixa em pé.
+   Os dados ficam numa textura (`texelFetch`): uma malha só serve para os 24 modelos.
 3. ✅ **Nível simplificado** (o "meio" que faltava): os galhos finos saem (os triângulos de aresta mais curta), o
-   meshoptimizer da Godot junta o resto, e fica 1 cartão de folhas a cada 3, maior (~37% dos triângulos); casca e
+   meshoptimizer da Godot junta o resto, e fica 1 cartão de folhas a cada 4, maior (~27% dos triângulos); casca e
    folhas numa superfície só (metade das chamadas).
 4. ✅ **Troca pontilhada** entre todos os níveis (ruído de gradiente intercalado na tela; os dois níveis usam o
    mesmo ruído, um ao contrário do outro: nenhum ponto fica sem árvore ou com duas). Sem TAA, a faixa é curta (±8%).
 5. ✅ **Vento some** quando a árvore fica com menos de 160 px.
-6. ✅ **Corte por grupo**: o MultiMesh de voxels de cada bloco de 250 m só fica na cena na faixa de distância em que
-   alguma árvore dele pode estar naquele nível (o fino some nos blocos longe; o grosso nos de perto).
-7. ✖ *Assemblies*: não precisamos (os 24 modelos já são instâncias compartilhadas).
-8. ✖ *Vento por esqueleto*: o vento continua no shader (sem ossos), que é o que cabe no celular.
+6. ✅ **Corte pela visão** (o descarte por grupo do HISM): as listas de perto (completa, simplificada e os voxels
+   até ~400 m) só pegam as árvores na frente da câmera (+26° de cada lado e um círculo de 24 m por causa das sombras).
+   *Medido: sem isso, metade dos triângulos das árvores eram de árvores atrás da câmera.*
+7. ✅ **HLOD de longe**: depois de ~400 m, cada bloco de 250 m desenha as árvores em 4 bolhas (o custo dos
+   impostores antigos), em ordem de altura, e só manda para a GPU o começo da lista que já está nesse tamanho
+   (`visible_instance_count`); a troca com os voxels de perto é um dissolve pela distância.
+8. ✅ **Sombra pela simplificada** (*shadow proxy*): a árvore completa não desenha a própria sombra.
+9. ✖ *Assemblies*: não precisamos (os 24 modelos já são instâncias compartilhadas).
+10. ✖ *Vento por esqueleto*: o vento continua no shader (sem ossos), que é o que cabe no celular.
+11. ✖ *Rasterização de triângulos minúsculos e seleção na GPU* (o coração do Nanite): o renderizador de
+   compatibilidade da Godot não tem *compute shader*; por isso a escolha de quem vai para a GPU é feita na CPU
+   (listas de perto) e por bloco (HLOD), e o shader só confere cada árvore.
+
+**Resultado (teste_desempenho, mesmas vistas da 1.20):** Bethesda 245 mil triângulos (antes 290 mil), The Mall
+~610 mil (antes 585 mil, com a faixa de 27–64 m simplificada em vez de foto), centro 238 mil (antes 233 mil).
 
 ---
 
@@ -690,9 +701,9 @@ Impacto e esforço estimados por mim; cada item cita a seção acima. **Todos os
 |---|---|---|---|
 | 31 ✅ | Detalhe das árvores pelo **tamanho na tela** (1.14) | Muda com a resolução e com o zoom da luneta | `mundo/arvores.gd` |
 | 32 ✅ | **Voxels** de longe no lugar dos impostores (1.14) | Copa com volume de qualquer lado, luz e silhueta certas | `mundo/arvores.gd`, `ferramentas/preparar_arvores_lod.gd` |
-| 33 ✅ | **Nível simplificado** + casca e folhas numa chamada (1.14) | ~37% dos triângulos entre a completa e os voxels | idem |
+| 33 ✅ | **Nível simplificado** + casca e folhas numa chamada (1.14) | ~27% dos triângulos entre a completa e os voxels | idem |
 | 34 ✅ | **Troca pontilhada** entre os níveis e vento que some longe (1.14) | Nada estala na troca | `mundo/arvores.gd` |
-| 35 ✅ | **Corte por grupo** dos voxels (1.14) | Bloco sai da cena fora da faixa do nível dele | `mundo/arvores.gd` |
+| 35 ✅ | **Corte pela visão** + **HLOD** de 4 bolhas longe + **sombra pela simplificada** (1.14) | Na mata: de 2,1 milhões de triângulos (primeira versão) para ~620 mil; Bethesda abaixo da 1.20 | `mundo/arvores.gd` |
 
 ---
 

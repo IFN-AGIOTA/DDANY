@@ -83,19 +83,29 @@ ATUALIZAÇÃO 1.21 · PONTOS TURÍSTICOS DE NOVA YORK E ÁRVORES NO JEITO DA UNR
     outros prédios ganham o número novo (remapa_v8).
   · ÁRVORES NO JEITO DA UNREAL ENGINE 5 (pedido: "o mesmo sistema de otimização para árvores da Unreal Engine 5";
     estudos/ESTUDO_AAA.md 1.14). A Unreal 5.7 (Nanite Foliage) escolhe o detalhe pelo tamanho na tela e, de longe,
-    desenha a folhagem como VOXELS (um volume), sem fotos planas e sem estalo. Aqui:
-      - 4 NÍVEIS escolhidos pelo TAMANHO DA ÁRVORE NA TELA (em pixels de altura), não por metros: COMPLETA (300 px ou
-        mais), SIMPLIFICADA (110 a 300: sem os galhos finos e com 1/3 das folhas, maiores; ~37% dos triângulos; casca
-        e folhas numa chamada só), VOXELS (32 a 110: a árvore vira 40 bolhas de folhagem, cada uma com luz de esfera e
-        a borda recortada) e VOXELS GROSSOS (menos de 32: 12 bolhas). A troca muda sozinha com a resolução e com o
-        ZOOM: pela luneta a árvore longe aparece com o detalhe de perto;
-      - os VOXELS entram no lugar dos IMPOSTORES (a "foto" de 3 planos): de qualquer lado a copa tem volume, a silhueta
-        certa e luz e sombra de verdade (de cima o Central Park parece uma mata, não um carpete de fotos);
+    desenha a folhagem como VOXELS (um volume), sem fotos planas e sem estalo; descarta grupos fora da câmera e junta
+    o que está bem longe (HLOD). Aqui:
+      - os NÍVEIS são escolhidos pelo TAMANHO DA ÁRVORE NA TELA (em pixels de altura), não por metros: COMPLETA (520 px
+        ou mais), SIMPLIFICADA (220 a 520: sem os galhos finos e com 1/4 das folhas, maiores; ~27% dos triângulos;
+        casca e folhas numa chamada só), VOXELS (64 a 220: a árvore vira 24 bolhas de folhagem) e VOXELS GROSSOS
+        (menos de 64: 8 bolhas). Muda sozinho com a resolução e com o ZOOM: pela luneta a árvore longe aparece com o
+        detalhe de perto. Na câmera do jogo, uma árvore de 15 m fica completa até ~27 m, simplificada até ~64 m, em
+        voxels até ~220 m;
+      - os VOXELS entram no lugar dos IMPOSTORES (a "foto" de 3 planos): cada bolha tem luz de esfera, a borda rendada
+        em "folhinhas" e a cor variando; o tronco é uma faixa em pé. De qualquer lado a copa tem volume e silhueta
+        certas (de cima o Central Park parece uma mata, não um carpete de fotos);
+      - de BEM LONGE (depois de ~400 m), o "HLOD": cada bloco de 250 m guarda as árvores em 4 bolhas (só a copa; o mesmo
+        custo dos impostores de antes), e só manda para a placa de vídeo as que já estão nesse tamanho;
+      - CORTE PELA VISÃO: as árvores de perto (e os voxels até ~400 m) só são montadas na frente da câmera (mais uma
+        margem e um círculo de 24 m em volta, por causa das sombras); virando a câmera, as listas se refazem;
+      - a SOMBRA da árvore completa é feita com a simplificada (no chão não se vê a diferença);
       - as trocas são em DISSOLVE pontilhado (o novo nível aparece ponto a ponto onde o velho some; nenhum ponto fica
         sem árvore ou com duas): acabou o "estalo" a 40 m;
-      - o vento nas folhas some quando a árvore fica pequena na tela (como a Unreal para a animação de longe);
-      - cada bloco de 250 m só desenha os voxels finos/grossos na faixa de distância em que eles podem aparecer.
-    "Distância dos detalhes" continua mandando (baixo troca bem antes; ultra bem depois).
+      - o vento nas folhas some quando a árvore fica pequena na tela (como a Unreal para a animação de longe).
+    Medido (teste_desempenho, mesmas vistas): Central Park/Bethesda 245 mil triângulos (1.20: 290 mil), The Mall
+    ~610 mil (1.20: 585 mil, agora com a mata toda em volume e as árvores de 27 a 64 m simplificadas em vez de foto);
+    no meio da mata, de 2,1 milhões (primeira versão) para 620 mil. "Distância dos detalhes" continua mandando
+    (baixo troca bem antes; ultra bem depois).
   ARQUIVOS (testado: compilar_tudo, cidade igual à da 1.20 fora os terrenos dos pontos, teste_pontos_turisticos NOVO
   (os 17 montados, nenhum prédio nos terrenos, conversão dos saves, aviso, SUBIR ANDANDO as escadarias, entrar na Grand
   Central e no Yankee Stadium, passar no arco, a mureta do Memorial), teste_central_park, teste_desempenho, teste_graficos,
@@ -115,8 +125,9 @@ ATUALIZAÇÃO 1.21 · PONTOS TURÍSTICOS DE NOVA YORK E ÁRVORES NO JEITO DA UNR
     main.gd ........................ liga o aviso dos pontos turísticos no HUD
     hud/mapa.gd .................... o terreno, a estrela e o nome de cada ponto turístico
     mundo/mato.gd .................. sem capim nos terrenos dos pontos turísticos
-    mundo/arvores.gd ............... reescrito: os 4 níveis pelo tamanho na tela, dissolve, vento que some, voxels
-                                     (textura com as bolhas), corte por bloco; os impostores saíram
+    mundo/arvores.gd ............... reescrito: os níveis pelo tamanho na tela, dissolve, vento que some, voxels
+                                     (textura com as bolhas, folhinhas e tronco), corte pela visão, listas de voxels
+                                     de perto, HLOD de 4 bolhas por bloco, sombra pela simplificada; os impostores saíram
     mundo/arvores/lod1/ ............ NOVA · as 24 árvores simplificadas (<nome>.res)
     mundo/arvores/voxels.json ...... NOVO · as bolhas (voxels) de cada árvore
     mundo/arvores/impostores.png ... APAGADO (os impostores saíram)
@@ -4760,8 +4771,10 @@ MÚSICA (pasta audio/)
   uma quadra antes do mar do mapa (a areia é do próprio terreno). Em volta de alguns pontos sobra uma faixa de terra
   entre a calçada da rua e a praça (a grade de 20 m dos lotes não chega na calçada).
 - 1.21: ÁRVORES: sem o TAA da Unreal, o dissolve das trocas aparece como pontilhado por um instante (a faixa é curta,
-  ±8% em volta de cada limiar). Os voxels são bolhas (de muito perto da troca dá para notar que a copa ficou mais
-  lisa). As simplificadas não têm o normal map da casca.
+  ±8% em volta de cada limiar). De perto da troca dá para ver que os voxels são bolhas (rendadas, mas bolhas). As
+  simplificadas não têm o normal map da casca. Girando a câmera muito rápido (mais de ~26° num quadro) as árvores de
+  perto que entram pela borda aparecem um quadro depois. No celular, "Distância dos detalhes" em médio ou baixo deixa
+  as trocas mais cedo (mais leve).
 - 1.20: o Central Park é PLANO (o de verdade tem morros e a rua da 72nd passa por baixo da arcada; aqui o terraço
   alto da Bethesda fica em cima e a arcada passa no chão). Ele é menor que o de verdade (950 x 1730 m): o Reservoir,
   o zoológico, o Great Hill e o norte do parque não couberam. Dentro das construções só a arcada da Bethesda, o
