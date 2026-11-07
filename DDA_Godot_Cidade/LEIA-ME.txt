@@ -104,9 +104,10 @@ ATUALIZAÇÃO 1.21 · PONTOS TURÍSTICOS DE NOVA YORK E ÁRVORES NO JEITO DA UNR
       - as trocas são em DISSOLVE pontilhado (o novo nível aparece ponto a ponto onde o velho some; nenhum ponto fica
         sem árvore ou com duas): acabou o "estalo" a 40 m;
       - o vento nas folhas some quando a árvore fica pequena na tela (como a Unreal para a animação de longe).
-    Medido (teste_desempenho, mesmas vistas): Central Park/Bethesda 245 mil triângulos (1.20: 290 mil), The Mall
-    ~610 mil (1.20: 585 mil, agora com a mata toda em volume e as árvores de 27 a 64 m simplificadas em vez de foto);
-    no meio da mata, de 2,1 milhões (primeira versão) para 620 mil. "Distância dos detalhes" continua mandando
+    Medido (teste_desempenho, mesmas vistas da 1.20): The Mall 603 mil triângulos e 307 chamadas (1.20: 585 mil e 305,
+    agora com a mata toda em volume e as árvores de 27 a 64 m em 3D em vez de foto); Bethesda 367 mil e 299 chamadas
+    (1.20: 290 mil e 280), dos quais ~43 mil são o skyline novo dos pontos turísticos ao fundo; no meio da mata, de
+    2,1 milhões de triângulos (a primeira versão, sem o corte pela visão) para ~620 mil. "Distância dos detalhes" continua mandando
     (baixo troca bem antes; ultra bem depois).
   ARQUIVOS (testado: compilar_tudo, cidade igual à da 1.20 fora os terrenos dos pontos, teste_pontos_turisticos NOVO
   (os 17 montados, nenhum prédio nos terrenos, conversão dos saves, aviso, SUBIR ANDANDO as escadarias, entrar na Grand
@@ -140,6 +141,8 @@ ATUALIZAÇÃO 1.21 · PONTOS TURÍSTICOS DE NOVA YORK E ÁRVORES NO JEITO DA UNR
     ferramentas/testes/teste_central_park.gd . confere os blocos de voxels (no lugar dos impostores)
     ferramentas/testes/teste_graficos.gd ..... remapa_v7 conta também os prédios dos pontos turísticos; MAPA_PREDIOS 9
     ferramentas/testes/teste_pontes.gd ....... remapa_v6 conta também os prédios dos pontos turísticos
+    ferramentas/testes/teste_desempenho.gd ... + a vista da Times Square · desempenho_base.json regravado (os pontos
+                                     turísticos são conteúdo novo; as árvores ficaram no custo da 1.20)
     ferramentas/testes/rodar.sh .... + teste_pontos_turisticos
     estudos/ESTUDO_AAA.md .......... seção 1.14 NOVA (árvores na Unreal 5) + itens 31-35 do plano (✅)
     menu/config.gd ................. VERSAO "1.21"
