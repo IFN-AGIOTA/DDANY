@@ -103,10 +103,19 @@ static func aplicar_dados(data: Dictionary) -> void:
 		var f: Array = []
 		for q in d["lagos"][nome]:
 			f.append(float(q[0]))
-			f.append(float(q[1]))
+			f.append(_fora_da_linha(float(q[1])))
 		f.append(float(d["lagos"][nome][0][0]))
-		f.append(float(d["lagos"][nome][0][1]))
+		f.append(_fora_da_linha(float(d["lagos"][nome][0][1])))
 		lands.append([1, f])
+
+# A máscara da cidade (mundo/cidade.gd _fill) é preenchida por linhas de 20 m que juntam os cruzamentos de TODOS os
+# polígonos: um canto exatamente no centro de uma linha conta duas vezes e vira terra/água numa faixa do mapa inteiro
+# (mudava os prédios da cidade e os jogos salvos). Os cantos dos lagos ficam sempre um pouco fora do centro das linhas.
+static func _fora_da_linha(z: float) -> float:
+	var resto := fposmod(z + 8600.0, 20.0)
+	if absf(resto - 10.0) < 0.05:
+		return z + 0.137
+	return z
 
 # recorta os lagos de dentro de um polígono de parque (sem buraco: corta o parque em duas metades por uma linha que
 # passa no meio de cada lago; cada metade fica com uma "mordida" na borda, que a triangulação aceita)

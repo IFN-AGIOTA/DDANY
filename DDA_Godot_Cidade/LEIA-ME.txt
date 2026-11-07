@@ -80,7 +80,10 @@ ATUALIZAÇÃO 1.20 · CENTRAL PARK DE VERDADE E ÁRVORES REALISTAS (EZ-TREE)
   · LAGOS: os 4 lagos do parque são água de verdade (dá para nadar; a ponte passa por cima). A água dos lagos ficou
     de LAGO (parada, escura, sem a espuma de praia que deixava os lagos pequenos brancos), em toda a cidade.
   · No MAPA: os lagos que ficavam embaixo dos parques aparecem, e o Central Park mostra gramados, praças e caminhos.
-  ARQUIVOS (testado: compilar_tudo, teste_central_park NOVO (lagos, construções, árvores, nadar, SUBIR ANDANDO a
+  · O RESTO DA CIDADE NÃO MUDA: conferido prédio por prédio que a cidade sai igual à da 1.19 (13.981 prédios, os mesmos
+    removidos): os jogos salvos continuam valendo. (Um canto de lago bem no centro de uma linha da máscara de 20 m
+    contava duas vezes e mudava uma faixa do mapa inteiro: os cantos ficam um pouco fora — central_park.gd _fora_da_linha.)
+  ARQUIVOS (testado: compilar_tudo, cidade igual à da 1.19, teste_central_park NOVO (lagos, construções, árvores, nadar, SUBIR ANDANDO a
   escadaria da Bethesda e a do castelo e atravessar a Bow Bridge), teste_graficos, teste_desempenho (referência
   regravada com 2 vistas do Central Park), teste_agua, teste_jogo, teste_veiculos, teste_chunks, teste_carregamento,
   teste_void, teste_locais_108, teste_infectados_colisao, teste_menu_leve, teste_pontes, teste_novidades e fotos):
