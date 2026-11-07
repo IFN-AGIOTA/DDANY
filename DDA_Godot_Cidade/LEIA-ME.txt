@@ -41,6 +41,96 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.21 · PONTOS TURÍSTICOS DE NOVA YORK E ÁRVORES NO JEITO DA UNREAL ENGINE 5
+  · PONTOS TURÍSTICOS (pedido: "pegar imagens dos pontos de interesse de Nova York, locais de visita e turismo, e
+    adaptar para o nosso mapa"): 17 lugares feitos olhando as fotos de cada um e postos onde ficam na Nova York de
+    verdade (a ilha do meio é Manhattan: a 5ª Avenida na borda leste do Central Park, Midtown logo abaixo, Wall Street
+    e o WTC na ponta sul; a ilhota do sudoeste é a da Estátua; Brooklyn e Queens a leste, o Bronx a nordeste):
+      - ESTÁTUA DA LIBERDADE: o Forte Wood em estrela de 11 pontas (a escadaria da frente sobe até o alto dele), a
+        base de concreto, o pedestal de granito com a loggia e os escudos, e a estátua de cobre verde (manto com as
+        dobras, a coroa de 7 raios com as janelinhas, a tocha dourada no braço erguido, a tábua no outro): 95 m;
+      - EMPIRE STATE BUILDING (os recuos art déco, as faixas de metal subindo o prédio, o deck do 86º, o mastro e a
+        antena: 443 m) · CHRYSLER BUILDING (tijolo branco, as águias nos cantos, a coroa de aço em arcos e a agulha);
+      - ONE WORLD TRADE CENTER (o quadrado que vira um quadrado girado em 8 triângulos, a agulha: 541 m) e o MEMORIAL
+        11/9: as 2 piscinas quadradas com a cortina d'água e o vazio do meio (o buraco é desenhado no chão por um
+        shader: dá para olhar lá dentro de qualquer lado; a mureta de granito com o parapeito de bronze não deixa
+        cair), os carvalhos em fileira;
+      - GRAND CENTRAL TERMINAL: a fachada da rua 42 (os 3 janelões, as colunas aos pares, o relógio e as estátuas) e
+        DÁ PARA ENTRAR no salão principal: o teto verde com as constelações douradas, o balcão de informações com o
+        relógio de 4 faces, as 2 escadarias até os balcões, os guichês e os lustres;
+      - TIMES SQUARE: as torres cobertas de TELÕES (imagens que trocam; uns queimados piscando), a escadaria vermelha
+        (TKTS: dá para subir e sentar), o One Times Square com a bola de Ano-Novo e a faixa "ALERTA: EVACUEM MANHATTAN
+        · DIRIJAM-SE AO SUL", táxis largados; à noite os telões são a única luz;
+      - ROCKEFELLER CENTER (o 30 Rock com o Top of the Rock, a pista de patinação, o Prometeu dourado, as bandeiras e
+        o pinheiro de Natal que ninguém acendeu) · CATEDRAL DE ST. PATRICK (mármore branco, 2 agulhas de 100 m,
+        rosácea, arcobotantes) · FLATIRON (o "ferro de passar") · WALL STREET (a Bolsa com as colunas, o frontão e a
+        bandeira gigante rasgada; o TOURO de bronze e a menina) · THE VESSEL (a colmeia de escadas cor de cobre) ·
+        SEDE DA ONU (o Secretariado de vidro verde, a Assembleia, as bandeiras) · MUSEU GUGGENHEIM (a espiral branca);
+      - WASHINGTON SQUARE PARK: o ARCO de mármore no fim da 5ª Avenida (o caminho passa por baixo), a fonte redonda, os
+        caminhos em estrela, os gramados com cerquinha, os olmos, bancos e as mesas de xadrez;
+      - CONEY ISLAND (Brooklyn): o calçadão de madeira e a areia, a RODA-GIGANTE com as cabines coloridas, a TORRE DO
+        PARAQUEDAS, a MONTANHA-RUSSA de madeira (sobe-se pela estação e dá para andar nos trilhos até o alto da
+        subida, a 26 m), o portal CONEY ISLAND, as barracas e o bate-bate;
+      - YANKEE STADIUM (Bronx): a fachada de calcário com os arcos e as letras douradas, as arquibancadas azuis, o friso
+        branco no teto, as torres de luz, o placar com telão e o campo (grama, terra, bases, montinho); pelos portões
+        (atrás da casa base e nas laterais) você passa por baixo da arquibancada e sai no campo;
+      - UNISPHERE (Queens): o globo de aço inclinado com os continentes em placas, os 3 anéis das órbitas, o tripé e o
+        espelho d'água redondo com os jatos.
+    Ao chegar perto aparece o aviso com o nome e o bairro. No MAPA cada um tem a estrela dourada e o nome (com zoom).
+  · O TERRENO de cada ponto: os prédios que ficavam ali saíram (88 dos que existiam na 1.20; 126 contando os fechados
+    que já tinham saído) e os terrenos baldios em volta (até 30 m) viraram calçada. O resto da cidade é igual
+    (conferido prédio por prédio). Os JOGOS SALVOS continuam valendo: o loot guardado num prédio que saiu some, os
+    outros prédios ganham o número novo (remapa_v8).
+  · ÁRVORES NO JEITO DA UNREAL ENGINE 5 (pedido: "o mesmo sistema de otimização para árvores da Unreal Engine 5";
+    estudos/ESTUDO_AAA.md 1.14). A Unreal 5.7 (Nanite Foliage) escolhe o detalhe pelo tamanho na tela e, de longe,
+    desenha a folhagem como VOXELS (um volume), sem fotos planas e sem estalo. Aqui:
+      - 4 NÍVEIS escolhidos pelo TAMANHO DA ÁRVORE NA TELA (em pixels de altura), não por metros: COMPLETA (300 px ou
+        mais), SIMPLIFICADA (110 a 300: sem os galhos finos e com 1/3 das folhas, maiores; ~37% dos triângulos; casca
+        e folhas numa chamada só), VOXELS (32 a 110: a árvore vira 40 bolhas de folhagem, cada uma com luz de esfera e
+        a borda recortada) e VOXELS GROSSOS (menos de 32: 12 bolhas). A troca muda sozinha com a resolução e com o
+        ZOOM: pela luneta a árvore longe aparece com o detalhe de perto;
+      - os VOXELS entram no lugar dos IMPOSTORES (a "foto" de 3 planos): de qualquer lado a copa tem volume, a silhueta
+        certa e luz e sombra de verdade (de cima o Central Park parece uma mata, não um carpete de fotos);
+      - as trocas são em DISSOLVE pontilhado (o novo nível aparece ponto a ponto onde o velho some; nenhum ponto fica
+        sem árvore ou com duas): acabou o "estalo" a 40 m;
+      - o vento nas folhas some quando a árvore fica pequena na tela (como a Unreal para a animação de longe);
+      - cada bloco de 250 m só desenha os voxels finos/grossos na faixa de distância em que eles podem aparecer.
+    "Distância dos detalhes" continua mandando (baixo troca bem antes; ultra bem depois).
+  ARQUIVOS (testado: compilar_tudo, cidade igual à da 1.20 fora os terrenos dos pontos, teste_pontos_turisticos NOVO
+  (os 17 montados, nenhum prédio nos terrenos, conversão dos saves, aviso, SUBIR ANDANDO as escadarias, entrar na Grand
+  Central e no Yankee Stadium, passar no arco, a mureta do Memorial), teste_central_park, teste_desempenho, teste_graficos,
+  teste_jogo, teste_chunks, teste_carregamento, teste_pontes, teste_locais_108, teste_novidades e fotos de cada ponto):
+    mundo/pontos_turisticos.gd ..... NOVO · a lista dos 17 (lugar, tamanho, giro, nome, bairro), os prédios que saem,
+                                     os materiais (fachadas com janelas pelo shader, telões, aço, ouro, o teto da
+                                     Grand Central, a piscina do Memorial, areia), colisão, postes/bancos, aviso, mapa
+    mundo/pontos_obras.gd .......... NOVO · as construções de Manhattan (Empire, Chrysler, WTC e Memorial, Rockefeller,
+                                     St. Patrick, Grand Central, Times Square, Flatiron, Wall Street, Vessel, ONU,
+                                     Guggenheim)
+    mundo/pontos_obras_fora.gd ..... NOVO · Estátua da Liberdade, Washington Square, Coney Island, Yankee Stadium e
+                                     Unisphere
+    mundo/cidade.gd ................ os prédios nos terrenos saem (_buildings: "ponto", remapa_v8), os terrenos e o
+                                     entorno viram calçada (_lotes_pontos), etapa "Pontos turísticos de Nova York",
+                                     as árvores dos pontos são plantadas e nenhuma árvore/planta antiga nasce neles
+    menu/salvamento.gd ............. MAPA_PREDIOS 9 (saves da 1.17..1.20 convertidos com o remapa_v8)
+    main.gd ........................ liga o aviso dos pontos turísticos no HUD
+    hud/mapa.gd .................... o terreno, a estrela e o nome de cada ponto turístico
+    mundo/mato.gd .................. sem capim nos terrenos dos pontos turísticos
+    mundo/arvores.gd ............... reescrito: os 4 níveis pelo tamanho na tela, dissolve, vento que some, voxels
+                                     (textura com as bolhas), corte por bloco; os impostores saíram
+    mundo/arvores/lod1/ ............ NOVA · as 24 árvores simplificadas (<nome>.res)
+    mundo/arvores/voxels.json ...... NOVO · as bolhas (voxels) de cada árvore
+    mundo/arvores/impostores.png ... APAGADO (os impostores saíram)
+    ferramentas/preparar_arvores_lod.gd ...... NOVO · faz as simplificadas e os voxels a partir dos modelos
+    ferramentas/preparar_arvores.gd .......... não tira mais as fotos dos impostores
+    ferramentas/arvores_ez/sangrar.py ........ APAGADO (era a borda do atlas dos impostores)
+    ferramentas/testes/teste_pontos_turisticos.gd . NOVO
+    ferramentas/testes/teste_central_park.gd . confere os blocos de voxels (no lugar dos impostores)
+    ferramentas/testes/rodar.sh .... + teste_pontos_turisticos
+    estudos/ESTUDO_AAA.md .......... seção 1.14 NOVA (árvores na Unreal 5) + itens 31-35 do plano (✅)
+    menu/config.gd ................. VERSAO "1.21"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..." + seção 10
+
 ATUALIZAÇÃO 1.20 · CENTRAL PARK DE VERDADE E ÁRVORES REALISTAS (EZ-TREE)
   · ÁRVORES NOVAS (escolhidas pelo dono: a opção 6, todas): 24 variações REALISTAS geradas pelo programa EZ-Tree
     (MIT; cascas de foto CC0 do Poly Haven e do TextureCan) — carvalhos (5), freixos (4), olmos (4, os de copa em
@@ -4360,12 +4450,23 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd
 - chunks de 500 m (o que fica na cena, raio) ....... mundo/chunks.gd (+ Opções › Gráficos › Raio de chunks)
 - halos de luz (0.84; 1.16: os fios saíram) ...... mundo/luzes_rua.gd (onde ficam: mundo/abandono.gd _poste_luzes)
-- 1.20 · ÁRVORES (EZ-Tree): distâncias perto/
-  longe, vento, cor, colisão do tronco ..... mundo/arvores.gd (RAIO_PERTO, ALCANCE_IMPOSTOR, SHADER_FOLHA)
+- 1.21 · ÁRVORES: os 4 níveis (tamanho na
+  tela de cada troca, dissolve, alcance dos
+  voxels), vento, cor, colisão do tronco ... mundo/arvores.gd (PX, FAIXA, QUALIDADE, ALCANCE, PX_VENTO, SHADER_*)
+- 1.21 · as árvores SIMPLIFICADAS e os VOXELS
+  (refazer depois de mudar os modelos) .... ferramentas/preparar_arvores_lod.gd (grava mundo/arvores/lod1/ e voxels.json)
+- 1.21 · PONTOS TURÍSTICOS: a lista (lugar,
+  tamanho, giro, nome, bairro), materiais,
+  aviso, mapa .............................. mundo/pontos_turisticos.gd (LISTA, mat, SHADER_FACHADA/TELA/PISCINA)
+- 1.21 · o desenho de cada ponto turístico . mundo/pontos_obras.gd (Manhattan) · mundo/pontos_obras_fora.gd (Estátua da
+                                          Liberdade, Washington Square, Coney Island, Yankee Stadium, Unisphere)
+- 1.21 · prédios que saem nos terrenos e a
+  conversão dos jogos salvos .............. mundo/cidade.gd (_buildings: "ponto", remapa_v8, _lotes_pontos) ·
+                                          menu/salvamento.gd (MAPA_PREDIOS 9)
 - 1.20 · qual modelo vai em cada lugar
   guardado (rua, parque, terreno) ......... mundo/cidade.gd (_plantar_arvores, SORTEIO_*) · lugares: data/arvores_lugares.json
 - 1.20 · fazer/mudar as 24 árvores .......... ferramentas/arvores_ez/ (variantes.json, gerar.mjs) e depois
-                                          ferramentas/preparar_arvores.gd + ferramentas/arvores_ez/sangrar.py
+                                          ferramentas/preparar_arvores.gd + ferramentas/preparar_arvores_lod.gd
 - 1.20 · CENTRAL PARK: onde fica cada coisa
   (lagos, gramados, caminhos, árvores,
   postes, bancos) ......................... ferramentas/central_park/desenho.py (grava data/central_park.json)
@@ -4652,11 +4753,20 @@ MÚSICA (pasta audio/)
 -----------------------------------------------------------------------------------------------------
 10. LIMITAÇÕES CONHECIDAS E PRÓXIMOS PASSOS
 -----------------------------------------------------------------------------------------------------
+- 1.21: dos pontos turísticos só dá para ENTRAR na Grand Central (o salão) e no Yankee Stadium (pelos portões até o
+  campo); os arranha-céus, a catedral, a Bolsa, a ONU e o museu são por fora. A roda-gigante e a montanha-russa ficam
+  paradas. A piscina do Memorial é um desenho no chão (o chão da cidade continua inteiro embaixo: não dá para descer
+  nela). A Estátua da Liberdade fica num terreno de parque da ilhota (não tem o cais da balsa) e Coney Island fica
+  uma quadra antes do mar do mapa (a areia é do próprio terreno). Em volta de alguns pontos sobra uma faixa de terra
+  entre a calçada da rua e a praça (a grade de 20 m dos lotes não chega na calçada).
+- 1.21: ÁRVORES: sem o TAA da Unreal, o dissolve das trocas aparece como pontilhado por um instante (a faixa é curta,
+  ±8% em volta de cada limiar). Os voxels são bolhas (de muito perto da troca dá para notar que a copa ficou mais
+  lisa). As simplificadas não têm o normal map da casca.
 - 1.20: o Central Park é PLANO (o de verdade tem morros e a rua da 72nd passa por baixo da arcada; aqui o terraço
   alto da Bethesda fica em cima e a arcada passa no chão). Ele é menor que o de verdade (950 x 1730 m): o Reservoir,
   o zoológico, o Great Hill e o norte do parque não couberam. Dentro das construções só a arcada da Bethesda, o
   terraço do castelo e as pontes são de andar (o castelo, o Boathouse, o carrossel e as casinhas não abrem). O
-  impostor das árvores é a mesma foto para todos os lados (de muito perto da troca dá para notar). No meio da mata
+  impostor das árvores é a mesma foto para todos os lados (1.21: saiu; de longe agora são voxels). No meio da mata
   densa o desenho pesa mais que na cidade (~580 mil triângulos na Mall no "alto"): no celular, "Distância dos
   detalhes" em médio ou baixo deixa leve.
 - 1.19: o MODO HISTÓRIA foi apagado (botão bloqueado no menu); a lore continua em lore/ e o roteiro em
