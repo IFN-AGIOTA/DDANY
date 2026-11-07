@@ -3,24 +3,25 @@ extends SceneTree
 # modelos completos (mundo/arvores/modelos/<nome>.res, do ferramentas/preparar_arvores.gd) grava:
 #   - mundo/arvores/lod1/<nome>.res: a árvore SIMPLIFICADA (meio caminho), numa superfície só (casca com UV2.x = 1). Na casca saem os galhos finos (de longe nem
 #     aparecem, e ficam atrás das folhas) e o meshoptimizer da Godot (ImporterMesh.generate_lods) junta o resto; das
-#     folhas fica 1 cartão a cada 3, cada um maior (a copa continua com a mesma "massa" de folhas: é o que o
+#     folhas fica 1 cartão a cada 4, cada um maior (a copa continua com a mesma "massa" de folhas: é o que o
 #     SpeedTree/Unreal fazem nas folhagens).
 #   - mundo/arvores/voxels.json: os "VOXELS" de cada árvore para longe (como os do Nanite Foliage da 5.7: a árvore vira
 #     um volume, não uma foto plana). As folhas (e os galhos das secas) são agrupadas (k-means, pelo tamanho de cada
-#     cartão/triângulo) em 40 bolhas (o fino) e em 12 (o grosso); o tronco ganha 3 (1) bolhas. Cada bolha: centro e
+#     cartão/triângulo) em 24 bolhas (o fino), em 8 (o grosso) e em 4 (o de bem longe, só a copa); o tronco ganha 2 (1) delas. Cada bolha: centro e
 #     raio (m, no espaço do modelo), cor (a média da textura, mais escura no miolo e embaixo da copa) e se é folha
-#     (recebe a cor de cada árvore) ou casca.
+#     (1: recebe a cor de cada árvore), galho (0) ou o tronco (negativo: a meia altura da faixa em pé).
 # Rodar (não precisa de tela):  godot --headless --path . -s res://ferramentas/preparar_arvores_lod.gd
 const Arv := preload("res://mundo/arvores.gd")
 const SAIDA := "res://mundo/arvores/"
-const FICA_FOLHAS := 3                      # LOD1: fica 1 cartão de folhas a cada 3
-const CRESCE_FOLHA := 1.55                  # ... e ele cresce isso (em volta do centro do cartão)
+const FICA_FOLHAS := 4                      # LOD1: fica 1 cartão de folhas a cada 4
+const CRESCE_FOLHA := 1.75                  # ... e ele cresce isso (em volta do centro do cartão)
 const ALVO_CASCA := 0.3                     # LOD1: fração dos triângulos da casca
-const TIRA_GALHOS := [0.6, 0.45]            # LOD1: fração dos triângulos que pode sair nos galhos finos [com folhas, seca]
-const AREA_GALHOS := [0.22, 0.12]           # ... sem passar desta fração da área da casca
-const K_FINO := 40
-const K_GROSSO := 12
-const TRONCO_FINO := 3
+const TIRA_GALHOS := [0.72, 0.55]            # LOD1: fração dos triângulos que pode sair nos galhos finos [com folhas, seca]
+const AREA_GALHOS := [0.32, 0.18]           # ... sem passar desta fração da área da casca
+const K_FINO := 24
+const K_GROSSO := 8
+const K_LONGE := 4                          # o de bem longe (os blocos fixos, o "HLOD"): só a copa
+const TRONCO_FINO := 2
 const TRONCO_GROSSO := 1
 
 func _initialize() -> void:
@@ -134,10 +135,10 @@ func _initialize() -> void:
 			var c3 := vc0[ic2[t * 3 + 2]]
 			pc.append((a + b + c3) / 3.0)
 			wc.append((b - a).cross(c3 - a).length() * 0.5)
-		var r := {"fino": [], "grosso": []}
-		for nivel in ["fino", "grosso"]:
-			var k_total := K_FINO if nivel == "fino" else K_GROSSO
-			var n_tronco := TRONCO_FINO if nivel == "fino" else TRONCO_GROSSO
+		var r := {"fino": [], "grosso": [], "longe": []}
+		for nivel in ["fino", "grosso", "longe"]:
+			var k_total: int = {"fino": K_FINO, "grosso": K_GROSSO, "longe": K_LONGE}[nivel]
+			var n_tronco: int = {"fino": TRONCO_FINO, "grosso": TRONCO_GROSSO, "longe": 0}[nivel]
 			var lista: Array = []
 			if pf.size() > 0:
 				var y_copa := INF
@@ -150,10 +151,11 @@ func _initialize() -> void:
 					var ao := lerpf(0.62 + 0.38 * fora, 1.0, 0.25) * (0.78 + 0.22 * clampf(cen.y / h, 0.0, 1.0))
 					lista.append([cen.x, cen.y, cen.z, raio, cor_f.r * ao, cor_f.g * ao, cor_f.b * ao, 1.0])
 				# o tronco: de baixo até a copa
+				# (o tronco é uma faixa em pé: a "folha" negativa guarda a meia altura dela)
 				for q in n_tronco:
 					var y := y_copa * (q + 0.5) / n_tronco
-					var rr := maxf(rt * 1.5, 0.22) if n_tronco > 1 else maxf(rt * 1.6, y_copa * 0.25)
-					lista.append([0.0, y, 0.0, rr, cor_c.r, cor_c.g, cor_c.b, 0.0])
+					var rr := maxf(rt * 1.3, 0.2)
+					lista.append([0.0, y, 0.0, rr, cor_c.r, cor_c.g, cor_c.b, -(y_copa * 0.5 / n_tronco + 0.3)])
 			else:
 				# seca: só os galhos (a casca inteira agrupada)
 				for g in _kmeans(pc, wc, k_total, 11 + k_total):
@@ -166,7 +168,7 @@ func _initialize() -> void:
 					v[q] = snappedf(float(v[q]), 0.001)
 			r[nivel] = lista
 		saida[nome] = r
-		print("LOD %s · completa %d · simplificada %d triângulos (%d%%) · voxels %d/%d" % [nome, tri0, tri1, 100 * tri1 / maxi(tri0, 1), r["fino"].size(), r["grosso"].size()])
+		print("LOD %s · completa %d · simplificada %d triângulos (%d%%) · voxels %d/%d/%d" % [nome, tri0, tri1, 100 * tri1 / maxi(tri0, 1), r["fino"].size(), r["grosso"].size(), r["longe"].size()])
 	var f := FileAccess.open(SAIDA + "voxels.json", FileAccess.WRITE)
 	f.store_string(JSON.stringify({"_leia": "1.21 · gerado por ferramentas/preparar_arvores_lod.gd (não editar à mão): por modelo, as bolhas [x, y, z, raio, r, g, b, folha]", "modelos": saida}))
 	f.close()

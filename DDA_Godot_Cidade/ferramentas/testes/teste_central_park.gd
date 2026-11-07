@@ -99,7 +99,7 @@ func _r():
 	ok(arv != null and arv.quantas() > 20000, "árvores plantadas na cidade: %d" % (arv.quantas() if arv != null else 0))
 	ok(d["arvores"].size() > 10000, "árvores do Central Park no desenho: %d" % d["arvores"].size())
 	ok(arv.contagem.size() == 24, "as 24 variações do EZ-Tree aparecem: %d" % arv.contagem.size())
-	ok(arv.longe.size() > 100, "voxels (de longe, 1.21): %d MultiMesh (fino e grosso por bloco)" % arv.longe.size())
+	ok(arv.longe.size() > 100, "voxels grossos de longe (1.21): %d blocos" % arv.longe.size())
 	# ---- máscara: caminhos sem planta ----
 	var mall_meio := Vector2(-1622.0, -1000.0)
 	ok(CP.chao(mall_meio.x, mall_meio.y) == 2 and CP.bloqueia_planta(mall_meio.x, mall_meio.y), "a Mall é caminho (sem planta nem capim)")
