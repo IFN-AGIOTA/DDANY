@@ -215,10 +215,8 @@ World of Horizon Zero Dawn* (GDC 2017; só a página da palestra pôde ser lida)
 - **Objetos que dependem um do outro vão juntos** (uma porta e o prédio dela, um interruptor e a luz): a célula
   carrega o grupo inteiro, para nunca aparecer metade. *(Epic)*
 - **HLOD em camadas** (*Hierarchical LOD*): de longe, muitos objetos viram **uma malha só**.
-  - *Instancing*: a vegetação de longe vira instâncias no LOD mais baixo. ✅ 1.20: as árvores (EZ-Tree) de longe são
-    IMPOSTORES (foto da árvore em 3 planos + 1 deitado, 8 triângulos) num MultiMesh por bloco de 250 m, todas as 24
-    variações juntas num atlas (1 chamada de desenho por bloco); perto, a árvore de verdade num MultiMesh por modelo,
-    escolhida pela CPU num raio, e a troca acontece no shader na mesma distância (`mundo/arvores.gd`).
+  - *Instancing*: a vegetação de longe vira instâncias no LOD mais baixo. ✅ 1.20: as árvores (EZ-Tree) de longe
+    eram IMPOSTORES num MultiMesh por bloco de 250 m. ✅ 1.21: viraram 4 níveis no jeito da Unreal 5 (ver 1.14).
   - *Merged Mesh*: junta várias malhas numa, mantendo o visual.
   - *Simplified Mesh*: refaz a forma por fora. Usa um *Merge Distance* que **fecha portas e janelas**, porque de longe
     não se vê o interior.
@@ -256,6 +254,53 @@ World of Horizon Zero Dawn* (GDC 2017; só a página da palestra pôde ser lida)
    (ver 1.3), com a troca pela distância calculada para dar o tamanho certo na tela.
 7. **Overlay de diagnóstico** (só para nós, escondido nas opções de desenvolvedor): grade dos chunks com cores por
    estado, quantos ligaram neste quadro, quanto tempo levou e um botão para desligar o HLOD.
+
+### 1.14 Árvores: como a Unreal Engine 5 faz (Nanite Foliage, 5.7)
+
+Fontes: documentação da Epic *Nanite Foliage* (5.7, experimental); matérias do lançamento da 5.7 (Digital Production,
+NoobFeed); fóruns da Epic sobre o HISM (*Hierarchical Instanced Static Mesh*) e o *dithered LOD transition*.
+
+**Como funciona lá**
+- **O detalhe é escolhido pelo tamanho na tela, não pela distância.** O Nanite divide a malha em grupos de
+  triângulos e desenha cada grupo no nível em que o erro fica menor que um pixel. Muda sozinho com a resolução e
+  com o zoom (uma luneta mostra a árvore longe com o detalhe de perto). *(Epic)*
+- **Voxels de longe (Nanite Voxels).** Quando os grupos ficam pequenos na tela, a folhagem passa a ser desenhada
+  como **voxels** (um volume), "imperceptíveis pelo tamanho na tela": a árvore guarda a silhueta e a massa de
+  qualquer lado, **sem fotos planas (billboards/impostores) e sem LOD estalando**. Liga-se na malha com *Shape
+  Preservation = Voxelize*. *(Epic)*
+- **Assemblies (Nanite Assemblies).** A árvore é montada com **peças instanciadas** (galhos e cachos de folhas
+  repetidos): o disco e a memória guardam a peça uma vez só. *(Epic)*
+- **Vento por esqueleto (Nanite Skinning / Dynamic Wind)**, e a **animação para de ser aplicada sozinha** quando a
+  árvore fica pequena na tela. *(Epic)*
+- **Instâncias em árvore de grupos (HISM).** As folhagens ficam em grupos (*clusters*) com caixa: o motor descarta
+  um grupo inteiro fora da câmera ou longe demais e escolhe o LOD **por instância** dentro dele. *(fóruns da Epic)*
+- **Troca pontilhada (*dithered LOD transition*).** Na troca de nível, o novo aparece e o velho some em pontinhos
+  (com o TAA da Unreal o pontilhado vira um "dissolve" suave): **nada estala**. Tem custo (os dois níveis aparecem por
+  um instante). *(fóruns da Epic)*
+- **Some com a distância por grupo (*cull distance*)**, também com o pontilhado.
+
+**O que já tínhamos (1.20)**
+- ✅ A árvore de verdade perto (lista da CPU, MultiMesh por modelo) e o IMPOSTOR (8 triângulos com a "foto") longe,
+  num MultiMesh por bloco. ✖ Trocava pela DISTÂNCIA (22–56 m), estalava na troca, e a foto de longe é plana.
+
+**O que foi feito (1.21)** ➜ `mundo/arvores.gd` + `ferramentas/preparar_arvores_lod.gd`
+1. ✅ **Detalhe pelo tamanho na tela**: cada árvore mede a altura dela em pixels (altura × escala da câmera ÷
+   distância; a escala vem da resolução e do campo de visão, então a **luneta** traz o detalhe). 4 níveis:
+   completa ≥ 300 px · simplificada 110–300 · voxels 32–110 · voxels grossos < 32 (× a "Distância dos detalhes").
+2. ✅ **Voxels** no lugar dos impostores: cada árvore vira 40 bolhas (e 12 no grosso) achadas por k-means nas folhas
+   (e nos galhos das secas), com a cor da textura e o miolo/baixo da copa mais escuros; cada bolha é um quadrado
+   virado para a câmera com a normal de uma esfera (a luz fica de volume) e a borda recortada com ruído. Os dados
+   ficam numa textura (`texelFetch`): uma malha só serve para os 24 modelos (1 chamada por bloco).
+3. ✅ **Nível simplificado** (o "meio" que faltava): os galhos finos saem (os triângulos de aresta mais curta), o
+   meshoptimizer da Godot junta o resto, e fica 1 cartão de folhas a cada 3, maior (~37% dos triângulos); casca e
+   folhas numa superfície só (metade das chamadas).
+4. ✅ **Troca pontilhada** entre todos os níveis (ruído de gradiente intercalado na tela; os dois níveis usam o
+   mesmo ruído, um ao contrário do outro: nenhum ponto fica sem árvore ou com duas). Sem TAA, a faixa é curta (±8%).
+5. ✅ **Vento some** quando a árvore fica com menos de 160 px.
+6. ✅ **Corte por grupo**: o MultiMesh de voxels de cada bloco de 250 m só fica na cena na faixa de distância em que
+   alguma árvore dele pode estar naquele nível (o fino some nos blocos longe; o grosso nos de perto).
+7. ✖ *Assemblies*: não precisamos (os 24 modelos já são instâncias compartilhadas).
+8. ✖ *Vento por esqueleto*: o vento continua no shader (sem ossos), que é o que cabe no celular.
 
 ---
 
@@ -639,6 +684,16 @@ Impacto e esforço estimados por mim; cada item cita a seção acima. **Todos os
 | 30 ✅ | Fios de poste **removidos** (pedido) | A etapa mais lenta da montagem da cidade saiu | `mundo/luzes_rua.gd`, `mundo/abandono.gd` |
 | — | Resultado | Triângulos: ponte −11/−12%, Downtown −10%, avenida −2%; chamadas iguais ou menores | `ferramentas/testes/teste_desempenho.gd` |
 
+**Quarta leva (1.21)**: as árvores no jeito da Unreal Engine 5 (seção 1.14).
+
+| # | O quê | Resultado | Onde |
+|---|---|---|---|
+| 31 ✅ | Detalhe das árvores pelo **tamanho na tela** (1.14) | Muda com a resolução e com o zoom da luneta | `mundo/arvores.gd` |
+| 32 ✅ | **Voxels** de longe no lugar dos impostores (1.14) | Copa com volume de qualquer lado, luz e silhueta certas | `mundo/arvores.gd`, `ferramentas/preparar_arvores_lod.gd` |
+| 33 ✅ | **Nível simplificado** + casca e folhas numa chamada (1.14) | ~37% dos triângulos entre a completa e os voxels | idem |
+| 34 ✅ | **Troca pontilhada** entre os níveis e vento que some longe (1.14) | Nada estala na troca | `mundo/arvores.gd` |
+| 35 ✅ | **Corte por grupo** dos voxels (1.14) | Bloco sai da cena fora da faixa do nível dele | `mundo/arvores.gd` |
+
 ---
 
 ## 8. Fontes
@@ -648,6 +703,7 @@ Impacto e esforço estimados por mim; cada item cita a seção acima. **Todos os
 - [Android: Optimize](https://developer.android.com/games/optimize) · [Frame pacing](https://developer.android.com/games/sdk/frame-pacing) · [ADPF](https://developer.android.com/games/optimize/adpf) · [Thermal](https://developer.android.com/games/optimize/adpf/thermal) · [Textures](https://developer.android.com/games/optimize/textures) · [Geometry](https://developer.android.com/games/optimize/geometry) · [Materials](https://developer.android.com/games/optimize/materials) · [Power](https://developer.android.com/games/optimize/power)
 - [Arm Community: overhead of the driver (~500 chamadas)](https://community.arm.com/support-forums/f/graphics-gaming-and-vr-forum/48848/overhead-of-the-driver) · [Arm Mali best practices (anúncio)](https://developer.arm.com/community/arm-community-blogs/b/mobile-graphics-and-gaming-blog/posts/new-developer-guide-arm-mali-application-developer-best-practices)
 - Streaming: [Epic: World Partition](https://dev.epicgames.com/documentation/en-us/unreal-engine/world-partition-in-unreal-engine) · [Epic: World Partition HLOD](https://dev.epicgames.com/documentation/en-us/unreal-engine/world-partition---hierarchical-level-of-detail-in-unreal-engine) · [Guerrilla: Streaming the World of Horizon Zero Dawn](https://www.guerrilla-games.com/read/Streaming-the-World-of-Horizon-Zero-Dawn) · [Advances in Real-Time Rendering 2017](https://advances.realtimerendering.com/s2017/index.html) · [zeux.io (Arseny Kapoulkine)](https://zeux.io/)
+- Árvores: [Epic: Nanite Foliage (5.7)](https://dev.epicgames.com/documentation/unreal-engine/nanite-foliage) · [Digital Production: UE 5.7, foliage, PCG](https://digitalproduction.com/2025/11/12/unreal-engine-5-7-foliage-pcg-and-in-editor-ai/) · [NoobFeed: UE 5.7 foliage](https://www.noobfeed.com/hardware/unreal-engine-5-7-foliage-material-ai-upgrades) · [Fórum da Epic: HISM e dithered LOD](https://forums.unrealengine.com/t/need-info-on-hierarchical-instanced-static-mesh-components/23811/13)
 - [GameDev.net: por que a luneta PiP é cara](https://gamedev.net/forums/topic/717272-why-are-picture-in-picture-scopes-in-games-such-an-expensive-effect-they-seem-like-they-could-be-easily-optimised)
 
 **IA e multidões**

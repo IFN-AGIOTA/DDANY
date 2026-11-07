@@ -4,7 +4,7 @@ extends SceneTree
 #     ÁGUA de verdade (dá para nadar no meio do The Lake); a praça da Bethesda é chão firme
 #   · as construções foram montadas (Bethesda, Bow Bridge, Gapstow, Belvedere, Boathouse, Bandshell, obelisco...)
 #   · árvores: mais de 20 mil na cidade e mais de 10 mil dentro do Central Park; perto do jogador aparecem as de verdade
-#     (lista de perto) e de longe os impostores; os troncos são obstáculos da física
+#     (lista de perto: completa e simplificada) e de longe os voxels (1.21); os troncos são obstáculos da física
 #   · nada de planta/capim nos caminhos (a máscara do desenho) e o desenho é o mesmo do data/central_park.json
 #   · ANDANDO (sem pular): sobe a escadaria da Bethesda até o terraço alto, atravessa a Bow Bridge por cima do lago
 #     e sobe a escada da Vista Rock até o terraço do Belvedere Castle
@@ -99,7 +99,7 @@ func _r():
 	ok(arv != null and arv.quantas() > 20000, "árvores plantadas na cidade: %d" % (arv.quantas() if arv != null else 0))
 	ok(d["arvores"].size() > 10000, "árvores do Central Park no desenho: %d" % d["arvores"].size())
 	ok(arv.contagem.size() == 24, "as 24 variações do EZ-Tree aparecem: %d" % arv.contagem.size())
-	ok(arv.impostores.size() > 50, "impostores (de longe): %d blocos" % arv.impostores.size())
+	ok(arv.longe.size() > 100, "voxels (de longe, 1.21): %d MultiMesh (fino e grosso por bloco)" % arv.longe.size())
 	# ---- máscara: caminhos sem planta ----
 	var mall_meio := Vector2(-1622.0, -1000.0)
 	ok(CP.chao(mall_meio.x, mall_meio.y) == 2 and CP.bloqueia_planta(mall_meio.x, mall_meio.y), "a Mall é caminho (sem planta nem capim)")

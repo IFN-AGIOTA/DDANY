@@ -4,80 +4,24 @@ extends SceneTree
 #     tronco no ponto (0, 0, 0); escala da textura da casca dentro das UVs; tangentes (normal map); normais das folhas
 #     "redondas" (de dentro da copa para fora: a luz fica macia como numa copa de verdade)
 #   - grava mundo/arvores/modelos/<nome>.res
-#   - tira as FOTOS dos impostores (de lado e de cima, sem luz, fundo transparente) e monta mundo/arvores/impostores.png
-#     (o "sangramento" da cor para o transparente é feito depois pelo ferramentas/arvores_ez/sangrar.py)
-#   - grava mundo/arvores/arvores.json (altura, raio da copa, raio do tronco, lado da foto, célula do atlas, tipos)
-# Rodar (precisa de tela para as fotos: xvfb no Linux):
-#   GLB=<pasta dos .glb> xvfb-run -a godot --rendering-driver opengl3 --path . -s res://ferramentas/preparar_arvores.gd
-#   python3 ferramentas/arvores_ez/sangrar.py mundo/arvores/impostores.png
+#   - grava mundo/arvores/arvores.json (altura, raio da copa, raio do tronco, tipos)
+#   (1.21: as "fotos" dos impostores saíram: de longe a árvore agora é de VOXELS; os níveis de detalhe saem do
+#   ferramentas/preparar_arvores_lod.gd, que se roda DEPOIS deste)
+# Rodar:
+#   GLB=<pasta dos .glb> godot --headless --path . -s res://ferramentas/preparar_arvores.gd
+#   godot --headless --path . -s res://ferramentas/preparar_arvores_lod.gd
 const Arv := preload("res://mundo/arvores.gd")
 const SAIDA := "res://mundo/arvores/"
 
-var vp: SubViewport
-var cam: Camera3D
-var palco: Node3D
-
 func _initialize() -> void:
 	_r.call_deferred()
-
-func _shader_foto(folha: bool) -> Shader:
-	var s := Shader.new()
-	s.code = """
-shader_type spatial;
-render_mode unshaded, cull_disabled;
-uniform sampler2D tex : source_color, filter_linear_mipmap, repeat_enable;
-uniform vec4 tint : source_color = vec4(1.0);
-uniform float altura = 10.0;
-uniform float raio = 4.0;
-uniform float folha = 0.0;
-varying vec3 p;
-void vertex() { p = VERTEX; }
-void fragment() {
-	vec4 t = texture(tex, UV);
-	vec3 c = t.rgb * tint.rgb;
-	// "sombra" pintada: o miolo da copa e a parte de baixo mais escuros (a foto não tem luz)
-	float fora = clamp(length(p.xz) / max(raio, 0.5), 0.0, 1.0);
-	float alto = clamp(p.y / max(altura, 1.0), 0.0, 1.0);
-	c *= mix(0.62 + 0.38 * fora, 1.0, 0.25) * (0.78 + 0.22 * alto);
-	ALBEDO = c;
-	if (folha > 0.5) {
-		ALPHA = t.a;
-		ALPHA_SCISSOR_THRESHOLD = 0.5;
-	}
-}
-"""
-	return s
 
 func _r() -> void:
 	var dir_glb := OS.get_environment("GLB")
 	var cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://ferramentas/arvores_ez/variantes.json"))
 	var geradas: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(dir_glb + "/variantes_geradas.json"))
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SAIDA + "modelos"))
-	# palco das fotos
-	vp = SubViewport.new()
-	vp.size = Vector2i(Arv.CEL_LADO, Arv.CEL_LADO)
-	vp.transparent_bg = true
-	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	vp.msaa_3d = Viewport.MSAA_4X
-	root.add_child(vp)
-	var we := WorldEnvironment.new()
-	var env := Environment.new()
-	env.background_mode = Environment.BG_CLEAR_COLOR
-	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
-	we.environment = env
-	vp.add_child(we)
-	cam = Camera3D.new()
-	cam.projection = Camera3D.PROJECTION_ORTHOGONAL
-	vp.add_child(cam)
-	cam.current = true
-	palco = Node3D.new()
-	vp.add_child(palco)
-	var sh_casca := _shader_foto(false)
-	var sh_folha := _shader_foto(true)
-	var atlas := Image.create(Arv.ATLAS.x, Arv.ATLAS.y, false, Image.FORMAT_RGBA8)
-	atlas.fill(Color(0, 0, 0, 0))
 	var modelos: Array = []
-	var cel := 0
 	for v in cfg["variantes"]:
 		var nome := String(v["nome"])
 		var g: Dictionary = geradas[nome]
@@ -92,61 +36,15 @@ func _r() -> void:
 		e["casca"] = String(g["casca"])
 		e["folha"] = String(g["folha"])
 		e["cor_folha"] = Color.hex(int(g["folha_tint"]) << 8 | 0xff).to_html(false)
-		e["celula"] = cel
 		am.remove_meta("info")
 		ResourceSaver.save(am, SAIDA + "modelos/%s.res" % nome, ResourceSaver.FLAG_COMPRESS)
-		# fotos
-		var mi := MeshInstance3D.new()
-		mi.mesh = am
-		var mc := ShaderMaterial.new()
-		mc.shader = sh_casca
-		mc.set_shader_parameter("tex", load(SAIDA + "texturas/casca_%s.jpg" % Arv.CASCAS.get(e["casca"], "carvalho")))
-		mc.set_shader_parameter("altura", e["altura"])
-		mc.set_shader_parameter("raio", e["raio_copa"])
-		mi.set_surface_override_material(0, mc)
-		if am.get_surface_count() > 1:
-			var mf := ShaderMaterial.new()
-			mf.shader = sh_folha
-			mf.set_shader_parameter("tex", load(SAIDA + "texturas/folha_%s.png" % Arv.FOLHAS.get(e["folha"], "carvalho")))
-			mf.set_shader_parameter("tint", Color.html(e["cor_folha"]))
-			mf.set_shader_parameter("altura", e["altura"])
-			mf.set_shader_parameter("raio", e["raio_copa"])
-			mf.set_shader_parameter("folha", 1.0)
-			mi.set_surface_override_material(1, mf)
-		palco.add_child(mi)
-		var lado := float(e["lado"])
-		# de lado (olhando para -Z): base da árvore na borda de baixo
-		vp.size = Vector2i(Arv.CEL_LADO, Arv.CEL_LADO)
-		cam.size = lado
-		cam.position = Vector3(0, lado * 0.5, 200.0)
-		cam.rotation = Vector3.ZERO
-		cam.far = 500.0
-		var img := await _foto()
-		img.resize(Arv.CEL_LADO, Arv.CEL_LADO, Image.INTERPOLATE_LANCZOS)
-		atlas.blit_rect(img, Rect2i(0, 0, Arv.CEL_LADO, Arv.CEL_LADO), Vector2i((cel % Arv.COLS) * Arv.CEL_LADO, (cel / Arv.COLS) * Arv.CEL_LADO))
-		# de cima (olhando para baixo, "para cima" da foto = -Z)
-		vp.size = Vector2i(Arv.CEL_TOPO, Arv.CEL_TOPO)
-		cam.size = float(e["raio_copa"]) * 2.0
-		cam.position = Vector3(0, float(e["altura"]) + 100.0, 0)
-		cam.rotation = Vector3(-PI * 0.5, 0, 0)
-		var img2 := await _foto()
-		img2.resize(Arv.CEL_TOPO, Arv.CEL_TOPO, Image.INTERPOLATE_LANCZOS)
-		atlas.blit_rect(img2, Rect2i(0, 0, Arv.CEL_TOPO, Arv.CEL_TOPO), Vector2i((cel % Arv.COLS_TOPO) * Arv.CEL_TOPO, Arv.Y_TOPO_ATLAS + (cel / Arv.COLS_TOPO) * Arv.CEL_TOPO))
-		mi.queue_free()
 		modelos.append(e)
 		print("ARVORE %s · %d triângulos · altura %.1f m · copa %.1f m · tronco %.2f m" % [nome, e["tris"], e["altura"], e["raio_copa"], e["raio_tronco"]])
-		cel += 1
-	atlas.save_png(ProjectSettings.globalize_path(SAIDA + "impostores.png"))
 	var f := FileAccess.open(SAIDA + "arvores.json", FileAccess.WRITE)
 	f.store_string(JSON.stringify({"_leia": "1.20 · gerado por ferramentas/preparar_arvores.gd (não editar à mão)", "modelos": modelos}, "\t"))
 	f.close()
 	print("PRONTO: %d modelos" % modelos.size())
 	quit()
-
-func _foto() -> Image:
-	for i in 4:
-		await process_frame
-	return vp.get_texture().get_image()
 
 # lê o .glb (GLTFDocument, sem importar no projeto) e devolve a malha pronta (meta "info" com as medidas)
 func _malha(arq: String, g: Dictionary, altura: float) -> ArrayMesh:

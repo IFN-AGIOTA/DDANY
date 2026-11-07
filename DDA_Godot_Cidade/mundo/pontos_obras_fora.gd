@@ -291,6 +291,7 @@ func _washington_sq() -> void:
 	_bc("granito", Vector3(-rp - 8.0, 1.4, 6.0), Vector3(2.6, 2.8, 2.6), Color(0.45, 0.44, 0.43))
 	_figura("bronze", Vector3(-rp - 8.0, 2.8, 6.0), 2.8, BRONZE, -PI * 0.5, false)
 	parque.pontos_altos["washington_arco"] = T * Vector3(0, 0.1, za - 8.0)
+	parque.pontos_altos["washington_rua"] = T * Vector3(0, 0.1, za + 9.0)
 
 # ---------------------------------------------------------------------------------------------------------------
 # CONEY ISLAND (+Z = sul: o calçadão e a areia)
@@ -648,8 +649,10 @@ func _yankee() -> void:
 	ct.caixa(up + Vector3(0, 28.0, 1.05), Vector3(32.0, 11.0, 0.1), Color(0.37, 32.0 / 64.0, 11.0 / 64.0))
 	_letreiro("YANKEES", up + Vector3(0, 36.4, 1.1), 0.0, 128, 0.04, Color(0.95, 0.95, 0.95))
 	_letreiro("YANKEE STADIUM", Vector3(0, 27.0, rf + 1.6), 0.0, 128, 0.07, OURO)
+	var ug := Vector3(sin(PI / n), 0, cos(PI / n))           # o meio do portão atrás da casa base (fatia 0)
 	parque.pontos_altos["yankee_campo"] = T * (monte + Vector3(0, 0.6, 0))
-	parque.pontos_altos["yankee_portao"] = T * Vector3(0, 0.1, rf + 4.0)
+	parque.pontos_altos["yankee_portao"] = T * (ug * (rf + 4.0) + Vector3(0, 0.1, 0))
+	parque.pontos_altos["yankee_tunel"] = T * (ug * (rc - 6.0) + Vector3(0, 0.1, 0))
 
 # ---------------------------------------------------------------------------------------------------------------
 # UNISPHERE (Flushing Meadows · Queens): o globo de aço da Feira Mundial de 1964
