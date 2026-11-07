@@ -29,6 +29,7 @@ const Teclas := preload("res://jogador/teclas.gd")
 const Locais := preload("res://mundo/locais.gd")
 const Pontes := preload("res://mundo/pontes.gd")     # 1.15: o nome das pontes no mapa
 const CentralParkCls := preload("res://mundo/central_park.gd")   # 1.20: gramados, caminhos e lagos do Central Park
+const PontosCls := preload("res://mundo/pontos_turisticos.gd")    # 1.21: pontos turísticos (terreno e nome)
 
 const RAIO_MINI := 250.0            # metros do centro até a borda do minimapa
 const TAM_MINI := 22.0              # diâmetro do minimapa (vh = 1% da altura da tela)
@@ -354,6 +355,7 @@ func _desenhar_cidade(ci: CanvasItem, dados) -> void:
 		if int(l[0]) == 1:
 			_poligono(rid, _pts(l[1]), COR_AGUA)
 	CentralParkCls.desenhar_mapa(ci, COR_PARQUE, COR_CALCADA)
+	PontosCls.desenhar_terrenos(ci, COR_CALCADA)
 	var ruas: Array = dados["roads"]
 	for passo in 2:
 		var cor := COR_CALCADA if passo == 0 else COR_RUA
@@ -657,6 +659,16 @@ func _apertar(id: String) -> void:
 
 # ---------- desenho: texto e símbolos ----------
 # OTIMIZAÇÃO: os textos vão para uma FILA e são desenhados todos juntos no fim (_soltar_textos). Texto no meio de
+# 1.21: estrela de 5 pontas (pontos turísticos)
+func _estrela(ci: CanvasItem, c: Vector2, r: float, cor: Color) -> void:
+	var pts := PackedVector2Array()
+	for k in 10:
+		var a := -PI * 0.5 + k * PI / 5.0
+		var rr := r if k % 2 == 0 else r * 0.45
+		pts.append(c + Vector2(cos(a), sin(a)) * rr)
+	UI.circulo(ci, c, r * 1.15, Color(0.03, 0.05, 0.08, 0.85))
+	ci.draw_colored_polygon(pts, cor)
+
 # linhas/círculos troca de textura (a fonte) e quebra o lote do desenho 2D: a bússola fazia ~25 chamadas de desenho.
 var _fila_txt: Array = []
 
@@ -1071,6 +1083,14 @@ func _desenhar_mapa() -> void:
 			var pp := _mundo_para_tela(pt.ponto((pt.ini + pt.fim) * 0.5))
 			if Rect2(Vector2.ZERO, vs).grow(8.0 * vh).has_point(pp):
 				_texto(ci, pt.nome, pp + Vector2(0, -2.4 * vh), tl, Color(0.86, 0.92, 1.0, 0.92))
+	# 1.21: PONTOS TURÍSTICOS (estrela e, com zoom, o nome)
+	for pt2 in PontosCls.pontos_mapa():
+		var pp2 := _mundo_para_tela(pt2[0])
+		if not Rect2(Vector2.ZERO, vs).grow(3.0 * vh).has_point(pp2):
+			continue
+		_estrela(ci, pp2, 1.3 * vh, PontosCls.COR_MAPA)
+		if _mpp < 9.0:
+			_texto(ci, pt2[1], pp2 + Vector2(0, 2.6 * vh), tl, PontosCls.COR_MAPA)
 	# 0.91: trocas te esperando nos hospitais (o "$" e o que é)
 	var por_lugar := {}
 	for nt in _notas():

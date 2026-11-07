@@ -726,6 +726,8 @@ func _criar_jogo() -> void:
 	locais.mundo = mundo
 	locais.clima = clima
 	locais.hud = hud
+	if cidade.get("pontos") != null and is_instance_valid(cidade.pontos):
+		cidade.pontos.hud = hud                     # 1.21: aviso ao chegar num ponto turístico
 	await _etapa("carros")
 	veiculos = VeiculosCls.new()
 	veiculos.name = "Veiculos"

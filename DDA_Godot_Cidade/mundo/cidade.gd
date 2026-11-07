@@ -22,6 +22,7 @@ const PontesCls := preload("res://mundo/pontes.gd")      # 1.15: pontes de Nova 
 const Cenario := preload("res://mundo/cenario.gd")
 const ArvoresCls := preload("res://mundo/arvores.gd")    # 1.20: as árvores novas (EZ-Tree) nos lugares guardados
 const CentralParkCls := preload("res://mundo/central_park.gd")   # 1.20: o Central Park (lagos, caminhos, construções, mata)
+const PontosCls := preload("res://mundo/pontos_turisticos.gd")    # 1.21: pontos turísticos de Nova York
 
 const CELL := 20.0                          # resolução das máscaras (m)
 const WORLD := Vector2(11000.0, 8600.0)     # metade do mundo (m)
@@ -129,6 +130,7 @@ func etapas() -> Array:
 	r.append_array(ab.etapas())
 	r.append(["Juntando o abandono", 1.3, _abandono_fim])
 	r.append(["O Central Park", 2.0, func(): await _central_park()])
+	r.append(["Pontos turísticos de Nova York", 2.0, func(): await _pontos_turisticos()])
 	r.append(["Árvores e canteiros", 8.0, _arvores])
 	r.append(["Escondendo o que a câmera não vê", 3.0, _oclusao])
 	return r
@@ -171,6 +173,9 @@ func limpar() -> void:
 	if central_park != null and is_instance_valid(central_park):
 		central_park.queue_free()
 	central_park = null
+	if pontos != null and is_instance_valid(pontos):
+		pontos.queue_free()
+	pontos = null
 	is_built = false
 
 # grava res://cidade.scn: a cidade vira uma cena de verdade, editável com as ferramentas da Godot
@@ -695,6 +700,7 @@ var remapa_v4 := PackedInt32Array()         # 1.06: número do prédio na 0.78..
 var remapa_v5 := PackedInt32Array()         # 1.07: número do prédio na 1.06 -> agora (-1 = saiu para um porto)
 var remapa_v6 := PackedInt32Array()         # 1.15: número do prédio na 1.07..1.14 -> agora (-1 = saiu para as ruas novas das pontes)
 var remapa_v7 := PackedInt32Array()         # 1.17: número do prédio na 1.15..1.16 -> agora (-1 = era um prédio FECHADO, que saiu)
+var remapa_v8 := PackedInt32Array()         # 1.21: número do prédio na 1.17..1.20 -> agora (-1 = saiu para um PONTO TURÍSTICO)
 # 1.17 · SÓ FICAM OS PRÉDIOS QUE DÁ PARA ENTRAR (pedido): os inteiros sem entrada (térreo com portas de aço, ~29%)
 # saem da cidade; o terreno deles vira terreno vazio (terra, mato e árvore seca). As ruínas ficam. Os sorteios
 # continuam os mesmos (os outros prédios não mudam) e os jogos salvos são convertidos (remapa_v7, MAPA_PREDIOS 8).
@@ -740,7 +746,9 @@ func _buildings() -> void:
 	remapa_v5 = PackedInt32Array()
 	remapa_v6 = PackedInt32Array()
 	remapa_v7 = PackedInt32Array()
+	remapa_v8 = PackedInt32Array()
 	removidos["fechado"] = 0
+	removidos["ponto"] = 0
 	var n_105: int = LocaisCls.N_LOCAIS_105
 	var n_106: int = LocaisCls.N_LOCAIS_106
 	var rets_locais: Array[Rect2] = []
@@ -774,6 +782,9 @@ func _buildings() -> void:
 			var bz := z + rng.randf_range(-3.0, 3.0)
 			# em cima/perto da água ou da rua/calçada? (os sorteios continuam iguais para os outros prédios não mudarem)
 			var fora := _predio_ruim(bx, bz, sx, sz)
+			# 1.21: no terreno de um PONTO TURÍSTICO (mundo/pontos_turisticos.gd): sai (as tabelas de antes ganham -1)
+			var no_ponto := PontosCls.em(Rect2(bx - sx * 0.5, bz - sz * 0.5, sx, sz))
+			var idx_agora: int = -1 if no_ponto else predio_info.size()
 			# 1.17: posição desta entrada em cada tabela de jogo salvo (se o prédio for um fechado que sai, vira -1)
 			var marcas := PackedInt32Array([remapa_predios.size(), remapa_v2.size(), remapa_v3.size(), remapa_v4.size(),
 				remapa_v5.size(), remapa_v6.size()])
@@ -794,9 +805,9 @@ func _buildings() -> void:
 				var no_local := no_antigo or no_novo
 				# 1.15: em cima de uma RUA NOVA das pontes (mundo/pontes.gd RUAS_NOVAS): sai também (todas as tabelas)
 				var na_ponte := PontesCls.em_rua_nova(bx, bz, sx, sz)
-				remapa_v2.append(-1 if (no_local or na_ponte) else predio_info.size())
+				remapa_v2.append(-1 if (no_local or na_ponte) else idx_agora)
 				if not no_antigo:
-					remapa_v3.append(-1 if (no_novo or na_ponte) else predio_info.size())
+					remapa_v3.append(-1 if (no_novo or na_ponte) else idx_agora)
 				# 1.06: na 0.78..1.05 só os locais até N_LOCAIS_105 tiravam prédios
 				var no_ate_105 := false
 				if no_local:
@@ -805,7 +816,7 @@ func _buildings() -> void:
 							no_ate_105 = true
 							break
 				if not no_ate_105:
-					remapa_v4.append(-1 if (no_106 or na_ponte) else predio_info.size())
+					remapa_v4.append(-1 if (no_106 or na_ponte) else idx_agora)
 				# 1.07: na 1.06 só os locais até N_LOCAIS_106 tiravam prédios
 				var no_ate_106 := false
 				var no_107 := false
@@ -817,14 +828,16 @@ func _buildings() -> void:
 							else:
 								no_107 = true
 				if not no_ate_106:
-					remapa_v5.append(-1 if (no_107 or na_ponte) else predio_info.size())
+					remapa_v5.append(-1 if (no_107 or na_ponte) else idx_agora)
 				# 1.15: na 1.07..1.14 todos os locais já tiravam prédios; agora saem também os das ruas novas
 				if not no_local:
-					remapa_v6.append(-1 if na_ponte else predio_info.size())
+					remapa_v6.append(-1 if na_ponte else idx_agora)
 				if no_local:
 					fora = "local"
 				elif na_ponte:
 					fora = "ponte"
+				elif no_ponto:
+					fora = "ponto"
 			remapa_predios.append(-1 if fora != "" else predio_info.size())
 			if fora != "":
 				removidos[fora] += 1
@@ -855,9 +868,14 @@ func _buildings() -> void:
 					lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx, h, sz * 0.5)), Vector3(bx, Y_RUA + h * 0.5, bz - sz * 0.25)), cz, Color(sx, h, sz * 0.5, dado_predio(4, sem))])
 					lista_bloco.append([Transform3D(Basis.from_scale(Vector3(sx * 0.85, h_b, sz * 0.5)), Vector3(bx, Y_RUA + h_b * 0.5, bz + sz * 0.25)), cz, Color(sx * 0.85, h_b, sz * 0.5, dado_predio(4, sem))])
 				info["h"] = h
+				if fora == "ponto":
+					remapa_v7.append(-1)                # 1.21: a ruína existia até a 1.20; saiu para o ponto turístico
+					remapa_v8.append(-1)
+					_marcar_lote(lr, lc)                # o lote fica (calçado: sem o terreno baldio em volta do ponto)
 				if fora == "":
 					_marcar_lote(lr, lc)
 					remapa_v7.append(predio_info.size())
+					remapa_v8.append(predio_info.size())
 					ruinas.append([bx, bz, sx, sz, h, pb.x, pb.y, h_b])
 					predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h]))
 					predio_info.append(info)
@@ -893,9 +911,16 @@ func _buildings() -> void:
 				removidos["fechado"] += 1
 				pos_removidos.append(Vector2(bx, bz))
 				continue
+			if fora == "ponto":
+				# 1.21: existia na 1.17..1.20 (se tinha entrada) e saiu para o ponto turístico; o lote fica (calçado)
+				remapa_v7.append(-1)
+				if not (SO_COM_ENTRADA and not info["entra"]):
+					remapa_v8.append(-1)
+				_marcar_lote(lr, lc)
 			if fora == "":
 				_marcar_lote(lr, lc)
 				remapa_v7.append(predio_info.size())
+				remapa_v8.append(predio_info.size())
 				# guardado para a colisão (1.04: até o CORPO; antes ia até o alto da torre escalonada inteira e o
 				# telhado do corpo tinha uma parede invisível em volta do topo)
 				predios.append_array(PackedFloat32Array([bx, bz, sx, sz, h1]))
@@ -964,7 +989,8 @@ func _buildings() -> void:
 	print("Prédios: ", predios.size() / 5, " (", n, " blocos de malha) · com entrada: ", n_entra, " · em ruína: ", ruinas.size(),
 		" · removidos: ", removidos["agua"], " na/perto da água, ", removidos["rua"], " em cima da rua/calçada, ",
 		removidos["local"], " para os locais especiais, ", removidos["ponte"], " para as ruas novas das pontes, ",
-		removidos["fechado"], " fechados (sem entrada)")
+		removidos["fechado"], " fechados (sem entrada), ", removidos["ponto"], " para os pontos turísticos")
+	_lotes_pontos()                                  # 1.21
 
 # 1.17: o prédio fechado que saiu vira -1 em cada tabela de jogo salvo em que ganhou entrada (as tabelas são da
 # cidade: alterar direto, sem guardar numa lista, que copiaria)
@@ -1515,6 +1541,37 @@ func _central_park() -> void:
 	if abandono != null:
 		abandono.obstaculos.append_array(central_park.obstaculos)
 
+# ---------- 1.21: PONTOS TURÍSTICOS (mundo/pontos_turisticos.gd) ----------
+var pontos: Node3D = null
+
+func _pontos_turisticos() -> void:
+	if pontos != null and is_instance_valid(pontos):
+		pontos.queue_free()
+	pontos = PontosCls.new()
+	pontos.name = "PontosTuristicos"
+	add_child(pontos)
+	await pontos.montar(self)
+	for n in pontos.visuais:
+		_adopt(n)
+	if abandono != null:
+		abandono.obstaculos.append_array(pontos.obstaculos)
+
+# o terreno dos pontos turísticos de chão "lote" fica na altura da calçada (concreto; a colisão também), e também os
+# terrenos baldios em volta até a rua (PontosCls.ENTORNO): o ponto fica numa praça, não no meio da terra
+func _lotes_pontos() -> void:
+	for i in PontosCls.LISTA.size():
+		if String(PontosCls.LISTA[i][8]) != "lote":
+			continue
+		var r: Rect2 = PontosCls.retangulo(i, PontosCls.ENTORNO)
+		for lr in range(int((r.position.y + WORLD.y) / CELL), int((r.end.y + WORLD.y) / CELL) + 1):
+			for lc in range(int((r.position.x + WORLD.x) / CELL), int((r.end.x + WORLD.x) / CELL) + 1):
+				if lr < 0 or lc < 0 or lr >= H or lc >= W:
+					continue
+				var k := lr * W + lc
+				if land[k] == 1 and road[k] == 0 and lote[k] == 0:
+					lote[k] = 1
+					_lote_idx.append(k)
+
 # ---------- 1.20: AS ÁRVORES NOVAS (mundo/arvores.gd) nos lugares guardados ----------
 # Cada lugar antigo (1.19) ganha um modelo novo pelo tipo de antes (árvore viva, pinheiro, seca, grande), sorteado pela
 # posição (o mesmo em todo aparelho e todo carregamento). A rua fica com olmos/freixos menores; os parques com de tudo.
@@ -1556,6 +1613,8 @@ func _plantar_arvores() -> void:
 		var p := Vector3(float(l[2]), float(l[3]), float(l[4]))
 		if CentralParkCls.dentro(Vector2(p.x, p.z)):
 			continue                                # 1.20: o Central Park tem as árvores dele (mundo/central_park.gd)
+		if PontosCls.indice_em(Vector2(p.x, p.z), 2.0) >= 0:
+			continue                                # 1.21: no terreno de um ponto turístico
 		r.seed = hash(Vector2i(roundi(p.x * 10.0), roundi(p.z * 10.0)))
 		var nome := ""
 		var s := 1.0
@@ -1582,6 +1641,9 @@ func _plantar_arvores() -> void:
 		tom.a = 1.0
 		arvores.plantar(nome, p, float(l[5]), s, clampf(sh, 0.85, 1.2), tom)
 	await CentralParkCls.plantar_arvores(self, arvores)
+	if pontos != null and is_instance_valid(pontos):
+		for a in pontos.arvores:                    # 1.21: as dos pontos turísticos (memorial, Washington Square...)
+			arvores.plantar(String(a[0]), a[1], float(a[2]), float(a[3]))
 	for mi in arvores.montar():
 		_adopt(mi)
 	if abandono != null:
@@ -1667,6 +1729,8 @@ func _planta(veg: Dictionary, e: Array, celula: int, r: RandomNumberGenerator, y
 	var nome: String = e[0]
 	if CentralParkCls.bloqueia_planta(x, z, nome.begins_with("arbusto") or nome.begins_with("samambaia")):
 		return                                        # 1.20: nada de planta em caminho, lago ou construção do Central Park
+	if PontosCls.indice_em(Vector2(x, z), 1.0) >= 0:
+		return                                        # 1.21: nem no terreno dos pontos turísticos
 	var afunda := 0.15 * s if nome.begins_with("pedra") else 0.0
 	if nome == "poste_jardim":
 		b = Basis(Vector3.UP, r.randf() * TAU)                     # poste em pé, sem esticar
