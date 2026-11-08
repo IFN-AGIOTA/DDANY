@@ -139,8 +139,9 @@ static func tex_voxels() -> ImageTexture:
 	_tex_voxels = ImageTexture.create_from_image(img)
 	return _tex_voxels
 
+# (o servidor dedicado não desenha: a exportação dele não leva a geometria nem as camadas, e aqui fica sem elas)
 static func tex_geo() -> ImageTexture:
-	if _tex_geo == null:
+	if _tex_geo == null and ResourceLoader.exists(DIR + "geometria.res"):
 		var img: Image = load(DIR + "geometria.res")
 		_tex_geo = ImageTexture.create_from_image(img)
 	return _tex_geo
@@ -380,6 +381,8 @@ static func material() -> ShaderMaterial:
 
 # as texturas de casca e folha numa Texture2DArray (a pilha 512 x 512n vira n camadas com mipmaps)
 static func _camadas(qual: String) -> Texture2DArray:
+	if not ResourceLoader.exists(DIR + "texturas/camadas_%s.res" % qual):
+		return null
 	var pilha: Image = load(DIR + "texturas/camadas_%s.res" % qual)
 	var lado := pilha.get_width()
 	var imgs: Array[Image] = []
