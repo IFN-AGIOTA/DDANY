@@ -66,6 +66,10 @@ ATUALIZAÇÃO 1.22 · TODAS AS ÁRVORES NUMA CHAMADA DE DESENHO SÓ
     mundo/arvores/geometria.res .... NOVO · a geometria de todas as árvores (2 texels por vértice)
     mundo/arvores/clusters.json .... NOVO · onde começa a completa e a simplificada de cada modelo
     mundo/arvores/texturas/camadas_cor.res / camadas_normal.res . NOVOS · as cascas e folhas (viram a Texture2DArray)
+    export_presets.cfg ............. as exportações (PC, Android, servidor) não levam mais os modelos, as simplificadas e
+                                     as texturas soltas das árvores (só as ferramentas usam); o servidor também não leva
+                                     a geometria e as camadas (não desenha): o pacote caiu de 78 para 73,5 MB e o
+                                     servidor_windows.zip de 106 para 87 MB (o GitHub não aceita arquivo de 100 MB)
     ferramentas/preparar_arvores_lod.gd ...... grava também a geometria em clusters e as camadas das texturas
     ferramentas/testes/teste_central_park.gd . confere a chamada única (1 nó, instâncias, níveis)
     ferramentas/testes/teste_graficos.gd ..... um nó de desenho só para as árvores
