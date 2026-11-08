@@ -128,12 +128,12 @@ func _r():
 		var nm := str(nd.name)
 		if nm.begins_with("arvore") or nm.begins_with("Veg_arvore") or nm.begins_with("Veg_pinheiro"):
 			nos_antigos += 1
-		elif nm.begins_with("ArvoresLonge_"):
+		elif nm.begins_with("ArvoresLonge_") or nm.begins_with("ArvoresPerto") or nm == "ArvoresUnica":
 			longe += 1
 	var lug: Array = cid.lugares_das_arvores()
-	ok(nos_antigos == 0 and longe > 50 and cid.arvores != null and cid.arvores.quantas() > lug.size() and lug.size() > 10000
+	ok(nos_antigos == 0 and longe == 1 and cid.arvores != null and cid.arvores.unica != null and cid.arvores.quantas() > lug.size() and lug.size() > 10000
 		and ResourceLoader.exists("res://data/arvores_lugares.json"),
-		"1.20: árvores novas plantadas (%d; %d lugares guardados; %d blocos de longe) e nenhuma das antigas" % [cid.arvores.quantas() if cid.arvores != null else 0, lug.size(), longe])
+		"1.20/1.22: árvores novas plantadas (%d; %d lugares guardados), TODAS num desenho só (%d nó de árvores), nenhuma das antigas" % [cid.arvores.quantas() if cid.arvores != null else 0, lug.size(), longe])
 	ok(not ResourceLoader.exists("res://mundo/cenario/natureza/CommonTree_1.gltf") and not ResourceLoader.exists("res://historia/historia.gd"),
 		"1.19: arquivos das árvores e do modo história apagados")
 	# ---- halos (1.16: os fios de poste saíram, e a opção também) ----

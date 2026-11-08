@@ -99,7 +99,7 @@ func _r():
 	ok(arv != null and arv.quantas() > 20000, "árvores plantadas na cidade: %d" % (arv.quantas() if arv != null else 0))
 	ok(d["arvores"].size() > 10000, "árvores do Central Park no desenho: %d" % d["arvores"].size())
 	ok(arv.contagem.size() == 24, "as 24 variações do EZ-Tree aparecem: %d" % arv.contagem.size())
-	ok(arv.longe.size() > 100, "voxels grossos de longe (1.21): %d blocos" % arv.longe.size())
+	ok(arv.unica != null and arv._blocos.size() > 100, "1.22: todas as árvores numa chamada de desenho só (%d blocos de voxels de longe)" % arv._blocos.size())
 	# ---- máscara: caminhos sem planta ----
 	var mall_meio := Vector2(-1622.0, -1000.0)
 	ok(CP.chao(mall_meio.x, mall_meio.y) == 2 and CP.bloqueia_planta(mall_meio.x, mall_meio.y), "a Mall é caminho (sem planta nem capim)")
@@ -108,6 +108,9 @@ func _r():
 	await _ir(Vector3(-1700.0, 0.4, -1650.0))
 	await q(30)
 	ok(arv.perto_agora() > 20, "no meio da mata (Ramble): %d árvores de verdade perto" % arv.perto_agora())
+	var nos_arv := arv.find_children("*", "GeometryInstance3D", true, false)
+	ok(nos_arv.size() == 1 and arv.instancias > 100 and arv.por_nivel[2] + arv.por_nivel[3] > 100,
+		"1.22: uma chamada de desenho só para todas as árvores (%d nó, %d instâncias: clusters e grupos de voxels; níveis %s)" % [nos_arv.size(), arv.instancias, str(arv.por_nivel)])
 	var a0: Array = d["arvores"][d["arvores"].size() / 2]
 	ok(m.mundo.dentro_de_obstaculo(float(a0[1]), float(a0[2]), 0.05) or true, "tronco vira obstáculo (lista)")
 	var tem_tronco := false

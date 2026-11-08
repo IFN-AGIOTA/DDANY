@@ -41,6 +41,39 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.22 · TODAS AS ÁRVORES NUMA CHAMADA DE DESENHO SÓ
+  · Pedido: "transforme todas as árvores em uma única draw". Antes, as ~24 mil árvores custavam de 40 a 80 chamadas de
+    desenho por quadro (uma por modelo e nível de detalhe, mais uma por bloco de longe); agora são UMA (no passe da
+    sombra do sol, também uma). É o jeito do NANITE da Unreal 5 ("clusters" e a placa de vídeo buscando os vértices):
+      - a geometria de TODAS as árvores (a completa e a simplificada dos 24 modelos) foi para uma TEXTURA, em pedaços
+        de 128 triângulos (881 "clusters");
+      - existe uma malha só, de 128 triângulos "vazios": cada cópia dela (instância) vira um pedaço de uma árvore (o
+        shader busca os vértices daquele cluster na textura) ou um grupo de árvores em voxel (2 finas, 8 grossas ou
+        16 de bem longe);
+      - as cascas e as folhas estão numa só textura em camadas (Texture2DArray): um material só;
+      - a CPU monta a lista de instâncias com o que está na frente da câmera e no tamanho certo (os mesmos níveis,
+        dissolve e corte pela visão da 1.21); na sombra só vão as simplificadas (a sombra é reconhecida pela projeção).
+    Nada muda no visual (conferido lado a lado nas mesmas vistas).
+    Medido (teste_desempenho): chamadas de desenho de toda a cena Bethesda 299 → 274, avenida 406 → 340, The Mall 307 →
+    288 (as árvores: 1). Os triângulos contados sobem um pouco (The Mall 603 → 672 mil): a conta inclui as sobras dos
+    clusters e o que vai junto para o passe da sombra e o shader esconde (custa só o vértice).
+  ARQUIVOS (testado: compilar_tudo, teste_central_park, teste_graficos, teste_desempenho, teste_jogo, teste_chunks,
+  teste_carregamento, teste_pontos_turisticos, teste_menu_leve, teste_novidades e fotos lado a lado):
+    mundo/arvores.gd ............... a chamada única: a malha do cluster, o material único (busca dos vértices,
+                                     voxels, dissolve, sombra), as texturas "arvs" (as árvores) e "lista", e a
+                                     montagem das instâncias na CPU (clusters de perto e grupos de voxels)
+    mundo/arvores/geometria.res .... NOVO · a geometria de todas as árvores (2 texels por vértice)
+    mundo/arvores/clusters.json .... NOVO · onde começa a completa e a simplificada de cada modelo
+    mundo/arvores/texturas/camadas_cor.res / camadas_normal.res . NOVOS · as cascas e folhas (viram a Texture2DArray)
+    ferramentas/preparar_arvores_lod.gd ...... grava também a geometria em clusters e as camadas das texturas
+    ferramentas/testes/teste_central_park.gd . confere a chamada única (1 nó, instâncias, níveis)
+    ferramentas/testes/teste_graficos.gd ..... um nó de desenho só para as árvores
+    ferramentas/testes/desempenho_base.json .. regravado (menos chamadas)
+    estudos/ESTUDO_AAA.md .......... seção 1.14: a chamada única (item 36 do plano)
+    menu/config.gd ................. VERSAO "1.22"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..." + seção 10
+
 ATUALIZAÇÃO 1.21 · PONTOS TURÍSTICOS DE NOVA YORK E ÁRVORES NO JEITO DA UNREAL ENGINE 5
   · PONTOS TURÍSTICOS (pedido: "pegar imagens dos pontos de interesse de Nova York, locais de visita e turismo, e
     adaptar para o nosso mapa"): 17 lugares feitos olhando as fotos de cada um e postos onde ficam na Nova York de
@@ -4470,7 +4503,10 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - halos de luz (0.84; 1.16: os fios saíram) ...... mundo/luzes_rua.gd (onde ficam: mundo/abandono.gd _poste_luzes)
 - 1.21 · ÁRVORES: os 4 níveis (tamanho na
   tela de cada troca, dissolve, alcance dos
-  voxels), vento, cor, colisão do tronco ... mundo/arvores.gd (PX, FAIXA, QUALIDADE, ALCANCE, PX_VENTO, SHADER_*)
+  voxels), vento, cor, colisão do tronco ... mundo/arvores.gd (PX, FAIXA, QUALIDADE, ALCANCE, PX_VENTO, SHADER)
+- 1.22 · a CHAMADA ÚNICA das árvores
+  (clusters, grupos de voxels, a lista de
+  instâncias montada na CPU) .............. mundo/arvores.gd (CLUSTER, POR_GRUPO, _perto, _voxels, SHADER)
 - 1.21 · as árvores SIMPLIFICADAS e os VOXELS
   (refazer depois de mudar os modelos) .... ferramentas/preparar_arvores_lod.gd (grava mundo/arvores/lod1/ e voxels.json)
 - 1.21 · PONTOS TURÍSTICOS: a lista (lugar,
@@ -4777,6 +4813,10 @@ MÚSICA (pasta audio/)
   nela). A Estátua da Liberdade fica num terreno de parque da ilhota (não tem o cais da balsa) e Coney Island fica
   uma quadra antes do mar do mapa (a areia é do próprio terreno). Em volta de alguns pontos sobra uma faixa de terra
   entre a calçada da rua e a praça (a grade de 20 m dos lotes não chega na calçada).
+- 1.22: as árvores são UMA chamada de desenho: por isso tudo o que é árvore vai para todos os passes (a sombra do
+  sol recebe também as instâncias que só aparecem na tela, e o shader as esconde: custa só o vértice). O jogo monta a
+  Texture2DArray das cascas e folhas ao carregar (um instante a mais na tela de carregamento). Mudando um modelo de
+  árvore, rode o ferramentas/preparar_arvores_lod.gd (refaz a geometria em clusters).
 - 1.21: ÁRVORES: sem o TAA da Unreal, o dissolve das trocas aparece como pontilhado por um instante (a faixa é curta,
   ±8% em volta de cada limiar). De perto da troca dá para ver que os voxels são bolhas (rendadas, mas bolhas). As
   simplificadas não têm o normal map da casca. Girando a câmera muito rápido (mais de ~26° num quadro) as árvores de

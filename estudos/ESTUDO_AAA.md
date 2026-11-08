@@ -310,6 +310,12 @@ NoobFeed); fóruns da Epic sobre o HISM (*Hierarchical Instanced Static Mesh*) e
    compatibilidade da Godot não tem *compute shader*; por isso a escolha de quem vai para a GPU é feita na CPU
    (listas de perto) e por bloco (HLOD), e o shader só confere cada árvore.
 
+12. ✅ **Uma chamada de desenho para todas as árvores (1.22)**, como o Nanite: a geometria das árvores (completa e
+   simplificada) está numa textura em **clusters de 128 triângulos**; uma malha só de 128 triângulos "vazios" é
+   instanciada, e cada instância vira um cluster de uma árvore (o shader busca os vértices pelo `VERTEX_ID`) ou um
+   grupo de árvores em voxel; cascas e folhas numa `Texture2DArray`. Um MultiMesh, um material: 1 chamada (de 40–80).
+   O preço: o que não é do passe (a sombra) vai junto e é escondido no vértice.
+
 **Resultado (teste_desempenho, mesmas vistas da 1.20):** The Mall 603 mil triângulos e 307 chamadas (antes 585 mil
 e 305, com a faixa de 27–64 m em 3D em vez de foto); Bethesda 367 mil e 299 (antes 290 mil e 280, dos quais ~43 mil
 são o skyline novo dos pontos turísticos; sem ele, 324 mil); no meio da mata, de 2,1 milhões (a primeira versão, sem
@@ -706,6 +712,7 @@ Impacto e esforço estimados por mim; cada item cita a seção acima. **Todos os
 | 33 ✅ | **Nível simplificado** + casca e folhas numa chamada (1.14) | ~27% dos triângulos entre a completa e os voxels | idem |
 | 34 ✅ | **Troca pontilhada** entre os níveis e vento que some longe (1.14) | Nada estala na troca | `mundo/arvores.gd` |
 | 35 ✅ | **Corte pela visão** + **HLOD** de 4 bolhas longe + **sombra pela simplificada** (1.14) | Na mata: de 2,1 milhões de triângulos (primeira versão) para ~620 mil; The Mall no custo da 1.20 | `mundo/arvores.gd` |
+| 36 ✅ | **Todas as árvores numa chamada de desenho** (clusters + busca de vértices na textura, 1.14) | De 40–80 chamadas para 1; cena: Bethesda 299 → 274, avenida 406 → 340 | `mundo/arvores.gd`, `ferramentas/preparar_arvores_lod.gd` |
 
 ---
 

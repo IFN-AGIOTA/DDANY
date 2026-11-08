@@ -10,6 +10,11 @@ extends SceneTree
 #     cartão/triângulo) em 24 bolhas (o fino), em 8 (o grosso) e em 4 (o de bem longe, só a copa); o tronco ganha 2 (1) delas. Cada bolha: centro e
 #     raio (m, no espaço do modelo), cor (a média da textura, mais escura no miolo e embaixo da copa) e se é folha
 #     (1: recebe a cor de cada árvore), galho (0) ou o tronco (negativo: a meia altura da faixa em pé).
+#   - (1.22) mundo/arvores/geometria.res + clusters.json: a geometria de TODAS as árvores (completa e simplificada) numa
+#     textura, em "clusters" de 128 triângulos (como o Nanite), para o desenho numa chamada só (mundo/arvores.gd): por
+#     vértice 2 texels (posição + camada da textura; normal em octaedro + UV); camada -1 = enchimento do último cluster
+#   - (1.22) mundo/arvores/texturas/camadas_cor.res (as 3 cascas e as 4 folhas, 512 px, empilhadas numa imagem) e
+#     camadas_normal.res (as normais das 3 cascas): o jogo monta a Texture2DArray delas ao carregar
 # Rodar (não precisa de tela):  godot --headless --path . -s res://ferramentas/preparar_arvores_lod.gd
 const Arv := preload("res://mundo/arvores.gd")
 const SAIDA := "res://mundo/arvores/"
@@ -169,6 +174,8 @@ func _initialize() -> void:
 			r[nivel] = lista
 		saida[nome] = r
 		print("LOD %s · completa %d · simplificada %d triângulos (%d%%) · voxels %d/%d/%d" % [nome, tri0, tri1, 100 * tri1 / maxi(tri0, 1), r["fino"].size(), r["grosso"].size(), r["longe"].size()])
+	_geometria()
+	_camadas()
 	var f := FileAccess.open(SAIDA + "voxels.json", FileAccess.WRITE)
 	f.store_string(JSON.stringify({"_leia": "1.21 · gerado por ferramentas/preparar_arvores_lod.gd (não editar à mão): por modelo, as bolhas [x, y, z, raio, r, g, b, folha]", "modelos": saida}))
 	f.close()
@@ -281,3 +288,76 @@ func _kmeans(p: PackedVector3Array, w: PackedFloat32Array, k: int, semente: int)
 		if peso2[j] > 0.0:
 			r.append([cs[j], sqrt(rms[j] / peso2[j])])
 	return r
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# 1.22 · A GEOMETRIA DE TODAS AS ÁRVORES NUMA TEXTURA (clusters de Arv.CLUSTER triângulos)
+# ---------------------------------------------------------------------------------------------------------------
+static func _oct(n: Vector3) -> Vector2:
+	var l := absf(n.x) + absf(n.y) + absf(n.z)
+	var p := Vector2(n.x, n.z) / maxf(l, 1e-6)
+	if n.y < 0.0:
+		p = Vector2((1.0 - absf(p.y)) * signf(p.x if p.x != 0.0 else 1.0), (1.0 - absf(p.x)) * signf(p.y if p.y != 0.0 else 1.0))
+	return p
+
+func _geometria() -> void:
+	var geo := PackedFloat32Array()
+	var mapa := {}
+	var cluster_v: int = Arv.CLUSTER * 3
+	for nome in Arv.nomes():
+		var e: Dictionary = Arv.info()[nome]
+		var cam_c: int = Arv.CAMADAS.find("casca_" + String(Arv.CASCAS.get(String(e["casca"]), "carvalho")))
+		var cam_f: int = Arv.CAMADAS.find("folha_" + String(Arv.FOLHAS.get(String(e["folha"]), "carvalho")))
+		var faixas: Array = []
+		for nivel in 2:
+			var am: ArrayMesh = Arv.malha(nome) if nivel == 0 else load(SAIDA + "lod1/%s.res" % nome)
+			var ini := geo.size() / 8
+			for sfc in am.get_surface_count():
+				var a := am.surface_get_arrays(sfc)
+				var vs: PackedVector3Array = a[Mesh.ARRAY_VERTEX]
+				var ns: PackedVector3Array = a[Mesh.ARRAY_NORMAL]
+				var uv: PackedVector2Array = a[Mesh.ARRAY_TEX_UV]
+				var uv2 = a[Mesh.ARRAY_TEX_UV2]
+				var ix: PackedInt32Array = a[Mesh.ARRAY_INDEX]
+				for k in ix:
+					var cam: int
+					if nivel == 0:
+						cam = cam_c if sfc == 0 else cam_f
+					else:
+						cam = cam_c if (uv2 != null and (uv2 as PackedVector2Array)[k].x > 0.5) else cam_f
+					var o := _oct(ns[k].normalized())
+					geo.append_array(PackedFloat32Array([vs[k].x, vs[k].y, vs[k].z, float(cam), o.x, o.y, uv[k].x, uv[k].y]))
+			# enche o último cluster (camada -1: o shader esconde)
+			var nv := geo.size() / 8 - ini
+			var falta := (cluster_v - nv % cluster_v) % cluster_v
+			for q in falta:
+				geo.append_array(PackedFloat32Array([0, 0, 0, -1, 0, 0, 0, 0]))
+			faixas.append([ini / cluster_v, (nv + falta) / cluster_v])
+		mapa[nome] = faixas
+	# textura: Arv.GEO_W texels por linha, 2 texels por vértice
+	var texels := geo.size() / 4
+	var linhas := int(ceil(float(texels) / Arv.GEO_W))
+	geo.resize(linhas * Arv.GEO_W * 4)
+	var img := Image.create_from_data(Arv.GEO_W, linhas, false, Image.FORMAT_RGBAF, geo.to_byte_array())
+	img.convert(Image.FORMAT_RGBAH)
+	ResourceSaver.save(img, SAIDA + "geometria.res", ResourceSaver.FLAG_COMPRESS)
+	var f := FileAccess.open(SAIDA + "clusters.json", FileAccess.WRITE)
+	f.store_string(JSON.stringify({"_leia": "1.22 · gerado por ferramentas/preparar_arvores_lod.gd: por modelo, [primeiro cluster, quantos] da completa e da simplificada", "modelos": mapa}))
+	f.close()
+	print("GEOMETRIA: %d vértices em %d clusters de %d triângulos · textura %d x %d" % [geo.size() / 8, texels / 2 / cluster_v, Arv.CLUSTER, Arv.GEO_W, linhas])
+
+# as pilhas das texturas (viram Texture2DArray)
+func _camadas() -> void:
+	var lado := 512
+	for qual in ["cor", "normal"]:
+		var lista: Array = Arv.CAMADAS if qual == "cor" else Arv.CAMADAS.slice(0, 3)
+		var pilha := Image.create(lado, lado * lista.size(), false, Image.FORMAT_RGBA8)
+		for i in lista.size():
+			var nome := String(lista[i])
+			var arq := SAIDA + "texturas/%s%s" % [nome + ("_normal" if qual == "normal" else ""), ".png" if nome.begins_with("folha") else ".jpg"]
+			var im := Image.load_from_file(ProjectSettings.globalize_path(arq))
+			im.convert(Image.FORMAT_RGBA8)
+			im.resize(lado, lado, Image.INTERPOLATE_LANCZOS)
+			pilha.blit_rect(im, Rect2i(0, 0, lado, lado), Vector2i(0, i * lado))
+		ResourceSaver.save(pilha, SAIDA + "texturas/camadas_%s.res" % qual, ResourceSaver.FLAG_COMPRESS)
+		print("CAMADAS %s: %d" % [qual, lista.size()])
