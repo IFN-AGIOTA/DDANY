@@ -54,9 +54,10 @@ ATUALIZAÇÃO 1.22 · TODAS AS ÁRVORES NUMA CHAMADA DE DESENHO SÓ
       - a CPU monta a lista de instâncias com o que está na frente da câmera e no tamanho certo (os mesmos níveis,
         dissolve e corte pela visão da 1.21); na sombra só vão as simplificadas (a sombra é reconhecida pela projeção).
     Nada muda no visual (conferido lado a lado nas mesmas vistas).
-    Medido (teste_desempenho): chamadas de desenho de toda a cena Bethesda 299 → 274, avenida 406 → 340, The Mall 307 →
-    288 (as árvores: 1). Os triângulos contados sobem um pouco (The Mall 603 → 672 mil): a conta inclui as sobras dos
-    clusters e o que vai junto para o passe da sombra e o shader esconde (custa só o vértice).
+    Medido (teste_desempenho, chamadas de desenho da cena inteira, 1.21 → 1.22): base militar 219 → 186, centro 186 →
+    178, avenida 354 → 331, Ponte do Brooklyn 220 → 199, The Mall 307 → 249, Bethesda 299 → 259, Times Square 333 → 299
+    (as árvores: 1). Os triângulos contados sobem um pouco (The Mall 603 → 666 mil, Bethesda 367 → 385 mil): a conta
+    inclui as sobras dos clusters e o que vai junto para o passe da sombra e o shader esconde (custa só o vértice).
   ARQUIVOS (testado: compilar_tudo, teste_central_park, teste_graficos, teste_desempenho, teste_jogo, teste_chunks,
   teste_carregamento, teste_pontos_turisticos, teste_menu_leve, teste_novidades e fotos lado a lado):
     mundo/arvores.gd ............... a chamada única: a malha do cluster, o material único (busca dos vértices,

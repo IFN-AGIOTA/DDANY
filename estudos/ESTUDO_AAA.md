@@ -712,7 +712,7 @@ Impacto e esforço estimados por mim; cada item cita a seção acima. **Todos os
 | 33 ✅ | **Nível simplificado** + casca e folhas numa chamada (1.14) | ~27% dos triângulos entre a completa e os voxels | idem |
 | 34 ✅ | **Troca pontilhada** entre os níveis e vento que some longe (1.14) | Nada estala na troca | `mundo/arvores.gd` |
 | 35 ✅ | **Corte pela visão** + **HLOD** de 4 bolhas longe + **sombra pela simplificada** (1.14) | Na mata: de 2,1 milhões de triângulos (primeira versão) para ~620 mil; The Mall no custo da 1.20 | `mundo/arvores.gd` |
-| 36 ✅ | **Todas as árvores numa chamada de desenho** (clusters + busca de vértices na textura, 1.14) | De 40–80 chamadas para 1; cena: Bethesda 299 → 274, avenida 406 → 340 | `mundo/arvores.gd`, `ferramentas/preparar_arvores_lod.gd` |
+| 36 ✅ | **Todas as árvores numa chamada de desenho** (clusters + busca de vértices na textura, 1.14) | De 40–80 chamadas para 1; cena: The Mall 307 → 249, Bethesda 299 → 259, avenida 354 → 331 (triângulos +3 a 10%) | `mundo/arvores.gd`, `ferramentas/preparar_arvores_lod.gd` |
 
 ---
 

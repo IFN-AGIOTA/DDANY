@@ -108,7 +108,7 @@ func _r():
 	await _ir(Vector3(-1700.0, 0.4, -1650.0))
 	await q(30)
 	ok(arv.perto_agora() > 20, "no meio da mata (Ramble): %d árvores de verdade perto" % arv.perto_agora())
-	var nos_arv := arv.find_children("*", "GeometryInstance3D", true, false)
+	var nos_arv: Array = arv.find_children("*", "GeometryInstance3D", true, false)
 	ok(nos_arv.size() == 1 and arv.instancias > 100 and arv.por_nivel[2] + arv.por_nivel[3] > 100,
 		"1.22: uma chamada de desenho só para todas as árvores (%d nó, %d instâncias: clusters e grupos de voxels; níveis %s)" % [nos_arv.size(), arv.instancias, str(arv.por_nivel)])
 	var a0: Array = d["arvores"][d["arvores"].size() / 2]

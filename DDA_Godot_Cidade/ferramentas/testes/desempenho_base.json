@@ -1,58 +1,58 @@
 {
 	"Central Park (Bethesda)": {
-		"chamadas": 299,
-		"nos": 19759,
-		"objetos": 338,
+		"chamadas": 259,
+		"nos": 19054,
+		"objetos": 298,
 		"processando": 52,
-		"quadro_ms": 133.2,
-		"triangulos": 367237
+		"quadro_ms": 127.4,
+		"triangulos": 385347
 	},
 	"Central Park (The Mall)": {
-		"chamadas": 307,
-		"nos": 20419,
-		"objetos": 347,
+		"chamadas": 249,
+		"nos": 19698,
+		"objetos": 289,
 		"processando": 53,
-		"quadro_ms": 203.6,
-		"triangulos": 603182
+		"quadro_ms": 227.1,
+		"triangulos": 666208
 	},
 	"Times Square": {
-		"chamadas": 333,
-		"nos": 21103,
-		"objetos": 372,
+		"chamadas": 299,
+		"nos": 20349,
+		"objetos": 338,
 		"processando": 52,
-		"quadro_ms": 104.3,
-		"triangulos": 279968
+		"quadro_ms": 98.3,
+		"triangulos": 281120
 	},
 	"base militar (início)": {
-		"chamadas": 219,
-		"nos": 10929,
-		"objetos": 257,
+		"chamadas": 186,
+		"nos": 10615,
+		"objetos": 224,
 		"processando": 53,
-		"quadro_ms": 108.8,
-		"triangulos": 176277
+		"quadro_ms": 102.9,
+		"triangulos": 182903
 	},
 	"centro da cidade": {
-		"chamadas": 186,
-		"nos": 18843,
-		"objetos": 227,
+		"chamadas": 178,
+		"nos": 18271,
+		"objetos": 219,
 		"processando": 52,
-		"quadro_ms": 115.2,
-		"triangulos": 222079
+		"quadro_ms": 101.4,
+		"triangulos": 226399
 	},
 	"centro olhando a avenida": {
-		"chamadas": 354,
-		"nos": 18843,
-		"objetos": 396,
+		"chamadas": 331,
+		"nos": 18271,
+		"objetos": 373,
 		"processando": 52,
-		"quadro_ms": 141.8,
-		"triangulos": 299319
+		"quadro_ms": 131.3,
+		"triangulos": 303303
 	},
 	"olhando a Ponte do Brooklyn": {
-		"chamadas": 220,
-		"nos": 16117,
-		"objetos": 261,
+		"chamadas": 199,
+		"nos": 15604,
+		"objetos": 240,
 		"processando": 52,
-		"quadro_ms": 119,
-		"triangulos": 242727
+		"quadro_ms": 95.8,
+		"triangulos": 245130
 	}
 }
