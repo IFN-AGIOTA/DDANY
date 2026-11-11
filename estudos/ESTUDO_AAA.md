@@ -240,7 +240,7 @@ World of Horizon Zero Dawn* (GDC 2017; só a página da palestra pôde ser lida)
 - ✅ A fila do `_refazer_fila` já carrega **o mais perto primeiro**.
 
 **O que aplicar** ➜ *(minha leitura para o nosso caso)*
-1. **Separar ligar de carregar.** Hoje um chunk é "na cena" ou "fora". Criar um anel do meio onde o chunk fica
+1. ✅ (1.23: carga em anéis + camada de visibilidade, seção 1.15) **Separar ligar de carregar.** Hoje um chunk é "na cena" ou "fora". Criar um anel do meio onde o chunk fica
    **preparado mas escondido** (ativar ~1 chunk ao redor; preparar ~2). Assim, cruzar a borda só liga coisas prontas.
 2. **Orçamento em milissegundos, não em operações.** Trocar `OPS_POR_QUADRO` por "até ~1,5 ms por quadro", medido
    com `Time.get_ticks_usec` (o mesmo jeito do `cidade.pausa()`). No celular lento, 90 operações podem passar de 4 ms.
@@ -252,7 +252,7 @@ World of Horizon Zero Dawn* (GDC 2017; só a página da palestra pôde ser lida)
 6. **HLOD em 3 níveis** para quarteirões e fachadas: perto, a malha completa; médio, a fachada juntada; longe, um
    bloco simples sem janelas. Na Godot 4.3 isso é `visibility_range_begin/end` com `visibility_parent`
    (ver 1.3), com a troca pela distância calculada para dar o tamanho certo na tela.
-7. **Overlay de diagnóstico** (só para nós, escondido nas opções de desenvolvedor): grade dos chunks com cores por
+7. ✅ (1.23: F3, `hud/painel_render.gd`) **Overlay de diagnóstico** (só para nós, escondido nas opções de desenvolvedor): grade dos chunks com cores por
    estado, quantos ligaram neste quadro, quanto tempo levou e um botão para desligar o HLOD.
 
 ### 1.14 Árvores: como a Unreal Engine 5 faz (Nanite Foliage, 5.7)
@@ -320,6 +320,64 @@ NoobFeed); fóruns da Epic sobre o HISM (*Hierarchical Instanced Static Mesh*) e
 e 305, com a faixa de 27–64 m em 3D em vez de foto); Bethesda 367 mil e 299 (antes 290 mil e 280, dos quais ~43 mil
 são o skyline novo dos pontos turísticos; sem ele, 324 mil); no meio da mata, de 2,1 milhões (a primeira versão, sem
 o corte pela visão) para ~620 mil. Os pontos turísticos ganharam o mesmo HLOD (de longe, uma malha e um material).
+
+### 1.15 Visibilidade e renderização por chunk (1.23)
+
+Fontes: documentação da Godot 4.3 (*Optimizing 3D performance*, *Occlusion culling*, *Visibility ranges*, *Using
+MultiMesh*), *World Partition* da Epic (células, *streaming sources*, HLOD) e o que a Guerrilla conta do *Horizon*
+(carregar por anéis de distância, nunca travar esperando). Pedido: "não transformar tudo numa draw; poucas draws por
+grupos espaciais, podendo esconder chunks inteiros".
+
+**O que medimos ANTES de mexer** (a mesma cena, meio-dia, raio de chunks 7, `ferramentas/testes` + medições à parte):
+- A Godot já descarta cada objeto fora da câmera sozinha (árvore de caixas, BVH): esconder à mão 10.822 objetos fora
+  da câmera **não mudou nada** no desenho (333 chamadas e 303 mil triângulos, iguais).
+- A **oclusão nativa** quase não ganha: desligada, as chamadas sobem só 1 a 7 (≤ 2%). O motivo é o tamanho dos grupos
+  (prédios em blocos de 500 m, chão em pedaços de 2 km, objetos da rua em 250 m): um grupo só some se ficar INTEIRO
+  atrás de um prédio. Diminuir os grupos aumentaria as chamadas em todas as vistas para ganhar só em algumas.
+- O que pesava de verdade era a **quantidade de objetos na cena**: ~15–17 mil, e cada um custa à Godot ~80 ns de
+  processador por quadro mesmo sem aparecer (micro-teste: 15 mil objetos sem nada na tela = 1,49 ms; escondidos os de
+  fora da câmera = 1,06 ms; nenhum = 0,27 ms). A maioria eram postes, hidrantes, bancos, carros com alcance de 200 a
+  900 m, carregados a até 3,5 km (o raio inteiro).
+- As **árvores** eram 1 desenho para o mundo inteiro (1.22): a Godot não conseguia descartá-lo (caixa do tamanho do
+  mundo), e refazer as listas no The Mall custava **7,8 ms** (pior 9,1 ms) a cada 11° de giro ou 4 m andados.
+
+**O que aplicamos**
+1. ✅ **Carregar ≠ mostrar: carga em anéis** (*streaming* por distância, como as *streaming sources* da Epic): cada
+   objeto entra na cena só até a distância em que pode aparecer (anel = 1 + (alcance máximo + 30 m) / 500 m, com o
+   maior fator das opções). Prioridade: perto > meio > longe; com a mesma distância, a frente da câmera primeiro.
+2. ✅ **Contêiner por chunk e anel**: pôr/tirar um chunk é uma operação (antes, uma por objeto).
+3. ✅ **Camada de visibilidade por chunk** (o "descarte por célula"): a caixa do chunk contra a câmera, com folga e
+   cache (recalcula a cada 8 m ou 4° de giro); mostrar é na hora, esconder vai num orçamento de tempo; os chunks em
+   volta da câmera nunca somem (sombra do sol). Dentro dos chunks à vista, a Godot ainda descarta por objeto e pela
+   oclusão.
+4. ✅ **Árvores em grupos por chunk** (o HISM da Unreal por célula): até 3 desenhos por grupo — perto (com sombra),
+   sombra (só no passe de sombra) e voxels (sem sombra) —, cada um com a caixa de verdade. Mais o **cache** dos
+   registros dos clusters de cada árvore.
+5. ✅ **Painel de depuração** (F3): chamadas, objetos, triângulos, memória, chunks à vista/fora da câmera/na fila, nós
+   na cena, tempo da visibilidade e da carga, quantos objetos a oclusão esconde e a grade dos chunks por cor (o item 7
+   da seção 1.13).
+6. ✖ **Oclusão própria por chunk** (fora a da Godot): a Godot não dá como perguntar "esta caixa está escondida?" pelo
+   GDScript, e um teste aproximado (raios até os cantos) pode esconder o que está à vista. A oclusão continua a nativa
+   (por objeto, sobre os grupos de cada chunk); os oclusores agora só ficam na cena a até ~1,5 km.
+7. ✖ **Juntar o chão em pedaços de chunk** (500 m): o chão é leve (o maior pedaço tem 5,7 mil triângulos) e cada
+   pedaço vira 1 chamada por material: 4x mais chamadas para quase nada de triângulos.
+
+**Resultado (medido, mesmo script, mesmas vistas, antes → depois):**
+
+| Vista | Chamadas | Objetos | Triângulos | Objetos de desenho na cena | CPU de descarte* |
+|---|---|---|---|---|---|
+| avenida | 332 → 338 | 374 → 384 | 303 → 304 mil | 15.300 → 3.039 | 14,3 → 13,1 ms |
+| Times Square | 300 → 311 | 339 → 351 | 281 → 272 mil | 17.118 → 3.194 | 15,4 → 13,7 ms |
+| Bethesda | 260 → 274 | 299 → 325 | 385 → 383 mil | 16.747 → 3.477 | 14,6 → 13,4 ms |
+| The Mall | 250 → 264 | 290 → 310 | 666 → 624 mil | 16.762 → 3.574 | 13,9 → 11,5 ms |
+
+\* câmera com máscara 0 (nada desenhado, tudo descartado) no PC de teste com placa de vídeo em software: o valor
+absoluto tem um custo fixo; a diferença (1,2 a 2,5 ms por quadro) é o trabalho com os objetos que saíram da cena.
+
+Árvores, o que gastam **por quadro** (120 quadros; pior quadro e quantos passaram de 2 ms): The Mall girando 8,3 → 2,2 ms
+(26 → 4); andando 5,5 → 2,2 ms (11 → 6); Ramble girando 9,0 → 2,7 ms (25 → 3); andando 7,0 → 3,2 ms (11 → 3); avenida
+1,8 → 2,1 / 1,6 → 1,8 ms (0 → 1 / 0 → 0). Andar 1 chunk: 8 → 5 quadros, o mais caro 1,5 → 1,3 ms.
+O preço: +6 a +14 chamadas por vista (as árvores eram 1 desenho; agora até 3 por grupo de chunk à vista).
 
 ---
 
@@ -713,6 +771,17 @@ Impacto e esforço estimados por mim; cada item cita a seção acima. **Todos os
 | 34 ✅ | **Troca pontilhada** entre os níveis e vento que some longe (1.14) | Nada estala na troca | `mundo/arvores.gd` |
 | 35 ✅ | **Corte pela visão** + **HLOD** de 4 bolhas longe + **sombra pela simplificada** (1.14) | Na mata: de 2,1 milhões de triângulos (primeira versão) para ~620 mil; The Mall no custo da 1.20 | `mundo/arvores.gd` |
 | 36 ✅ | **Todas as árvores numa chamada de desenho** (clusters + busca de vértices na textura, 1.14) | De 40–80 chamadas para 1; cena: The Mall 307 → 249, Bethesda 299 → 259, avenida 354 → 331 (triângulos +3 a 10%) | `mundo/arvores.gd`, `ferramentas/preparar_arvores_lod.gd` |
+
+**Quinta leva (1.23)**: visibilidade e renderização por chunk (seção 1.15).
+
+| # | O quê | Resultado | Onde |
+|---|---|---|---|
+| 37 ✅ | **Carga em anéis** (carregar ≠ mostrar: cada objeto só na cena até o alcance dele) | Objetos de desenho na cena: ~15–17 mil → ~3–3,5 mil; CPU de descarte −1,2 a −2,5 ms | `mundo/chunks.gd` |
+| 38 ✅ | **Contêiner por chunk** (pôr/tirar o chunk numa operação) | Andar 1 chunk: 8 → 5 quadros (o mais caro 1,5 → 1,3 ms) | `mundo/chunks.gd` |
+| 39 ✅ | **Camada de visibilidade por chunk** (câmera + folga + cache; mostrar na hora) | Nada da tela some (testado girando 180° de uma vez); chunks fora da câmera escondidos | `mundo/chunks.gd` |
+| 40 ✅ | **Árvores em grupos por chunk** (perto/sombra/voxels) + **cache** + **listas em etapas** | Pior quadro das árvores na mata 9,0 → 2,7 ms; quadros acima de 2 ms 25 → 3 (de 120) | `mundo/arvores.gd` |
+| 41 ✅ | **Painel de depuração** (F3) com a grade dos chunks | O item 7 da seção 1.13 | `hud/painel_render.gd` |
+| — | Fica de fora | Oclusão própria por chunk (a Godot não deixa perguntar pelo GDScript; aproximada esconderia o que está à vista) e chão em pedaços de 500 m (4x mais chamadas por quase nada) | |
 
 ---
 

@@ -41,6 +41,84 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.23 · SISTEMA DE VISIBILIDADE E RENDERIZAÇÃO POR CHUNKS
+  · Pedido: reestruturar os chunks com um sistema inteligente de visibilidade e renderização (poucas chamadas por
+    GRUPO ESPACIAL, cada região podendo sumir sozinha; nada de uma chamada gigante para o mundo inteiro), com
+    medições reais antes e depois. Nada muda no visual, nos controles, no movimento nem no multijogador.
+  · O QUE A MEDIÇÃO MOSTROU ANTES (4 vistas fixas, meio-dia, raio de chunks 7):
+      - a Godot já descarta sozinha, objeto por objeto, o que está fora da câmera: esconder à mão os ~11 mil objetos
+        fora da câmera NÃO mudou nada no desenho (mesmas chamadas e triângulos);
+      - a oclusão (caixas dos prédios) ganha pouco: desligada, as chamadas sobem só 1 a 7, porque os grupos são grandes
+        e só somem inteiros;
+      - o que pesava era a QUANTIDADE de objetos na cena: ~15 a 17 mil, e cada um custa processador todo quadro mesmo
+        sem aparecer (num teste à parte: 15 mil objetos sem nada na tela = 1,49 ms; nenhum = 0,27 ms). A maioria
+        (postes, hidrantes, bancos, carros, lixo) só aparece a até 200–900 m, mas ficava carregada a até 3,5 km;
+      - as árvores eram 1 desenho do tamanho do mundo (1.22): a Godot não conseguia descartar nada delas, e refazer as
+        listas no The Mall custava ~8 ms a cada giro de 11° ou 4 m andados (um engasgo).
+  · O QUE MUDOU:
+      - CARREGAR ≠ MOSTRAR (carga em anéis): cada objeto só entra na cena até a distância em que pode aparecer (com o
+        maior valor das opções de detalhe). Um hidrante fica nos 3 x 3 chunks em volta da câmera; um prédio, no raio
+        inteiro. Ordem: perto > meio > longe, e a frente da câmera primeiro.
+      - CONTÊINER POR CHUNK: os objetos de cada chunk (e anel) ficam num nó só: pôr/tirar o chunk é uma operação.
+      - CAMADA DE VISIBILIDADE POR CHUNK: o chunk inteiro fora da câmera some (com folga e cache: recalcula a cada 8 m
+        ou 4° de giro; mostrar é na hora, nada some da tela; os chunks em volta da câmera nunca somem por causa da
+        sombra do sol). Dentro dos chunks à vista, a Godot continua descartando objeto por objeto e pela oclusão.
+      - ÁRVORES EM GRUPOS POR CHUNK: no lugar do desenho único do mundo inteiro, um grupo por chunk com a caixa de
+        verdade (a Godot descarta o grupo fora da câmera, atrás dos prédios e longe da sombra), em até 3 desenhos:
+        perto (com sombra), sombra (só no passe da sombra) e voxels (sem sombra). E um CACHE dos pedaços (clusters)
+        de cada árvore, e as listas (de perto e de voxels) passaram a ser montadas EM VÁRIOS QUADROS, no máximo
+        ~1,2 ms por quadro (a lista antiga fica na tela até a nova ficar pronta): acabou o engasgo ao girar.
+      - Os oclusores dos prédios só ficam na cena a até ~1,5 km (mais longe quase tudo já sumiu pelo alcance).
+      - PAINEL DE DEPURAÇÃO (tecla F3; no celular, /render no modo desenvolvedor): FPS, chamadas, objetos, triângulos,
+        memória, chunks carregados/à vista/fora da câmera/na fila, nós na cena, tempo da visibilidade e da carga,
+        quantos objetos a oclusão está escondendo, árvores (grupos, desenhos, tempo das listas) e a GRADE dos chunks
+        por cor. Com ele aberto, F4 liga/desliga a camada de visibilidade para comparar. Fechado, não custa nada.
+  · MEDIDO (o mesmo script, as mesmas vistas, antes → depois; "descarte" = processador da Godot com a câmera sem
+    desenhar nada, no PC de teste com placa de vídeo em software):
+      vista ........... chamadas · objetos · triângulos · objetos de desenho na cena · descarte
+      avenida ......... 332 → 338 · 374 → 384 · 303 → 304 mil · 15.300 → 3.039 · 14,3 → 13,1 ms
+      Times Square .... 300 → 311 · 339 → 351 · 281 → 272 mil · 17.118 → 3.194 · 15,4 → 13,7 ms
+      Bethesda ........ 260 → 274 · 299 → 325 · 385 → 383 mil · 16.747 → 3.477 · 14,6 → 13,4 ms
+      The Mall ........ 250 → 264 · 290 → 310 · 666 → 624 mil · 16.762 → 3.574 · 13,9 → 11,5 ms
+      (o "descarte" inclui um custo fixo da placa de vídeo em software do PC de teste; o que mudou, 1,2 a 2,5 ms
+      por quadro, é o trabalho da Godot com os objetos a menos na cena)
+      Andar 1 chunk: de 8 quadros (o mais caro 1,5 ms) para 5 quadros (1,3 ms).
+      ÁRVORES (o que elas gastam por quadro, 120 quadros girando a câmera ou andando; pior quadro e quantos passaram
+      de 2 ms): The Mall girando 8,3 → 2,2 ms (26 → 4 quadros); The Mall andando 5,5 → 2,2 ms (11 → 6); Ramble
+      (mata) girando 9,0 → 2,7 ms (25 → 3); Ramble andando 7,0 → 3,2 ms (11 → 3); avenida (poucas árvores) 1,8 →
+      2,1 ms girando e 1,6 → 1,8 ms andando (0 → 1 e 0 → 0). A média por quadro ficou parecida (0,9 a 1,0 ms na
+      mata): o trabalho é o mesmo, só que espalhado, sem engasgo.
+      O PREÇO: as chamadas de desenho sobem 6 a 14 por vista (as árvores eram 1 desenho só; agora são até 3 por
+      grupo de chunk com algo na tela). A oclusão continua ganhando pouco (desligada, quase igual).
+  ARQUIVOS (testado: compilar_tudo, teste_chunks, teste_central_park, teste_graficos, teste_jogo,
+  teste_carregamento, teste_pontos_turisticos, teste_pontes, teste_luneta, teste_veiculos, teste_menu_leve,
+  teste_desempenho, rede e rede_carro (o amigo continua visível e sincronizado), medições antes/depois e fotos lado a lado):
+    mundo/chunks.gd ................ carga em anéis (alcance_de, anel_de), contêiner por chunk e anel, camada de
+                                     visibilidade (_visibilidade, _calcular_visibilidade, VIS_*), estatisticas(),
+                                     roda depois de quem mexe na câmera; MAX_CHUNKS_POR_NO 25 (o chão de 2 km entra)
+    mundo/arvores.gd ............... grupos por chunk (GRUPO, _no, _enviar: perto/sombra/voxels com a caixa de cada
+                                     grupo), cache dos clusters (_registros), listas de perto e de voxels em etapas
+                                     no orçamento (_perto_comecar/_perto_continuar, _voxels_comecar/_continuar/_fim,
+                                     ORCAMENTO_*, MARGEM_VISAO_V, VIRAR_V), tempos por quadro, desenhos_ativos();
+                                     tangentes na malha do cluster (sem aviso no log)
+    mundo/abandono.gd .............. a troca perto/longe diz até onde aparece (meta "alcance_carga")
+    mundo/cidade.gd ................ caixas d'água com o maior alcance das opções (meta "alcance_carga")
+    mundo/oclusao.gd ............... ALCANCE: oclusores só a até ~1,5 km
+    hud/painel_render.gd ........... NOVO · o painel de depuração (F3)
+    main.gd ........................ cria/apaga o painel (alternar_painel_render)
+    jogador/controles.gd ........... tecla F3 (sinal painel_render_pedido)
+    dev/modo_dev.gd ................ comandos /render e /camada
+    ferramentas/testes/teste_chunks.gd ....... reescrito: anéis, contêineres, camada de visibilidade (girando devagar
+                                               e 180° de uma vez, nada da tela fica escondido)
+    ferramentas/testes/teste_graficos.gd ..... árvores em grupos por chunk (nenhuma caixa do tamanho do mundo)
+    ferramentas/testes/teste_central_park.gd . idem
+    ferramentas/testes/desempenho_base.json .. regravado
+    estudos/ESTUDO_AAA.md .......... seção 1.15 (visibilidade e renderização por chunk) e itens 37 a 41 do plano
+    menu/config.gd ................. VERSAO "1.23"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + seção 3 (F3) + seção 11 (/render, /camada) + mapa "QUERO MEXER EM..."
+                                     + seção 10
+
 ATUALIZAÇÃO 1.22 · TODAS AS ÁRVORES NUMA CHAMADA DE DESENHO SÓ
   · Pedido: "transforme todas as árvores em uma única draw". Antes, as ~24 mil árvores custavam de 40 a 80 chamadas de
     desenho por quadro (uma por modelo e nível de detalhe, mais uma por bloco de longe); agora são UMA (no passe da
