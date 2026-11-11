@@ -362,22 +362,29 @@ grupos espaciais, podendo esconder chunks inteiros".
 7. ✖ **Juntar o chão em pedaços de chunk** (500 m): o chão é leve (o maior pedaço tem 5,7 mil triângulos) e cada
    pedaço vira 1 chamada por material: 4x mais chamadas para quase nada de triângulos.
 
-**Resultado (medido, mesmo script, mesmas vistas, antes → depois):**
+**Resultado (medido, antes 1.22 → depois 1.23):** `teste_desempenho`, as 7 vistas fixas:
 
-| Vista | Chamadas | Objetos | Triângulos | Objetos de desenho na cena | CPU de descarte* |
-|---|---|---|---|---|---|
-| avenida | 332 → 338 | 374 → 384 | 303 → 304 mil | 15.300 → 3.039 | 14,3 → 13,1 ms |
-| Times Square | 300 → 311 | 339 → 351 | 281 → 272 mil | 17.118 → 3.194 | 15,4 → 13,7 ms |
-| Bethesda | 260 → 274 | 299 → 325 | 385 → 383 mil | 16.747 → 3.477 | 14,6 → 13,4 ms |
-| The Mall | 250 → 264 | 290 → 310 | 666 → 624 mil | 16.762 → 3.574 | 13,9 → 11,5 ms |
+| Vista | Chamadas | Objetos | Triângulos | Nós na árvore da cena |
+|---|---|---|---|---|
+| base militar | 186 → 179 | 224 → 217 | 183 → 177 mil | 10.615 → 4.623 |
+| centro da cidade | 178 → 183 | 219 → 236 | 226 → 226 mil | 18.271 → 6.097 |
+| olhando a avenida | 331 → 337 | 373 → 384 | 303 → 302 mil | 18.271 → 6.106 |
+| Ponte do Brooklyn | 199 → 208 | 240 → 249 | 245 → 245 mil | 15.604 → 5.608 |
+| The Mall | 249 → 263 | 289 → 303 | 666 → 636 mil | 19.698 → 5.898 |
+| Bethesda | 259 → 273 | 298 → 325 | 385 → 400 mil | 19.054 → 6.195 |
+| Times Square | 299 → 310 | 338 → 369 | 281 → 275 mil | 20.349 → 6.415 |
 
-\* câmera com máscara 0 (nada desenhado, tudo descartado) no PC de teste com placa de vídeo em software: o valor
-absoluto tem um custo fixo; a diferença (1,2 a 2,5 ms por quadro) é o trabalho com os objetos que saíram da cena.
+CPU de descarte (câmera com máscara 0: nada desenhado, tudo descartado; PC de teste com placa de vídeo em software,
+o valor absoluto tem um custo fixo e o que conta é a diferença) e objetos de desenho na cena: avenida 14,3 → 13,1 ms
+(15.300 → 3.039), Times Square 15,4 → 13,7 ms (17.118 → 3.194), Bethesda 14,6 → 13,4 ms (16.747 → 3.477), The Mall
+13,9 → 11,5 ms (16.762 → 3.574).
 
 Árvores, o que gastam **por quadro** (120 quadros; pior quadro e quantos passaram de 2 ms): The Mall girando 8,3 → 2,2 ms
 (26 → 4); andando 5,5 → 2,2 ms (11 → 6); Ramble girando 9,0 → 2,7 ms (25 → 3); andando 7,0 → 3,2 ms (11 → 3); avenida
 1,8 → 2,1 / 1,6 → 1,8 ms (0 → 1 / 0 → 0). Andar 1 chunk: 8 → 5 quadros, o mais caro 1,5 → 1,3 ms.
-O preço: +6 a +14 chamadas por vista (as árvores eram 1 desenho; agora até 3 por grupo de chunk à vista).
+O preço: +5 a +14 chamadas por vista (as árvores eram 1 desenho; agora até 3 por grupo de chunk à vista; a base
+militar caiu 7) e, na Bethesda, +4% de triângulos (a lista dos voxels pega mais dos lados para cobrir os quadros em
+que está sendo montada); nas outras 6 vistas os triângulos caem.
 
 ---
 

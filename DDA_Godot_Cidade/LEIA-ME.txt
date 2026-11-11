@@ -73,23 +73,29 @@ ATUALIZAÇÃO 1.23 · SISTEMA DE VISIBILIDADE E RENDERIZAÇÃO POR CHUNKS
         memória, chunks carregados/à vista/fora da câmera/na fila, nós na cena, tempo da visibilidade e da carga,
         quantos objetos a oclusão está escondendo, árvores (grupos, desenhos, tempo das listas) e a GRADE dos chunks
         por cor. Com ele aberto, F4 liga/desliga a camada de visibilidade para comparar. Fechado, não custa nada.
-  · MEDIDO (o mesmo script, as mesmas vistas, antes → depois; "descarte" = processador da Godot com a câmera sem
-    desenhar nada, no PC de teste com placa de vídeo em software):
-      vista ........... chamadas · objetos · triângulos · objetos de desenho na cena · descarte
-      avenida ......... 332 → 338 · 374 → 384 · 303 → 304 mil · 15.300 → 3.039 · 14,3 → 13,1 ms
-      Times Square .... 300 → 311 · 339 → 351 · 281 → 272 mil · 17.118 → 3.194 · 15,4 → 13,7 ms
-      Bethesda ........ 260 → 274 · 299 → 325 · 385 → 383 mil · 16.747 → 3.477 · 14,6 → 13,4 ms
-      The Mall ........ 250 → 264 · 290 → 310 · 666 → 624 mil · 16.762 → 3.574 · 13,9 → 11,5 ms
-      (o "descarte" inclui um custo fixo da placa de vídeo em software do PC de teste; o que mudou, 1,2 a 2,5 ms
-      por quadro, é o trabalho da Godot com os objetos a menos na cena)
+  · MEDIDO, ANTES (1.22) → DEPOIS (1.23):
+      teste_desempenho (as 7 vistas fixas; chamadas · objetos · triângulos · nós na árvore da cena):
+      base militar ........ 186 → 179 · 224 → 217 · 183 → 177 mil · 10.615 → 4.623
+      centro da cidade .... 178 → 183 · 219 → 236 · 226 → 226 mil · 18.271 → 6.097
+      olhando a avenida ... 331 → 337 · 373 → 384 · 303 → 302 mil · 18.271 → 6.106
+      Ponte do Brooklyn ... 199 → 208 · 240 → 249 · 245 → 245 mil · 15.604 → 5.608
+      The Mall ............ 249 → 263 · 289 → 303 · 666 → 636 mil · 19.698 → 5.898
+      Bethesda ............ 259 → 273 · 298 → 325 · 385 → 400 mil · 19.054 → 6.195
+      Times Square ........ 299 → 310 · 338 → 369 · 281 → 275 mil · 20.349 → 6.415
+      Processador que a Godot gasta descartando (câmera sem desenhar nada; PC de teste com placa de vídeo em
+      software, então o número tem um custo fixo; o que conta é a diferença) e objetos de desenho na cena:
+      avenida 14,3 → 13,1 ms (15.300 → 3.039) · Times Square 15,4 → 13,7 ms (17.118 → 3.194) · Bethesda 14,6 →
+      13,4 ms (16.747 → 3.477) · The Mall 13,9 → 11,5 ms (16.762 → 3.574)
       Andar 1 chunk: de 8 quadros (o mais caro 1,5 ms) para 5 quadros (1,3 ms).
       ÁRVORES (o que elas gastam por quadro, 120 quadros girando a câmera ou andando; pior quadro e quantos passaram
       de 2 ms): The Mall girando 8,3 → 2,2 ms (26 → 4 quadros); The Mall andando 5,5 → 2,2 ms (11 → 6); Ramble
       (mata) girando 9,0 → 2,7 ms (25 → 3); Ramble andando 7,0 → 3,2 ms (11 → 3); avenida (poucas árvores) 1,8 →
       2,1 ms girando e 1,6 → 1,8 ms andando (0 → 1 e 0 → 0). A média por quadro ficou parecida (0,9 a 1,0 ms na
       mata): o trabalho é o mesmo, só que espalhado, sem engasgo.
-      O PREÇO: as chamadas de desenho sobem 6 a 14 por vista (as árvores eram 1 desenho só; agora são até 3 por
-      grupo de chunk com algo na tela). A oclusão continua ganhando pouco (desligada, quase igual).
+      O PREÇO: as chamadas de desenho sobem 5 a 14 por vista (as árvores eram 1 desenho só; agora são até 3 por
+      grupo de chunk com algo na tela; a base militar caiu 7). Os triângulos caem em 6 das 7 vistas, mas sobem 4% na
+      Bethesda (a lista dos voxels pega um pouco mais dos lados para cobrir os quadros em que está sendo montada).
+      A oclusão continua ganhando pouco (desligada, quase igual).
   ARQUIVOS (testado: compilar_tudo, teste_chunks, teste_central_park, teste_graficos, teste_jogo,
   teste_carregamento, teste_pontos_turisticos, teste_pontes, teste_luneta, teste_veiculos, teste_menu_leve,
   teste_desempenho, rede e rede_carro (o amigo continua visível e sincronizado), medições antes/depois e fotos lado a lado):
