@@ -984,6 +984,7 @@ func _buildings() -> void:
 		mi.multimesh = mm
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		mi.visibility_range_end = 1500.0
+		mi.set_meta("alcance_carga", 2400.0)          # 1.23: o maior alcance de "Distância dos detalhes" (mundo/chunks.gd)
 		_adopt(mi)
 		detalhes.append(mi)
 	print("Prédios: ", predios.size() / 5, " (", n, " blocos de malha) · com entrada: ", n_entra, " · em ruína: ", ruinas.size(),

@@ -99,7 +99,7 @@ func _r():
 	ok(arv != null and arv.quantas() > 20000, "árvores plantadas na cidade: %d" % (arv.quantas() if arv != null else 0))
 	ok(d["arvores"].size() > 10000, "árvores do Central Park no desenho: %d" % d["arvores"].size())
 	ok(arv.contagem.size() == 24, "as 24 variações do EZ-Tree aparecem: %d" % arv.contagem.size())
-	ok(arv.unica != null and arv._blocos.size() > 100, "1.22: todas as árvores numa chamada de desenho só (%d blocos de voxels de longe)" % arv._blocos.size())
+	ok(arv._g_chave.size() > 50 and arv._blocos.size() > 100, "1.23: as árvores em grupos por chunk (%d grupos, %d blocos de voxels de longe)" % [arv._g_chave.size(), arv._blocos.size()])
 	# ---- máscara: caminhos sem planta ----
 	var mall_meio := Vector2(-1622.0, -1000.0)
 	ok(CP.chao(mall_meio.x, mall_meio.y) == 2 and CP.bloqueia_planta(mall_meio.x, mall_meio.y), "a Mall é caminho (sem planta nem capim)")

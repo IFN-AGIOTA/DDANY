@@ -12,6 +12,9 @@ extends RefCounted
 const CEL := 250.0
 const RECUO := 0.5            # a caixa fica 0,5 m para dentro de cada parede/telhado (nada visível some)
 const ALTURA_MIN := 8.0
+# 1.23: os oclusores ficam na cena só a até ~1,5 km da câmera (mundo/chunks.gd, anel). Mais longe quase tudo já
+# sumiu pelo alcance; sem o oclusor de lá, o pior que acontece é desenhar o que estaria escondido (nunca sumir algo)
+const ALCANCE := 1500.0
 
 var cidade
 var nos: Array[OccluderInstance3D] = []
@@ -35,6 +38,7 @@ func montar(c) -> void:
 		var oi := OccluderInstance3D.new()
 		oi.name = "Oclusor_%d_%d" % [k.x, k.y]
 		oi.position = Vector3((k.x + 0.5) * CEL, 0.0, (k.y + 0.5) * CEL)   # vértices relativos a este centro (AABB do tamanho do pedaço: mundo/chunks.gd)
+		oi.set_meta("alcance_carga", ALCANCE)        # 1.23: mundo/chunks.gd só põe na cena a até esse anel
 		_no[k] = oi
 		nos.append(oi)
 		_refazer(k)

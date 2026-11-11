@@ -42,6 +42,7 @@ signal mic_pedido                  # 0.97: chat de voz: mutar/desmutar o SEU mic
 signal vozes_pedido                # 0.97: chat de voz: mutar/desmutar os OUTROS jogadores (botão VOZES, tecla K)
 signal sentido_pedido              # 0.95: mutado/controlado: FAREJAR / ESCUTAR (botão SENTIDO, tecla H · jogador/sentidos.gd)
 signal construir_pedido            # 0.90: abrir/fechar a construção (botão CONSTRUIR, tecla B)
+signal painel_render_pedido        # 1.23: painel de depuração da renderização (tecla F3 · hud/painel_render.gd)
 signal girar_pedido                # 0.90: construindo: girar a peça (botão GIRAR, tecla R)
 signal confirmar_pedido            # 0.90: construindo: pôr a peça aqui (botão OK, tecla E / clique)
 signal cancelar_pedido             # 0.90: construindo: desistir (botão CANCELAR, botão direito)
@@ -455,9 +456,11 @@ func _tecla(e: InputEvent) -> void:
 	for a in Teclas.ACOES:
 		if Teclas.casa(k, a[0]):
 			_acao(a[0], k.pressed)
-	# P (pausa) e F11 (tela cheia) são fixos, mas só valem se nenhuma ação usa a tecla (0.64)
+	# P (pausa), F3 (painel de renderização, 1.23) e F11 (tela cheia) são fixos, mas só valem se nenhuma ação usa a tecla (0.64)
 	if k.pressed and k.keycode == KEY_P and Teclas.acao_da_tecla("k:%d" % KEY_P) == "":
 		pausa_pedida.emit()
+	if k.pressed and k.keycode == KEY_F3 and Teclas.acao_da_tecla("k:%d" % KEY_F3) == "":
+		painel_render_pedido.emit()       # 1.23: painel de depuração da renderização
 	if k.pressed and k.keycode == KEY_F11 and Teclas.acao_da_tecla("k:%d" % KEY_F11) == "":
 		var w := DisplayServer.window_get_mode()
 		var cheia := w == DisplayServer.WINDOW_MODE_FULLSCREEN or w == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN

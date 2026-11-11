@@ -32,6 +32,19 @@ extends Node3D
 #   voxels a cada MOVER_V m; só o que está NA FRENTE da câmera (o "corte pela visão") e no tamanho certo. A GPU
 #   confere cada árvore pelo tamanho na tela (o shader esconde quem não é daquele nível). A sombra do sol é
 #   reconhecida pela projeção ortográfica: nela só vão as simplificadas.
+# 1.23 · GRUPOS POR CHUNK (estudos/ESTUDO_AAA.md 1.15; pedido: nada de uma chamada gigante para o mundo inteiro):
+#   a "chamada única" virou UM GRUPO POR CHUNK de GRUPO m (o mesmo quadrado de mundo/chunks.gd), cada um com a CAIXA
+#   de verdade das árvores dele. Assim a Godot descarta o grupo inteiro fora da câmera, atrás dos prédios (oclusão) e
+#   longe da sombra. Cada grupo tem até 3 desenhos, um por passe:
+#     "perto"  completa + simplificada (tipos 0 e 1) · faz sombra (a completa some no passe de sombra)
+#     "sombra" a sombra da completa (tipo 2) · SÓ no passe de sombra (antes ia também no passe normal, à toa)
+#     "voxels" os grupos de voxels (tipos 3, 4 e 5) · SEM sombra (antes passavam no passe de sombra, à toa)
+#   Grupo sem nada na lista fica com 0 instâncias (a Godot nem considera).
+#   CACHE: os registros dos clusters de cada árvore (um por cluster) são montados uma vez e guardados; refazer a
+#   lista de perto virou só juntar pedaços prontos. Só o grupo que mudou é reenviado à placa.
+#   LISTA DE VOXELS EM ETAPAS: era o maior engasgo (no The Mall, ~7 ms num quadro só a cada giro de 11°); agora é
+#   montada em vários quadros, no máximo ORCAMENTO_V_US por quadro, e a antiga fica na tela até a nova ficar pronta
+#   (o corte pela visão dos voxels tem mais folga, MARGEM_VISAO_V, para cobrir esses quadros).
 # COLISÃO: o tronco de cada árvore vira um obstáculo (caixa) da física perto do jogador (mundo/colisao_mundo.gd).
 # Quem usa: mundo/cidade.gd (planta: lugares guardados + mundo/central_park.gd + mundo/pontos_turisticos.gd) e
 # menu/aplicar_opcoes.gd ("Distância dos detalhes" muda os limiares e até onde vão os voxels).
@@ -60,7 +73,12 @@ const MARGEM_VISAO := 0.45               # rad (~26°)
 const PERTO_SEMPRE := 24.0
 const VIRAR := 0.2                       # rad (~11°)
 const MOVER_V := 10.0                    # as listas de voxels são refeitas quando a câmera anda isso
-const FOLGA_V := 14.0
+const FOLGA_V := 18.0                    # (1.23: 18; a lista é feita em vários quadros e a câmera anda enquanto isso)
+# 1.23: a lista de voxels é montada AOS POUCOS (no máximo ORCAMENTO_V_US por quadro); a antiga fica na tela até a
+# nova ficar pronta. Para cobrir esses quadros, o corte pela visão dos voxels tem mais folga e o giro que refaz é maior
+const ORCAMENTO_V_US := 1200
+const MARGEM_VISAO_V := 0.75             # rad (~43°) de cada lado
+const VIRAR_V := 0.3                     # rad (~17°)
 const TRONCO_ALTURA := 4.0               # altura da caixa de colisão do tronco
 # A CHAMADA ÚNICA
 const CLUSTER := 128                     # triângulos por cluster (e por grupo de voxels: 64 bolhas)
@@ -70,6 +88,12 @@ const LISTA_H := 16                      # até 16 mil árvores nas listas de vo
 const CAMADAS := ["casca_carvalho", "casca_betula", "casca_pinheiro", "folha_freixo", "folha_alamo", "folha_carvalho",
 	"folha_pinheiro"]                    # as camadas da Texture2DArray (as 3 primeiras têm normal)
 const POR_GRUPO := {3: 2, 4: 8, 5: 16}   # árvores por grupo de voxels (64 bolhas / bolhas por árvore)
+const GRUPO := 500.0                     # 1.23: um grupo de desenho por chunk (= mundo/chunks.gd TAM_CHUNK)
+const PERTO := 0                         # 1.23: os 3 desenhos de cada grupo
+const SOMBRA := 1
+const VOXELS := 2
+const NOMES_DESENHO := ["perto", "sombra", "voxels"]
+const CACHE_MAX := 6000                  # 1.23: registros de árvore guardados (passou disso, fica só o que foi usado)
 
 # ---------------------------------------------------------------------------------------------------------------
 # MODELOS (static: os mesmos para todo mundo; carregados uma vez)
@@ -403,6 +427,15 @@ static func malha_cluster() -> ArrayMesh:
 		var arr := []
 		arr.resize(Mesh.ARRAY_MAX)
 		arr[Mesh.ARRAY_VERTEX] = vs
+		# 1.23: tangentes vazias (o shader calcula as dele): sem elas a Godot avisa no log a cada desenho criado
+		var tg := PackedFloat32Array()
+		for i in CLUSTER * 3:
+			tg.append_array(PackedFloat32Array([1.0, 0.0, 0.0, 1.0]))
+		arr[Mesh.ARRAY_TANGENT] = tg
+		var nr := PackedVector3Array()
+		nr.resize(CLUSTER * 3)
+		nr.fill(Vector3.UP)
+		arr[Mesh.ARRAY_NORMAL] = nr
 		_malha_cluster = ArrayMesh.new()
 		_malha_cluster.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 		_malha_cluster.custom_aabb = AABB(Vector3(-12.0, -1.0, -12.0), Vector3(24.0, 28.0, 24.0))
@@ -418,11 +451,8 @@ var _reg := PackedFloat32Array()          # 20 floats por árvore: transform (12
 var _grade := {}                          # Vector2i -> PackedInt32Array
 var _alt_max := 1.0
 var _ord := PackedInt32Array()            # árvore -> posição dela na textura "arvs" (ordem de bloco e altura)
-var _blocos: Array = []                   # [Rect2, primeira (em "arvs"), quantas, alturas em ordem, y médio]
-var unica: MultiMeshInstance3D = null     # A chamada de desenho de todas as árvores
+var _blocos: Array = []                   # [Rect2, primeira (em "arvs"), quantas, alturas em ordem, y médio, grupo]
 var _tex_lista: ImageTexture = null
-var _buf_perto := PackedFloat32Array()    # instâncias da completa/simplificada (refeitas a cada MOVER m)
-var _buf_voxel := PackedFloat32Array()    # instâncias dos grupos de voxels (a cada MOVER_V m)
 var _ult := Vector3(1.0e9, 0.0, 1.0e9)
 var _ult_v := Vector3(1.0e9, 0.0, 1.0e9)
 var _ult_esc := 0.0
@@ -433,12 +463,29 @@ var meia_visao := PI                      # metade do campo de visão na horizon
 var escala_px := 600.0                    # pixels de altura por metro a 1 m da câmera (resolução e campo de visão)
 var qualidade: float = QUALIDADE[2]
 var alcance: float = ALCANCE[2]
-var longe: Array = []                     # (1.22: vazio; a cidade não adota nada: tudo é a "unica")
+var longe: Array = []                     # (1.22: vazio; a cidade não adota nada: os grupos são filhos deste nó)
 var obstaculos := PackedFloat32Array()    # troncos no formato do mundo/colisao_mundo.gd (7 floats cada)
 var contagem := {}                        # nome -> quantas (estatística e testes)
 var sombra := true
 var por_nivel := [0, 0, 0, 0]             # (testes) árvores na completa, simplificada, voxels finos, voxels grossos de perto
-var instancias := 0                       # (testes) instâncias (clusters + grupos) na chamada única
+var instancias := 0                       # (testes) instâncias (clusters + grupos) em todos os grupos
+# 1.23: os grupos de desenho (um por chunk)
+var _grupo := PackedInt32Array()          # árvore -> grupo
+var _g_chave: Array[Vector2i] = []        # grupo -> chunk
+var _g_caixa: Array[AABB] = []            # grupo -> caixa das árvores dele
+var _g_nos: Array = []                    # grupo -> [MultiMeshInstance3D ou null] x 3 (perto, sombra, voxels)
+var _g_n: Array = []                      # grupo -> [instâncias] x 3 (o que está na placa agora)
+var _cache := {}                          # árvore x 3 + tipo -> registros prontos dos clusters (PackedFloat32Array)
+var _usados := {}
+var grupos_ativos := 0                    # (painel/testes) grupos com alguma coisa para desenhar
+var nos_desenho := 0                      # (painel/testes) MultiMeshInstance3D criados (até 3 por grupo)
+var us_perto := 0                         # (painel/testes) µs da última lista de perto / dos voxels neste quadro
+var us_voxels := 0
+var us_perto_maior := 0                   # (testes) o quadro mais caro de cada uma
+var us_voxels_maior := 0
+var voxels_prontos := 0                   # (testes) quantas listas de voxels já ficaram prontas
+var _vx := {}                             # 1.23: a lista de voxels em andamento ({} = nenhuma)
+var _ult_frente_v := Vector2.ZERO
 
 func quantas() -> int:
 	return _var.size()
@@ -471,8 +518,26 @@ func plantar(nome: String, p: Vector3, giro: float, s: float, sh := 1.0, tom := 
 	if rt > 0.12:
 		obstaculos.append_array(PackedFloat32Array([p.x, p.z, giro, rt, TRONCO_ALTURA, rt, p.y + TRONCO_ALTURA * 0.5]))
 
-# depois de plantar todas: a textura "arvs" (as árvores em ordem de bloco e altura), os blocos e a chamada única
+# depois de plantar todas: a textura "arvs" (as árvores em ordem de bloco e altura), os blocos e os grupos (1.23)
 func montar() -> Array:
+	# 1.23: os grupos (um por chunk de GRUPO m) e a caixa de cada um (copa e altura de todas as árvores dele)
+	var g_idx := {}
+	_grupo.resize(_var.size())
+	for i in _var.size():
+		var p := _pos[i]
+		var kg := Vector2i(floori(p.x / GRUPO), floori(p.z / GRUPO))
+		if not g_idx.has(kg):
+			g_idx[kg] = _g_chave.size()
+			_g_chave.append(kg)
+			_g_caixa.append(AABB())
+			_g_nos.append([null, null, null])
+			_g_n.append([0, 0, 0])
+		var g: int = g_idx[kg]
+		_grupo[i] = g
+		var h := _alt[i]
+		var r := h * 0.6 + 2.0                          # a copa (e as bolhas dos voxels) com folga
+		var a := AABB(Vector3(p.x - r, p.y - 1.0, p.z - r), Vector3(r * 2.0, h + 3.0, r * 2.0))
+		_g_caixa[g] = a if _g_caixa[g].size == Vector3.ZERO else _g_caixa[g].merge(a)
 	var blocos := {}
 	for i in _var.size():
 		var p := _pos[i]
@@ -482,7 +547,13 @@ func montar() -> Array:
 		blocos[k].append(i)
 	var ordem := PackedInt32Array()
 	_ord.resize(_var.size())
-	for k in blocos:
+	var chaves: Array = blocos.keys()
+	# os blocos de um mesmo grupo ficam juntos (os registros dos voxels de longe saem em sequência por grupo)
+	chaves.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+		var ga: int = _grupo[blocos[a][0]]
+		var gb: int = _grupo[blocos[b][0]]
+		return ga < gb if ga != gb else (a.x < b.x if a.x != b.x else a.y < b.y))
+	for k in chaves:
 		var lista: Array = blocos[k]
 		lista.sort_custom(func(a, b): return _alt[a] < _alt[b])
 		var alts := PackedFloat32Array()
@@ -490,7 +561,8 @@ func montar() -> Array:
 		for i in lista:
 			alts.append(_alt[i])
 			y_med += _pos[i].y
-		_blocos.append([Rect2(k.x * BLOCO, k.y * BLOCO, BLOCO, BLOCO), ordem.size(), lista.size(), alts, y_med / maxf(lista.size(), 1)])
+		# (um bloco de BLOCO m cabe num grupo de GRUPO m: o grupo da primeira árvore é o de todas)
+		_blocos.append([Rect2(k.x * BLOCO, k.y * BLOCO, BLOCO, BLOCO), ordem.size(), lista.size(), alts, y_med / maxf(lista.size(), 1), _grupo[lista[0]]])
 		for i in lista:
 			_ord[i] = ordem.size()
 			ordem.append(i)
@@ -508,20 +580,61 @@ func montar() -> Array:
 	var mat := material()
 	mat.set_shader_parameter("arvs", ImageTexture.create_from_image(img))
 	mat.set_shader_parameter("lista", _tex_lista)
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.use_colors = true
-	mm.use_custom_data = true
-	mm.mesh = malha_cluster()
-	mm.custom_aabb = AABB(Vector3(-20000.0, -500.0, -20000.0), Vector3(40000.0, 1500.0, 40000.0))
-	unica = MultiMeshInstance3D.new()
-	unica.name = "ArvoresUnica"
-	unica.multimesh = mm
-	unica.material_override = mat
-	unica.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
-	add_child(unica)
 	_limiares()
 	return longe
+
+# 1.23: o desenho "qual" do grupo g (criado na primeira vez que o grupo tem algo para ele)
+func _no(g: int, qual: int) -> MultiMeshInstance3D:
+	var nos: Array = _g_nos[g]
+	if nos[qual] == null:
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.use_colors = true
+		mm.use_custom_data = true
+		mm.mesh = malha_cluster()
+		mm.custom_aabb = _g_caixa[g]                   # a caixa de verdade: a Godot descarta o grupo inteiro
+		var mi := MultiMeshInstance3D.new()
+		var k: Vector2i = _g_chave[g]
+		mi.name = "Arvores_%d_%d_%s" % [k.x, k.y, NOMES_DESENHO[qual]]
+		mi.multimesh = mm
+		mi.material_override = material()
+		_sombra_do(mi, qual)
+		add_child(mi)
+		nos[qual] = mi
+		nos_desenho += 1
+	return nos[qual]
+
+func _sombra_do(mi: MultiMeshInstance3D, qual: int) -> void:
+	if qual == PERTO:
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if sombra else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	elif qual == SOMBRA:
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+		mi.visible = sombra
+	else:
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+
+# 1.23: manda para a placa as instâncias novas de um tipo de desenho; grupo que tinha e agora não tem fica com 0
+func _enviar(qual: int, bufs: Dictionary) -> void:
+	for g in _g_nos.size():
+		var tinha: int = _g_n[g][qual]
+		if tinha == 0 and not bufs.has(g):
+			continue
+		var buf: PackedFloat32Array = bufs.get(g, PackedFloat32Array())
+		var n := buf.size() / 20
+		var mi := _no(g, qual) if n > 0 else (_g_nos[g][qual] as MultiMeshInstance3D)
+		if mi == null:
+			continue
+		mi.multimesh.instance_count = n
+		if n > 0:
+			mi.multimesh.buffer = buf
+		_g_n[g][qual] = n
+	instancias = 0
+	grupos_ativos = 0
+	for g in _g_n.size():
+		var t: int = _g_n[g][0] + _g_n[g][1] + _g_n[g][2]
+		instancias += t
+		if t > 0:
+			grupos_ativos += 1
 
 # "Distância dos detalhes" (0..3)
 func aplicar_alcance(nivel: int) -> void:
@@ -538,13 +651,15 @@ func _limiares() -> void:
 
 func aplicar_sombra(ligada: bool) -> void:
 	sombra = ligada
-	if unica != null:
-		unica.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if ligada else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for nos in _g_nos:
+		for qual in 2:
+			if nos[qual] != null:
+				_sombra_do(nos[qual], qual)
 	_ult = Vector3(1.0e9, 0.0, 1.0e9)
 
 func _process(_dt: float) -> void:
 	var cam := get_viewport().get_camera_3d()
-	if cam == null or _var.is_empty() or unica == null:
+	if cam == null or _var.is_empty() or _g_nos.is_empty():
 		return
 	var tela := get_viewport().get_visible_rect().size
 	var fov := deg_to_rad(cam.fov)
@@ -558,7 +673,15 @@ func _process(_dt: float) -> void:
 	atualizar(cam.global_position)
 
 # a câmera em "c": manda para o material e, se andou (ou virou, ou o zoom mudou), refaz as instâncias
+var us_quadro := 0                        # 1.23: (painel/testes) tempo das árvores neste quadro e o pior
+var us_quadro_maior := 0
 func atualizar(c: Vector3, forcar := false) -> void:
+	var tq := Time.get_ticks_usec()
+	_atualizar(c, forcar)
+	us_quadro = Time.get_ticks_usec() - tq
+	us_quadro_maior = maxi(us_quadro_maior, us_quadro)
+
+func _atualizar(c: Vector3, forcar: bool) -> void:
 	var m := material()
 	m.set_shader_parameter("centro", c)
 	m.set_shader_parameter("escala_px", escala_px)
@@ -568,19 +691,28 @@ func atualizar(c: Vector3, forcar := false) -> void:
 	var zoom := absf(escala_px - _ult_esc) >= _ult_esc * 0.03
 	if zoom:
 		_ult_esc = escala_px
-	var mudou := false
-	if forcar or virou or zoom or Vector2(c.x - _ult_v.x, c.z - _ult_v.z).length() >= MOVER_V:
-		_voxels(c)
-		mudou = true
+	if _g_nos.is_empty():
+		return
+	# 1.23: os voxels em vários quadros (o trabalho em andamento termina antes de começar outro; zoom recomeça)
+	var t0 := Time.get_ticks_usec()
+	var virou_v := frente != Vector2.ZERO and (_ult_frente_v == Vector2.ZERO or absf(_ult_frente_v.angle_to(frente)) > VIRAR_V)
+	if Vector2(c.x - _ult_v.x, c.z - _ult_v.z).length() > 150.0:
+		forcar = true                                 # pulou longe (renascer, teleporte): a lista toda agora
+	if forcar or zoom:
+		_vx.clear()
+	if _vx.is_empty() and (forcar or zoom or virou_v or Vector2(c.x - _ult_v.x, c.z - _ult_v.z).length() >= MOVER_V):
+		_ult_frente_v = frente
+		_voxels_comecar(c)
+	if not _vx.is_empty():
+		_voxels_continuar(0 if forcar else ORCAMENTO_V_US)
+	us_voxels = Time.get_ticks_usec() - t0
+	if us_voxels > 0:
+		us_voxels_maior = maxi(us_voxels_maior, us_voxels)
 	if forcar or virou or zoom or Vector2(c.x - _ult.x, c.z - _ult.z).length() >= MOVER:
+		var t1 := Time.get_ticks_usec()
 		_perto(c)
-		mudou = true
-	if mudou and unica != null:
-		var tudo := _buf_perto + _buf_voxel
-		instancias = tudo.size() / 20
-		unica.multimesh.instance_count = instancias
-		if instancias > 0:
-			unica.multimesh.buffer = tudo
+		us_perto = Time.get_ticks_usec() - t1
+		us_perto_maior = maxi(us_perto_maior, us_perto)
 
 # na frente da câmera? (as de perto de PERTO_SEMPRE ficam sempre: a sombra delas pode cair na tela)
 func _na_visao(dx: float, dz: float, dh2: float, cos_visao: float) -> bool:
@@ -588,7 +720,8 @@ func _na_visao(dx: float, dz: float, dh2: float, cos_visao: float) -> bool:
 		return true
 	return (dx * frente.x + dz * frente.y) >= cos_visao * sqrt(dh2)
 
-# a completa e a simplificada: um registro por CLUSTER (a transformação da árvore, o número do cluster e o tipo)
+# a completa e a simplificada: um registro por CLUSTER (a transformação da árvore, o número do cluster e o tipo),
+# separados por grupo (1.23)
 func _perto(c: Vector3) -> void:
 	_ult = c
 	var t0: float = PX[0] * qualidade
@@ -599,11 +732,9 @@ func _perto(c: Vector3) -> void:
 	var r := _alt_max * k1 + FOLGA
 	var r2 := r * r
 	var cos_visao := cos(meia_visao)
-	var cl := clusters()
-	var lista := nomes()
-	_b = PackedFloat32Array()
 	por_nivel[0] = 0
 	por_nivel[1] = 0
+	var por_g := {}                                   # grupo -> [árvore x 4 + (1 = completa, 2 = simplificada)]
 	var c0 := Vector2i(floori((c.x - r) / CEL), floori((c.z - r) / CEL))
 	var c1 := Vector2i(floori((c.x + r) / CEL), floori((c.z + r) / CEL))
 	for gx in range(c0.x, c1.x + 1):
@@ -625,48 +756,92 @@ func _perto(c: Vector3) -> void:
 				var em1 := d >= h * k0b - FOLGA and d <= h * k1 + FOLGA
 				if not em0 and not em1:
 					continue
-				var faixas: Array = cl.get(lista[_var[i]], [])
-				if faixas.size() < 2:
-					continue
-				var rec := _reg.slice(i * 20, i * 20 + 20)
-				if em0:
-					por_nivel[0] += 1
-					_clusters_de(rec, faixas[0], 0.0)
-					if sombra:
-						_clusters_de(rec, faixas[1], 2.0)           # a sombra da completa: a simplificada
-				if em1:
-					por_nivel[1] += 1
-					_clusters_de(rec, faixas[1], 1.0)
-	_buf_perto = _b
+				var g: int = _grupo[i]
+				if not por_g.has(g):
+					por_g[g] = []
+				por_g[g].append(i * 4 + (1 if em0 else 0) + (2 if em1 else 0))
+	# os registros prontos (cache) de cada árvore, juntos por grupo
+	_usados.clear()
+	var bufs := {}
+	var bufs_s := {}
+	for g in por_g:
+		var bp := PackedFloat32Array()
+		var bs := PackedFloat32Array()
+		for v in por_g[g]:
+			var i: int = v >> 2
+			if v & 1:
+				por_nivel[0] += 1
+				bp.append_array(_registros(i, 0))
+				if sombra:
+					bs.append_array(_registros(i, 2))     # a sombra da completa: a simplificada
+			if v & 2:
+				por_nivel[1] += 1
+				bp.append_array(_registros(i, 1))
+		if bp.size() > 0:
+			bufs[g] = bp
+		if bs.size() > 0:
+			bufs_s[g] = bs
+	_enviar(PERTO, bufs)
+	_enviar(SOMBRA, bufs_s)
+	if _cache.size() > CACHE_MAX:                    # fica só o que foi usado agora
+		var novo := {}
+		for k in _usados:
+			novo[k] = _cache[k]
+		_cache = novo
 
-var _b := PackedFloat32Array()            # (a lista sendo montada)
-func _clusters_de(rec: PackedFloat32Array, faixa_c: Array, tipo: float) -> void:
-	var r := rec.duplicate()
-	r[17] = tipo
-	var ini := int(faixa_c[0])
-	for k in int(faixa_c[1]):
-		r[16] = float(ini + k)
-		_b.append_array(r)
+# 1.23: os registros (um por cluster) da árvore i no tipo 0 (completa), 1 (simplificada) ou 2 (sombra da completa)
+func _registros(i: int, tipo: int) -> PackedFloat32Array:
+	var chave := i * 3 + tipo
+	_usados[chave] = true
+	if _cache.has(chave):
+		return _cache[chave]
+	var out := PackedFloat32Array()
+	var faixas: Array = clusters().get(nomes()[_var[i]], [])
+	if faixas.size() >= 2:
+		var faixa_c: Array = faixas[0 if tipo == 0 else 1]
+		var r := _reg.slice(i * 20, i * 20 + 20)
+		r[17] = float(tipo)
+		var ini := int(faixa_c[0])
+		for k in int(faixa_c[1]):
+			r[16] = float(ini + k)
+			out.append_array(r)
+	_cache[chave] = out
+	return out
 
-# os GRUPOS de voxels: os de perto (fino e grosso; a lista de árvores vai na textura "lista") e os de bem longe (os
-# começos dos blocos da textura "arvs")
-func _voxels(c: Vector3) -> void:
+# os GRUPOS de voxels: os de perto (fino e grosso; a lista de árvores vai na textura "lista", grupo a grupo) e os de
+# bem longe (os começos dos blocos da textura "arvs"). 1.23: em etapas (_voxels_comecar, _voxels_continuar a cada
+# quadro no orçamento, _voxels_fim manda tudo de uma vez quando termina)
+func _voxels_comecar(c: Vector3) -> void:
 	_ult_v = c
 	var t1: float = PX[1] * qualidade
 	var t2: float = PX[2] * qualidade
-	var kv_ini := escala_px / (t1 * (1.0 + FAIXA))       # o fino começa em d >= altura x kv_ini
-	var kv_fim := escala_px / (t2 * (1.0 - FAIXA))       # ... e vai até d <= altura x kv_fim
-	var kg_ini := escala_px / (t2 * (1.0 + FAIXA))       # o grosso começa em d >= altura x kg_ini
+	var kv_fim := escala_px / (t2 * (1.0 - FAIXA))       # o fino vai até d <= altura x kv_fim
 	var r := _alt_max * kv_fim + FOLGA_V
-	_raio_v = r - FOLGA_V
-	material().set_shader_parameter("dist_corte", _raio_v)
+	var meia := minf(meia_visao - MARGEM_VISAO + MARGEM_VISAO_V, PI)
+	_vx = {"c": c, "t2": t2, "kv_ini": escala_px / (t1 * (1.0 + FAIXA)), "kv_fim": kv_fim,
+		"kg_ini": escala_px / (t2 * (1.0 + FAIXA)), "r": r, "frente": frente, "meia": meia, "cos": cos(meia),
+		"c0": Vector2i(floori((c.x - r) / CEL), floori((c.z - r) / CEL)),
+		"c1": Vector2i(floori((c.x + r) / CEL), floori((c.z + r) / CEL)),
+		"gx": floori((c.x - r) / CEL), "fino": {}, "grosso": {}}
+
+# continua a lista em andamento por até limite_us (0 = até o fim); quando termina, manda para a placa
+func _voxels_continuar(limite_us: int) -> void:
+	var t0 := Time.get_ticks_usec()
+	var c: Vector3 = _vx["c"]
+	var kv_ini: float = _vx["kv_ini"]
+	var kv_fim: float = _vx["kv_fim"]
+	var kg_ini: float = _vx["kg_ini"]
+	var r: float = _vx["r"]
 	var r2 := r * r
-	var cos_visao := cos(meia_visao)
-	var fino := PackedFloat32Array()
-	var grosso := PackedFloat32Array()
-	var c0 := Vector2i(floori((c.x - r) / CEL), floori((c.z - r) / CEL))
-	var c1 := Vector2i(floori((c.x + r) / CEL), floori((c.z + r) / CEL))
-	for gx in range(c0.x, c1.x + 1):
+	var fr: Vector2 = _vx["frente"]
+	var todas: bool = fr == Vector2.ZERO or float(_vx["meia"]) >= PI
+	var cos_visao: float = _vx["cos"]
+	var c0: Vector2i = _vx["c0"]
+	var c1: Vector2i = _vx["c1"]
+	var fino_g: Dictionary = _vx["fino"]
+	var grosso_g: Dictionary = _vx["grosso"]
+	var gx: int = _vx["gx"]
+	while gx <= c1.x:
 		for gz in range(c0.y, c1.y + 1):
 			var kg := Vector2i(gx, gz)
 			if not _grade.has(kg):
@@ -676,37 +851,77 @@ func _voxels(c: Vector3) -> void:
 				var dx := p.x - c.x
 				var dz := p.z - c.z
 				var dh2 := dx * dx + dz * dz
-				if dh2 > r2 or not _na_visao(dx, dz, dh2, cos_visao):
+				if dh2 > r2:
+					continue
+				if not todas and dh2 > PERTO_SEMPRE * PERTO_SEMPRE and (dx * fr.x + dz * fr.y) < cos_visao * sqrt(dh2):
 					continue
 				var h := _alt[i]
 				var dy := p.y + h * 0.5 - c.y
 				var d := sqrt(dh2 + dy * dy)
 				if d >= h * kv_ini - FOLGA_V and d <= h * kv_fim + FOLGA_V:
-					fino.append(float(_ord[i]))
+					var g: int = _grupo[i]
+					if not fino_g.has(g):
+						fino_g[g] = []
+					fino_g[g].append(float(_ord[i]))
 				if d >= h * kg_ini - FOLGA_V:
-					grosso.append(float(_ord[i]))
-	# a lista (fino e depois grosso) e os grupos
-	var lista := fino + grosso
-	if lista.size() > LISTA_W * LISTA_H:
-		lista.resize(LISTA_W * LISTA_H)
-	por_nivel[2] = fino.size()
-	por_nivel[3] = grosso.size()
-	var buf := PackedFloat32Array()
+					var g2: int = _grupo[i]
+					if not grosso_g.has(g2):
+						grosso_g[g2] = []
+					grosso_g[g2].append(float(_ord[i]))
+		gx += 1
+		if limite_us > 0 and Time.get_ticks_usec() - t0 > limite_us:
+			_vx["gx"] = gx
+			return
+	_voxels_fim()
+
+func _voxels_fim() -> void:
+	var c: Vector3 = _vx["c"]
+	var t2: float = _vx["t2"]
+	var fr: Vector2 = _vx["frente"]
+	var meia: float = _vx["meia"]
+	var fino_g: Dictionary = _vx["fino"]
+	var grosso_g: Dictionary = _vx["grosso"]
+	_raio_v = float(_vx["r"]) - FOLGA_V
+	material().set_shader_parameter("dist_corte", _raio_v)
+	# a lista (grupo a grupo: fino e depois grosso) e os registros de cada grupo
+	var lista := PackedFloat32Array()
+	var cap := LISTA_W * LISTA_H
+	var bufs := {}
+	var n_fino := 0
+	var n_grosso := 0
 	var rec := PackedFloat32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0, 0])
-	for parte in 2:
-		var ini := 0 if parte == 0 else fino.size()
-		var n := mini(fino.size() if parte == 0 else grosso.size(), lista.size() - ini)
-		var por: int = POR_GRUPO[3 + parte]
-		rec[17] = float(3 + parte)
-		var g := 0
-		while g < n:
-			rec[16] = float(ini + g)
-			rec[18] = float(mini(por, n - g))
-			buf.append_array(rec)
-			g += por
+	var gs := {}
+	for g in fino_g:
+		gs[g] = true
+	for g in grosso_g:
+		gs[g] = true
+	for g in gs:
+		var buf := PackedFloat32Array()
+		for parte in 2:
+			var arr: Array = (fino_g if parte == 0 else grosso_g).get(g, [])
+			var n := mini(arr.size(), cap - lista.size())
+			if n <= 0:
+				continue
+			var ini := lista.size()
+			lista.append_array(PackedFloat32Array(arr.slice(0, n)))
+			if parte == 0:
+				n_fino += n
+			else:
+				n_grosso += n
+			var por: int = POR_GRUPO[3 + parte]
+			rec[17] = float(3 + parte)
+			var q := 0
+			while q < n:
+				rec[16] = float(ini + q)
+				rec[18] = float(mini(por, n - q))
+				buf.append_array(rec)
+				q += por
+		bufs[g] = buf
+	por_nivel[2] = n_fino
+	por_nivel[3] = n_grosso
 	if lista.size() > 0:
 		var dados := lista.duplicate()
-		dados.resize(LISTA_W * LISTA_H)
+		dados.resize(cap)
 		_tex_lista.update(Image.create_from_data(LISTA_W, LISTA_H, false, Image.FORMAT_RF, dados.to_byte_array()))
 	# os de bem longe: blocos depois do corte, até o alcance, na frente da câmera; só o começo de cada bloco (as mais
 	# baixas) que já está no tamanho dos voxels grossos no canto mais longe do bloco
@@ -730,22 +945,39 @@ func _voxels(c: Vector3) -> void:
 		var dcz := cen.y - c.z
 		var dc := sqrt(dcx * dcx + dcz * dcz)
 		var raio_b := BLOCO * 0.72
-		if frente != Vector2.ZERO and meia_visao < PI and dc > raio_b:
-			var ang := acos(clampf((dcx * frente.x + dcz * frente.y) / dc, -1.0, 1.0))
-			if ang > meia_visao + asin(clampf(raio_b / dc, 0.0, 1.0)):
+		if fr != Vector2.ZERO and meia < PI and dc > raio_b:
+			var ang := acos(clampf((dcx * fr.x + dcz * fr.y) / dc, -1.0, 1.0))
+			if ang > meia + asin(clampf(raio_b / dc, 0.0, 1.0)):
 				continue
 		var dy: float = absf(c.y - float(b[4])) + 25.0
 		var alts: PackedFloat32Array = b[3]
 		var n := alts.bsearch(sqrt(longe_h * longe_h + dy * dy) * k_ini, false)
+		if n <= 0:
+			continue
+		var g: int = b[5]
+		var buf: PackedFloat32Array = bufs.get(g, PackedFloat32Array())
+		bufs.erase(g)                                       # (sem cópia ao crescer: só esta variável segura a lista)
 		var ini: int = b[1]
-		var g := 0
-		while g < n:
-			rec[16] = float(ini + g)
-			rec[18] = float(mini(por_l, n - g))
+		var q := 0
+		while q < n:
+			rec[16] = float(ini + q)
+			rec[18] = float(mini(por_l, n - q))
 			buf.append_array(rec)
-			g += por_l
-	_buf_voxel = buf
+			q += por_l
+		bufs[g] = buf
+	_enviar(VOXELS, bufs)
+	_vx.clear()
+	voxels_prontos += 1
 
 # quantas árvores de verdade (completas + simplificadas) estão nas listas de perto agora (testes)
 func perto_agora() -> int:
 	return por_nivel[0] + por_nivel[1]
+
+# 1.23: os desenhos de árvore que estão sendo mandados agora (painel e testes)
+func desenhos_ativos() -> int:
+	var n := 0
+	for g in _g_n.size():
+		for qual in 3:
+			if int(_g_n[g][qual]) > 0:
+				n += 1
+	return n

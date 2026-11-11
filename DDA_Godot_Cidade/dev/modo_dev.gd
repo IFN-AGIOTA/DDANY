@@ -39,6 +39,8 @@ const COMANDOS := [
 	["pos", "/pos", "mostra onde você está", false],
 	["voo", "/voo", "câmera livre (voar) liga/desliga", false],
 	["fps", "/fps", "contador de FPS e posição na tela liga/desliga", false],
+	["render", "/render", "painel de depuração da renderização (o mesmo da tecla F3) liga/desliga", false],
+	["camada", "/camada", "camada de visibilidade dos chunks liga/desliga (para comparar)", false],
 	["gasolina", "/gasolina", "enche o tanque do veículo que você dirige", false],
 	["salvar", "/salvar", "salva o jogo agora", false],
 	["hora", "/hora <0-24>", "muda a hora do dia", true],
@@ -387,6 +389,16 @@ func _c_fps(_a: Array) -> void:
 	var c = main.controles
 	c.set_info(not c.mostrar_info)
 	_diz("FPS na tela: %s" % ("sim" if c.mostrar_info else "não"))
+
+func _c_render(_a: Array) -> void:
+	main.alternar_painel_render()
+	_diz("Painel de renderização: %s" % ("aberto" if main.painel_render != null else "fechado"))
+
+func _c_camada(_a: Array) -> void:
+	if main.get("chunks") == null:
+		return
+	main.chunks.camada_visibilidade = not main.chunks.camada_visibilidade
+	_diz("Camada de visibilidade dos chunks: %s" % ("LIGADA" if main.chunks.camada_visibilidade else "desligada"))
 
 func _c_gasolina(_a: Array) -> void:
 	var v = main.veiculos.dirigindo if main.get("veiculos") != null else null

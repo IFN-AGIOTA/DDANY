@@ -26,6 +26,7 @@ const MatoCls := preload("res://mundo/mato.gd")
 const FumacaCls := preload("res://mundo/fumaca.gd")
 const HudStatusCls := preload("res://hud/hud_status.gd")
 const ChatCls := preload("res://hud/chat.gd")                # 1.09: chat de texto (e o modo desenvolvedor: dev/)
+const PainelRenderCls := preload("res://hud/painel_render.gd")   # 1.23: painel de depuração da renderização (F3)
 const MapaCls := preload("res://hud/mapa.gd")
 const ClimaCls := preload("res://mundo/clima.gd")
 const Salvamento := preload("res://menu/salvamento.gd")
@@ -84,6 +85,7 @@ var jogador: CharacterBody3D
 var controles: CanvasLayer
 var mundo: Node3D
 var chunks: Node                            # mundo/chunks.gd (só os chunks de 500 m perto da câmera ficam na cena)
+var painel_render: CanvasLayer = null       # 1.23: hud/painel_render.gd (F3; só existe aberto)
 var hud: CanvasLayer
 var estande: Node3D
 var tela_inventario: CanvasLayer
@@ -647,6 +649,7 @@ func _criar_jogo() -> void:
 	jogo.add_child(chat)
 	chat.ligar(self)
 	controles.chat_pedido.connect(chat.abrir)
+	controles.painel_render_pedido.connect(alternar_painel_render)   # 1.23: F3
 	await _etapa("mapa")
 	mapa = MapaCls.new()
 	mapa.name = "Mapa"
@@ -917,6 +920,19 @@ func _ponto_renascer(longe_de: Vector2) -> Vector2:
 			return p
 	return SPAWN
 
+# 1.23: painel de depuração da renderização (F3 / comando /render): criado ao abrir, apagado ao fechar (não custa nada)
+func alternar_painel_render() -> void:
+	if painel_render != null and is_instance_valid(painel_render):
+		painel_render.queue_free()
+		painel_render = null
+		return
+	if jogo == null:
+		return
+	painel_render = PainelRenderCls.new()
+	painel_render.name = "PainelRender"
+	painel_render.main = self
+	jogo.add_child(painel_render)
+
 func _fechar_jogo() -> void:
 	_fechar_morte()
 	if construcao != null and is_instance_valid(construcao):
@@ -932,6 +948,7 @@ func _fechar_jogo() -> void:
 		jogo.queue_free()
 	jogo = null
 	chunks = null
+	painel_render = null
 	jogador = null
 	controles = null
 	mundo = null

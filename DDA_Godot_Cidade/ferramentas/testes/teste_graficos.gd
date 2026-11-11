@@ -129,11 +129,17 @@ func _r():
 		if nm.begins_with("arvore") or nm.begins_with("Veg_arvore") or nm.begins_with("Veg_pinheiro"):
 			nos_antigos += 1
 		elif nm.begins_with("ArvoresLonge_") or nm.begins_with("ArvoresPerto") or nm == "ArvoresUnica":
-			longe += 1
+			longe += 1                            # (os nós antigos: a 1.23 tirou a chamada única do mundo inteiro)
 	var lug: Array = cid.lugares_das_arvores()
-	ok(nos_antigos == 0 and longe == 1 and cid.arvores != null and cid.arvores.unica != null and cid.arvores.quantas() > lug.size() and lug.size() > 10000
+	# 1.23: em grupos por chunk (até 3 desenhos por grupo, cada um com a caixa de verdade, nenhum do tamanho do mundo)
+	var grupos_ok := cid.arvores != null and cid.arvores._g_chave.size() > 50
+	var caixa_max := 0.0
+	if cid.arvores != null:
+		for cx in cid.arvores._g_caixa:
+			caixa_max = maxf(caixa_max, maxf((cx as AABB).size.x, (cx as AABB).size.z))
+	ok(nos_antigos == 0 and longe == 0 and grupos_ok and caixa_max < 700.0 and cid.arvores.quantas() > lug.size() and lug.size() > 10000
 		and ResourceLoader.exists("res://data/arvores_lugares.json"),
-		"1.20/1.22: árvores novas plantadas (%d; %d lugares guardados), TODAS num desenho só (%d nó de árvores), nenhuma das antigas" % [cid.arvores.quantas() if cid.arvores != null else 0, lug.size(), longe])
+		"1.20/1.23: árvores novas plantadas (%d; %d lugares guardados), em %d grupos por chunk (maior caixa %.0f m), nenhuma das antigas" % [cid.arvores.quantas() if cid.arvores != null else 0, lug.size(), cid.arvores._g_chave.size() if cid.arvores != null else 0, caixa_max])
 	ok(not ResourceLoader.exists("res://mundo/cenario/natureza/CommonTree_1.gltf") and not ResourceLoader.exists("res://historia/historia.gd"),
 		"1.19: arquivos das árvores e do modo história apagados")
 	# ---- halos (1.16: os fios de poste saíram, e a opção também) ----

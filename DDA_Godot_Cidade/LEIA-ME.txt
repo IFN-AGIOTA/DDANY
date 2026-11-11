@@ -3982,7 +3982,9 @@ PC (todas as teclas trocáveis em Opções › Teclado e mouse)
   T mensagens rápidas (multijogador; 1..8 escolhe) · Enter chat de texto (1.09; Enter manda, Esc fecha, seta para
   cima repete, Tab completa o comando no modo desenvolvedor) · F11 tela cheia · G empurrar/pisar · B construir (com a
   peça na mão: R gira, E ou clique constrói, botão direito cancela) · H sentido do mutado (farejar / escutar) ·
-  J muta o seu microfone · K muta as vozes dos outros (chat de voz, 0.97).
+  J muta o seu microfone · K muta as vozes dos outros (chat de voz, 0.97) · F3 painel de depuração da
+  renderização (1.23: chamadas, chunks, oclusão, árvores, memória; com ele aberto, F4 liga/desliga a camada de
+  visibilidade dos chunks · no celular: /render no modo desenvolvedor).
 
 -----------------------------------------------------------------------------------------------------
 4. NÚMEROS DO JOGO
@@ -4503,15 +4505,25 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - CAIXAS D'ÁGUA dos telhados ......... onde ficam e o desenho: mundo/cidade.gd (caixas_dagua, CAIXA_RAIO,
                                           _malha_caixa_dagua) · física: mundo/escadas_incendio.gd
                                           caixa_dagua_fisica (montada com a das escadas, a até 30 m)
-- oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd
+- oclusão (não desenhar o que os prédios escondem) . mundo/oclusao.gd (1.23: ALCANCE = até onde os oclusores ficam)
 - chunks de 500 m (o que fica na cena, raio) ....... mundo/chunks.gd (+ Opções › Gráficos › Raio de chunks)
+- 1.23 · CARGA EM ANÉIS (cada objeto só fica na
+  cena até o alcance dele), CONTÊINER por chunk
+  e CAMADA DE VISIBILIDADE (chunks fora da
+  câmera somem) .......................... mundo/chunks.gd (MARGEM, FATOR_ALCANCE, alcance_de, anel_de, VIS_*,
+                                          _calcular_visibilidade, estatisticas) · quem monta um objeto com troca
+                                          perto/longe diz até onde ele aparece com a meta "alcance_carga"
+- 1.23 · PAINEL DE DEPURAÇÃO da renderização
+  (F3; F4 liga/desliga a camada; /render) . hud/painel_render.gd (criado e apagado por main.gd alternar_painel_render)
 - halos de luz (0.84; 1.16: os fios saíram) ...... mundo/luzes_rua.gd (onde ficam: mundo/abandono.gd _poste_luzes)
 - 1.21 · ÁRVORES: os 4 níveis (tamanho na
   tela de cada troca, dissolve, alcance dos
   voxels), vento, cor, colisão do tronco ... mundo/arvores.gd (PX, FAIXA, QUALIDADE, ALCANCE, PX_VENTO, SHADER)
-- 1.22 · a CHAMADA ÚNICA das árvores
-  (clusters, grupos de voxels, a lista de
-  instâncias montada na CPU) .............. mundo/arvores.gd (CLUSTER, POR_GRUPO, _perto, _voxels, SHADER)
+- 1.22/1.23 · as árvores em CLUSTERS
+  (grupos de voxels, a lista de instâncias
+  montada na CPU, 1.23: um GRUPO de desenho
+  por chunk, o cache dos clusters) ........ mundo/arvores.gd (CLUSTER, POR_GRUPO, GRUPO, _perto, _voxels, _registros,
+                                          _enviar, SHADER)
 - 1.21 · as árvores SIMPLIFICADAS e os VOXELS
   (refazer depois de mudar os modelos) .... ferramentas/preparar_arvores_lod.gd (grava mundo/arvores/lod1/ e voxels.json)
 - 1.21 · PONTOS TURÍSTICOS: a lista (lugar,
@@ -4818,8 +4830,16 @@ MÚSICA (pasta audio/)
   nela). A Estátua da Liberdade fica num terreno de parque da ilhota (não tem o cais da balsa) e Coney Island fica
   uma quadra antes do mar do mapa (a areia é do próprio terreno). Em volta de alguns pontos sobra uma faixa de terra
   entre a calçada da rua e a praça (a grade de 20 m dos lotes não chega na calçada).
-- 1.22: as árvores são UMA chamada de desenho: por isso tudo o que é árvore vai para todos os passes (a sombra do
-  sol recebe também as instâncias que só aparecem na tela, e o shader as esconde: custa só o vértice). O jogo monta a
+- 1.23: a OCLUSÃO nativa (caixas dos prédios) ganha pouco nas vistas medidas (1 a 7 chamadas): os grupos de desenho
+  são grandes (prédios por 500 m, chão por 2 km, objetos da rua por 250 m) e só somem INTEIROS. Grupos menores
+  ganhariam mais oclusão, mas custariam chamadas em toda vista; ficou como está (dá para desligar em Opções ›
+  Gráficos › "Ocultar o que está atrás"). Não existe oclusão "própria" por chunk: a Godot não deixa o GDScript
+  perguntar se uma caixa está escondida, e um teste aproximado poderia sumir com algo que está à vista.
+- 1.23: a CAMADA DE VISIBILIDADE esconde chunks INTEIROS (a Godot continua descartando objeto por objeto dentro dos
+  chunks à vista). Girar a câmera muito rápido custa um pouco mais no quadro da virada (mostrar os chunks é na hora,
+  para nada sumir da tela). Um objeto que passa até 30 m da borda do chunk dele vai no contêiner do chunk: na beirada
+  do raio de chunks (lá no fim da neblina) essa faixa pode sair da cena um chunk antes.
+- 1.23: as árvores são UM GRUPO POR CHUNK (até 3 desenhos cada: perto, sombra e voxels). O jogo monta a
   Texture2DArray das cascas e folhas ao carregar (um instante a mais na tela de carregamento). Mudando um modelo de
   árvore, rode o ferramentas/preparar_arvores_lod.gd (refaz a geometria em clusters).
 - 1.21: ÁRVORES: sem o TAA da Unreal, o dissolve das trocas aparece como pontilhado por um instante (a faixa é curta,
@@ -5029,6 +5049,8 @@ COMANDOS:
   /pos ............................... mostra onde você está (x, y, z e o local)
   /voo ............................... câmera livre (voar) liga/desliga
   /fps ............................... FPS e posição no canto da tela liga/desliga
+  /render ............................ 1.23: painel de depuração da renderização (o mesmo da tecla F3)
+  /camada ............................ 1.23: camada de visibilidade dos chunks liga/desliga (para comparar)
   /gasolina .......................... enche o tanque do veículo que você está dirigindo
   /salvar ............................ salva o jogo agora
   /hora <0-24> · /dia · /noite ....... muda a hora (só host)

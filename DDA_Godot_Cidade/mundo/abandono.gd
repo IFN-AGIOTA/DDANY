@@ -788,6 +788,8 @@ func _montar() -> void:
 					mi.visibility_range_end = 0.0
 					ml.visibility_range_begin = 0.0
 					mi.visible = false
+					# 1.23: até onde o "perto" pode aparecer (mundo/chunks.gd põe na cena só a até esse anel)
+					mi.set_meta("alcance_carga", float(PERTO_PONTO[base]) * FATOR_MODELOS[3])
 					if not _troca.has(k):
 						_troca[k] = []
 					_troca[k].append([mi, ml, r.grow(4.0), float(PERTO_PONTO[base])])
