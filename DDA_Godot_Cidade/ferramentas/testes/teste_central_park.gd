@@ -109,8 +109,13 @@ func _r():
 	await q(30)
 	ok(arv.perto_agora() > 20, "no meio da mata (Ramble): %d árvores de verdade perto" % arv.perto_agora())
 	var nos_arv: Array = arv.find_children("*", "GeometryInstance3D", true, false)
-	ok(nos_arv.size() == 1 and arv.instancias > 100 and arv.por_nivel[2] + arv.por_nivel[3] > 100,
-		"1.22: uma chamada de desenho só para todas as árvores (%d nó, %d instâncias: clusters e grupos de voxels; níveis %s)" % [nos_arv.size(), arv.instancias, str(arv.por_nivel)])
+	# 1.23: um grupo por chunk (até 3 desenhos cada), cada um com a caixa das árvores dele (nenhum do tamanho do mundo)
+	var caixa_max := 0.0
+	for nd in nos_arv:
+		var mmc: MultiMesh = (nd as MultiMeshInstance3D).multimesh
+		caixa_max = maxf(caixa_max, maxf(mmc.custom_aabb.size.x, mmc.custom_aabb.size.z))
+	ok(nos_arv.size() > 1 and caixa_max < 700.0 and arv.desenhos_ativos() >= 2 and arv.instancias > 100 and arv.por_nivel[2] + arv.por_nivel[3] > 100,
+		"1.23: as árvores em grupos por chunk (%d desenhos criados, %d com algo agora, maior caixa %.0f m, %d instâncias; níveis %s)" % [nos_arv.size(), arv.desenhos_ativos(), caixa_max, arv.instancias, str(arv.por_nivel)])
 	var a0: Array = d["arvores"][d["arvores"].size() / 2]
 	ok(m.mundo.dentro_de_obstaculo(float(a0[1]), float(a0[2]), 0.05) or true, "tronco vira obstáculo (lista)")
 	var tem_tronco := false

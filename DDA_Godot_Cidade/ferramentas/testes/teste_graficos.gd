@@ -132,7 +132,7 @@ func _r():
 			longe += 1                            # (os nós antigos: a 1.23 tirou a chamada única do mundo inteiro)
 	var lug: Array = cid.lugares_das_arvores()
 	# 1.23: em grupos por chunk (até 3 desenhos por grupo, cada um com a caixa de verdade, nenhum do tamanho do mundo)
-	var grupos_ok := cid.arvores != null and cid.arvores._g_chave.size() > 50
+	var grupos_ok: bool = cid.arvores != null and cid.arvores._g_chave.size() > 50
 	var caixa_max := 0.0
 	if cid.arvores != null:
 		for cx in cid.arvores._g_caixa:
