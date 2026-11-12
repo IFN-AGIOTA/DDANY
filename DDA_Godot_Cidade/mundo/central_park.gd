@@ -11,7 +11,8 @@ extends Node3D
 #   - CONSTRUÇÕES (mundo/central_park_obras.gd): Bethesda Terrace e a Fonte do Anjo, Bow Bridge, Gapstow Bridge,
 #     Belvedere Castle na Vista Rock, Loeb Boathouse, Naumburg Bandshell, Cleopatra's Needle, Wollman Rink, o Carrossel,
 #     o mosaico IMAGINE, o Delacorte Theater, as estátuas da Mall, a Alice, a fonte do Cherry Hill e os campos de beisebol.
-#   - ÁRVORES: ~12 mil (mundo/arvores.gd), MATA DENSA: 4 fileiras de olmos na Mall, o Ramble bem fechado.
+#   - ÁRVORES: ~12 mil no desenho (mundo/arvores.gd), MATA DENSA: 4 fileiras de olmos na Mall, o Ramble bem fechado.
+#     1.24: 30% delas saíram (arvores_que_ficam; a Mall fica inteira): ~9 mil plantadas.
 #   - FÍSICA: um StaticBody3D com as caixas de colisão de tudo (sempre na cena); postes, bancos e troncos viram
 #     obstáculos (mundo/colisao_mundo.gd, perto do jogador).
 # O desenho é igual em todo aparelho (o mesmo arquivo): nada vai pela rede.
@@ -662,15 +663,51 @@ static func desenhar_mapa(ci: CanvasItem, cor_parque: Color, cor_caminho: Color)
 	ci.draw_polyline(_poli(d["mall"]), cc, 12.0)
 
 # ---------- ÁRVORES (mundo/arvores.gd): a lista do desenho ----------
+# 1.24: 30% das árvores do parque saíram (pedido). A escolha é fixa (semente SEMENTE_TIRAR: igual em todo aparelho e
+# no multijogador, sem mandar nada pela rede); as olmeiras da Mall ficam todas (a alameda continua fechada), então a
+# mata perde um pouco mais que 30% para o total dar 30%.
+const TIRAR_ARVORES := 0.30
+const SEMENTE_TIRAR := 2411
+const MALL_LARGURA := 17.5                  # m do eixo da Mall: as 4 fileiras de olmos (9 e 16,5 m de cada lado)
+static var _ficam := PackedByteArray()
+
+# 1 = a árvore i de dados()["arvores"] é plantada, 0 = saiu
+static func arvores_que_ficam() -> PackedByteArray:
+	if not _ficam.is_empty():
+		return _ficam
+	var d := dados()
+	var lista: Array = d.get("arvores", [])
+	_ficam.resize(lista.size())
+	_ficam.fill(1)
+	var m: Array = d.get("mall", [])
+	var ma := Vector2(float(m[0][0]), float(m[0][1])) if m.size() == 2 else Vector2.INF
+	var mb := Vector2(float(m[1][0]), float(m[1][1])) if m.size() == 2 else Vector2.INF
+	var r := RandomNumberGenerator.new()
+	r.seed = SEMENTE_TIRAR
+	var candidatas: Array = []                 # [sorteio, índice]
+	for i in lista.size():
+		var sorteio := r.randf()
+		var p := Vector2(float(lista[i][1]), float(lista[i][2]))
+		if ma != Vector2.INF and Geometry2D.get_closest_point_to_segment(p, ma, mb).distance_to(p) <= MALL_LARGURA:
+			continue
+		candidatas.append([sorteio, i])
+	candidatas.sort_custom(func(x, y): return x[0] < y[0])
+	for k in mini(roundi(lista.size() * TIRAR_ARVORES), candidatas.size()):
+		_ficam[int(candidatas[k][1])] = 0
+	return _ficam
+
 static func plantar_arvores(cidade: Node, arv: Node) -> void:
 	var d := dados()
 	if d.is_empty():
 		return
+	var fica := arvores_que_ficam()
 	var n := 0
 	for a in d["arvores"]:
 		n += 1
 		if n % 2048 == 0:
 			await cidade.pausa()
+		if fica[n - 1] == 0:
+			continue                                # 1.24: saiu (30% do parque)
 		var tom := float(a[5])
 		var cor := Color(1, 1, 1) * absf(tom)
 		if tom < 0.0:

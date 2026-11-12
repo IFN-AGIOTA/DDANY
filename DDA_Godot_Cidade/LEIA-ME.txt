@@ -41,6 +41,21 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.24 · CENTRAL PARK COM 30% MENOS ÁRVORES
+  · Pedido: apagar 30% das árvores do Central Park. Saíram 3.873 das 12.910 (30,0%); ficaram 9.037. A escolha é
+    sorteada uma vez com semente fixa: é a mesma em todo aparelho e no multijogador (nada vai pela rede). As 4
+    fileiras de olmos da The Mall ficaram inteiras (a alameda continua fechada); o resto do parque (mata, Ramble,
+    gramados) perdeu um pouco mais que 30% para o total dar 30%. Os troncos que saíram levam a colisão junto.
+    As árvores do resto da cidade não mudaram.
+  ARQUIVOS (testado: compilar_tudo, teste_central_park, teste_graficos, teste_desempenho):
+    mundo/central_park.gd .......... arvores_que_ficam() (TIRAR_ARVORES 0,30, SEMENTE_TIRAR, MALL_LARGURA);
+                                     plantar_arvores() pula as que saíram
+    ferramentas/testes/teste_central_park.gd . confere os 30% e a Mall inteira; o tronco conferido é de uma que ficou
+    ferramentas/testes/desempenho_base.json .. regravado (menos árvores no parque)
+    menu/config.gd ................. VERSAO "1.24"
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..."
+
 ATUALIZAÇÃO 1.23 · SISTEMA DE VISIBILIDADE E RENDERIZAÇÃO POR CHUNKS
   · Pedido: reestruturar os chunks com um sistema inteligente de visibilidade e renderização (poucas chamadas por
     GRUPO ESPACIAL, cada região podendo sumir sozinha; nada de uma chamada gigante para o mundo inteiro), com
@@ -4627,6 +4642,9 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
   postes, bancos) ......................... ferramentas/central_park/desenho.py (grava data/central_park.json)
 - 1.20 · Central Park: chão, muro, postes,
   bancos, rochas, lagos no mapa ........... mundo/central_park.gd
+- 1.24 · quantas árvores do Central Park
+  saem (e quais) .......................... mundo/central_park.gd (TIRAR_ARVORES, SEMENTE_TIRAR, MALL_LARGURA,
+                                          arvores_que_ficam)
 - 1.20 · Central Park: as construções
   (Bethesda, Bow Bridge, castelo...) ...... mundo/central_park_obras.gd
 - 1.19 · onde ficavam as árvores antigas ... mundo/cidade.gd (lugares_das_arvores) · mundo/abandono.gd (as da rua) ·

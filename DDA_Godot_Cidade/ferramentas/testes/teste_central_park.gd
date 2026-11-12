@@ -98,6 +98,16 @@ func _r():
 	var arv = cid.arvores
 	ok(arv != null and arv.quantas() > 20000, "árvores plantadas na cidade: %d" % (arv.quantas() if arv != null else 0))
 	ok(d["arvores"].size() > 10000, "árvores do Central Park no desenho: %d" % d["arvores"].size())
+	# 1.24: 30% saíram (a Mall inteira fica)
+	var fica: PackedByteArray = CP.arvores_que_ficam()
+	var sairam := fica.count(0)
+	var mall_fica := true
+	var mm: Array = d["mall"]
+	for i in fica.size():
+		var pa := Vector2(float(d["arvores"][i][1]), float(d["arvores"][i][2]))
+		if Geometry2D.get_closest_point_to_segment(pa, Vector2(mm[0][0], mm[0][1]), Vector2(mm[1][0], mm[1][1])).distance_to(pa) <= 17.0 and fica[i] == 0:
+			mall_fica = false
+	ok(absf(float(sairam) / fica.size() - 0.30) < 0.002 and mall_fica, "1.24: saíram %d de %d árvores do parque (%.1f%%), as olmeiras da Mall ficaram" % [sairam, fica.size(), 100.0 * sairam / fica.size()])
 	ok(arv.contagem.size() == 24, "as 24 variações do EZ-Tree aparecem: %d" % arv.contagem.size())
 	ok(arv._g_chave.size() > 50 and arv._blocos.size() > 100, "1.23: as árvores em grupos por chunk (%d grupos, %d blocos de voxels de longe)" % [arv._g_chave.size(), arv._blocos.size()])
 	# ---- máscara: caminhos sem planta ----
@@ -116,7 +126,10 @@ func _r():
 		caixa_max = maxf(caixa_max, maxf(mmc.custom_aabb.size.x, mmc.custom_aabb.size.z))
 	ok(nos_arv.size() > 1 and caixa_max < 700.0 and arv.desenhos_ativos() >= 2 and arv.instancias > 100 and arv.por_nivel[2] + arv.por_nivel[3] > 100,
 		"1.23: as árvores em grupos por chunk (%d desenhos criados, %d com algo agora, maior caixa %.0f m, %d instâncias; níveis %s)" % [nos_arv.size(), arv.desenhos_ativos(), caixa_max, arv.instancias, str(arv.por_nivel)])
-	var a0: Array = d["arvores"][d["arvores"].size() / 2]
+	var i0: int = d["arvores"].size() / 2
+	while fica[i0] == 0:
+		i0 += 1                                  # 1.24: uma que ficou
+	var a0: Array = d["arvores"][i0]
 	ok(m.mundo.dentro_de_obstaculo(float(a0[1]), float(a0[2]), 0.05) or true, "tronco vira obstáculo (lista)")
 	var tem_tronco := false
 	for i in range(0, cid.abandono.obstaculos.size(), 7):
