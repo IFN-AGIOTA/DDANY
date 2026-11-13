@@ -1,0 +1,62 @@
+; Teste da cidade (blocagem) – Godot 4.2+
+config_version=5
+
+[application]
+config/name="Dias de um Apocalipse"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.2", "GL Compatibility")
+config/icon="res://icon.png"
+
+[audio]
+
+driver/enable_input=true
+
+[autoload]
+
+Atualizador="*res://rede/atualizador.gd"
+Config="*res://menu/config.gd"
+Musica="*res://audio/musica_procedural.gd"
+Rede="*res://rede/rede.gd"
+Conta="*res://rede/conta.gd"
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=4
+
+[input_devices]
+pointing/emulate_touch_from_mouse=true
+
+[layer_names]
+
+3d_physics/layer_1="mundo"
+3d_physics/layer_2="jogador"
+3d_physics/layer_3="inimigos"
+
+[rendering]
+
+occlusion_culling/use_occlusion_culling=true
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/vram_compression/import_etc2_astc=true
+
+[shader_globals]
+
+molhado={
+"type": "float",
+"value": 0.0
+}
+pos_jogador={
+"type": "vec3",
+"value": Vector3(0, -1000, 0)
+}
+vento={
+"type": "float",
+"value": 0.3
+}
+noite={
+"type": "float",
+"value": 0.0
+}

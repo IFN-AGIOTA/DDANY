@@ -1,0 +1,27 @@
+ROUPAS 3D (1.11) · como as roupas do MakeHuman viram roupas do jogo
+====================================================================
+Não roda dentro do jogo e não vai para o APK. Precisa de Python 3 com numpy, scipy e Pillow, e da Godot.
+Pasta de trabalho: MH_PASTA (padrão ~/roupas_mh_trabalho), com:
+  base/base.obj, base/default.mhskel, base/default_weights.mhw   (do repositório do MakeHuman, CC0:
+      github.com/makehumancommunity/makehuman -> makehuman/data/3dobjs e makehuman/data/rigs)
+  ubc/ubc_m.json, ubc/ubc_f.json   (o corpo do jogo exportado da Godot: vértices, normais, ossos, pesos, regiões)
+  roupas/<peça>/  (cada peça do MakeHuman: .mhclo + .obj + .mhmat + texturas; extrair.py tira dos asset packs)
+
+PASSO A PASSO
+  1. python3 ajuste.py m f       -> base_m.pkl / base_f.pkl: o corpo-base do MakeHuman levado até o nosso corpo (pose
+                                    pelos ossos + "colar" a superfície nos dois sentidos; erro médio < 1 mm)
+  2. python3 lote.py             -> saida/<peça>_<m|f>.json para tudo de catalogo.py (JOBS): cada ponto da roupa vem
+                                    do .mhclo sobre o corpo ajustado; pesos dos ossos do ponto de pele mais perto;
+                                    "esconde" = vértices do corpo cobertos pela roupa; conjuntos viram __cima/__baixo
+                                    (pelas ilhas do UV). Ajustes por peça: DESLOCA e INFLAR em roupa.py.
+     python3 camadas.py          -> em cada .json: ib/dv (vértice do corpo e distância de cada ponto da peça) e esp
+                                    (espessura da peça em cada vértice do corpo): o jogo põe o colete por fora da
+                                    camisa e a camisa por fora da calça (jogador/roupa.gdshader "baixo")
+  3. python3 texturas.py         -> jogador/roupas/texturas/<peça>.png (512 px, fundo do UV preenchido)
+     bash imports.sh             -> o .import de cada textura (VRAM + mipmaps); depois godot --headless --import
+  4. ENTRADA=<MH_PASTA>/saida godot --headless -s res://ferramentas/preparar_roupas.gd
+                                 -> jogador/roupas/<peça>_<m|f>.res (reduzida pelo simplificador, com LODs)
+  5. python3 gerar_gd.py         -> bloco de itens (cole em inventario/itens.gd) e jogador/roupas_tabela.gd (+ LOOT)
+     python3 gerar_licenca.py    -> jogador/roupas/LICENCA.txt (autor e licença de cada peça)
+  6. ícones: SO=<itens> godot --rendering-driver opengl3 -s res://ferramentas/gerar_icones.gd
+Só a pele: reesconde.py (recalcula "esconde") · só a espessura do tronco: grossura.py.

@@ -1,0 +1,228 @@
+{
+ "_leia": "1.20 · as árvores do jogo (ferramentas/arvores_ez/LEIA-ME.txt). nome, preset do EZ-Tree, altura no jogo (m), tipo (o grupo usado nos sorteios), ajustes (caminho.com.pontos: valor) e seca (sem folhas).",
+ "leve": {
+  "secoes": 0.6,
+  "folhas": 0.6,
+  "tamanho_folha": 1.65,
+  "billboard": "single",
+  "alvo": 4200
+ },
+ "variantes": [
+  {
+   "nome": "carvalho_p",
+   "preset": "Oak Small",
+   "altura": 7.5,
+   "tipo": "carvalho",
+   "alvo": 2600
+  },
+  {
+   "nome": "carvalho_m",
+   "preset": "Oak Medium",
+   "altura": 11.0,
+   "tipo": "carvalho"
+  },
+  {
+   "nome": "carvalho_m2",
+   "preset": "Oak Medium",
+   "altura": 12.5,
+   "tipo": "carvalho",
+   "ajuste": {
+    "seed": 4121
+   }
+  },
+  {
+   "nome": "carvalho_g",
+   "preset": "Oak Large",
+   "altura": 16.0,
+   "tipo": "carvalho",
+   "alvo": 5000
+  },
+  {
+   "nome": "carvalho_g2",
+   "preset": "Oak Large",
+   "altura": 17.5,
+   "tipo": "carvalho",
+   "ajuste": {
+    "seed": 7777
+   },
+   "alvo": 5000
+  },
+  {
+   "nome": "freixo_p",
+   "preset": "Ash Small",
+   "altura": 8.0,
+   "tipo": "freixo",
+   "alvo": 3000
+  },
+  {
+   "nome": "freixo_m",
+   "preset": "Ash Medium",
+   "altura": 13.0,
+   "tipo": "freixo"
+  },
+  {
+   "nome": "freixo_m2",
+   "preset": "Ash Medium",
+   "altura": 14.0,
+   "tipo": "freixo",
+   "ajuste": {
+    "seed": 9012
+   }
+  },
+  {
+   "nome": "freixo_g",
+   "preset": "Ash Large",
+   "altura": 18.0,
+   "tipo": "freixo",
+   "alvo": 5000
+  },
+  {
+   "nome": "olmo_1",
+   "preset": "Ash Large",
+   "altura": 17.0,
+   "tipo": "olmo",
+   "ajuste": {
+    "seed": 1101,
+    "branch.angle.1": 28,
+    "branch.angle.2": 40,
+    "branch.start.1": 0.35,
+    "branch.length.0": 40
+   },
+   "alvo": 4800
+  },
+  {
+   "nome": "olmo_2",
+   "preset": "Ash Large",
+   "altura": 18.5,
+   "tipo": "olmo",
+   "ajuste": {
+    "seed": 2202,
+    "branch.angle.1": 30,
+    "branch.angle.2": 42,
+    "branch.start.1": 0.33,
+    "branch.length.0": 42
+   },
+   "alvo": 4800
+  },
+  {
+   "nome": "olmo_3",
+   "preset": "Ash Medium",
+   "altura": 15.0,
+   "tipo": "olmo",
+   "ajuste": {
+    "seed": 3303,
+    "branch.angle.1": 26,
+    "branch.angle.2": 38,
+    "branch.start.1": 0.38
+   }
+  },
+  {
+   "nome": "olmo_4",
+   "preset": "Ash Medium",
+   "altura": 16.0,
+   "tipo": "olmo",
+   "ajuste": {
+    "seed": 4404,
+    "branch.angle.1": 32,
+    "branch.angle.2": 45,
+    "branch.start.1": 0.36,
+    "leaves.type": "oak"
+   }
+  },
+  {
+   "nome": "alamo_p",
+   "preset": "Aspen Small",
+   "altura": 8.5,
+   "tipo": "alamo",
+   "ajuste": {
+    "leaves.tint": 11206570
+   },
+   "alvo": 1800
+  },
+  {
+   "nome": "alamo_m",
+   "preset": "Aspen Medium",
+   "altura": 13.0,
+   "tipo": "alamo",
+   "ajuste": {
+    "leaves.tint": 10288042
+   }
+  },
+  {
+   "nome": "alamo_g",
+   "preset": "Aspen Large",
+   "altura": 17.0,
+   "tipo": "alamo_outono",
+   "alvo": 4500
+  },
+  {
+   "nome": "pinheiro_p",
+   "preset": "Pine Small",
+   "altura": 8.0,
+   "tipo": "pinheiro",
+   "alvo": 3000
+  },
+  {
+   "nome": "pinheiro_m",
+   "preset": "Pine Medium",
+   "altura": 13.0,
+   "tipo": "pinheiro"
+  },
+  {
+   "nome": "pinheiro_g",
+   "preset": "Pine Large",
+   "altura": 18.0,
+   "tipo": "pinheiro",
+   "alvo": 4800
+  },
+  {
+   "nome": "seca_carvalho",
+   "preset": "Oak Medium",
+   "altura": 10.0,
+   "tipo": "seca",
+   "seca": true,
+   "ajuste": {
+    "seed": 5150
+   }
+  },
+  {
+   "nome": "seca_carvalho_g",
+   "preset": "Oak Large",
+   "altura": 14.5,
+   "tipo": "seca",
+   "seca": true,
+   "ajuste": {
+    "seed": 6160
+   }
+  },
+  {
+   "nome": "seca_freixo",
+   "preset": "Ash Large",
+   "altura": 13.5,
+   "tipo": "seca",
+   "seca": true
+  },
+  {
+   "nome": "seca_olmo",
+   "preset": "Ash Medium",
+   "altura": 12.0,
+   "tipo": "seca",
+   "seca": true,
+   "ajuste": {
+    "seed": 3303,
+    "branch.angle.1": 26,
+    "branch.angle.2": 38
+   }
+  },
+  {
+   "nome": "seca_alamo",
+   "preset": "Aspen Medium",
+   "altura": 11.0,
+   "tipo": "seca",
+   "seca": true,
+   "ajuste": {
+    "seed": 2718
+   }
+  }
+ ]
+}

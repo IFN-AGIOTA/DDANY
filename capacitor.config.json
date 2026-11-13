@@ -1,7 +1,0 @@
-{
-  "appId": "com.dda.apocalipse",
-  "appName": "Dias de um Apocalipse",
-  "webDir": "www",
-  "backgroundColor": "#000000",
-  "android": { "allowMixedContent": false }
-}

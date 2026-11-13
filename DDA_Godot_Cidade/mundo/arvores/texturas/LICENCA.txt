@@ -1,0 +1,30 @@
+TEXTURAS DAS ÁRVORES (1.20) · vindas do EZ-Tree (https://github.com/dgreenheck/ez-tree), de Daniel Greenheck, licença MIT
+(o texto da licença MIT está em ferramentas/arvores_ez/LICENCA_EZ-TREE.txt e repetido abaixo).
+
+As cascas, segundo o próprio EZ-Tree (src/lib/assets/bark/README.md), vêm de bancos de textura livres (CC0):
+  casca_carvalho.jpg / casca_carvalho_normal.jpg  <- Poly Haven "bark_brown_02"  (https://polyhaven.com/a/bark_brown_02, CC0)
+  casca_betula.jpg / casca_betula_normal.jpg      <- TextureCan nº 221            (https://www.texturecan.com/details/221/, CC0)
+  casca_pinheiro.jpg / casca_pinheiro_normal.jpg  <- TextureCan nº 588            (https://www.texturecan.com/details/588/, CC0)
+As folhas (folha_freixo.png, folha_alamo.png, folha_carvalho.png, folha_pinheiro.png) vêm do repositório do EZ-Tree (MIT).
+
+MIT License
+
+Copyright (c) 2024 Daniel Greenheck
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

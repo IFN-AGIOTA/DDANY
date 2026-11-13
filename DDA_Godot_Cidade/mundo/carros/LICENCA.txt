@@ -1,0 +1,11 @@
+CARROS QUE FUNCIONAM NO MODO LIVRE (1.15)
+
+  duke69.glb ... "Duke '69 - Low Poly Model" · Daniel Zhabotinsky (Sketchfab: https://sketchfab.com/DanielZhabotinsky)
+                 https://sketchfab.com/3d-models/46fed79f600c4fc69e060991f9e3e4f9
+                 Licença: Creative Commons Attribution 4.0 (CC-BY 4.0) · https://creativecommons.org/licenses/by/4.0/
+                 O autor escreve na página: "I unconditionally give you permission to use this model at your
+                 discretion, modify it or implement it into a digital product."
+
+Como o modelo é: em METROS, frente para +X, volante à esquerda (lado -Z), rodas no chão (y = 0); rodas, volante,
+interior, vidros e luzes são peças separadas; 5,24 x 1,40 x 1,96 m. No jogo (mundo/veiculo.gd) a frente é +Z.
+Os carros largados que FUNCIONAM (sedã, táxi e van de antes) são desenhados com ele, parados na rua e dirigindo.

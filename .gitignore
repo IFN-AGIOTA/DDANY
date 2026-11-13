@@ -1,0 +1,17 @@
+*.idsig
+atualizacao_*.zip
+DDA_Godot_Cidade/rede/firebase_segredo.cfg
+# chaves de assinatura: NUNCA no GitHub
+chaves_privadas/
+*.keystore
+*.jks
+*.pem
+chaves_*.zip
+# servidor do PC: vai só o servidor_windows.zip (os arquivos soltos são grandes)
+servidor_windows/
+DDA_Godot_Cidade/rede/turn.cfg
+# jogo para PC (Windows): gerado por export "Windows"; vai entregue como jogo_windows.zip (não fica no git)
+jogo_windows/
+jogo_windows.zip
+# cópia do projeto inteiro entregue em zip (o próprio repositório já tem tudo)
+DDA_Godot_Cidade_*.zip

@@ -1,0 +1,10 @@
+WebRTC para Godot ("webrtc-native" 1.2.2-stable, plugin oficial da Godot), usado no multijogador pela internet
+(rede/rtc.gd). Baixado de https://github.com/godotengine/webrtc-native/releases (Godot Asset Library: "WebRTC
+plugin - Godot 4.3+"). Só as bibliotecas de Android arm64, Linux x86_64 e Windows x86_64 foram mantidas.
+- webrtc-native: licença MIT (LICENSE.webrtc-native) · Godot Engine contributors
+- libdatachannel: Mozilla Public License 2.0 (LICENSE.libdatachannel) · Paul-Louis Ageneau
+- usrsctp: licença BSD de 3 cláusulas (LICENSE.usrsctp)
+- libjuice: Mozilla Public License 2.0 (LICENSE.libjuice) · Paul-Louis Ageneau
+- libsrtp: licença BSD (LICENSE.libsrtp) · Cisco Systems
+- Mbed TLS: Apache 2.0 (LICENSE.mbedtls)
+- plog: licença MIT (LICENSE.plog) · Sergey Podobry
