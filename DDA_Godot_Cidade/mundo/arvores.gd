@@ -61,7 +61,8 @@ const PX := [520.0, 220.0, 64.0]         # altura na tela (px) das trocas 0|1, 1
 const FAIXA := 0.08                      # o dissolve vai de limiar x (1 - FAIXA) a limiar x (1 + FAIXA) (sem o TAA da
                                          # Unreal o pontilhado aparece: faixa curta = poucas árvores trocando de cada vez)
 const QUALIDADE := [1.7, 1.3, 1.0, 0.78] # por "Distância dos detalhes" (0..3): multiplica os limiares (maior = troca antes)
-const ALCANCE := [650.0, 1000.0, 1500.0, 2200.0]      # até onde vão os voxels (some com dissolve)
+const ALCANCE := [650.0, 1000.0, 1500.0, 2200.0]      # até onde vão os voxels (some com dissolve), por "Distância dos detalhes"
+const ALCANCE_AUTO := 0.5                # 1.25: "Distância das árvores" em AUTO = metade disso (pedido: era longe demais)
 const PX_VENTO := 160.0                  # abaixo disso as folhas param de mexer
 const K_FINO := 24                       # bolhas do voxel fino, do grosso e do de bem longe (ferramentas/preparar_arvores_lod.gd)
 const K_GROSSO := 8
@@ -210,8 +211,8 @@ vec2 lod_fator(vec3 o, float altura, int nivel) {
 	float pmax = nivel == 0 ? 0.0 : (nivel == 1 ? limiares.x : (nivel == 2 ? limiares.y : limiares.z));
 	float a = pmin > 0.0 ? smoothstep(pmin * (1.0 - faixa), pmin * (1.0 + faixa), px) : 1.0;
 	float b = pmax > 0.0 ? 1.0 - smoothstep(pmax * (1.0 - faixa), pmax * (1.0 + faixa), px) : 1.0;
-	if (nivel == 3) {
-		a *= 1.0 - smoothstep(alcance * 0.88, alcance, distance(o, centro));
+	if (nivel >= 2) {
+		a *= 1.0 - smoothstep(alcance * 0.88, alcance, distance(o, centro));   // 1.25: os dois níveis de voxels
 	}
 	return vec2(a, b);
 }
@@ -465,7 +466,7 @@ var frente := Vector2.ZERO                # para onde a câmera olha (no chão; 
 var meia_visao := PI                      # metade do campo de visão na horizontal + a margem (rad)
 var escala_px := 600.0                    # pixels de altura por metro a 1 m da câmera (resolução e campo de visão)
 var qualidade: float = QUALIDADE[2]
-var alcance: float = ALCANCE[2]
+var alcance: float = ALCANCE[2] * ALCANCE_AUTO
 var longe: Array = []                     # (1.22: vazio; a cidade não adota nada: os grupos são filhos deste nó)
 var obstaculos := PackedFloat32Array()    # troncos no formato do mundo/colisao_mundo.gd (7 floats cada)
 var contagem := {}                        # nome -> quantas (estatística e testes)
@@ -646,10 +647,10 @@ func _enviar(qual: int, bufs: Dictionary) -> void:
 			com[g] = true
 	grupos_ativos = com.size()
 
-# "Distância dos detalhes" (0..3)
-func aplicar_alcance(nivel: int) -> void:
+# "Distância dos detalhes" (0..3: as trocas de detalhe) · 1.25: metros = "Distância das árvores" (0 = AUTO)
+func aplicar_alcance(nivel: int, metros := 0.0) -> void:
 	qualidade = QUALIDADE[clampi(nivel, 0, 3)]
-	alcance = ALCANCE[clampi(nivel, 0, 3)]
+	alcance = metros if metros > 0.0 else ALCANCE[clampi(nivel, 0, 3)] * ALCANCE_AUTO
 	_limiares()
 	_ult = Vector3(1.0e9, 0.0, 1.0e9)
 	_ult_v = Vector3(1.0e9, 0.0, 1.0e9)

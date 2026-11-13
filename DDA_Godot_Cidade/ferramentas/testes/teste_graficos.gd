@@ -140,6 +140,14 @@ func _r():
 	ok(nos_antigos == 0 and longe == 0 and grupos_ok and caixa_max < 700.0 and cid.arvores.quantas() > lug.size() and lug.size() > 10000
 		and ResourceLoader.exists("res://data/arvores_lugares.json"),
 		"1.20/1.23: árvores novas plantadas (%d; %d lugares guardados), em %d grupos por chunk (maior caixa %.0f m), nenhuma das antigas" % [cid.arvores.quantas() if cid.arvores != null else 0, lug.size(), cid.arvores._g_chave.size() if cid.arvores != null else 0, caixa_max])
+	# 1.25: "Distância das árvores": AUTO = metade do alcance de antes; um valor escolhido vale
+	if cid.arvores != null:
+		cid.aplicar_detalhes(3, 2, true, 0.0)
+		var auto_m: float = cid.arvores.alcance
+		cid.aplicar_detalhes(3, 2, true, 400.0)
+		var esc_m: float = cid.arvores.alcance
+		cid.aplicar_detalhes(3, 2, true, float(root.get_node("Config").g.get("arv", 0)))
+		ok(is_equal_approx(auto_m, 750.0) and is_equal_approx(esc_m, 400.0), "1.25: distância das árvores AUTO %.0f m (antes 1500) · escolhida 400 -> %.0f m" % [auto_m, esc_m])
 	ok(not ResourceLoader.exists("res://mundo/cenario/natureza/CommonTree_1.gltf") and not ResourceLoader.exists("res://historia/historia.gd"),
 		"1.19: arquivos das árvores e do modo história apagados")
 	# ---- halos (1.16: os fios de poste saíram, e a opção também) ----

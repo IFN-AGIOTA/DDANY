@@ -226,8 +226,8 @@ func _aplicar_resto(o: Dictionary, g: Dictionary, j) -> void:
 		if cid.sol != null:
 			cid.sol.shadow_enabled = int(g["shad"]) >= 2
 		var qual: Array = [cid.get_instance_id(), cid.detalhes.size(), cid.escadas_incendio, cid.detalhes_veg.size(), cid.mats_chao.size()]
-		if cid.has_method("aplicar_detalhes") and _mudou("detalhes", qual + [int(g["shd"]), int(g["detd"]), bool(g["wtr"])]):
-			cid.aplicar_detalhes(int(g["shd"]), int(g["detd"]), bool(g["wtr"]))     # janelas dos prédios · árvores/caixas d'água
+		if cid.has_method("aplicar_detalhes") and _mudou("detalhes", qual + [int(g["shd"]), int(g["detd"]), bool(g["wtr"]), int(g.get("arv", 0))]):
+			cid.aplicar_detalhes(int(g["shd"]), int(g["detd"]), bool(g["wtr"]), float(g.get("arv", 0)))   # janelas · árvores (1.25: distância própria) · caixas d'água
 		# 0.84: as opções que estavam "em breve"
 		if cid.has_method("aplicar_texturas") and _mudou("texturas", qual + [int(g.get("tex", 3)), aniso_efetivo(int(g.get("aniso", 1)))]):
 			cid.aplicar_texturas(int(g.get("tex", 3)), aniso_efetivo(int(g.get("aniso", 1))))   # texturas e filtragem anisotrópica do chão

@@ -195,7 +195,9 @@ func salvar_cena() -> void:
 	print("Cena salva em res://cidade.scn (código ", err, " · 0 = ok)")
 
 # Opções › Gráficos: janelas nos prédios (shaders) e até onde aparecem árvores/caixas d'água
-func aplicar_detalhes(nivel_shaders: int, nivel_distancia: int, agua_completa := true) -> void:
+var _arvores_m := 0.0                       # 1.25: Opções › "Distância das árvores" (m; 0 = AUTO)
+func aplicar_detalhes(nivel_shaders: int, nivel_distancia: int, agua_completa := true, arvores_m := 0.0) -> void:
+	_arvores_m = arvores_m
 	for m in mats_agua:
 		m.set_shader_parameter("completa", 1.0 if agua_completa else 0.0)
 	if mat_predio != null:
@@ -210,7 +212,7 @@ func aplicar_detalhes(nivel_shaders: int, nivel_distancia: int, agua_completa :=
 	if escadas_incendio != null and is_instance_valid(escadas_incendio):
 		escadas_incendio.aplicar_alcance(EscadasIncendioCls.ALCANCES[clampi(nivel_distancia, 0, 3)])
 	if arvores != null and is_instance_valid(arvores):
-		arvores.aplicar_alcance(nivel_distancia)          # 1.20
+		arvores.aplicar_alcance(nivel_distancia, _arvores_m)          # 1.20 · 1.25: distância própria
 	var fator: float = [0.6, 0.8, 1.0, 1.3][clampi(nivel_distancia, 0, 3)]
 	for d in detalhes_veg:
 		if is_instance_valid(d):
@@ -1649,7 +1651,7 @@ func _plantar_arvores() -> void:
 		_adopt(mi)
 	if abandono != null:
 		abandono.obstaculos.append_array(arvores.obstaculos)
-	arvores.aplicar_alcance(_nivel_distancia)
+	arvores.aplicar_alcance(_nivel_distancia, _arvores_m)
 	print("Árvores (1.20): %d plantadas · %s" % [arvores.quantas(), str(arvores.contagem)])
 
 # ---------- 0.69: VEGETAÇÃO BAIXADA (mundo/cenario.gd: Quaternius "Stylized Nature MegaKit") ----------

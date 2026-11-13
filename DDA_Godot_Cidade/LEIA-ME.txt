@@ -41,6 +41,24 @@ ficam só no histórico do git) e foi passado para a Godot 4, um sistema por arq
 -----------------------------------------------------------------------------------------------------
 2. O JOGO HOJE
 -----------------------------------------------------------------------------------------------------
+ATUALIZAÇÃO 1.25 · DISTÂNCIA DAS ÁRVORES (METADE, E UMA OPÇÃO PARA MUDAR)
+  · Pedido: as árvores apareciam longe demais. Agora vão até a METADE da distância de antes (no padrão, de 1,5 km
+    para 750 m; some com o mesmo dissolve) e há uma opção nova em Opções › Gráficos › "Distância das árvores":
+    AUTO (a metade do alcance da "Distância dos detalhes": 325 m / 500 m / 750 m / 1,1 km) ou 250 m, 400 m, 600 m,
+    800 m, 1,1 km, 1,5 km e 2,2 km. Menos distância = mais leve. Os dois níveis de voxels respeitam o limite.
+    "Distância dos detalhes" continua mandando em quando as árvores trocam de detalhe (e nas caixas d'água).
+  ARQUIVOS (testado: compilar_tudo, teste_graficos, teste_central_park, teste_desempenho):
+    mundo/arvores.gd ............... ALCANCE_AUTO 0,5; aplicar_alcance(nível, metros); o sumiço pela distância vale
+                                     também para os voxels finos
+    mundo/cidade.gd ................ aplicar_detalhes recebe a distância das árvores e passa para mundo/arvores.gd
+    menu/aplicar_opcoes.gd ......... manda a opção "arv" para a cidade
+    menu/opcoes.gd ................. a linha "Distância das árvores" (AUTO, 250 m a 2,2 km)
+    menu/config.gd ................. "arv": 0 (AUTO) nas predefinições; VERSAO "1.25"
+    ferramentas/testes/teste_graficos.gd ..... confere o AUTO (750 m) e um valor escolhido
+    ferramentas/testes/desempenho_base.json .. regravado (menos árvores de longe)
+    menu/novidades_lista.gd ........ refeita
+    LEIA-ME.txt .................... este bloco + mapa "QUERO MEXER EM..."
+
 ATUALIZAÇÃO 1.24 · CENTRAL PARK COM 30% MENOS ÁRVORES
   · Pedido: apagar 30% das árvores do Central Park. Saíram 3.873 das 12.910 (30,0%); ficaram 9.037. A escolha é
     sorteada uma vez com semente fixa: é a mesma em todo aparelho e no multijogador (nada vai pela rede). As 4
@@ -4618,6 +4636,8 @@ MUNDO / CONSTRUÇÕES (pasta mundo/)
 - 1.21 · ÁRVORES: os 4 níveis (tamanho na
   tela de cada troca, dissolve, alcance dos
   voxels), vento, cor, colisão do tronco ... mundo/arvores.gd (PX, FAIXA, QUALIDADE, ALCANCE, PX_VENTO, SHADER)
+- 1.25 · ATÉ ONDE AS ÁRVORES APARECEM ....... Opções › Gráficos › "Distância das árvores" (chave "arv" em menu/config.gd;
+                                          a lista em menu/opcoes.gd) · AUTO: mundo/arvores.gd (ALCANCE x ALCANCE_AUTO)
 - 1.22/1.23 · as árvores em CLUSTERS
   (grupos de voxels, a lista de instâncias
   montada na CPU, 1.23: um GRUPO de desenho

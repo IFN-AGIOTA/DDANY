@@ -603,7 +603,9 @@ func _pagina_graficos(v: float) -> Control:
 	_gfx_seg(lista, "shd", "Detalhes dos shaders", "fachadas: janelas, andares e lojas", NIVEIS, v)
 	_gfx_seg(lista, "tex", "Detalhes das texturas", "nitidez das texturas do chão (menos = mais leve)", NIVEIS, v)
 	_gfx_seg(lista, "models", "Detalhes dos modelos", "até onde carros, postes, árvores e objetos da rua aparecem completos", NIVEIS, v)
-	_gfx_seg(lista, "detd", "Distância dos detalhes", "árvores e caixas d'água nos telhados", NIVEIS, v)
+	_gfx_seg(lista, "detd", "Distância dos detalhes", "caixas d'água nos telhados e quando as árvores trocam de detalhe", NIVEIS, v)
+	_gfx_passo(lista, "arv", "Distância das árvores", "até onde as árvores aparecem (menor = mais leve; AUTO = metade do alcance dos detalhes)",
+		[[0, "AUTO"], [250, "250 m"], [400, "400 m"], [600, "600 m"], [800, "800 m"], [1100, "1,1 km"], [1500, "1,5 km"], [2200, "2,2 km"]], v)
 	_gfx_seg(lista, "fx", "Detalhes dos efeitos", "colunas de fumaça no horizonte, poeira dos tiros e marcas de bala", NIVEIS, v)
 	_gfx_seg(lista, "shad", "Sombras", "Simples: mancha sob o personagem · Alta: sombra em tempo real (usa mais GPU)",
 		[[0, "DESLIGADAS"], [1, "SIMPLES"], [2, "ALTA"]], v)
